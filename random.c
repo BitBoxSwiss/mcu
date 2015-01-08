@@ -39,7 +39,6 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
 	(void) update_seed;
     fread(buf, 1, len, f);
-    memset(buf,0,len);
     return 0;
 }
 

@@ -1,6 +1,5 @@
-OUT    = tests
 CC     = gcc
-CFLAGS = -Os # optimized compile
+CFLAGS = -g -Os # optimized compile
 CFLAGS += -W -Wall -Wextra -Wimplicit-function-declaration -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wformat -Wreturn-type -Wsign-compare -Wmultichar -Wformat-nonliteral -Winit-self -Wuninitialized -Wformat-security -Werror
 #CFLAGS = -g -O0 # valgrind compile
 CFLAGS += -D NOT_EMBEDDED
@@ -10,8 +9,11 @@ OBJS =  keys.o bignum.o ecdsa.o secp256k1.o sha2.o random.o hmac.o bip32.o ripem
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 
-all: $(OUT)
 
-$(OUT): $(OBJS) ; $(CC) $(OUT).c -o $@ $^ $(CFLAGS) 
+all: tests_cmdline 
 
-clean: ; rm -rf *.o $(OUT)
+tests: tests.o $(OBJS) ; $(CC) tests.o $(OBJS) -o tests
+tests_cmdline: tests_cmdline.o $(OBJS) ; $(CC) tests_cmdline.o $(OBJS) -o tests_cmdline
+
+
+clean: ; rm -f *.o tests tests_cmdline

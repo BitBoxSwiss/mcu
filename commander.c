@@ -406,7 +406,6 @@ static int commander_process_token(int cmd, char * message)
         }
         
         case CMD_random_ : {
-            // TEST
             int update_seed;
             uint8_t number[16];
             if( strcmp(message, ATTR_STR[ATTR_true_]) == 0 ){
@@ -428,13 +427,12 @@ static int commander_process_token(int cmd, char * message)
             break;
         }
         
-        
-        
         case CMD_none_ :
             break;
     }
     return 0;
 }
+
 
 char * commander(const char *instruction_encrypted)
 {
@@ -451,7 +449,7 @@ char * commander(const char *instruction_encrypted)
         fill_report("input","A valid command was not found.",ERROR);
     }
     
-    // In case of forgotten password, allow reset from unencrypted command.
+    // In case of a forgotten password, allow reset from an unencrypted command.
     else if( strstr(instruction_encrypted, CMD_STR[CMD_reset_]) != NULL )
 	{
         int r_len;
@@ -588,7 +586,7 @@ char * aes_cbc_b64_decrypt( const unsigned char *in, int inlen, const uint8_t ke
     // unbase64
     int ub64len;
     unsigned char * ub64 = unbase64( (char *)in, inlen, &ub64len );
-    if( ub64len % N_BLOCK ){
+    if( !ub64 || ub64len % N_BLOCK ){
         fill_report("input","Invalid encryption.",ERROR);
         decrypt_len = 0;
         free( ub64 );

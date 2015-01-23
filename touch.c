@@ -48,7 +48,8 @@ const char * qt_button_str[] = {"disable", "enable"};
 #include <asf.h>
 #include "touch_api.h"
 
-void touch_update_time(void){
+void touch_update_time(void)
+{
 	time_to_measure_touch = 1u;
 	current_time_ms_touch += qt_measurement_period_msec; 
 }
@@ -83,25 +84,24 @@ uint8_t touch_button_press(void)
 	int pushed = 0;
 	int status = ERROR;
 	char message[128];
-    if( !qt_button_enable ){
+    if (!qt_button_enable) {
 	    pushed = 1;
 	    status = SUCCESS;
 	    sprintf(message,"touch button disabled");
-    }
-	else{
+    } else {
 #ifdef NOT_EMBEDDED
 		pushed = 1;
 		status = SUCCESS;
-		sprintf(message,"touched (hard coded)");
+		sprintf(message, "touched (hard coded)");
 #else 
 		// Make high priority so that we can timeout
-		NVIC_SetPriority(SysTick_IRQn,0);
+		NVIC_SetPriority(SysTick_IRQn, 0);
 	
 		int16_t touch_snks;
 		int16_t touch_sns;
 		uint16_t exit_time_ms = current_time_ms_touch + qt_timeout_ms;
 
-		while( current_time_ms_touch < exit_time_ms) {
+		while (current_time_ms_touch < exit_time_ms) {
 			do {
 				//  One time measure touch sensors
 				status_flag = qt_measure_sensors(current_time_ms_touch);
@@ -112,60 +112,54 @@ uint8_t touch_button_press(void)
 			touch_sns = qt_measure_data.channel_signals[TOUCH_CHANNEL];
 		
 			if ((touch_snks - touch_sns ) > qt_sensor_thresh) {
-				delay_ms(300);
-				led_toggle();
-				delay_ms(300);
-				led_toggle();  
+				delay_ms(300); 	led_toggle();
+				delay_ms(300);	led_toggle();  
 				pushed = 1;		
 				break;	
 			}
 		}
 		// Reset lower priority
-		NVIC_SetPriority(SysTick_IRQn,15);
-		if( pushed ){
-			sprintf(message,"touched (%d/%d)", qt_measure_data.channel_signals[TOUCH_CHANNEL], qt_measure_data.channel_references[TOUCH_CHANNEL]);
+		NVIC_SetPriority(SysTick_IRQn, 15);
+		if (pushed) {
+			sprintf(message,"touched (%d/%d)", qt_measure_data.channel_signals[TOUCH_CHANNEL], 
+                                               qt_measure_data.channel_references[TOUCH_CHANNEL]);
 			status = SUCCESS;
-		}
-		else{
-			sprintf(message,"not touched (%d/%d)", qt_measure_data.channel_signals[TOUCH_CHANNEL], qt_measure_data.channel_references[TOUCH_CHANNEL]);
+		} else {
+			sprintf(message,"not touched (%d/%d)", qt_measure_data.channel_signals[TOUCH_CHANNEL], 
+                                                   qt_measure_data.channel_references[TOUCH_CHANNEL]);
 			status = ERROR;
 		}
 #endif
 	}
-    fill_report("touchbutton",message,status);
+    fill_report("touchbutton", message, status);
     return pushed;
 }
 
-void touch_button_parameters( uint16_t timeout, uint16_t threshold, int status )
+void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status)
 {
-	if( timeout > 0 && qt_timeout_ms!=timeout )
-	{
-		if( timeout > qt_timeout_ms_min )
-		{
+	if (timeout > 0 && qt_timeout_ms != timeout) {
+		if (timeout > qt_timeout_ms_min) {
 			qt_timeout_ms = timeout;
-		}
-		else
-		{
+		} else {
 			qt_timeout_ms = qt_timeout_ms_min;			
 		}
 		memory_touch_timeout_write(qt_timeout_ms);
 	}
 	
-    if( threshold > 0 && qt_sensor_thresh!=threshold )
-	{
+    if (threshold > 0 && qt_sensor_thresh != threshold) {
 		qt_sensor_thresh = threshold;
 		memory_touch_thresh_write(qt_sensor_thresh);
 	}
 
-    if( status >= 0 && qt_button_enable!=status )
-    {
+    if (status >= 0 && qt_button_enable != status) {
         qt_button_enable = status;
         memory_touch_enable_write(qt_button_enable);
     }
 
 	char message[64];
-	sprintf(message,"{\"timeout\":\"%d\",\"threshold\":\"%d\",\"button\":\"%s\"}", qt_timeout_ms, qt_sensor_thresh, qt_button_str[qt_button_enable]);
-	fill_report("touchbutton",message,SUCCESS);
+	sprintf(message,"{\"timeout\":\"%d\",\"threshold\":\"%d\",\"button\":\"%s\"}", 
+                    qt_timeout_ms, qt_sensor_thresh, qt_button_str[qt_button_enable]);
+	fill_report("touchbutton", message, SUCCESS);
 }
 
 

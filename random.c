@@ -46,7 +46,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
 #include "ataes132.h"
 
-void rand_init(void){};
+void rand_init(void) { };
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     // TEST bit order 00000010=0x02 or 01000000=0x40 ?
@@ -55,17 +55,17 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     uint8_t ataes_ret[20] = {0}; // size of Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
     
     uint32_t cnt = 0;
-    while( len > cnt ){
-        if( update_seed ){  
+    while (len > cnt) {
+        if (update_seed) {  
             aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
-        }else{
+        } else {
             aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
-        if( ataes_ret[0] ){
+        if (ataes_ret[0]) {
             // TEST for len > 16 and len%16!=0
-            memcpy(buf+cnt,ataes_ret+1, (len-cnt)<16 ? (len-cnt) : 16); 
-        }else{
+            memcpy(buf + cnt, ataes_ret + 1, (len - cnt) < 16 ? (len - cnt) : 16); 
+        } else {
             return 1; // error
         }
         cnt += 16;

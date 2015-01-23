@@ -93,7 +93,7 @@ uint8_t const *p_wr_buffer)
 	twi_package.chip = AES_DEVICE_ADDR;
 	aes_build_word_address(twi_package.addr, u32_start_address);
 	twi_package.addr_length = AES_MEM_ADDR_LEN;
-	twi_package.buffer = (uint8_t *) p_wr_buffer;
+	twi_package.buffer = (uint8_t *)p_wr_buffer;
 	twi_package.length = u16_length;
 
 	return twi_master_write(AES_TWI, &twi_package);
@@ -121,22 +121,24 @@ uint8_t *p_rd_buffer)
 
 
 //TODO  need to lock LockConfig register to get a random number
-void aes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block, uint16_t response_len)
+void aes_process(uint8_t const *command, uint16_t cmd_len, 
+uint8_t *response_block, uint16_t response_len)
 {
 	uint8_t i;
 	uint8_t crc[2];
 
 	//uint8_t command_block[cmd_len+3];
-	uint8_t command_block[cmd_len+3];
-	command_block[0] = cmd_len+3;
-	for ( i=0; i<cmd_len; i++ ){
-		command_block[i+1] = command[i];
+	uint8_t command_block[cmd_len + 3];
+	command_block[0] = cmd_len + 3;
+	for (i = 0; i < cmd_len; i++) {
+		command_block[i + 1] = command[i];
 	}
 	
-	CalculateCrc(cmd_len+1,command_block,crc); // CRC done on [Count | Packet] bytes
+    // CRC done on [Count | Packet] bytes
+	CalculateCrc(cmd_len + 1, command_block, crc); 
 	
-	command_block[cmd_len+1] = crc[0];
-	command_block[cmd_len+2] = crc[1];
+	command_block[cmd_len + 1] = crc[0];
+	command_block[cmd_len + 2] = crc[1];
 	
 	uint32_t ret = 0;
 	uint8_t aes_status = 0;
@@ -151,7 +153,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_blo
 	ret = aes_eeprom_write(AES_MEM_ADDR_RESET, 1, 0);
 	ret = aes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &aes_status);
 
-	ret = aes_eeprom_write(AES_MEM_ADDR_IO, cmd_len+3, command_block);
+	ret = aes_eeprom_write(AES_MEM_ADDR_IO, cmd_len + 3, command_block);
 	ret = aes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &aes_status);
 	
 	// read response block
@@ -164,41 +166,35 @@ void aes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_blo
 
 /* TODO: ADD CRC checking of response packet */
 
-    
 }
 
 
-
 // Pass NULL to read only or write only
-void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t * userdata_read, const uint8_t * userdata_write)
+void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read, 
+const uint8_t *userdata_write)
 {
 	
 	int ret;
 	char message[64];
 	
-	if( userdata_write!=NULL )
-	{
+	if (userdata_write != NULL) {
 		ret = aes_eeprom_write(ADDR, LEN, userdata_write);
-		if( ret )
-		{
-			sprintf(message,"EEPROM write error %i.", ret);
+		if (ret) {
+			sprintf(message, "EEPROM write error %i.", ret);
 			fill_report("eeprom", message, ERROR);
 			return;
 		}
 		delay_ms(100); // some delay is required to avoid errors - better to look at STATUS	
 	}
 		
-	if( userdata_read!=NULL )
-	{
+	if (userdata_read != NULL) {
 		ret = aes_eeprom_read(ADDR, LEN, userdata_read);
-		if( ret )
-		{
-			sprintf(message,"EEPROM read error %i.", ret);
+		if (ret) {
+			sprintf(message, "EEPROM read error %i.", ret);
 			fill_report("eeprom", message, ERROR);
 			return;
 		}
 	}
-
 }
 
 

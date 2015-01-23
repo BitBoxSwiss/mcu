@@ -41,6 +41,6 @@ void led_on(void);
 void led_toggle(void);
 void led_off_flash(void);
 
-const char * led_state( const char * state );
+const char *led_state(const char *state);
 
 #endif

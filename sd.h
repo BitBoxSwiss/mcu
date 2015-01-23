@@ -29,7 +29,7 @@
 
 //void display_sd_files(void); // debug
 int format_sd(void);
-void backup_sd(const char * f, int f_len, const char * text, int t_len);
-char * load_sd(const char * f, int f_len);
+void backup_sd(const char *f, int f_len, const char *text, int t_len);
+char *load_sd(const char *f, int f_len);
 
 #endif

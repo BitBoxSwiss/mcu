@@ -23,7 +23,6 @@
 */
 
 
-
 #ifndef _TOUCH_H_
 #define _TOUCH_H_
 
@@ -43,7 +42,8 @@
 #define GET_SENSOR_STATE(SENSOR_NUMBER) (qt_measure_data.qt_touch_status.sensor_states[(SENSOR_NUMBER/8)] & (1 << (SENSOR_NUMBER % 8)))
 #endif
 
-void touch_button_parameters( uint16_t timeout, uint16_t threshold, int status );
+
+void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status);
 void touch_update_time(void);
 void touch_init(void);
 uint8_t touch_button_press(void);

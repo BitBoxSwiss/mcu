@@ -1,6 +1,7 @@
 /**
  * Copyright (c) 2013 Tomas Dzetkulic
  * Copyright (c) 2013 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J Bakkum
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -26,13 +27,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "ripemd160.h"
+#include "base58.h"
 #include "bignum.h"
 #include "sha2.h"
 #include "hmac.h"
 #include "ecdsa.h"
-//#include "rand.h"
-#include "ripemd160.h"
-#include "base58.h"
+#include "utils.h"
 
 // Set cp2 = cp1
 void point_copy(const curve_point *cp1, curve_point *cp2)
@@ -129,6 +130,10 @@ void point_double(curve_point *cp)
 	memcpy(&(cp->y), &yr, sizeof(bignum256));
 	bn_mod(&(cp->x), &prime256k1);
 	bn_mod(&(cp->y), &prime256k1);
+    memset(&inverse_y,0,sizeof(bignum256));
+    memset(&lambda,0,sizeof(bignum256));
+    memset(&xr,0,sizeof(bignum256));
+    memset(&yr,0,sizeof(bignum256));
 }
 
 // res = k * p
@@ -154,6 +159,7 @@ void point_multiply(const bignum256 *k, const curve_point *p, curve_point *res)
 			point_double(&curr);
 		}
 	}
+    memset(&curr,0,sizeof(curve_point));
 }
 
 // set point to internal representation of point at infinity
@@ -233,28 +239,164 @@ void scalar_multiply(const bignum256 *k, curve_point *res)
 		point_double(&curr);
 #endif
 	}
+    memset(&curr,0,sizeof(curve_point));
 }
 
-/* // generate random K for signing
-int generate_k_random(bignum256 *k) {
-	int i, j;
-	for (j = 0; j < 10000; j++) {
-		for (i = 0; i < 8; i++) {
-			k->val[i] = random32() & 0x3FFFFFFF;
-		}
-		k->val[8] = random32() & 0xFFFF;
-		// if k is too big or too small, we don't like it
-		if ( !bn_is_zero(k) && bn_is_less(k, &order256k1) ) {
-			return 0; // good number - no error
-		}
-	}
-	// we generated 10000 numbers, none of them is good -> fail
-	return 1;
-}// */
+void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y)
+{
+    // y^2 = x^3 + 0*x + 7
+    memcpy(y, x, sizeof(bignum256));       // y is x
+    bn_multiply(x, y, &prime256k1);        // y is x^2
+    bn_multiply(x, y, &prime256k1);        // y is x^3
+    bn_addmodi(y, 7, &prime256k1);         // y is x^3 + 7
+    bn_sqrt(y, &prime256k1);               // y = sqrt(y)
+    if ((odd & 0x01) != (y->val[0] & 1)) {
+        bn_substract_noprime(&prime256k1, y, y);   // y = -y
+    }
+}
+
+
+static void reverse_hex(char *h, int len)
+{
+    char copy[len];
+    strncpy(copy, h, len);
+    int i;
+    for (i = 0; i<len; i += 2) {
+        h[i] = copy[len - i - 2];
+        h[i + 1] = copy[len - i - 1];
+    }   
+}
+
+static void varint(char * vi, uint64_t i)
+{
+    memset(vi, 0, LENVARINT); 
+    int len = 0;
+    char v[LENVARINT];  
+    if( i<0xfd ){
+        sprintf(v, "%02llx", i);
+    } else if (i<=0xffff) {
+        sprintf(v, "%04llx", i);
+        sprintf(vi, "fd");
+        len = 4;
+    
+    } else if (i<=0xffffffff) {
+        sprintf(v, "%08llx", i);
+        sprintf(vi, "fe");
+        len = 8;
+
+    } else {
+        sprintf(v, "%016llx", i);
+        sprintf(vi, "ff");
+        len = 16;
+    }
+  
+    // reverse order
+    if (len) {
+        reverse_hex(v, len); 
+        strncat(vi, v, len);
+    } else {
+        strncpy(vi, v, 2);
+    }
+}
+
+static int message_magic(const char * msg, int msg_len, char * out)
+{
+    const char *header = "\030Bitcoin Signed Message:\n";
+    uint64_t vilen = strlen(msg); 
+    char vi[LENVARINT];
+    varint(vi, vilen);
+    
+    memcpy(out, header, strlen(header));
+    memcpy(out + strlen(header), hex_to_uint8(vi), strlen(vi)/2);
+    memcpy(out + strlen(header) + strlen(vi)/2, msg, msg_len);
+    
+    int outlen = strlen(header)+strlen(msg)+strlen(vi)/2;
+    return outlen;
+}
+
+
+static int verify_message(const uint8_t * sig_m, const char * msg, int msg_len, const uint8_t * pubkey)
+{
+    uint8_t r[32], s[32], h[32], Qxy[64], odd;
+    uint8_t nV = sig_m[0];
+    uint32_t recid;
+    bignum256 bn_x, bn_y, bn_r, bn_s, bn_recid, bn_e;
+    curve_point res, Q, R;  
+    
+    if (nV < 27 || nV > 30) {
+        return 1;
+    }
+    recid = nV - 27;
+    odd = recid % 2; 
+    
+    memcpy(r, sig_m + 1, 32);
+    memcpy(s, sig_m + 33, 32);
+    
+    // x = r + (recid/2) * order
+    bn_read_be(r, &bn_r);
+    bn_read_be(s, &bn_s);
+    bn_zero(&bn_recid);
+    bn_addi(&bn_recid, recid / 2);
+    bn_multiply(&order256k1, &bn_recid, &order256k1);// necessary?  
+    bn_addmod(&bn_recid, &bn_r, &order256k1);
+    memcpy(&bn_x, &bn_recid, sizeof(bignum256));
+
+    uncompress_coords(odd, &bn_x, &bn_y);
+
+    memcpy(&R.x, &bn_x, sizeof(bignum256)); 
+    memcpy(&R.y, &bn_y, sizeof(bignum256)); 
+
+    sha256_Raw((uint8_t *)msg, msg_len, h);
+    sha256_Raw(h, 32, h);
+    bn_read_be(h, &bn_e);
+    bn_substract_noprime(&order256k1, &bn_e, &bn_e);   // e = -e
+    bn_mod(&bn_e, &order256k1);
+    
+    // Q = r^-1 (sR - eG)
+    point_multiply(&bn_s, &R, &res);
+    point_multiply(&bn_e, &G256k1, &Q);
+    point_add(&res, &Q);
+    bn_inverse(&bn_r, &order256k1);
+    point_multiply(&bn_r, &Q, &Q);
+    
+    bn_write_be(&Q.x, Qxy);
+    bn_write_be(&Q.y, Qxy + 32);
+
+    return memcmp(Qxy, pubkey, 64); // success when Q == public key
+}
+
+
+int ecdsa_sign_message(const uint8_t *priv_key, const char *msg, uint32_t msg_len, uint8_t *sig_m)
+{
+    int ret;
+    char nV = 27;
+    char msg_m[msg_len + LENVARINT + 64];
+    int msg_m_len = message_magic(msg, msg_len, msg_m); 
+    uint8_t public_key[64];
+    uint8_t sig[64];
+    
+    ret = ecdsa_sign_double(priv_key, (uint8_t *)msg_m, msg_m_len, sig); 
+    ecdsa_get_public_key64(priv_key, public_key);
+   
+    if (!ret) {
+        memcpy(sig_m+1, sig, 64);
+        do {
+            // Using tests_unit.c:tests_sign_message() to generate (alot of) 
+            // surrogate data, nV never exceeded 28...
+            sig_m[0] = nV;
+            ret = verify_message(sig_m, msg_m, msg_m_len, public_key); 
+            nV++;
+        }
+        while (ret && nV < 31);
+    }
+    return ret;
+}
+
+
 
 // generate K in a deterministic way, according to RFC6979
 // http://tools.ietf.org/html/rfc6979
-static int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const uint8_t *hash)
+int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const uint8_t *hash)
 {
 	int i;
 	uint8_t v[32], k[32], bx[2*32], buf[32 + 1 + sizeof(bx)], t[32];
@@ -280,6 +422,9 @@ static int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const 
 	hmac_sha256(k, sizeof(k), buf, sizeof(buf), k);
 	hmac_sha256(k, sizeof(k), v, sizeof(k), v);
 
+    memset(bx,0,sizeof(bx));
+    memset(&z1,0,sizeof(bignum256));
+
 	for (i = 0; i < 10000; i++) {
 		hmac_sha256(k, sizeof(k), v, sizeof(v), t);
 		bn_read_be(t, secret);
@@ -295,8 +440,6 @@ static int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const 
 	return 1;
 }
 
-// msg is a data to be signed
-// msg_len is the message length
 int ecdsa_sign(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig)
 {
 	uint8_t hash[32];
@@ -304,8 +447,6 @@ int ecdsa_sign(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, ui
 	return ecdsa_sign_digest(priv_key, hash, sig);
 }
 
-// msg is a data to be signed
-// msg_len is the message length
 int ecdsa_sign_double(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig)
 {
 	uint8_t hash[32];
@@ -374,6 +515,9 @@ void ecdsa_get_public_key33(const uint8_t *priv_key, uint8_t *pub_key)
 	scalar_multiply(&k, &R);
 	pub_key[0] = 0x02 | (R.y.val[0] & 0x01);
 	bn_write_be(&R.x, pub_key + 1);
+    
+    memset(&R,0,sizeof(curve_point));
+    memset(&k,0,sizeof(bignum256));
 }
 
 void ecdsa_get_public_key65(const uint8_t *priv_key, uint8_t *pub_key)
@@ -387,6 +531,9 @@ void ecdsa_get_public_key65(const uint8_t *priv_key, uint8_t *pub_key)
 	pub_key[0] = 0x04;
 	bn_write_be(&R.x, pub_key + 1);
 	bn_write_be(&R.y, pub_key + 33);
+    
+    memset(&R,0,sizeof(curve_point));
+    memset(&k,0,sizeof(bignum256));
 }
 
 void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key)
@@ -399,128 +546,10 @@ void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key)
 	scalar_multiply(&k, &R);
 	bn_write_be(&R.x, pub_key);
 	bn_write_be(&R.y, pub_key + 32);
+    
+    memset(&R,0,sizeof(curve_point));
+    memset(&k,0,sizeof(bignum256));
 }
-
-
-void ecdsa_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
-{
-	uint8_t h[32];
-	if (pub_key[0] == 0x04) {  // uncompressed format
-		sha256_Raw(pub_key, 65, h);
-	} else if (pub_key[0] == 0x00) { // point at infinity
-		sha256_Raw(pub_key, 1, h);
-	} else {
-		sha256_Raw(pub_key, 33, h); // expecting compressed format
-	}
-	ripemd160(h, 32, pubkeyhash);
-}
-
-void ecdsa_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw)
-{
-	addr_raw[0] = version;
-	ecdsa_get_pubkeyhash(pub_key, addr_raw + 1);
-}
-
-void ecdsa_get_address(const uint8_t *pub_key, uint8_t version, char *addr)
-{
-	uint8_t raw[21];
-	ecdsa_get_address_raw(pub_key, version, raw);
-	base58_encode_check(raw, 21, addr);
-}
-
-void ecdsa_get_wif(const uint8_t *priv_key, uint8_t version, char *wif)
-{
-	uint8_t data[34];
-	data[0] = version;
-	memcpy(data + 1, priv_key, 32);
-	data[33 ] = 0x01;
-	base58_encode_check(data, 34, wif);
-}
-
-int ecdsa_address_decode(const char *addr, uint8_t *out)
-{
-	if (!addr) return 0;
-	return base58_decode_check(addr, out) == 21;
-}
-
-void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y)
-{
-	// y^2 = x^3 + 0*x + 7
-	memcpy(y, x, sizeof(bignum256));       // y is x
-	bn_multiply(x, y, &prime256k1);        // y is x^2
-	bn_multiply(x, y, &prime256k1);        // y is x^3
-	bn_addmodi(y, 7, &prime256k1);         // y is x^3 + 7
-	bn_sqrt(y, &prime256k1);               // y = sqrt(y)
-	if ((odd & 0x01) != (y->val[0] & 1)) {
-		bn_substract_noprime(&prime256k1, y, y);   // y = -y
-	}
-}
-
-int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub)
-{
-	if (pub_key[0] == 0x04) {
-		bn_read_be(pub_key + 1, &(pub->x));
-		bn_read_be(pub_key + 33, &(pub->y));
-		return 1;
-	}
-	if (pub_key[0] == 0x02 || pub_key[0] == 0x03) { // compute missing y coords
-		bn_read_be(pub_key + 1, &(pub->x));
-		uncompress_coords(pub_key[0], &(pub->x), &(pub->y));
-		return 1;
-	}
-	// error
-	return 0;
-}
-
-// Verifies that:
-//   - pub is not the point at infinity.
-//   - pub->x and pub->y are in range [0,p-1].
-//   - pub is on the curve.
-//   - n*pub is the point at infinity.
-
-int ecdsa_validate_pubkey(const curve_point *pub)
-{
-	bignum256 y_2, x_3_b;
-	curve_point temp;
-
-	if (point_is_infinity(pub)) {
-		return 0;
-	}
-
-	if (!bn_is_less(&(pub->x), &prime256k1) || !bn_is_less(&(pub->y), &prime256k1)) {
-		return 0;
-	}
-
-	memcpy(&y_2, &(pub->y), sizeof(bignum256));
-	memcpy(&x_3_b, &(pub->x), sizeof(bignum256));
-
-	// y^2
-	bn_multiply(&(pub->y), &y_2, &prime256k1);
-	bn_mod(&y_2, &prime256k1);
-
-	// x^3 + b
-	bn_multiply(&(pub->x), &x_3_b, &prime256k1);
-	bn_multiply(&(pub->x), &x_3_b, &prime256k1);
-	bn_addmodi(&x_3_b, 7, &prime256k1);
-
-	if (!bn_is_equal(&x_3_b, &y_2)) {
-		return 0;
-	}
-
-	point_multiply(&order256k1, pub, &temp);
-
-	if (!point_is_infinity(&temp)) {
-		return 0;
-	}
-
-	return 1;
-}
-
-// uses secp256k1 curve
-// pub_key - 65 bytes uncompressed key
-// signature - 64 bytes signature
-// msg is a data that was signed
-// msg_len is the message length
 
 int ecdsa_verify(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len)
 {
@@ -590,6 +619,122 @@ int ecdsa_verify_digest(const uint8_t *pub_key, const uint8_t *sig, const uint8_
 	return 0;
 }
 
+
+void ecdsa_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
+{
+	uint8_t h[32];
+	if (pub_key[0] == 0x04) {  // uncompressed format
+		sha256_Raw(pub_key, 65, h);
+	} else if (pub_key[0] == 0x00) { // point at infinity
+		sha256_Raw(pub_key, 1, h);
+	} else {
+		sha256_Raw(pub_key, 33, h); // expecting compressed format
+	}
+	ripemd160(h, 32, pubkeyhash);
+}
+
+
+void ecdsa_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw)
+{
+	addr_raw[0] = version;
+	ecdsa_get_pubkeyhash(pub_key, addr_raw + 1);
+}
+
+
+void ecdsa_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize)
+{
+	uint8_t raw[21];
+	ecdsa_get_address_raw(pub_key, version, raw);
+	base58_encode_check(raw, 21, addr, addrsize);
+}
+
+
+void ecdsa_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize)
+{
+	uint8_t data[34];
+	data[0] = version;
+	memcpy(data + 1, priv_key, 32);
+	data[33] = 0x01;
+	base58_encode_check(data, 34, wif, wifsize);
+}
+
+
+int ecdsa_address_decode(const char *addr, uint8_t *out)
+{
+	if (!addr) return 0;
+	return base58_decode_check(addr, out, 21) == 21;
+}
+
+
+int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub)
+{
+	if (pub_key[0] == 0x04) {
+		bn_read_be(pub_key + 1, &(pub->x));
+		bn_read_be(pub_key + 33, &(pub->y));
+#if USE_PUBKEY_VALIDATE
+		return ecdsa_validate_pubkey(pub);
+#else
+		return 1;
+#endif
+	}
+	if (pub_key[0] == 0x02 || pub_key[0] == 0x03) { // compute missing y coords
+		bn_read_be(pub_key + 1, &(pub->x));
+		uncompress_coords(pub_key[0], &(pub->x), &(pub->y));
+#if USE_PUBKEY_VALIDATE
+		return ecdsa_validate_pubkey(pub);
+#else
+		return 1;
+#endif
+	}
+	// error
+	return 0;
+}
+
+
+// Verifies that:
+//   - pub is not the point at infinity.
+//   - pub->x and pub->y are in range [0,p-1].
+//   - pub is on the curve.
+//   - n*pub is the point at infinity.
+int ecdsa_validate_pubkey(const curve_point *pub)
+{
+	bignum256 y_2, x_3_b;
+	curve_point temp;
+
+	if (point_is_infinity(pub)) {
+		return 0;
+	}
+
+	if (!bn_is_less(&(pub->x), &prime256k1) || !bn_is_less(&(pub->y), &prime256k1)) {
+		return 0;
+	}
+
+	memcpy(&y_2, &(pub->y), sizeof(bignum256));
+	memcpy(&x_3_b, &(pub->x), sizeof(bignum256));
+
+	// y^2
+	bn_multiply(&(pub->y), &y_2, &prime256k1);
+	bn_mod(&y_2, &prime256k1);
+
+	// x^3 + b
+	bn_multiply(&(pub->x), &x_3_b, &prime256k1);
+	bn_multiply(&(pub->x), &x_3_b, &prime256k1);
+	bn_addmodi(&x_3_b, 7, &prime256k1);
+
+	if (!bn_is_equal(&x_3_b, &y_2)) {
+		return 0;
+	}
+
+	point_multiply(&order256k1, pub, &temp);
+
+	if (!point_is_infinity(&temp)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+
 int ecdsa_sig_to_der(const uint8_t *sig, uint8_t *der)
 {
 	int i;
@@ -625,4 +770,8 @@ int ecdsa_sig_to_der(const uint8_t *sig, uint8_t *der)
 
 	*len = *len1 + *len2 + 4;
 	return *len + 2;
+
 }
+
+
+

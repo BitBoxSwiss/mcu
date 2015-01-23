@@ -70,7 +70,7 @@
      }
      return U_TESTS_FAIL;
  }
-
+*/
 
 
 #ifndef _UTEST_H_

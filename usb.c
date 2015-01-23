@@ -35,7 +35,7 @@ bool usb_b_enable = false;
 
 void usb_report(const unsigned char *command)
 {
-	udi_hid_generic_send_report_in((uint8_t*)commander((const char *)command));
+	udi_hid_generic_send_report_in((uint8_t *)commander((const char *)command));
 }
 
 
@@ -51,7 +51,7 @@ void usb_process(uint16_t framenumber)
 	}
 	cpt_sof = 0;
 
-	if ( false ) { // can run timed locked processess here
+	if (false) { // can run timed locked processess here
         //
         // ...
         //
@@ -93,7 +93,7 @@ void usb_disable(void)
 }
 
 
-void usb_hid_set_feature(uint8_t* report)
+void usb_hid_set_feature(uint8_t *report)
 {
 	if (report[0] == 0xAA && report[1] == 0x55
 			&& report[2] == 0xAA && report[3] == 0x55) {

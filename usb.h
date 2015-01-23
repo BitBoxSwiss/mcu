@@ -36,6 +36,6 @@ void usb_suspend_action(void);
 void usb_resume_action(void);
 void usb_remotewakeup_enable(void);
 void usb_remotewakeup_disable(void);
-void usb_hid_set_feature(uint8_t* report);
+void usb_hid_set_feature(uint8_t *report);
 
 #endif

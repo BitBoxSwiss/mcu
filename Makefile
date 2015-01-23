@@ -18,7 +18,7 @@ OBJS =  keys.o bignum.o ecdsa.o secp256k1.o sha2.o random.o hmac.o bip32.o pbkdf
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 
 
-all: tests_cmdline tests_unit
+all: tests_cmdline tests_unit tests_openssl
 
 tests: tests.o $(OBJS) ; $(CC) tests.o $(OBJS) -o tests
 tests_unit: tests_unit.o $(OBJS) ; $(CC) tests_unit.o $(OBJS) -o tests_unit

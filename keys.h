@@ -31,21 +31,16 @@
 
 #define LENVARINT 20
 
-char * mnemonic_from_seed_electrum( char * seed_hex );
-char * mnemonic_from_index_bip32( const uint16_t * index );
-uint16_t * index_from_mnemonic_bip32( const char * mnemonic );
-uint16_t * index_from_mnemonic_electrum( const char * mnemonic );
-
-void master_from_mnemonic_electrum( const char * mnemo, int m_len );
-void generate_key_electrum( uint8_t priv_key_child[32], char * key_path, const uint8_t priv_key_master[32] );
-
-void master_from_mnemonic_bip32( char * mnemo, int m_len, const char * salt, int s_len, int strength );
-void generate_key_bip32( uint8_t priv_key_child[32], char * key_path, const uint8_t priv_key_master[32], const uint8_t chain_code[32] );
-
-void report_master_public_key_electrum(void); 
+uint16_t *index_from_mnemonic_bip32(const char *mnemonic);
+char *mnemonic_from_index_bip32(const uint16_t *index);
+void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength);
+void sign_bip32(const char *message, char *keypath, int encoding);
 void report_master_public_key_bip32(void);
 
-void sign_electrum( const char * message, char * keypath, int encoding );
-void sign_bip32( const char * message, char * keypath, int encoding );
+uint16_t *index_from_mnemonic_electrum(const char *mnemonic);
+char *mnemonic_from_seed_electrum(char *seed_hex);
+void master_from_mnemonic_electrum(const char *mnemo, int m_len);
+void sign_electrum(const char *message, char *keypath, int encoding);
+void report_master_public_key_electrum(void); 
 
 #endif

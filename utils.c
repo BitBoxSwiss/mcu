@@ -23,56 +23,97 @@
 */
 
 
-
-#include <string.h>
 #include "utils.h"
-//#include <stdio.h>
-//#include <stdlib.h>
+#include <string.h>
 
 
-uint8_t * hex_to_uint8(const char *str)
+uint8_t *hex_to_uint8(const char *str)
 {
-	if( strlen(str)>TO_UINT8_HEX_BUF_LEN){
+	if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
     static uint8_t buf[TO_UINT8_HEX_BUF_LEN]; 
-	memset(buf,0,sizeof(buf));
+	memset(buf, 0, sizeof(buf));
     uint8_t c;
 	size_t i;
 	for (i = 0; i < strlen(str) / 2; i++) {
 		c = 0;
-		if (str[i*2] >= '0' && str[i*2] <= '9') c += (str[i*2] - '0') << 4;
-		if (str[i*2] >= 'a' && str[i*2] <= 'f') c += (10 + str[i*2] - 'a') << 4;
-		if (str[i*2+1] >= '0' && str[i*2+1] <= '9') c += (str[i*2+1] - '0');
-		if (str[i*2+1] >= 'a' && str[i*2+1] <= 'f') c += (10 + str[i*2+1] - 'a');
-		buf[i] = c;
+		if (str[i * 2] >= '0' && str[i * 2] <= '9') c += (str[i * 2] - '0') << 4;
+		if (str[i * 2] >= 'a' && str[i * 2] <= 'f') c += (10 + str[i  *2] - 'a') << 4;
+        if (str[i * 2] >= 'A' && str[i * 2] <= 'F') c += (10 + str[i * 2] - 'A') << 4;
+        if (str[i * 2 + 1] >= '0' && str[i * 2 + 1] <= '9') c += (str[i * 2 + 1] - '0');
+		if (str[i * 2 + 1] >= 'a' && str[i * 2 + 1] <= 'f') c += (10 + str[i * 2 + 1] - 'a');
+		if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') c += (10 + str[i * 2 + 1] - 'A'); 
+        buf[i] = c;
 	}
 	return buf;
 }
 
-char * uint8_to_hex(const uint8_t *bin, size_t l)
+
+char *uint8_to_hex(const uint8_t *bin, size_t l)
 {
-	if( (l*2)>TO_UINT8_HEX_BUF_LEN ){
+	if ((l * 2) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
     static char digits[] = "0123456789abcdef";
 	static char buf[TO_UINT8_HEX_BUF_LEN]; 
-	memset(buf,0,sizeof(buf));
+	memset(buf, 0, sizeof(buf));
 	size_t i;
 	for (i = 0; i < l; i++) {
-		buf[i*2  ] = digits[(bin[i] >> 4) & 0xF];
-		buf[i*2+1] = digits[bin[i] & 0xF];
+		buf[i * 2] = digits[(bin[i] >> 4) & 0xF];
+		buf[i * 2 + 1] = digits[bin[i] & 0xF];
 	}
 	buf[l * 2] = 0;
 	return buf;
 }
 
-/*
-void print(const char * s)
-{
-#ifdef NOT_EMBEDDED
-    printf("%s\n",s);
-#endif
-}
-*/
 
+#ifdef NOT_EMBEDDED
+#include <stdio.h>
+#include <stdlib.h>
+#include "commander.h"
+#include "memory.h"
+#include "jsmn.h"
+
+
+extern const char *CMD_STR[];
+
+
+void print_report(const char *report)
+{
+    int decrypt_len, r, i;
+    jsmntok_t json_token[MAX_TOKENS];
+    r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
+     
+    if (r < 0) {
+        printf("Failed to parse report:  %s\n", report);
+        return;
+    }
+    
+    printf("\n\nReport:     \t%s    \n", report);
+    
+    for (i = 0; i < r; i++) {
+        if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
+            int len = json_token[i + 1].end - json_token[i + 1].start;
+            char cipher[len + 1];
+            memcpy(cipher, report + json_token[i + 1].start, len);
+            cipher[len] = '\0';
+            char *dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), memory_aeskey_read(), &decrypt_len);
+            printf("ciphertext:\t%.*s\n\n", decrypt_len,dec);
+            free(dec);
+            break;
+        }
+    }
+}
+
+
+void send_encrypted_cmd(const char *instruction)
+{
+    int encrypt_len;
+    char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), memory_aeskey_read(), &encrypt_len);
+    print_report(commander(enc));
+    free(enc); 
+}
+
+
+#endif

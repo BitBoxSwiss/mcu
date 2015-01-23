@@ -23,17 +23,23 @@
 */
 
 
-
 #ifndef _UTILS_H_
 #define _UTILS_H_
+
 
 #include <stdint.h>
 #include <stddef.h>
 
+
 #define TO_UINT8_HEX_BUF_LEN 2048
 
-uint8_t * hex_to_uint8(const char * str);
-char * uint8_to_hex(const uint8_t * bin, size_t l);
-//void print(const char * s);
+
+uint8_t *hex_to_uint8(const char *str);
+char *uint8_to_hex(const uint8_t *bin, size_t l);
+#ifdef NOT_EMBEDDED
+void print_report(const char *report);
+void send_encrypted_cmd(const char *instruction);
+#endif
+
 
 #endif

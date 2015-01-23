@@ -27,6 +27,16 @@
 #ifndef _COMMANDER_H_
 #define _COMMANDER_H_
 
+
+#include <stdint.h>
+#ifndef NOT_EMBEDDED
+#include "conf_usb.h"
+
+#define JSON_REPORT_SIZE	UDI_HID_REPORT_OUT_SIZE
+#else
+#define JSON_REPORT_SIZE   4096
+#endif
+
 #define DIGITAL_BITBOX_VERSION  "1.0"
 
 #define GENERATE_STRING(STRING) #STRING,
@@ -57,7 +67,7 @@
         CMD(sd_file)            \
         CMD(wallet)             \
         CMD(mnemonic)           \
-        CMD(message)            \
+        CMD(data)               \
         CMD(keypath)            \
         CMD(encoding)           \
         CMD(strength)           \
@@ -83,45 +93,25 @@
         ATTR(__ERASE__)         \
         ATTR(none)               /* keep last */
 
-#define CMD_NUM     CMD_none_
-#define ATTR_NUM     ATTR_none_
-
 enum CMD_ENUM { FOREACH_CMD(GENERATE_ENUM_CMD) };
 enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 
-
-#ifdef NOT_EMBEDDED
-void delay_ms( int delay );
-#define HID_REPORT_SIZE   4096
-#else
-#include "conf_usb.h"
-#define HID_REPORT_SIZE		UDI_HID_REPORT_OUT_SIZE
-#endif
-char hid_report[HID_REPORT_SIZE];
+#define CMD_NUM      CMD_none_
+#define ATTR_NUM     ATTR_none_
 
 enum REPORT_FLAGS { 
-    SUCCESS=0, 
-    ERROR=1, 
-    SUPPRESS=0,
-    REPORT=1
+    SUCCESS = 0, 
+    ERROR = 1, 
 };
 
-void device_reset(const char * r);
-void fill_report(const char * attr, const char * val, int err);
-void fill_report_len(const char * attr, const char * val, int err, int vallen);
-char * commander(const char * instruction_encrypted);
+void fill_report(const char *attr, const char *val, int err);
+void fill_report_len(const char *attr, const char *val, int err, int vallen);
+char *commander(const char *instruction_encrypted);
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, const uint8_t *key, int *out_b64len);
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, const uint8_t *key, int *declen);
+#ifdef NOT_EMBEDDED
+void delay_ms(int delay);
+#endif
 
-
-// JSMN.C extensions (JSON Minimal Parser)
-#include "jsmn.h"
-#define MAX_TOKENS  64
-int token_equals(const char *json, const jsmntok_t *tok, const char *s);
-jsmnerr_t jsmn_parse_init(const char *js, size_t len, jsmntok_t *tokens, unsigned int num_tokens);
-void jsmn_get_string_test(char * val, const char * message, int cmd, int report);
-
-// AES.C extensions
-#include "memory.h"
-char * aes_cbc_b64_encrypt( const unsigned char *in, int inlen, const uint8_t key[MEM_PAGE_LEN], int *out_b64len );
-char * aes_cbc_b64_decrypt( const unsigned char *in, int inlen, const uint8_t key[MEM_PAGE_LEN], int *declen );
 
 #endif

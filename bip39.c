@@ -7,20 +7,7 @@
 #include "bip39_english.h"
 #include "commander.h"
 
-/*
-//const char *mnemonic_generate(int strength)
-char *mnemonic_generate(int strength)
-{
-	if (strength % 32 || strength < 128 || strength > 256) {
-		return 0;
-	}
-	static uint8_t data[32];
-	random_bytes(data, 32);
-	return mnemonic_from_data(data, strength / 8);
-}
-*/
 
-//const char *mnemonic_from_data(const uint8_t *data, int len)
 char *mnemonic_from_data(const uint8_t *data, int len)
 {
 	if (len % 4 || len < 16 || len > 32) {
@@ -56,7 +43,7 @@ char *mnemonic_from_data(const uint8_t *data, int len)
 int mnemonic_check(const char *mnemonic)
 {
 	if (!mnemonic) {
-        fill_report("seed","Empty mnemonic.",ERROR);
+        fill_report("seed", "Empty mnemonic.", ERROR);
 		return 0;
 	}
 
@@ -72,7 +59,7 @@ int mnemonic_check(const char *mnemonic)
 	n++;
 	// check number of words
 	if (n != 12 && n != 18 && n != 24) {
-        fill_report("seed","Mnemonic must have 12, 18, or 24 words.",ERROR);
+        fill_report("seed", "Mnemonic must have 12, 18, or 24 words.", ERROR);
 		return 0;
 	}
 
@@ -85,7 +72,7 @@ int mnemonic_check(const char *mnemonic)
 		j = 0;
 		while (mnemonic[i] != ' ' && mnemonic[i] != 0) {
 			if (j >= sizeof(current_word)) {
-                fill_report("seed","Word not in bip39 wordlist.",ERROR);
+                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
 				return 0;
 			}
 			current_word[j] = mnemonic[i];
@@ -96,7 +83,7 @@ int mnemonic_check(const char *mnemonic)
 		k = 0;
 		for (;;) {
 			if (!wordlist[k]) { // word not found
-                fill_report("seed","Word not in bip39 wordlist.",ERROR);
+                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
 				return 0;
 			}
 			if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
@@ -112,7 +99,7 @@ int mnemonic_check(const char *mnemonic)
 		}
 	}
 	if (bi != n * 11) {
-        fill_report("seed","Mnemonic check error. [0]",ERROR);
+        fill_report("seed", "Mnemonic check error. [0]", ERROR);
 		return 0;
 	}
 	bits[32] = bits[n * 4 / 3];
@@ -127,7 +114,7 @@ int mnemonic_check(const char *mnemonic)
 		return bits[0] == bits[32]; // compare 8 bits
 	}
    
-    fill_report("seed","Invalid mnemonic: checksum error.",ERROR);
+    fill_report("seed", "Invalid mnemonic: checksum error.", ERROR);
     return 0;
 }
 

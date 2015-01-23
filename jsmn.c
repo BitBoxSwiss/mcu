@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2010 Serge A. Zaitsev
+Copyright (c) 2015 Douglas J. Bakkum
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,8 @@ THE SOFTWARE.
 
 
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include "jsmn.h"
 
 
@@ -332,3 +335,64 @@ void jsmn_init(jsmn_parser *parser) {
 	parser->toksuper = -1;
 }
 
+/**
+ * Combine the init and parse functions in a single function call
+ */
+jsmnerr_t jsmn_parse_init(const char *js, size_t len,
+		jsmntok_t *tokens, unsigned int num_tokens) {
+	jsmn_parser p;
+	jsmn_init(&p);
+	return(jsmn_parse(&p, js, len, tokens, num_tokens));
+}
+
+/**
+ * Check if the token is equal to the string s
+ */
+int jsmn_token_equals(const char *js, const jsmntok_t *tok, const char *s) {
+	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
+			strncmp(js + tok->start, s, tok->end - tok->start) == 0) {
+		return 0;
+	}
+	return -1;
+}
+
+/**
+ * Get the string and string length of the value and associated with name
+ */
+const char *jsmn_get_value_string(const char *js, const char *name, int *len) {
+    int r, i;
+	jsmntok_t json_token[MAX_TOKENS];
+	
+    *len = 0;
+    r = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
+	
+    for (i = 0; i < r; i++) {
+		if (jsmn_token_equals(js, &json_token[i], name) == 0) {
+			*len = json_token[i + 1].end - json_token[i + 1].start;
+			return(js + json_token[i + 1].start);
+        }
+	}
+    return NULL;
+}
+
+/**
+ * Get an unsigned int value associated with name
+ */
+unsigned int jsmn_get_value_uint(const char *js, const char *name) {
+    int r, i, vallen;
+    unsigned int valu = 0;
+    jsmntok_t json_token[MAX_TOKENS];
+    r = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
+     
+    for (i = 0; i < r; i++) {
+        if (jsmn_token_equals(js, &json_token[i], name) == 0) {
+            vallen = json_token[i + 1].end - json_token[i + 1].start;
+            char val[vallen + 1];
+            memcpy(val, js + json_token[i + 1].start, vallen);
+            val[vallen] = '\0';
+			if (vallen) { sscanf(val, "%u", &valu); }
+            return valu;  
+        }
+    }
+    return 0;
+}

@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2010 Serge A. Zaitsev
+Copyright (c) 2015 Douglas J. Bakkum
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +31,8 @@ extern "C" {
 #endif
 
 #define JSMN_PARENT_LINKS
+
+#define MAX_TOKENS  64
 
 /**
  * JSON type identifier. Basic types are:
@@ -92,7 +95,26 @@ void jsmn_init(jsmn_parser *parser);
 jsmnerr_t jsmn_parse(jsmn_parser *parser, const char *js, size_t len,
 		jsmntok_t *tokens, unsigned int num_tokens);
 
+/**
+ * Combine the init and parse functions in a single function call
+ */
+jsmnerr_t jsmn_parse_init(const char *js, size_t len, 
+        jsmntok_t *tokens, unsigned int num_tokens);
 
+/**
+ * Check if the token is equal to the string s
+ */
+int jsmn_token_equals(const char *js, const jsmntok_t *tok, const char *s);
+
+/**
+ * Get the string and string length of the value and associated with name
+ */
+const char *jsmn_get_value_string(const char *js, const char *name, int *len);
+
+/**
+ * Get an unsigned int value associated with name
+ */
+unsigned int jsmn_get_value_uint(const char *js, const char *name);
 
 
 #ifdef __cplusplus

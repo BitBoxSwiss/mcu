@@ -111,34 +111,28 @@ void memory_clear_variables(void)
 }
 
 
-static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t addr, const uint16_t len)
+static int memory_page(const uint8_t *write_b, uint8_t *read_b, const int32_t addr)
 {
     // read current memory
 #ifndef TESTING
-	aes_eeprom(len, addr, read_b, NULL);
+	aes_eeprom(MEM_PAGE_LEN, addr, read_b, NULL);
 #endif
     if (write_b){
-#ifndef TESTING
         // skip writing if memory does not change
-        if (read_b) {
-            if (!memcmp(read_b, write_b, len)){
-                return 1; 
-            }
-        }
-        aes_eeprom(len, addr, read_b, write_b);
-        if (read_b) {
-            if (!memcmp(write_b, read_b, len)){
-                return 1;
-            } else { 
-                // error 
-                if (len>2) {
-                    memcpy(read_b, MEM_PAGE_ERASE, len);
-                }
-                return 0;
-            }
+        if (!memcmp(read_b, write_b, MEM_PAGE_LEN)){
+            return 1; 
+       }
+#ifndef TESTING
+        aes_eeprom(MEM_PAGE_LEN, addr, read_b, write_b);
+        if (!memcmp(write_b, read_b, MEM_PAGE_LEN)){
+            return 1;
+        } else { 
+            // error 
+            memcpy(read_b, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+            return 0;
         }
 #else        
-        memcpy(read_b, write_b, len);
+        memcpy(read_b, write_b, MEM_PAGE_LEN);
         (void) addr; 
         return 1; 
 #endif
@@ -152,9 +146,9 @@ uint8_t *memory_name(const char *name)
     uint8_t name_b[MEM_PAGE_LEN] = {0};
     if (strlen(name)) {
         memcpy(name_b,name,(strlen(name)>MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlen(name));
-        memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
+        memory_page(name_b, MEM_name_, MEM_NAME_ADDR);
     } else {   
-        memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
+        memory_page(NULL, MEM_name_, MEM_NAME_ADDR);
     }
     return MEM_name_;
 }
@@ -162,24 +156,21 @@ uint8_t *memory_name(const char *name)
 
 uint8_t *memory_electrum_master(const uint8_t *master)
 {
-    memory_eeprom(master, MEM_master_electrum_, 
-                MEM_MASTER_ELECTRUM_ADDR, MEM_PAGE_LEN);
+    memory_page(master, MEM_master_electrum_, MEM_MASTER_ELECTRUM_ADDR);
     return MEM_master_electrum_;
 }
 
 
 uint8_t *memory_bip32_master(const uint8_t *master)
 {
-    memory_eeprom(master, MEM_master_bip32_, 
-                MEM_MASTER_BIP32_ADDR, MEM_PAGE_LEN);
+    memory_page(master, MEM_master_bip32_, MEM_MASTER_BIP32_ADDR);
     return MEM_master_bip32_;
 }
 
 
 uint8_t *memory_bip32_chaincode(const uint8_t *chain)
 {
-    memory_eeprom(chain, MEM_master_bip32_chain_, 
-                MEM_MASTER_BIP32_CHAIN_ADDR, MEM_PAGE_LEN);
+    memory_page(chain, MEM_master_bip32_chain_, MEM_MASTER_BIP32_CHAIN_ADDR);
     return MEM_master_bip32_chain_;
 }
 
@@ -187,16 +178,11 @@ uint8_t *memory_bip32_chaincode(const uint8_t *chain)
 uint16_t *memory_bip32_mnemonic(const uint16_t *idx)
 {
     if (idx) {
-        memory_eeprom((uint8_t *)idx, (uint8_t *)MEM_mnemonic_bip32_, 
-                    MEM_MNEMONIC_BIP32_ADDR_0, MEM_PAGE_LEN);
-        memory_eeprom((uint8_t *)idx + MEM_PAGE_LEN, 
-                    (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN,
-                    MEM_MNEMONIC_BIP32_ADDR_1, MEM_PAGE_LEN);
+        memory_page((uint8_t *)idx, (uint8_t *)MEM_mnemonic_bip32_, MEM_MNEMONIC_BIP32_ADDR_0);
+        memory_page((uint8_t *)idx + MEM_PAGE_LEN, (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN, MEM_MNEMONIC_BIP32_ADDR_1);
     } else {
-        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_bip32_, 
-                    MEM_MNEMONIC_BIP32_ADDR_0, MEM_PAGE_LEN);
-        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN, 
-                    MEM_MNEMONIC_BIP32_ADDR_1, MEM_PAGE_LEN);
+        memory_page(NULL, (uint8_t *)MEM_mnemonic_bip32_, MEM_MNEMONIC_BIP32_ADDR_0);
+        memory_page(NULL, (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN, MEM_MNEMONIC_BIP32_ADDR_1);
     }
     return MEM_mnemonic_bip32_;
 }
@@ -204,8 +190,7 @@ uint16_t *memory_bip32_mnemonic(const uint16_t *idx)
 
 char *memory_electrum_mnemonic(const char *seed_hex)
 {
-    memory_eeprom((uint8_t *)seed_hex, MEM_mnemonic_electrum_, 
-                MEM_MNEMONIC_ELECTRUM_ADDR, MEM_PAGE_LEN);
+    memory_page((uint8_t *)seed_hex, MEM_mnemonic_electrum_, MEM_MNEMONIC_ELECTRUM_ADDR);
     MEM_mnemonic_electrum_[MEM_PAGE_LEN] = '\0';
     return((char *)MEM_mnemonic_electrum_);
 }
@@ -229,7 +214,7 @@ int memory_aeskey_write(const char *password, int len)
 	sha256_Raw((uint8_t *)password, len, password_b);
 	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
-    if (memory_eeprom(password_b, MEM_aeskey_, MEM_AESKEY_ADDR, MEM_PAGE_LEN)) {
+    if (memory_page(password_b, MEM_aeskey_, MEM_AESKEY_ADDR)) {
         fill_report("password", "success", SUCCESS);
         return 1;
     } else { 
@@ -237,96 +222,164 @@ int memory_aeskey_write(const char *password, int len)
         return 0;
     }
 }
+
+
 uint8_t *memory_aeskey_read(void)
 {
-    memory_eeprom(NULL, MEM_aeskey_, MEM_AESKEY_ADDR, MEM_PAGE_LEN);
+    memory_page(NULL, MEM_aeskey_, MEM_AESKEY_ADDR);
     return MEM_aeskey_;
+}
+
+
+static void memory_byte_write(const uint32_t addr, const uint8_t *byte)
+{
+#ifndef TESTING
+	aes_eeprom(1, addr, NULL, byte);
+	
+    aes_eeprom(MEM_PAGE_LEN, addr, read_b, NULL);
+
+
+#else
+    (void)addr;
+    (void)byte;
+#endif
+}
+
+
+static void memory_uint8_t_read(const uint32_t addr, uint8_t *mem)
+{
+#ifndef TESTING
+	aes_eeprom(1, addr, mem, NULL);
+#else
+    (void)addr;
+    (void)mem;
+#endif
+}
+
+
+static void memory_uint16_t_read(const uint32_t addr, uint16_t *mem)
+{
+#ifndef TESTING
+	uint8_t b[2];
+	aes_eeprom(2, addr, b, NULL);
+	*mem = b[0] + (b[1] << 8);
+#else
+    (void)addr;
+    (void)mem;
+#endif
 }
 
 
 void memory_setup_write(const uint8_t setup)
 {
-    memory_eeprom(&setup, &MEM_setup_, MEM_SETUP_ADDR, 1);
+    MEM_setup_ = setup;
+    memory_byte_write(MEM_SETUP_ADDR, &setup);
 }
+
+
 uint8_t memory_setup_read(void)
 {
-    memory_eeprom(NULL, &MEM_setup_, MEM_SETUP_ADDR, 1);
+    memory_uint8_t_read(MEM_SETUP_ADDR, &MEM_setup_);
     return MEM_setup_;
 }
 
 
 void memory_erased_write(const uint8_t erased)
 {
-    memory_eeprom(&erased, &MEM_erased_, MEM_ERASED_ADDR, 1);
+    MEM_erased_ = erased;
+    memory_byte_write(MEM_ERASED_ADDR, &erased);
 }
+
+
 uint8_t memory_erased_read(void)
 {
-    memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
+    memory_uint8_t_read(MEM_ERASED_ADDR, &MEM_erased_);
     return MEM_erased_;     
 }
 
 
 void memory_led_write(const uint8_t led)
 {
-    memory_eeprom(&led, &MEM_led_, MEM_LED_ADDR, 1);
+    MEM_led_ = led;          
+    memory_byte_write(MEM_LED_ADDR, &led);
 }
+
+
 int memory_led_read(void)
 {
-    memory_eeprom(NULL, &MEM_led_, MEM_LED_ADDR, 1);
+    memory_uint8_t_read(MEM_LED_ADDR, &MEM_led_);
     return MEM_led_;       
 }
 
 
-// TEST 
-void memory_touch_enable_write(const uint8_t e)
-{
-    memory_eeprom(&e, &MEM_touch_enable_, MEM_TOUCH_ENABLE_ADDR, 1);
-}
-uint8_t memory_touch_enable_read(void)
-{
-    memory_eeprom(NULL, &MEM_touch_enable_, MEM_TOUCH_ENABLE_ADDR, 1);
-    return MEM_touch_enable_;
-}
-
-
-// TEST
 // '0' resets, '1' increments delay counter
 void memory_delay_iterate(const uint16_t d)
 {
-    uint16_t delay;
     if (d) {
-        memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
-        delay = MEM_delay_ + 1;
+        memory_uint16_t_read(MEM_DELAY_ADDR, &MEM_delay_);
+        MEM_delay_++;
 	} else {
-        delay = 0;
+        MEM_delay_ = 0;
     }
-    memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
+    uint8_t delay_0 = (MEM_delay_ & 0x00ff);
+	uint8_t delay_1 = (MEM_delay_ & 0xff00) >> 8;
+    memory_byte_write(MEM_DELAY_ADDR, &delay_0);
+    memory_byte_write(MEM_DELAY_ADDR+1, &delay_1); 
 }
+
+
 uint16_t memory_delay_read(void)
 {
-    memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
+    memory_uint16_t_read(MEM_DELAY_ADDR, &MEM_delay_);
     return MEM_delay_;
 }
 
 
 void memory_touch_timeout_write(const uint16_t t)
 {
-    memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
+    MEM_touch_timeout_ = t;     
+	uint8_t timeout_0 = (t & 0x00ff);
+	uint8_t timeout_1 = (t & 0xff00) >> 8;
+    memory_byte_write(MEM_TOUCH_TIMEOUT_ADDR, &timeout_0);
+    memory_byte_write(MEM_TOUCH_TIMEOUT_ADDR+1, &timeout_1); 
 }
+
+
 uint16_t memory_touch_timeout_read(void)
 {
-    memory_eeprom(NULL, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
+    memory_uint16_t_read(MEM_TOUCH_TIMEOUT_ADDR, &MEM_touch_timeout_);
     return MEM_touch_timeout_;
 }
 
 
 void memory_touch_thresh_write(const uint16_t t)
 {
-    memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
+    MEM_touch_thresh_ = t;      
+	uint8_t thresh_0 = (t & 0x00ff);
+	uint8_t thresh_1 = (t & 0xff00) >> 8;
+    memory_byte_write(MEM_TOUCH_THRESH_ADDR, &thresh_0);
+    memory_byte_write(MEM_TOUCH_THRESH_ADDR + 1, &thresh_1);
 }
+
+
 uint16_t memory_touch_thresh_read(void)
 {
-    memory_eeprom(NULL, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
+    memory_uint16_t_read(MEM_TOUCH_THRESH_ADDR, &MEM_touch_thresh_);
     return MEM_touch_thresh_;
+}
+
+
+// TEST 
+void memory_touch_enable_write(const uint8_t e)
+{
+    MEM_touch_enable_ = e;  
+    memory_byte_write(MEM_TOUCH_ENABLE_ADDR, &e);
+}
+
+
+uint8_t memory_touch_enable_read(void)
+{
+    memory_uint8_t_read(MEM_TOUCH_ENABLE_ADDR, &MEM_touch_enable_);
+    return MEM_touch_enable_;
 }
 

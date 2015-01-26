@@ -34,13 +34,13 @@
 uint16_t *index_from_mnemonic_bip32(const char *mnemonic);
 char *mnemonic_from_index_bip32(const uint16_t *index);
 void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength);
-void sign_bip32(const char *message, char *keypath, int encoding);
+void sign_bip32(const char *message, int msg_len, char *keypath, int encoding);
 void report_master_public_key_bip32(void);
 
 uint16_t *index_from_mnemonic_electrum(const char *mnemonic);
 char *mnemonic_from_seed_electrum(char *seed_hex);
 void master_from_mnemonic_electrum(const char *mnemo, int m_len);
-void sign_electrum(const char *message, char *keypath, int encoding);
+void sign_electrum(const char *message, int msg_len, char *keypath, int encoding);
 void report_master_public_key_electrum(void); 
 
 #endif

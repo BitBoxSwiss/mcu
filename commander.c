@@ -249,14 +249,14 @@ static void process_backup(char *message)
 
 static void process_sign(char *message)
 { 
-    int wallet_len, tx_len, keypath_len, encoding_len;		
-    const char *tx = jsmn_get_value_string(message,CMD_STR[CMD_data_], &tx_len);
+    int wallet_len, data_len, keypath_len, encoding_len;		
+    const char *data = jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
     const char *wallet = jsmn_get_value_string(message,CMD_STR[CMD_wallet_], &wallet_len);
     const char *keypath = jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
     const char *encoding = jsmn_get_value_string(message,CMD_STR[CMD_encoding_], &encoding_len);
     
     int enc;
-    if (!wallet || !tx || !encoding || !keypath) {
+    if (!wallet || !data || !encoding || !keypath) {
         fill_report("sign", "Incomplete command.", ERROR);
         return;  
     } else if (strncmp(encoding, ATTR_STR[ATTR_der_], strlen(ATTR_STR[ATTR_der_])) == 0) { 
@@ -275,9 +275,9 @@ static void process_sign(char *message)
     }
     if (BUTTON_TOUCHED) {
         if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-            sign_electrum(tx,(char *)keypath,enc);
+            sign_electrum(data, data_len, (char *)keypath, enc);
         } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-            sign_bip32(tx, (char *)keypath, enc);
+            sign_bip32(data, data_len, (char *)keypath, enc);
         } else {
             fill_report("sign", "Invalid wallet type.", ERROR);
             return;

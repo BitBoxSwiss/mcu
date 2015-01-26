@@ -91,23 +91,23 @@ static int split_seed(char **seed_words, const char *message)
 // original trezor code does not double sha256 the utx... electrum and standard protocol double hashes...
 // trezor ecdsa has extra step for sig=(r,s) where if s>order/2, then s = -s... electrum does not do this...
 // ref: https://bitcointalk.org/index.php?topic=285142.25
-static void sign_generic_report(const uint8_t *priv_key, const char *message, int encoding)
+static void sign_generic_report(const uint8_t *priv_key, const char *message, int msg_len, int encoding)
 {
     if (encoding == ATTR_der_) {
         int der_len;
         uint8_t sig[64]; 
         uint8_t der[64]; 
-        if (ecdsa_sign_double(priv_key, hex_to_uint8(message), strlen(message)/2, sig)) {
-            fill_report("sign", "Could not sign message.", ERROR);
+        if (ecdsa_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
+            fill_report("sign", "Could not sign data.", ERROR);
         } else {
             der_len = ecdsa_sig_to_der(sig, der);
             fill_report("sign", uint8_to_hex(der, der_len), SUCCESS);
         } 
     } else if (encoding == ATTR_message_) {
-        int msg_len = strlen(message), b64len;     
+        int b64len;     
         uint8_t sig_m[65]; 
         if (ecdsa_sign_message(priv_key, message, msg_len, sig_m)) {
-            fill_report("sign", "Could not sign message.", ERROR);
+            fill_report("sign", "Could not sign data.", ERROR);
         } else {
             char *b64;
             b64 = base64((char *)sig_m, 65, &b64len);
@@ -116,11 +116,11 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
         } 
     } else if (encoding == ATTR_none_) {
         uint8_t sig[64]; 
-        if (strlen(message) != (32 * 2)) {
-            fill_report("sign", "Incorrect message length. "
+        if (msg_len != (32 * 2)) {
+            fill_report("sign", "Incorrect data length. "
                         "A 32-byte hexadecimal (64 characters) is expected.", ERROR);
         } else if (ecdsa_sign_digest(priv_key, hex_to_uint8(message), sig)) {
-            fill_report("sign", "Could not sign message.", ERROR);
+            fill_report("sign", "Could not sign data.", ERROR);
         } else {
             fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
         }
@@ -260,7 +260,7 @@ void report_master_public_key_bip32(void)
 }   
 
 
-void sign_bip32(const char *message, char *keypath, int encoding)
+void sign_bip32(const char *message, int msg_len, char *keypath, int encoding)
 {
     uint8_t *priv_key_master = memory_bip32_master(NULL);
     uint8_t *chain_code = memory_bip32_chaincode(NULL);
@@ -269,7 +269,7 @@ void sign_bip32(const char *message, char *keypath, int encoding)
         fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
     } else {
         generate_key_bip32(priv_key_child, keypath, priv_key_master, chain_code);
-        sign_generic_report(priv_key_child, message, encoding);
+        sign_generic_report(priv_key_child, message, msg_len, encoding);
     }
     clear_static_variables();
 }
@@ -416,7 +416,7 @@ static void generate_key_electrum(uint8_t *privkeychild, char *keypath, const ui
 }
 
 
-void sign_electrum(const char *message, char *keypath, int encoding)
+void sign_electrum(const char *message, int msg_len, char *keypath, int encoding)
 {
     uint8_t *priv_key_master = memory_electrum_master(NULL);
     
@@ -424,7 +424,7 @@ void sign_electrum(const char *message, char *keypath, int encoding)
         fill_report("sign", "An Electrum master private key is not set.", ERROR);
     } else {
         generate_key_electrum(priv_key_child, keypath, priv_key_master);
-        sign_generic_report(priv_key_child, message, encoding);
+        sign_generic_report(priv_key_child, message, msg_len, encoding);
     }
     clear_static_variables();
 }

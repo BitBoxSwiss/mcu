@@ -31,13 +31,6 @@
 
 #define MEM_PAGE_LEN                32
 #define MEM_AESKEY_LEN_MIN			10
-#define MEM_ERASED_LEN   			1
-#define MEM_LED_LEN 				1
-#define MEM_TOUCH_THRESH_LEN   		2
-#define MEM_TOUCH_TIMEOUT_LEN  		2
-#define MEM_TOUCH_ENABLE_LEN    	1
-#define MEM_SETUP_LEN       		1
-#define MEM_DELAY_LEN       		2
 
 // User Zones: 0x0000 to 0x0FFF
 #define MEM_NAME_ADDR   			0x0000// Zone 0
@@ -48,15 +41,13 @@
 #define MEM_ERASED_ADDR 	    	0x0028
 #define MEM_SETUP_ADDR      		0x0030
 #define MEM_DELAY_ADDR      		0x0032
-#define MEM_AESKEY_ADDR				0x0040
-
 #define MEM_MASTER_ELECTRUM_ADDR	0x0100// Zone 1
 #define MEM_MNEMONIC_ELECTRUM_ADDR	0x0120
-
 #define MEM_MASTER_BIP32_ADDR		0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR	0x0220
 #define MEM_MNEMONIC_BIP32_ADDR_0	0x0240
 #define MEM_MNEMONIC_BIP32_ADDR_1	0x0260
+#define MEM_AESKEY_ADDR				0x0300// Zone 3
 
 // Default settings
 #define DEFAULT_erased_             0xFF

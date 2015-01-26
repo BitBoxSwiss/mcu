@@ -44,7 +44,7 @@ volatile uint16_t burst_flag			= 0u;
 
 const char * qt_button_str[] = {"disable", "enable"};
 
-#ifndef NOT_EMBEDDED
+#ifndef TESTING
 #include <asf.h>
 #include "touch_api.h"
 
@@ -89,7 +89,7 @@ uint8_t touch_button_press(void)
 	    status = SUCCESS;
 	    sprintf(message,"touch button disabled");
     } else {
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
 		pushed = 1;
 		status = SUCCESS;
 		sprintf(message, "touched (hard coded)");

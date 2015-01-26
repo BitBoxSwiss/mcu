@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 
-#ifndef NOT_EMBEDDED
+#ifndef TESTING
 #define TOUCH_CHANNEL					CHANNEL_9
 #define QTOUCH_LIB_TYPE_MASK			0x01
 #define QTOUCH_LIB_COMPILER_OFFSET		2

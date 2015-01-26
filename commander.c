@@ -39,7 +39,7 @@
 #include "aes.h"
 #include "led.h"
 #include "sd.h"
-#ifndef NOT_EMBEDDED
+#ifndef TESTING
 #include <asf.h> /* Atmel Software Framework */
 #include "ataes132.h" /* Atmel AES132 crypto chip */
 #else
@@ -393,7 +393,7 @@ char *commander(const char *instruction_encrypted)
 {
     //printf("Command:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);
     memset(json_report, 0, JSON_REPORT_SIZE);
-    memory_fill_variables();
+    //memory_load_parameters();
     REPORT_BUF_OVERFLOW = 0;
     BUTTON_TOUCHED = 0;
     led_on();

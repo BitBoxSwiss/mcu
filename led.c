@@ -29,7 +29,7 @@
 #include "led.h"
 #include "memory.h"
 #include "commander.h"
-#ifndef NOT_EMBEDDED
+#ifndef TESTING
 #include <gpio.h>
 #include <delay.h>
 #include <ioport.h>

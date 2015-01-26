@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include "random.h"
 
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
 
 static FILE *f;
 void rand_init(void)

@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include "sd.h"
 #include "commander.h"
-#ifndef NOT_EMBEDDED
+#ifndef TESTING
 #include <asf.h>
 
 uint32_t sd_update = 0;
@@ -136,7 +136,7 @@ void display_sd_files(void)
 // TODO - debug format_sd
 int format_sd(void)
 {
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
     fill_report("backup", "Formatting ignored for non-embedded testing.", ERROR);
     return 1;
 #else
@@ -189,7 +189,7 @@ void backup_sd(const char *f, int f_len, const char *t, int t_len)
 		return;
 	}
     memcpy(text, t, t_len);
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
     fill_report("backup", "Ignored for non-embedded testing.", ERROR);
 #else
     sd_mmc_init();
@@ -240,7 +240,7 @@ char *load_sd(const char *f, int f_len)
 	static char text[256];
 	memset(text, 0, sizeof(text));
 
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
 	fill_report("load", "Ignored for non-embedded testing.", ERROR);
     return NULL;
 #else

@@ -68,7 +68,7 @@ char *uint8_to_hex(const uint8_t *bin, size_t l)
 }
 
 
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
 #include <stdio.h>
 #include <stdlib.h>
 #include "commander.h"

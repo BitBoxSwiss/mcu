@@ -6,7 +6,7 @@ CFLAGS += -W -Wall -Wextra -Wimplicit-function-declaration -Wredundant-decls -Ws
 CFLAGS += -Wno-deprecated-declarations
 
 #CFLAGS = -g -O0 # valgrind compile
-CFLAGS += -D NOT_EMBEDDED
+CFLAGS += -D TESTING
 
 
 TESTSSLLIBS = -lcrypto

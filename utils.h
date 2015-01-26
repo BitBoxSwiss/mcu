@@ -36,7 +36,7 @@
 
 uint8_t *hex_to_uint8(const char *str);
 char *uint8_to_hex(const uint8_t *bin, size_t l);
-#ifdef NOT_EMBEDDED
+#ifdef TESTING
 void print_report(const char *report);
 void send_encrypted_cmd(const char *instruction);
 #endif

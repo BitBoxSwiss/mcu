@@ -54,7 +54,7 @@ int main ( int argc, char *argv[] )
         usage(argv);
     } else {
         rand_init(); 
-        memory_setup();
+        memory_erase();
         commander("{\"password\":\"passwordpassword\"}" ); // A password is required before sending commands.
         send_encrypted_cmd(argv[1]); 
     }

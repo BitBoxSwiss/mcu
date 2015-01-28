@@ -108,6 +108,7 @@ enum REPORT_FLAGS {
     ERROR = 1, 
 };
 
+void force_reset(void);
 void fill_report(const char *attr, const char *val, int err);
 void fill_report_len(const char *attr, const char *val, int err, int vallen);
 char *commander(const char *instruction_encrypted);

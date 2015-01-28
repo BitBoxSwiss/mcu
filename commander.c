@@ -99,14 +99,18 @@ void fill_report_len(const char *attr, const char *val, int err, int vallen)
 }
 
 
+void force_reset(void)
+{
+    memory_erase();
+    memset(json_report, 0, JSON_REPORT_SIZE);
+    fill_report("reset", "Too many failed access attempts.", ERROR);
+}
+
+
 static void device_reset(const char *r)
 {
     if (r) { 
-        if (strncmp(r, ATTR_STR[ATTR___FORCE___], strlen(ATTR_STR[ATTR___FORCE___])) == 0) { 
-            memory_erase();
-            memset(json_report, 0, JSON_REPORT_SIZE);
-            fill_report("reset", "forced", ERROR);
-        } else if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
+        if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
             led_state("enable");
 			led_on();
             if (touch_button_press()) { delay_ms(1500);
@@ -404,30 +408,17 @@ char *commander(const char *instruction_encrypted)
     led_on();
 
 
-    if (memory_delay_read() >= MAX_ATTEMPTS) {
-        // Force reset
-        device_reset(ATTR_STR[ATTR___FORCE___]);
-    }
-    
-    //long long int i; 
-    //int d = memory_delay_read();
-    //printf("delay %i\n",d);
-    //for (i = 0; i < d * d * d * d; i++) {
-        // After 3rd try, delay 4 sec
-        // After 10th try, delay 8 min
-        // After 20th try, delay 2.2 hrs
-        // After 50th try, delay 3.6 days
-        //delay_ms(50);
-    //}
-
     if (!instruction_encrypted) {
-        fill_report("input", "A valid command was not found.", ERROR);
-    }
+        fill_report("input", "No input received. "
+                    "Too many access errors will cause the device to reset.", ERROR);
+        memory_delay_iterate(1);
+    } 
     
     else if (!strlen(instruction_encrypted)) {
-        fill_report("input", "A valid command was not found.", ERROR);
+        fill_report("input", "No input received. "
+                    "Too many access errors will cause the device to reset.", ERROR);
+        memory_delay_iterate(1);
     }
-    
     // In case of a forgotten password, allow reset from an unencrypted instructions.
     else if (strstr(instruction_encrypted, CMD_STR[CMD_reset_]) != NULL) {
         int r_len;
@@ -470,7 +461,9 @@ char *commander(const char *instruction_encrypted)
             if (json_token[0].type != JSMN_OBJECT  ||  r < 0) 
             {
                 fill_report("input", "JSON parse error. "
+                            "Too many access errors will cause the device to reset. "
                             "Is the command enclosed by curly brackets?", ERROR);
+                memory_delay_iterate(1);
             } else {
                 found = 0;
                 for (j = 0; j < r; j++) {
@@ -499,9 +492,9 @@ char *commander(const char *instruction_encrypted)
                 } else {
                     // Assume incorrect password and exponentially 
                     // increase delay before processing next instructions 
-                    memory_delay_iterate(1);
                     fill_report("input", "A valid command was not found. "
-                                "The next instruction will be delayed.", ERROR);
+                                "Too many access errors will cause the device to reset.", ERROR);
+                    memory_delay_iterate(1);
                 }
             }
 
@@ -573,7 +566,9 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen,
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
-        fill_report("input", "Invalid encryption.", ERROR);
+        fill_report("input", "Invalid encryption. "
+                    "Too many access errors will cause the device to reset.", ERROR);
+        memory_delay_iterate(1);
         decrypt_len = 0;
         free(ub64);
         return NULL;
@@ -594,7 +589,9 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen,
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec)
     {
-        fill_report("input", "Could not allocate enough memory for decryption.", ERROR);
+        fill_report("input", "Could not allocate enough memory for decryption. "
+                    "Too many access errors will cause the device to reset.", ERROR);
+        memory_delay_iterate(1);
         memset(dec_pad, 0, sizeof(dec_pad));
         decrypt_len = 0;
         return NULL;

@@ -300,9 +300,15 @@ void memory_delay_iterate(const uint16_t d)
 	} else {
         delay = 0;
     }
-    memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
+    
+    // Force reset after too many failed attempts
+    if (delay >= MAX_ATTEMPTS) {
+        force_reset();
+    } else {
+        memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
+    }
 }
-uint16_t memory_delay_read(void)
+    uint16_t memory_delay_read(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
     return MEM_delay_;

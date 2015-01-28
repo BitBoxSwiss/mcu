@@ -1,6 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Tomas Dzetkulic
  * Copyright (c) 2013-2014 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J Bakkum
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -70,6 +71,15 @@ void bn_zero(bignum256 *a)
 {
 	int i;
 	for (i = 0; i < 9; i++) {
+		a->val[i] = 0;
+	}
+}
+
+void bn_one(bignum256 *a)
+{
+	int i;
+    a->val[0] = 1;
+	for (i = 1; i < 9; i++) {
 		a->val[i] = 0;
 	}
 }
@@ -223,6 +233,17 @@ void bn_multiply(const bignum256 *k, bignum256 *x, const bignum256 *prime)
 	}
 }
 
+// res = k * x
+void bn_multiply_res(const bignum256 *k, const bignum256 *x, bignum256 *res, const bignum256 *prime)
+{
+    bignum256 cpy;
+    memcpy(&cpy, x, sizeof(bignum256));
+    bn_multiply(k, &cpy, prime); 
+    memcpy(res, &cpy, sizeof(bignum256));
+}
+
+
+
 // result is smaller than 2*prime
 void bn_fast_mod(bignum256 *x, const bignum256 *prime)
 {
@@ -267,6 +288,10 @@ void bn_sqrt(bignum256 *x, const bignum256 *prime)
 	bn_mod(&res, prime);
 	memcpy(x, &res, sizeof(bignum256));
 }
+
+
+
+
 
 #if ! USE_INVERSE_FAST
 
@@ -515,11 +540,37 @@ void bn_addmod(bignum256 *a, const bignum256 *b, const bignum256 *prime)
 	bn_mod(a, prime);
 }
 
+// TODO TEST
+// res = a + b 
+void bn_addmod_res(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime)
+{
+    bignum256 cpy;
+    memcpy(&cpy, a, sizeof(bignum256));
+    bn_addmod(&cpy, b, prime);
+    memcpy(res, &cpy, sizeof(bignum256));
+}
+
+
 void bn_addmodi(bignum256 *a, uint32_t b, const bignum256 *prime) {
 	a->val[0] += b;
 	bn_normalize(a);
 	bn_fast_mod(a, prime);
 	bn_mod(a, prime);
+}
+
+// res = a - b
+// b < 2*prime; modulo 
+void bn_substractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime)
+{
+	int i;
+	uint32_t temp = 0;
+	for (i = 0; i < 9; i++) {
+		temp += a->val[i] + 2u * prime256k1.val[i] - b->val[i];
+		res->val[i] = temp & 0x3FFFFFFF;
+		temp >>= 30;
+	}
+    bn_fast_mod(res, prime);
+    bn_mod(res, prime);
 }
 
 // res = a - b
@@ -575,6 +626,7 @@ void bn_print(const bignum256 *a)
 	printf("%07x", a->val[2] & 0x0FFFFFFF);
 	printf("%08x", (a->val[1] << 2) | ((a->val[0] & 0x30000000) >> 28));
 	printf("%07x", a->val[0] & 0x0FFFFFFF);
+    printf("\n");
 }
 
 void bn_print_raw(const bignum256 *a)

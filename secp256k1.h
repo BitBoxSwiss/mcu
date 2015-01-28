@@ -1,6 +1,7 @@
 /**
  * Copyright (c) 2013 Tomas Dzetkulic
  * Copyright (c) 2013 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J Bakkum
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -27,6 +28,11 @@
 #include <stdint.h>
 
 #include "bignum.h"
+
+// Jacobian coordinates curve point x, y, and z
+typedef struct {
+	bignum256 x, y, z;
+} curve_point_jacobian;
 
 // curve point x and y
 typedef struct {

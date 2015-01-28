@@ -44,6 +44,7 @@ int point_is_infinity(const curve_point *p);
 int point_is_equal(const curve_point *p, const curve_point *q);
 int point_is_negative_of(const curve_point *p, const curve_point *q);
 void scalar_multiply(const bignum256 *k, curve_point *res);
+void scalar_multiply_jacobian(const bignum256 *k, curve_point *res);
 void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y);
 
 int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const uint8_t *hash);

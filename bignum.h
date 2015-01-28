@@ -1,6 +1,7 @@
 /**
  * Copyright (c) 2013 Tomas Dzetkulic
  * Copyright (c) 2013 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J Bakkum
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -33,7 +34,7 @@
 
 // use precomputed Curve Points (some scalar multiples of curve base point G)
 #ifndef USE_PRECOMPUTED_CP
-#define USE_PRECOMPUTED_CP 1
+#define USE_PRECOMPUTED_CP 1// faster but bigger
 #endif
 
 // use fast inverse method
@@ -59,6 +60,8 @@ void bn_write_be(const bignum256 *in_number, uint8_t *out_number);
 
 void bn_zero(bignum256 *a);
 
+void bn_one(bignum256 *a);
+
 int bn_is_zero(const bignum256 *a);
 
 int bn_is_less(const bignum256 *a, const bignum256 *b);
@@ -79,6 +82,8 @@ void bn_muli(bignum256 *a, uint32_t b);
 
 void bn_multiply(const bignum256 *k, bignum256 *x, const bignum256 *prime);
 
+void bn_multiply_res(const bignum256 *k, const bignum256 *x, bignum256 *res, const bignum256 *prime);
+
 void bn_fast_mod(bignum256 *x, const bignum256 *prime);
 
 void bn_sqrt(bignum256 *x, const bignum256 *prime);
@@ -89,9 +94,13 @@ void bn_normalize(bignum256 *a);
 
 void bn_addmod(bignum256 *a, const bignum256 *b, const bignum256 *prime);
 
+void bn_addmod_res(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime);
+
 void bn_addmodi(bignum256 *a, uint32_t b, const bignum256 *prime);
 
 void bn_substract(const bignum256 *a, const bignum256 *b, bignum256 *res);
+
+void bn_substractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime);
 
 void bn_substract_noprime(const bignum256 *a, const bignum256 *b, bignum256 *res);
 

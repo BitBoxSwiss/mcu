@@ -102,7 +102,11 @@ void fill_report_len(const char *attr, const char *val, int err, int vallen)
 static void device_reset(const char *r)
 {
     if (r) { 
-        if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
+        if (strncmp(r, ATTR_STR[ATTR___FORCE___], strlen(ATTR_STR[ATTR___FORCE___])) == 0) { 
+            memory_erase();
+            memset(json_report, 0, JSON_REPORT_SIZE);
+            fill_report("reset", "forced", ERROR);
+        } else if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
             led_state("enable");
 			led_on();
             if (touch_button_press()) { delay_ms(1500);
@@ -189,6 +193,7 @@ static void process_seed(char *message)
 }
 
 
+// TODO add verification routine
 static void process_backup(char *message)
 { 
     int wallet_len, encrypt_len, format_len, filename_len;
@@ -399,16 +404,21 @@ char *commander(const char *instruction_encrypted)
     led_on();
 
 
-    long long int i; 
-    int d = memory_delay_read();
+    if (memory_delay_read() >= MAX_ATTEMPTS) {
+        // Force reset
+        device_reset(ATTR_STR[ATTR___FORCE___]);
+    }
+    
+    //long long int i; 
+    //int d = memory_delay_read();
     //printf("delay %i\n",d);
-    for (i = 0; i < d * d * d * d; i++) {
+    //for (i = 0; i < d * d * d * d; i++) {
         // After 3rd try, delay 4 sec
         // After 10th try, delay 8 min
         // After 20th try, delay 2.2 hrs
         // After 50th try, delay 3.6 days
-        delay_ms(50);
-    }
+        //delay_ms(50);
+    //}
 
     if (!instruction_encrypted) {
         fill_report("input", "A valid command was not found.", ERROR);

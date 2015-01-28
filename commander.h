@@ -34,10 +34,13 @@
 
 #define JSON_REPORT_SIZE   UDI_HID_REPORT_OUT_SIZE
 #else
-#define JSON_REPORT_SIZE   4096
+#define JSON_REPORT_SIZE    4096
 #endif
 
 #define DIGITAL_BITBOX_VERSION  "1.0"
+
+#define MAX_ATTEMPTS        5
+#define FORCE_RESET         "___"
 
 #define GENERATE_STRING(STRING) #STRING,
 #define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,
@@ -91,6 +94,7 @@
         ATTR(serial)            \
         ATTR(version)           \
         ATTR(__ERASE__)         \
+        ATTR(__FORCE__)         \
         ATTR(none)               /* keep last */
 
 enum CMD_ENUM { FOREACH_CMD(GENERATE_ENUM_CMD) };

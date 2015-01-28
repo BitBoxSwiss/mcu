@@ -291,7 +291,7 @@ char *mnemonic_from_seed_electrum(char *seedhex)
     }
 	
     static char s[9] = {0};
-    long unsigned int idx, w1, w2, w3;
+    long unsigned int idx = 0, w1, w2, w3;
 	int i, n = electrum_wordlist_len;
     
     memset(mnemonic, 0, sizeof(mnemonic));

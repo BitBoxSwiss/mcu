@@ -83,17 +83,16 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 /* 
    Adapted from:
    http://benpfaff.org/writings/clc/shuffle.html
-   Arrange the N elements of ARRAY in random order.
-   Only effective if N is much smaller than RAND_MAX;
 */
 void random_shuffle(int *array, size_t n)
 {
-    uint16_t r[1];
+    int r_len = 15; // then only one Random command to aes_process()
+    uint8_t r[r_len + 1];
+    random_bytes(r, r_len + 1, 0);
     if (n > 1) {
         size_t i;
         for (i = 0; i < n - 1; i++) {
-          random_bytes((uint8_t *)r, 2, 0);
-          size_t j = i + r[0] / (65536 / (n - i) + 1);
+          size_t j = i + (r[i % r_len] + (r[i % r_len + 1] << 8)) / (65536 / (n - i) + 1);
           int t = array[j];
           array[j] = array[i];
           array[i] = t;

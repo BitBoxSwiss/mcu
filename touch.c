@@ -45,7 +45,7 @@ volatile uint16_t burst_flag			= 0u;
 const char * qt_button_str[] = {"disable", "enable"};
 
 #ifndef TESTING
-#include <asf.h>
+#include "mcu.h"
 #include "touch_api.h"
 
 void touch_update_time(void)

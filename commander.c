@@ -40,7 +40,7 @@
 #include "led.h"
 #include "sd.h"
 #ifndef TESTING
-#include <asf.h> /* Atmel Software Framework */
+#include "mcu.h"
 #include "ataes132.h" /* Atmel AES132 crypto chip */
 #else
 

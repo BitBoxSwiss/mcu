@@ -29,7 +29,7 @@
 #include "sd.h"
 #include "commander.h"
 #ifndef TESTING
-#include <asf.h>
+#include "mcu.h"
 
 uint32_t sd_update = 0;
 uint32_t sd_fs_found = 0;

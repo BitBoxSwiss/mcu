@@ -23,13 +23,14 @@
 */
 
 
+#include <string.h>
 
-#include "utils.h"
 #include "commander.h"
 #include "ataes132.h"
-#include "asf.h"
 #include "delay.h"
-#include <string.h>
+#include "utils.h"
+#include "mcu.h"
+
 
 #define aes_build_word_address(p_u8, addr) \
 do {\

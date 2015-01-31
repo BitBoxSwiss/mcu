@@ -152,7 +152,7 @@ void bn_mod(bignum256 *x, const bignum256 *prime)
 	} else {
 		// if x is greater
 		if (x->val[i] > prime->val[i]) {
-			// substract p from x
+			// subtract p from x
 			temp = 0x40000000u;
 			for (i = 0; i < 9; i++) {
 				temp += x->val[i] - prime->val[i];
@@ -218,7 +218,7 @@ void bn_multiply(const bignum256 *k, bignum256 *x, const bignum256 *prime)
 	for (i = 16; i >= 8; i--) {
 		// estimate (res / prime)
 		coef = (res[i] >> 16) + (res[i + 1] << 14);
-		// substract (coef * prime) from res
+		// subtract (coef * prime) from res
 		temp = 0x1000000000000000ull + res[i - 8] - prime->val[0] * (uint64_t)coef;
 		res[i - 8] = temp & 0x3FFFFFFF;
 		for (j = 1; j < 9; j++) {
@@ -253,7 +253,7 @@ void bn_fast_mod(bignum256 *x, const bignum256 *prime)
 
 	coef = x->val[8] >> 16;
 	if (!coef) return;
-	// substract (coef * prime) from x
+	// subtract (coef * prime) from x
 	temp = 0x1000000000000000ull + x->val[0] - prime->val[0] * (uint64_t)coef;
 	x->val[0] = temp & 0x3FFFFFFF;
 	for (j = 1; j < 9; j++) {
@@ -288,9 +288,6 @@ void bn_sqrt(bignum256 *x, const bignum256 *prime)
 	bn_mod(&res, prime);
 	memcpy(x, &res, sizeof(bignum256));
 }
-
-
-
 
 
 #if ! USE_INVERSE_FAST
@@ -519,6 +516,8 @@ void bn_inverse(bignum256 *x, const bignum256 *prime)
 }
 #endif
 
+
+
 void bn_normalize(bignum256 *a) {
 	int i;
 	uint32_t tmp = 0;
@@ -560,7 +559,7 @@ void bn_addmodi(bignum256 *a, uint32_t b, const bignum256 *prime) {
 
 // res = a - b
 // b < 2*prime; modulo 
-void bn_substractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime)
+void bn_subtractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime)
 {
 	int i;
 	uint32_t temp = 0;
@@ -575,7 +574,7 @@ void bn_substractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, con
 
 // res = a - b
 // b < 2*prime; result not normalized
-void bn_substract(const bignum256 *a, const bignum256 *b, bignum256 *res)
+void bn_subtract(const bignum256 *a, const bignum256 *b, bignum256 *res)
 {
 	int i;
 	uint32_t temp = 0;
@@ -587,7 +586,7 @@ void bn_substract(const bignum256 *a, const bignum256 *b, bignum256 *res)
 }
 
 // res = a - b ; a > b
-void bn_substract_noprime(const bignum256 *a, const bignum256 *b, bignum256 *res)
+void bn_subtract_noprime(const bignum256 *a, const bignum256 *b, bignum256 *res)
 {
 	int i;
 	uint32_t tmp = 1;

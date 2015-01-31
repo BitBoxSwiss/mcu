@@ -34,12 +34,22 @@
 
 // use precomputed Curve Points (some scalar multiples of curve base point G)
 #ifndef USE_PRECOMPUTED_CP
-#define USE_PRECOMPUTED_CP 1// faster but bigger
+#define USE_PRECOMPUTED_CP 1
+#endif
+
+// djb: remove as introduces side-channel signal
+#ifndef USE_PRECOMPUTED_CP2
+#define USE_PRECOMPUTED_CP2 0
 #endif
 
 // use fast inverse method
 #ifndef USE_INVERSE_FAST
 #define USE_INVERSE_FAST 1
+#endif
+
+// djb: use random order during scaler multiplication
+#ifndef USE_RANDOM_ORDER_MULT
+#define USE_RANDOM_ORDER_MULT 1
 #endif
 
 // bignum256 are 256 bits stored as 8*30 bit + 1*16 bit
@@ -98,11 +108,11 @@ void bn_addmod_res(const bignum256 *a, const bignum256 *b, bignum256 *res, const
 
 void bn_addmodi(bignum256 *a, uint32_t b, const bignum256 *prime);
 
-void bn_substract(const bignum256 *a, const bignum256 *b, bignum256 *res);
+void bn_subtract(const bignum256 *a, const bignum256 *b, bignum256 *res);
 
-void bn_substractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime);
+void bn_subtractmod(const bignum256 *a, const bignum256 *b, bignum256 *res, const bignum256 *prime);
 
-void bn_substract_noprime(const bignum256 *a, const bignum256 *b, bignum256 *res);
+void bn_subtract_noprime(const bignum256 *a, const bignum256 *b, bignum256 *res);
 
 void bn_divmod58(bignum256 *a, uint32_t *r);
 

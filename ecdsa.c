@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "ripemd160.h"
+#include "random.h"
 #include "base58.h"
 #include "bignum.h"
 #include "sha2.h"
@@ -35,23 +36,13 @@
 #include "ecdsa.h"
 #include "utils.h"
 
-// Set cp2 = cp1
-void point_copy(const curve_point *cp1, curve_point *cp2)
-{
-	memcpy(&(cp2->x),  &(cp1->x), sizeof(bignum256));
-	memcpy(&(cp2->y),  &(cp1->y), sizeof(bignum256));
-}
-
-
-
-
 
 // cp3 = cp1 + cp2
-void point_add_jacobian(const curve_point_jacobian *CP1, 
-                        const curve_point_jacobian *CP2, 
-                        curve_point_jacobian *CP3)
+static void point_add_jacobian(const curve_point_jacobian *CP1, 
+                        curve_point_jacobian *CP2)//, 
+                        //curve_point_jacobian *CP3)
 {
-    
+   
     /*
         The "add-2007-bl" 
         Cost: 11M + 5S + 9add + 4*2.
@@ -106,6 +97,16 @@ void point_add_jacobian(const curve_point_jacobian *CP1,
             Z3  =  t14 * H   
     */
     
+    // CP2 equal to zero case
+    if (bn_is_zero(&CP2->x) && bn_is_zero(&CP2->y)) {
+        memcpy(&CP2->x, &CP1->x, sizeof(bignum256));
+        memcpy(&CP2->y, &CP1->y, sizeof(bignum256));
+        memcpy(&CP2->z, &CP1->z, sizeof(bignum256));
+        return; 
+    }
+
+    curve_point_jacobian CP3;
+    
     bignum256 Z1Z1, Z2Z2, U1, U2, S1, S2, H, I, J, r, V,
               t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, 
               t10, t11, t12, t13, t14, two;
@@ -121,41 +122,45 @@ void point_add_jacobian(const curve_point_jacobian *CP1,
     bn_multiply_res(&CP1->y, &t0, &S1, &prime256k1);
     bn_multiply_res(&CP1->z, &Z1Z1, &t1, &prime256k1);
     bn_multiply_res(&CP2->y, &t1, &S2, &prime256k1);
-    bn_substractmod(&U2, &U1, &H, &prime256k1);
+    bn_subtractmod(&U2, &U1, &H, &prime256k1);
     
     bn_multiply_res(&two, &H, &t2, &prime256k1);
     bn_multiply_res(&t2, &t2, &I, &prime256k1);
     bn_multiply_res(&H, &I, &J, &prime256k1);
-    bn_substractmod(&S2 ,&S1 ,&t3, &prime256k1);
+    bn_subtractmod(&S2 ,&S1 ,&t3, &prime256k1);
     
     bn_multiply_res(&two, &t3, &r, &prime256k1);
     bn_multiply_res(&U1, &I, &V, &prime256k1);
     bn_multiply_res(&r, &r, &t4, &prime256k1);
     bn_multiply_res(&two, &V, &t5, &prime256k1);
-    bn_substractmod(&t4, &J, &t6, &prime256k1);
-    bn_substractmod(&t6, &t5, &CP3->x, &prime256k1);
-    bn_substractmod(&V, &CP3->x, &t7, &prime256k1);
+    bn_subtractmod(&t4, &J, &t6, &prime256k1);
+    bn_subtractmod(&t6, &t5, &CP3.x, &prime256k1);
+    bn_subtractmod(&V, &CP3.x, &t7, &prime256k1);
     
     bn_multiply_res(&S1, &J, &t8, &prime256k1);
     bn_multiply_res(&two, &t8, &t9, &prime256k1);
     bn_multiply_res(&r, &t7, &t10, &prime256k1);
-    bn_substractmod(&t10, &t9, &CP3->y, &prime256k1); 
+    bn_subtractmod(&t10, &t9, &CP3.y, &prime256k1); 
     
     bn_addmod_res(&CP1->z, &CP2->z, &t11, &prime256k1);
     
     bn_multiply_res(&t11, &t11, &t12, &prime256k1);
-    bn_substractmod(&t12, &Z1Z1, &t13, &prime256k1);
-    bn_substractmod(&t13, &Z2Z2, &t14, &prime256k1);
+    bn_subtractmod(&t12, &Z1Z1, &t13, &prime256k1);
+    bn_subtractmod(&t13, &Z2Z2, &t14, &prime256k1);
     
-    bn_multiply_res(&t14, &H, &CP3->z, &prime256k1);
+    bn_multiply_res(&t14, &H, &CP3.z, &prime256k1);
 
+    memcpy(&CP2->x, &CP3.x, sizeof(bignum256));
+    memcpy(&CP2->y, &CP3.y, sizeof(bignum256));
+    memcpy(&CP2->z, &CP3.z, sizeof(bignum256));
 }
 
 
+/* not used
 // cp3 = cp1 + cp1
-void point_double_jacobian(const curve_point_jacobian *CP1, curve_point_jacobian *CP3)
+static void point_double_jacobian(curve_point_jacobian *CP1)
 {
-    /*
+    / *
         "dbl-2009-l" 
         Cost: 2M + 5S + 6add + 1*8 + 3*2 + 1*3.
         Source: 2009.04.01 Lange.
@@ -189,7 +194,9 @@ void point_double_jacobian(const curve_point_jacobian *CP1, curve_point_jacobian
             Y3 = t7  - t6
             t8 = Y1  * Z1
             Z3 = two * t8
-    */
+    * /
+    
+    curve_point_jacobian CP3;
     
     bignum256 A, B, C, t0, t1, t2, t3, D, E, F, 
               t4, t5, t6, t7, t8, two, three, eight;
@@ -204,22 +211,51 @@ void point_double_jacobian(const curve_point_jacobian *CP1, curve_point_jacobian
     bn_addmod_res(&CP1->x, &B, &t0, &prime256k1); 
     
     bn_multiply_res(&t0, &t0, &t1, &prime256k1); 
-    bn_substractmod(&t1, &A, &t2, &prime256k1); 
-    bn_substractmod(&t2, &C, &t3, &prime256k1); 
+    bn_subtractmod(&t1, &A, &t2, &prime256k1); 
+    bn_subtractmod(&t2, &C, &t3, &prime256k1); 
     
     bn_multiply_res(&two, &t3, &D, &prime256k1 ); 
     bn_multiply_res(&three, &A, &E, &prime256k1 ); 
     bn_multiply_res(&E, &E, &F, &prime256k1 ); 
     bn_multiply_res(&two, &D, &t4, &prime256k1); 
-    bn_substractmod(&F, &t4,  &CP3->x, &prime256k1); 
-    bn_substractmod(&D, &CP3->x, &t5, &prime256k1); 
+    bn_subtractmod(&F, &t4,  &CP3.x, &prime256k1); 
+    bn_subtractmod(&D, &CP3.x, &t5, &prime256k1); 
     
     bn_multiply_res(&eight, &C, &t6, &prime256k1); 
     bn_multiply_res(&E, &t5, &t7, &prime256k1); 
-    bn_substractmod(&t7, &t6, &CP3->y, &prime256k1); 
+    bn_subtractmod(&t7, &t6, &CP3.y, &prime256k1); 
     
     bn_multiply_res(&CP1->y, &CP1->z, &t8, &prime256k1); 
-    bn_multiply_res(&two, &t8, &CP3->z, &prime256k1); 
+    bn_multiply_res(&two, &t8, &CP3.z, &prime256k1); 
+    
+    memcpy(&CP1->x, &CP3.x, sizeof(bignum256));
+    memcpy(&CP1->y, &CP3.y, sizeof(bignum256));
+    memcpy(&CP1->z, &CP3.z, sizeof(bignum256));
+}
+*/
+
+static void point_jacobian_to_xy(const curve_point_jacobian *J, curve_point *P)
+{
+    // Set U=1/Jz, then Px = Jx*U^2 and Py = Jy*U^3 (one modinv instead of two)
+    bignum256 U, UU, UUU, Z;
+    memcpy(&Z, &J->z, sizeof(bignum256));
+
+    bn_inverse(&Z, &prime256k1); 
+    memcpy(&U, &Z, sizeof(bignum256));
+
+    bn_multiply_res(&U, &U, &UU, &prime256k1);
+    bn_multiply_res(&UU, &U,&UUU, &prime256k1);
+    
+    bn_multiply_res(&J->x, &UU, &P->x, &prime256k1);
+    bn_multiply_res(&J->y, &UUU, &P->y, &prime256k1);
+}
+
+
+// Set cp2 = cp1
+void point_copy(const curve_point *cp1, curve_point *cp2)
+{
+	memcpy(&(cp2->x),  &(cp1->x), sizeof(bignum256));
+	memcpy(&(cp2->y),  &(cp1->y), sizeof(bignum256));
 }
 
 
@@ -246,9 +282,9 @@ void point_add(const curve_point *cp1, curve_point *cp2)
 		return;
 	}
 
-	bn_substract(&(cp2->x), &(cp1->x), &inv);
+	bn_subtract(&(cp2->x), &(cp1->x), &inv);
 	bn_inverse(&inv, &prime256k1);
-	bn_substract(&(cp2->y), &(cp1->y), &lambda);
+	bn_subtract(&(cp2->y), &(cp1->y), &lambda);
 	bn_multiply(&inv, &lambda, &prime256k1);
 	memcpy(&xr, &lambda, sizeof(bignum256));
 	bn_multiply(&xr, &xr, &prime256k1);
@@ -259,11 +295,11 @@ void point_add(const curve_point *cp1, curve_point *cp2)
 		temp >>= 30;
 	}
 	bn_fast_mod(&xr, &prime256k1);
-	bn_substract(&(cp1->x), &xr, &yr);
+	bn_subtract(&(cp1->x), &xr, &yr);
 	// no need to fast_mod here
 	// bn_fast_mod(&yr);
 	bn_multiply(&lambda, &yr, &prime256k1);
-	bn_substract(&yr, &(cp1->y), &yr);
+	bn_subtract(&yr, &(cp1->y), &yr);
 	bn_fast_mod(&yr, &prime256k1);
 	memcpy(&(cp2->x), &xr, sizeof(bignum256));
 	memcpy(&(cp2->y), &yr, sizeof(bignum256));
@@ -301,11 +337,11 @@ void point_double(curve_point *cp)
 		temp >>= 30;
 	}
 	bn_fast_mod(&xr, &prime256k1);
-	bn_substract(&(cp->x), &xr, &yr);
+	bn_subtract(&(cp->x), &xr, &yr);
 	// no need to fast_mod here
 	// bn_fast_mod(&yr);
 	bn_multiply(&lambda, &yr, &prime256k1);
-	bn_substract(&yr, &(cp->y), &yr);
+	bn_subtract(&yr, &(cp->y), &yr);
 	bn_fast_mod(&yr, &prime256k1);
 	memcpy(&(cp->x), &xr, sizeof(bignum256));
 	memcpy(&(cp->y), &yr, sizeof(bignum256));
@@ -380,139 +416,57 @@ int point_is_negative_of(const curve_point *p, const curve_point *q)
 	return !bn_is_equal(&(p->y), &(q->y));
 }
 
-// res = k * G
-void scalar_multiply(const bignum256 *k, curve_point *res)
-{
-	int i;
-	// result is zero
-	int is_zero = 1;
-	curve_point curr, sham;
-	// initial res
-	memcpy(&curr, &G256k1, sizeof(curve_point));
-	for (i = 0; i < 256; i++) {
-		if (k->val[i / 30] & (1u << (i % 30))) {
-			if (is_zero) {
-#if USE_PRECOMPUTED_CP
-				if (i < 255 && (k->val[(i + 1) / 30] & (1u << ((i + 1) % 30)))) {
-					memcpy(res, secp256k1_cp2 + i, sizeof(curve_point));
-					i++;
-				} else {
-					memcpy(res, secp256k1_cp + i, sizeof(curve_point));
-				}
-#else
-                memcpy(res, &curr, sizeof(curve_point));
-#endif
-				is_zero = 0;
-			} else {
-#if USE_PRECOMPUTED_CP
-				if (i < 255 && (k->val[(i + 1) / 30] & (1u << ((i + 1) % 30)))) {
-					point_add(secp256k1_cp2 + i, res);
-				    i++;
-				} else {
-					point_add(secp256k1_cp + i, res);
-				}
-#else
-				point_add(&curr, res);
-#endif
-			}
-		} else {
-            point_add(&curr, &sham); // "add-always"
-        }
-#if ! USE_PRECOMPUTED_CP
-        point_double(&curr);
-#endif
-    }
-}
 
-
-
-static void point_jacobian_to_xy(const curve_point_jacobian *J, curve_point *P)
-{
-    // Set U=1/Z, then x3 = X3*U^2 and y3 = Y3*U^3 (one modinv instead of two)
-    bignum256 U, UU, UUU, Z;
-    memcpy(&Z, &J->z, sizeof(bignum256));
-
-    bn_inverse(&Z, &prime256k1); 
-    memcpy(&U, &Z, sizeof(bignum256));
-
-    bn_multiply_res(&U, &U, &UU, &prime256k1);
-    bn_multiply_res(&UU, &U,&UUU, &prime256k1);
-    
-    bn_multiply_res(&J->x, &UU, &P->x, &prime256k1);
-    bn_multiply_res(&J->y, &UUU, &P->y, &prime256k1);
-
-}
-
-
-
-// res = k * G  (using Jacobian coordinates)
+// Avoid side-channel attacks
+// use double-and-add-always
+// balance power consumption
+// randomize double-and-add order (makes above 2 not necessary?)
+// Jacobian coordinates
+// C = k * G  
 void scalar_multiply_jacobian(const bignum256 *k, curve_point *C)
 {
-    curve_point_jacobian ret, kG, curr;
-	int i, is_zero;
+    curve_point_jacobian sham, kG, curr;
+	int i, j;
 
+#if USE_RANDOM_ORDER_MULT
+    random_init();
+    int r[256];
+    for (i = 0; i < 256; i++) {
+        r[i] = i;
+    }
+    random_shuffle(r, 256);
+#endif
+    
     // initializations
     bn_zero(&kG.x);
     bn_zero(&kG.y);
     bn_one(&kG.z);
-    bn_one(&ret.z);
-    is_zero = 1;
+    
+    bn_zero(&sham.x);
+    bn_zero(&sham.y);
+    bn_one(&sham.z);
 	
 	memcpy(&curr.x, &G256k1.x, sizeof(bignum256));
 	memcpy(&curr.y, &G256k1.y, sizeof(bignum256));
     bn_one(&curr.z);
    
+
+
 	for (i = 0; i < 256; i++) {
-		if (k->val[i / 30] & (1u << (i % 30))) {
-            if( is_zero ){
-#if USE_PRECOMPUTED_CP
-                if (i < 255 && (k->val[(i + 1) / 30] & (1u << ((i + 1) % 30)))) {
-					memcpy(&kG, secp256k1_cp2 + i, sizeof(curve_point));
-					i++;
-				} else {
-					memcpy(&kG, secp256k1_cp + i, sizeof(curve_point));
-				}
+#if USE_RANDOM_ORDER_MULT
+        j = r[i];
 #else
-                memcpy(&kG, &curr, sizeof(curve_point_jacobian));
-#endif            
-                is_zero = 0;
-            } else {
-#if USE_PRECOMPUTED_CP
-                if (i < 255 && (k->val[(i + 1) / 30] & (1u << ((i + 1) % 30)))) {
-					//point_add(secp256k1_cp2 + i, res);
-                    memcpy(&curr, secp256k1_cp2 + i, sizeof(curve_point));
-                    point_add_jacobian(&curr, &kG, &ret);
-                    memcpy(&kG, &ret, sizeof(curve_point_jacobian));
-				    i++;
-				} else {
-					//point_add(secp256k1_cp + i, res);
-                    memcpy(&curr, secp256k1_cp + i, sizeof(curve_point));
-                    point_add_jacobian(&curr, &kG, &ret);
-                    memcpy(&kG, &ret, sizeof(curve_point_jacobian));
-				}
-#else
-                point_add_jacobian(&curr, &kG, &ret);
-                memcpy(&kG, &ret, sizeof(curve_point_jacobian));
-#endif            
-            }
+        j = i;
+#endif
+        memcpy(&curr, secp256k1_cp + j, sizeof(curve_point));
+        if (k->val[j / 30] & (1u << (j % 30))) {
+            point_add_jacobian(&curr, &kG);
         } else {
-                // "add-always" - sham function to avoid side-channel attacks 
-#if USE_PRECOMPUTED_CP
-                memcpy(&curr, secp256k1_cp + i, sizeof(curve_point));
-#endif            
-                point_add_jacobian(&curr, &kG, &ret);            // sham calculation
-                memcpy(&ret, &kG, sizeof(curve_point_jacobian)); // no effect (kG does not change))
-        
+            point_add_jacobian(&curr, &sham);
         }
-#if ! USE_PRECOMPUTED_CP
-        point_double_jacobian(&curr, &ret);
-        memcpy(&curr, &ret, sizeof(curve_point_jacobian));    
-#endif            
     }
     point_jacobian_to_xy(&kG, C);
 }
-
-
 
 
 void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y)
@@ -524,7 +478,7 @@ void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y)
     bn_addmodi(y, 7, &prime256k1);         // y is x^3 + 7
     bn_sqrt(y, &prime256k1);               // y = sqrt(y)
     if ((odd & 0x01) != (y->val[0] & 1)) {
-        bn_substract_noprime(&prime256k1, y, y);   // y = -y
+        bn_subtract_noprime(&prime256k1, y, y);   // y = -y
     }
 }
 
@@ -622,7 +576,7 @@ static int verify_message(const uint8_t * sig_m, const char * msg, int msg_len, 
     sha256_Raw((uint8_t *)msg, msg_len, h);
     sha256_Raw(h, 32, h);
     bn_read_be(h, &bn_e);
-    bn_substract_noprime(&order256k1, &bn_e, &bn_e);   // e = -e
+    bn_subtract_noprime(&order256k1, &bn_e, &bn_e);   // e = -e
     bn_mod(&bn_e, &order256k1);
     
     // Q = r^-1 (sR - eG)
@@ -747,10 +701,7 @@ int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *s
 	}
 
 	// compute k*G
-	//////scalar_multiply(&k, &R);
 	scalar_multiply_jacobian(&k, &R);
-	
-    
     
     // r = (rx mod n)
 	bn_mod(&R.x, &order256k1);
@@ -772,7 +723,7 @@ int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *s
 
 	// if S > order/2 => S = -S
 	if (bn_is_less(&order256k1_half, &k)) {
-		bn_substract_noprime(&order256k1, &k, &k);
+		bn_subtract_noprime(&order256k1, &k, &k);
 	}
 
 	// we are done, R.x and k is the result signature
@@ -789,7 +740,6 @@ void ecdsa_get_public_key33(const uint8_t *priv_key, uint8_t *pub_key)
 
 	bn_read_be(priv_key, &k);
 	// compute k*G
-	//scalar_multiply(&k, &R);
 	scalar_multiply_jacobian(&k, &R);
 	pub_key[0] = 0x02 | (R.y.val[0] & 0x01);
 	bn_write_be(&R.x, pub_key + 1);
@@ -805,7 +755,6 @@ void ecdsa_get_public_key65(const uint8_t *priv_key, uint8_t *pub_key)
 
 	bn_read_be(priv_key, &k);
 	// compute k*G
-	//scalar_multiply(&k, &R);
 	scalar_multiply_jacobian(&k, &R);
 	pub_key[0] = 0x04;
 	bn_write_be(&R.x, pub_key + 1);
@@ -822,7 +771,6 @@ void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key)
 
 	bn_read_be(priv_key, &k);
 	// compute k*G
-	//scalar_multiply(&k, &R);
 	scalar_multiply_jacobian(&k, &R);
 	bn_write_be(&R.x, pub_key);
 	bn_write_be(&R.y, pub_key + 32);
@@ -877,7 +825,6 @@ int ecdsa_verify_digest(const uint8_t *pub_key, const uint8_t *sig, const uint8_
 		return 3;
 	} else {
 		scalar_multiply_jacobian(&z, &res);
-		//scalar_multiply(&z, &res);
 	}
 
 	// both pub and res can be infinity, can have y = 0 OR can be equal -> false negative

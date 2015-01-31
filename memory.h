@@ -47,7 +47,8 @@
 #define MEM_MASTER_BIP32_CHAIN_ADDR	0x0220
 #define MEM_MNEMONIC_BIP32_ADDR_0	0x0240
 #define MEM_MNEMONIC_BIP32_ADDR_1	0x0260
-#define MEM_AESKEY_ADDR				0x0300// Zone 3
+#define MEM_AESKEY_CMD_ADDR			0x0300// Zone 3
+#define MEM_AESKEY_RES_ADDR			0x0400// Zone 4
 
 // Default settings
 #define DEFAULT_erased_             0xFF
@@ -59,12 +60,19 @@
 #define DEFAULT_touch_enable_       1
 
 
+typedef enum PASSWORD_ID { 
+    PASSWORD_COMMAND, 
+    PASSWORD_RESPONSE, 
+    PASSWORD_NUM  /* keep last */
+} PASSWORD_ID;
+
+
 void memory_erase(void);
 void memory_setup(void);
 void memory_clear_variables(void);
 
-int memory_aeskey_write(const char *password, int len);
-uint8_t *memory_aeskey_read(void);
+int memory_aeskey_write(const char *password, int len, int id);
+uint8_t *memory_aeskey_read(int id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_bip32_master(const uint8_t *master_priv_key);
 uint8_t *memory_bip32_chaincode(const uint8_t *chain_code);

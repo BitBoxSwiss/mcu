@@ -150,7 +150,7 @@ static void process_load(char *message)
                 char *mnemo = load_sd(sd_file, sd_file_len);
                 if (decrypt ? strncmp(decrypt, "no", 2) : 1) { // default = decrypt
                     int dec_len;
-                    char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), memory_aeskey_read(), &dec_len);
+                    char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len);
                     memset(mnemo, 0, strlen(mnemo));
                     memcpy(mnemo, dec, dec_len);
                     memset(dec, 0, dec_len);
@@ -232,7 +232,7 @@ static void process_backup(char *message)
                     fill_report("backup", "Electrum mnemonic not present.", ERROR);
                 } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt
                     int enc_len;
-                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), memory_aeskey_read(), &enc_len);
+                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
                     backup_sd(filename, filename_len, enc, enc_len);
                     free(enc);
                 } else {
@@ -244,7 +244,7 @@ static void process_backup(char *message)
                     fill_report("backup", "BIP32 mnemonic not present.", ERROR);
                 } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
                     int enc_len;
-                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), memory_aeskey_read(), &enc_len);
+                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
                     backup_sd(filename, filename_len, enc, enc_len);
                     free(enc);
                 } else {
@@ -316,6 +316,15 @@ static void process_random(char *message)
 }
 
 
+static int process_password(const char *message, int msg_len)
+{
+    PASSWORD_ID id;
+    // fixed (not multipass)
+    id = 0; // TODO multipass, extract from string
+    return(memory_aeskey_write(message, msg_len, id));
+}
+
+
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
@@ -324,7 +333,7 @@ static int commander_process_token(int cmd, char *message)
             return -1;
         
         case CMD_password_:
-		    memory_aeskey_write(message, strlen(message));
+		    process_password(message, strlen(message));
             break;
        
         case CMD_load_:
@@ -434,7 +443,7 @@ char *commander(const char *instruction_encrypted)
             int pw_len;
             const char *pw = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
-                if (memory_aeskey_write(pw, pw_len)) { memory_erased_write(0); }
+                if (process_password(pw, pw_len)) { memory_erased_write(0); }
             } else {
                 fill_report("input", "JSON parse error.", ERROR);
             }
@@ -450,7 +459,6 @@ char *commander(const char *instruction_encrypted)
         int instruction_len;
 		char *instruction = aes_cbc_b64_decrypt((unsigned char*)instruction_encrypted, 
                                                 strlen(instruction_encrypted), 
-                                                memory_aeskey_read(), 
                                                 &instruction_len);
        
         // Parse instructions
@@ -502,7 +510,6 @@ char *commander(const char *instruction_encrypted)
 		    int encrypt_len;
 		    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                                     strlen(json_report), 
-                                                    memory_aeskey_read(),
                                                     &encrypt_len);
 		    memset(json_report, 0, JSON_REPORT_SIZE);
             fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
@@ -519,10 +526,9 @@ char *commander(const char *instruction_encrypted)
 
 
 // Must free() returned value (allocated inside base64() function)
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, 
-                           const uint8_t *key, int *out_b64len)
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len)
 {
-    
+    PASSWORD_ID id;
     int  pads;
     int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
     unsigned char inpad[inpadlen];
@@ -531,9 +537,10 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen,
     unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
     aes_context ctx[1]; 
     
-    // Set cipher key
+        // Set cipher key
+    id = 0; // TODO multipass
     memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(key, 32, ctx); 
+    aes_set_key(memory_aeskey_read(id), 32, ctx); 
     
     // PKCS7 padding
     memcpy(inpad, in, inlen);
@@ -559,9 +566,9 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen,
 }
 
 
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, 
-                           const uint8_t *key, int *decrypt_len)
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
 {
+    
     // unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
@@ -575,9 +582,12 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen,
     }
     
     // Set cipher key
+    PASSWORD_ID id;
     aes_context ctx[1]; 
+   
+    id = 0; // TODO multipass
     memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(key, 32, ctx); 
+    aes_set_key(memory_aeskey_read(id), 32, ctx); 
     
     unsigned char dec_pad[ub64len - N_BLOCK];
     aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);

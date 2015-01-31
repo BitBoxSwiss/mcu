@@ -47,7 +47,8 @@ static uint8_t MEM_touch_enable_ = DEFAULT_erased_;
 static uint8_t MEM_led_ = DEFAULT_led_;
 
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
-static uint8_t MEM_aeskey_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_aeskey_cmd_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_aeskey_res_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_mnemonic_electrum_[MEM_PAGE_LEN+1] = {0xFF};
 static uint8_t MEM_master_electrum_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_master_bip32_[MEM_PAGE_LEN] = {0xFF};
@@ -83,7 +84,8 @@ void memory_erase(void)
     memory_touch_enable_write(DEFAULT_touch_enable_);
     memory_delay_iterate(DEFAULT_delay_);
     
-    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_COMMAND);
+    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_RESPONSE);
     memory_electrum_mnemonic((char *)MEM_PAGE_ERASE);
     memory_electrum_master(MEM_PAGE_ERASE);
 	
@@ -101,7 +103,8 @@ void memory_clear_variables(void)
     // Do not clear for testing routines (i.e. not embedded).
     // Enable clearing if making a software wallet (variables should get loaded from an encrypted file).
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_cmd_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_res_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_mnemonic_electrum_, MEM_PAGE_ERASE, MEM_PAGE_LEN+1);
     memcpy(MEM_master_electrum_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_bip32_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -211,9 +214,10 @@ char *memory_electrum_mnemonic(const char *seed_hex)
 }
 
 
-int memory_aeskey_write(const char *password, int len)
+int memory_aeskey_write(const char *password, int len, int id)
 {
-	uint8_t password_b[MEM_PAGE_LEN];
+	int ret;
+    uint8_t password_b[MEM_PAGE_LEN];
 	memset(password_b, 0, MEM_PAGE_LEN);
     
     // TEST really need a max condition if later hash it? check against python aes implementation
@@ -229,7 +233,16 @@ int memory_aeskey_write(const char *password, int len)
 	sha256_Raw((uint8_t *)password, len, password_b);
 	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
-    if (memory_eeprom(password_b, MEM_aeskey_, MEM_AESKEY_ADDR, MEM_PAGE_LEN)) {
+    switch (id) {
+        case PASSWORD_COMMAND:
+            ret = memory_eeprom(password_b, MEM_aeskey_cmd_, MEM_AESKEY_CMD_ADDR, MEM_PAGE_LEN);
+            break;
+        case PASSWORD_RESPONSE:
+            ret = memory_eeprom(password_b, MEM_aeskey_res_, MEM_AESKEY_RES_ADDR, MEM_PAGE_LEN);
+            break;
+    }
+
+    if (ret) {
         fill_report("password", "success", SUCCESS);
         return 1;
     } else { 
@@ -237,10 +250,19 @@ int memory_aeskey_write(const char *password, int len)
         return 0;
     }
 }
-uint8_t *memory_aeskey_read(void)
+
+uint8_t *memory_aeskey_read(int id)
 {
-    memory_eeprom(NULL, MEM_aeskey_, MEM_AESKEY_ADDR, MEM_PAGE_LEN);
-    return MEM_aeskey_;
+    switch (id) {
+        case PASSWORD_COMMAND:
+            memory_eeprom(NULL, MEM_aeskey_cmd_, MEM_AESKEY_CMD_ADDR, MEM_PAGE_LEN);
+            return MEM_aeskey_cmd_;
+
+        case PASSWORD_RESPONSE:
+            memory_eeprom(NULL, MEM_aeskey_res_, MEM_AESKEY_RES_ADDR, MEM_PAGE_LEN);
+            return MEM_aeskey_res_;
+    }
+    return 0;
 }
 
 

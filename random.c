@@ -31,9 +31,13 @@
 #ifdef TESTING
 
 static FILE *f;
-void rand_init(void)
+static int f_open = 0;
+void random_init(void)
 {
-	f = fopen("/dev/urandom", "r");
+    if (!f_open) {
+        f = fopen("/dev/urandom", "r");
+        f_open = 1;
+    }
 }
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
@@ -46,13 +50,13 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
 #include "ataes132.h"
 
-void rand_init(void) { };
+void random_init(void) { };
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     // TEST bit order 00000010=0x02 or 01000000=0x40 ?
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
-    uint8_t ataes_ret[20] = {0}; // size of Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
+    uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
     
     uint32_t cnt = 0;
     while (len > cnt) {
@@ -74,3 +78,25 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 }
 
 #endif
+
+
+/* 
+   Adapted from:
+   http://benpfaff.org/writings/clc/shuffle.html
+   Arrange the N elements of ARRAY in random order.
+   Only effective if N is much smaller than RAND_MAX;
+*/
+void random_shuffle(int *array, size_t n)
+{
+    uint16_t r[1];
+    if (n > 1) {
+        size_t i;
+        for (i = 0; i < n - 1; i++) {
+          random_bytes((uint8_t *)r, 2, 0);
+          size_t j = i + r[0] / (65536 / (n - i) + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}

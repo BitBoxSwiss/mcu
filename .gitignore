@@ -1,1 +1,6 @@
-*.o *.swp
+*.o
+*.swp
+.ycm*
+tests*
+!*.c
+*.bak

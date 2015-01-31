@@ -907,7 +907,7 @@ static void test_sign_message(void)
     uint16_t i, msg_len, cnt = 0, err = 0, clen = strlen(characters);
     
     
-    rand_init();
+    random_init();
     
     while (cnt++ < iterations) {
         // random message len between 1 and max_len

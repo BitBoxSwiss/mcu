@@ -37,17 +37,12 @@
 #define USE_PRECOMPUTED_CP 1
 #endif
 
-// djb: remove as introduces side-channel signal
-#ifndef USE_PRECOMPUTED_CP2
-#define USE_PRECOMPUTED_CP2 0
-#endif
-
 // use fast inverse method
 #ifndef USE_INVERSE_FAST
 #define USE_INVERSE_FAST 1
 #endif
 
-// djb: use random order during scaler multiplication
+// use random order during scaler multiplication
 #ifndef USE_RANDOM_ORDER_MULT
 #define USE_RANDOM_ORDER_MULT 1
 #endif

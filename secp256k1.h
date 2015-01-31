@@ -29,7 +29,7 @@
 
 #include "bignum.h"
 
-// Jacobian coordinates curve point x, y, and z
+// Jacobian coordinates for curve point x, y, and z
 typedef struct {
 	bignum256 x, y, z;
 } curve_point_jacobian;
@@ -60,7 +60,6 @@ extern const bignum256 secp256k1_iv[256];
 
 #if USE_PRECOMPUTED_CP
 extern const curve_point secp256k1_cp[256];
-extern const curve_point secp256k1_cp2[255];
 #endif
 
 #endif

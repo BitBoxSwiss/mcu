@@ -449,10 +449,9 @@ void scalar_multiply_jacobian(const bignum256 *k, curve_point *C)
 	memcpy(&curr.x, &G256k1.x, sizeof(bignum256));
 	memcpy(&curr.y, &G256k1.y, sizeof(bignum256));
     bn_one(&curr.z);
-   
-
-
-	for (i = 0; i < 256; i++) {
+ 
+	
+    for (i = 0; i < 256; i++) {
 #if USE_RANDOM_ORDER_MULT
         j = r[i];
 #else
@@ -686,9 +685,19 @@ int ecdsa_sign_double(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_
 // priv_key is a 32 byte big endian stored number
 // sig is 64 bytes long array for the signature
 // digest is 32 bytes of digest
+#include "uECC.h"
 int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *sig)
 {
-	uint32_t i;
+	
+    if(!uECC_sign(priv_key, digest, sig))
+    {
+        printf("uECC_sign() failed\n");
+        return 1;
+    }
+    return 0;
+//////////////////////////////////////////////
+
+    uint32_t i;
 	curve_point R;
 	bignum256 k, z;
 	bignum256 *da = &R.y;
@@ -702,7 +711,7 @@ int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *s
 
 	// compute k*G
 	scalar_multiply_jacobian(&k, &R);
-    
+   
     // r = (rx mod n)
 	bn_mod(&R.x, &order256k1);
 	// if r is zero, we fail

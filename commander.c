@@ -43,9 +43,7 @@
 #include "mcu.h"
 #include "ataes132.h" /* Atmel AES132 crypto chip */
 #else
-
-void delay_ms(int delay) { (void)delay; }
-
+#include "sham.h"
 #endif
 
 

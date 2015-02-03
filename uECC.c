@@ -1808,6 +1808,37 @@ int uECC_make_key(uint8_t p_publicKey[uECC_BYTES*2], uint8_t p_privateKey[uECC_B
     return 1;
 }
 
+
+// djb
+void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES+1])
+{
+    uint8_t p_publicKey_long[uECC_BYTES*2];
+
+    uECC_get_public_key64(p_privateKey, p_publicKey_long);
+    uECC_compress(p_publicKey_long, p_publicKey);
+}
+
+void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES*2])
+{
+    uint8_t *p = p_publicKey;
+	p[0] = 0x04;
+    uECC_get_public_key64(p_privateKey, p+1);
+}
+
+void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES*2])
+{
+    EccPoint l_public;
+    uECC_word_t l_private[uECC_WORDS];
+
+    vli_bytesToNative(l_private, p_privateKey);
+    
+    EccPoint_mult(&l_public, &curve_G, l_private, 0, vli_numBits(l_private, uECC_WORDS));
+    
+    vli_nativeToBytes(p_publicKey, l_public.x);
+    vli_nativeToBytes(p_publicKey + uECC_BYTES, l_public.y);
+}
+
+
 int uECC_shared_secret(const uint8_t p_publicKey[uECC_BYTES*2], const uint8_t p_privateKey[uECC_BYTES], uint8_t p_secret[uECC_BYTES])
 {
     EccPoint l_public;
@@ -2144,10 +2175,34 @@ static void vli_modMult_n(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_
 #endif /* (uECC_CURVE != uECC_secp160r1) */
 
 
+#include <string.h>
+#include "sha2.h"
 #include "ecdsa.h"
 #include "bignum.h"
 
-int uECC_sign(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES*2])
+
+int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature)
+{
+    uint8_t p_hash[uECC_BYTES];
+    if(uECC_BYTES != SHA256_DIGEST_LENGTH)
+        return 0;
+	sha256_Raw(msg, msg_len, p_hash);
+    return uECC_sign_digest(p_privateKey, p_hash, p_signature);
+}
+
+int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature)
+{
+    uint8_t p_hash[uECC_BYTES];
+    if(uECC_BYTES != SHA256_DIGEST_LENGTH)
+        return 0;
+	sha256_Raw(msg, msg_len, p_hash);
+	sha256_Raw(p_hash, uECC_BYTES, p_hash);
+    return uECC_sign_digest(p_privateKey, p_hash, p_signature);
+}
+
+
+
+int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES*2])
 {
     uECC_word_t k[uECC_N_WORDS];
     uECC_word_t l_tmp[uECC_N_WORDS];
@@ -2218,7 +2273,7 @@ int uECC_sign(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_
     
     random_init();
     random_bytes(l_tmp, sizeof(l_tmp) / 2, 0); // call random once to improve speed
-                                               // then mult by 16 instead of 32 byte number
+                                               // this multiplies by a 16 instead of 32 byte number
     //l_tries = 0;
     //do
     //{
@@ -2261,8 +2316,54 @@ static bitcount_t smax(bitcount_t a, bitcount_t b)
     return (a > b ? a : b);
 }
 
-int uECC_verify(const uint8_t p_publicKey[uECC_BYTES*2], const uint8_t p_hash[uECC_BYTES], const uint8_t p_signature[uECC_BYTES*2])
+
+
+// djb
+int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey)
 {
+    if (publicKey[0] == 0x04) {
+		memcpy(p_publicKey, publicKey + 1, uECC_BYTES*2);
+        return 1;
+	}
+	if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
+        uECC_decompress(publicKey, p_publicKey);
+		return 1;
+	}
+	// error
+	return 0;
+}
+
+int uECC_verify(const uint8_t *publicKey, const uint8_t *p_signature, 
+                 const uint8_t *msg, uint32_t msg_len)
+{
+    uint8_t p_hash[uECC_BYTES];
+    if(uECC_BYTES != SHA256_DIGEST_LENGTH)
+        return 0;
+	sha256_Raw(msg, msg_len, p_hash);
+	return uECC_verify_digest(publicKey, p_hash, p_signature);
+}
+
+int uECC_verify_double(const uint8_t *publicKey, const uint8_t *p_signature, 
+                        const uint8_t *msg, uint32_t msg_len)
+{
+    uint8_t p_hash[uECC_BYTES];
+    if(uECC_BYTES != SHA256_DIGEST_LENGTH)
+        return 0;
+	sha256_Raw(msg, msg_len, p_hash);
+	sha256_Raw(p_hash, uECC_BYTES, p_hash);
+    return uECC_verify_digest(publicKey, p_hash, p_signature);
+}
+
+int uECC_verify_digest(const uint8_t *publicKey, 
+                       const uint8_t p_hash[uECC_BYTES], 
+                       const uint8_t p_signature[uECC_BYTES*2])
+{
+    uint8_t p_publicKey[uECC_BYTES*2];
+	
+    if (!uECC_read_pubkey(publicKey, p_publicKey)) {
+		return 0;
+	}
+    
     uECC_word_t u1[uECC_N_WORDS], u2[uECC_N_WORDS];
     uECC_word_t z[uECC_N_WORDS];
     EccPoint l_public, l_sum;

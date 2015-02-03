@@ -29,6 +29,7 @@
 
 #include "keys.h"
 #include "sha2.h"
+#include "uECC.h"
 #include "ecdsa.h"
 #include "memory.h"
 #include "commander.h"
@@ -97,7 +98,7 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
         int der_len;
         uint8_t sig[64]; 
         uint8_t der[64]; 
-        if (ecdsa_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
+        if (!uECC_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
             fill_report("sign", "Could not sign data.", ERROR);
         } else {
             der_len = ecdsa_sig_to_der(sig, der);
@@ -119,7 +120,7 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
         if (msg_len != (32 * 2)) {
             fill_report("sign", "Incorrect data length. "
                         "A 32-byte hexadecimal (64 characters) is expected.", ERROR);
-        } else if (ecdsa_sign_digest(priv_key, hex_to_uint8(message), sig)) {
+        } else if (!uECC_sign_digest(priv_key, hex_to_uint8(message), sig)) {
             fill_report("sign", "Could not sign data.", ERROR);
         } else {
             fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
@@ -216,7 +217,7 @@ void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_
 }
 
 
-static void generate_key_bip32(uint8_t *privkeychild, char *key_path,
+void generate_key_bip32(uint8_t *privkeychild, char *key_path,
                         const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
     unsigned long idx;
@@ -227,7 +228,7 @@ static void generate_key_bip32(uint8_t *privkeychild, char *key_path,
     hd_node.child_num = 0;
     memcpy(hd_node.chain_code, chaincode, 32);
     memcpy(hd_node.private_key, privkeymaster, 32);
-	hdnode_fill_public_key(&hd_node);
+	//hdnode_fill_public_key(&hd_node); // very slow
     
     pch = strtok(key_path, " /,m\\");
     while (pch != NULL) {
@@ -240,6 +241,8 @@ static void generate_key_bip32(uint8_t *privkeychild, char *key_path,
         memcpy(privkeychild, hd_node.private_key, 32);
         pch = strtok(NULL, " /,m\\");
     } 
+    
+    
     memset(&hd_node, 0, sizeof(HDNode));
 }
 
@@ -254,7 +257,7 @@ void report_master_public_key_bip32(void)
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         fill_report("master_public_key", "A bip32 master private key is not set.", ERROR);
     } else {
-	    ecdsa_get_public_key33(priv_key_master, pub_key_master);
+	    uECC_get_public_key33(priv_key_master, pub_key_master);
         fill_report("master_public_key", uint8_to_hex(pub_key_master,33), SUCCESS);
     }
 }   
@@ -383,7 +386,7 @@ static void generate_key_electrum(uint8_t *privkeychild, char *keypath, const ui
     uint8_t z[32], pubkeymaster[64];
     char *pch;
     
-    ecdsa_get_public_key64(privkeymaster, pubkeymaster);
+    uECC_get_public_key64(privkeymaster, pubkeymaster);
     
     // z = sha256_x2( n: || change: || pubkeymaster )
     pch = strtok(keypath, " /,m\\");    sscanf(pch, "%lu", &change); 
@@ -438,7 +441,7 @@ void report_master_public_key_electrum(void)
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32)) {
         fill_report("master_public_key", "An Electrum master private key is not set.", ERROR);
     } else {
-        ecdsa_get_public_key64(priv_key_master, pub_key_master);
+        uECC_get_public_key64(priv_key_master, pub_key_master);
         fill_report("master_public_key", uint8_to_hex(pub_key_master, 64), SUCCESS);
     }
 }   

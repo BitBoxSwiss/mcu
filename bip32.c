@@ -3,11 +3,12 @@
 #include "ripemd160.h"
 #include "bignum.h"
 #include "ecdsa.h"
+#include "uECC.h"
 #include "bip32.h"
 #include "sha2.h"
 #include "hmac.h"
 
-
+/*
 void hdnode_from_xpub(uint32_t depth, uint32_t fingerprint, uint32_t child_num, uint8_t *chain_code, uint8_t *public_key, HDNode *out)
 {
 	out->depth = depth;
@@ -28,7 +29,7 @@ void hdnode_from_xprv(uint32_t depth, uint32_t fingerprint, uint32_t child_num, 
 	memcpy(out->private_key, private_key, 32);
 	hdnode_fill_public_key(out);
 }
-
+*/
 
 int hdnode_from_seed(uint8_t *seed, int seed_len, HDNode *out)
 {
@@ -97,7 +98,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 	inout->child_num = i;
 	bn_write_be(&a, inout->private_key);
 
-	hdnode_fill_public_key(inout);
+	hdnode_fill_public_key(inout); // very slow
 
     memset(data, 0, sizeof(data));	
     memset(I, 0, sizeof(I));	
@@ -110,6 +111,7 @@ int hdnode_public_ckd(HDNode *inout, uint32_t i)
 	uint8_t data[1 + 32 + 4];
 	uint8_t I[32 + 32];
 	uint8_t fingerprint[32];
+	uint8_t pub_key64[64];
     curve_point a, b;
 	bignum256 c;
 
@@ -125,9 +127,12 @@ int hdnode_public_ckd(HDNode *inout, uint32_t i)
 	inout->fingerprint = (fingerprint[0] << 24) + (fingerprint[1] << 16) + (fingerprint[2] << 8) + fingerprint[3];
 
 	memset(inout->private_key, 0, 32);
-	if (!ecdsa_read_pubkey(inout->public_key, &a)) {
+	//if (!ecdsa_read_pubkey(inout->public_key, &a)) {
+	if (!uECC_read_pubkey(inout->public_key, pub_key64)) {
 		return 0;
 	}
+    bn_read_be(pub_key64, &(a.x));
+    bn_read_be(pub_key64 + 32, &(a.y));
 
 	hmac_sha512(inout->chain_code, 32, data, sizeof(data), I);
 	memcpy(inout->chain_code, I + 32, 32);
@@ -159,5 +164,6 @@ int hdnode_public_ckd(HDNode *inout, uint32_t i)
 
 void hdnode_fill_public_key(HDNode *node)
 {
-	ecdsa_get_public_key33(node->private_key, node->public_key);
+	uECC_get_public_key33(node->private_key, node->public_key);
 }
+

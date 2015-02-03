@@ -30,7 +30,7 @@
 
 // check public key for validity
 #ifndef USE_PUBKEY_VALIDATE
-#define USE_PUBKEY_VALIDATE 1
+#define USE_PUBKEY_VALIDATE 0
 #endif
 
 #define LENVARINT 20
@@ -48,22 +48,22 @@ void uncompress_coords(uint8_t odd, const bignum256 *x, bignum256 *y);
 
 int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const uint8_t *hash);
 
-int ecdsa_sign(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig);
-int ecdsa_sign_double(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig);
-int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *sig);
+//int ecdsa_sign(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig);
+//int ecdsa_sign_double(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig);
+//int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *sig);
 int ecdsa_sign_message(const uint8_t *priv_key, const char *msg, uint32_t msg_len, uint8_t *sig_m);
-void ecdsa_get_public_key33(const uint8_t *priv_key, uint8_t *pub_key);
-void ecdsa_get_public_key65(const uint8_t *priv_key, uint8_t *pub_key);
-void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key);
+//void ecdsa_get_public_key33(const uint8_t *priv_key, uint8_t *pub_key);
+//void ecdsa_get_public_key65(const uint8_t *priv_key, uint8_t *pub_key);
+//void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key);
 void ecdsa_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void ecdsa_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);
 void ecdsa_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize);
 void ecdsa_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize);
 int ecdsa_address_decode(const char *addr, uint8_t *out);
-int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub);
-int ecdsa_verify(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len);
-int ecdsa_verify_double(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len);
-int ecdsa_verify_digest(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *digest);
+//int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub);
+//int ecdsa_verify(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len);
+//int ecdsa_verify_double(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len);
+//int ecdsa_verify_digest(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *digest);
 int ecdsa_validate_pubkey(const curve_point *pub);
 int ecdsa_sig_to_der(const uint8_t *sig, uint8_t *der);
 

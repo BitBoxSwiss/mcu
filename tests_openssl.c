@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "uECC.h"
 #include "ecdsa.h"
 #include "random.h"
 
@@ -85,21 +86,21 @@ int main(int argc, char *argv[])
 		}
 
 		// use our ECDSA signer to sign the message with the key
-		if (ecdsa_sign(priv_key, msg, msg_len, sig) != 0) {
+		if (!uECC_sign(priv_key, msg, msg_len, sig) != 0) {
 			printf("signing failed\n");
 			break;
 		}
 
 		// generate public key from private key
-		ecdsa_get_public_key33(priv_key, pub_key33);
-		ecdsa_get_public_key65(priv_key, pub_key65);
+		uECC_get_public_key33(priv_key, pub_key33);
+		uECC_get_public_key65(priv_key, pub_key65);
 
-		// use our ECDSA verifier to verify the message signature
-		if (ecdsa_verify(pub_key65, sig, msg, msg_len) != 0) {
+		// verify the message signature
+		if (uECC_verify(pub_key65, sig, msg, msg_len) == 0) {
 			printf("verification failed (pub_key_len = 65)\n");
 			break;
 		}
-		if (ecdsa_verify(pub_key33, sig, msg, msg_len) != 0) {
+		if (uECC_verify(pub_key33, sig, msg, msg_len) == 0) {
 			printf("verification failed (pub_key_len = 33)\n");
 			break;
 		}

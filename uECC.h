@@ -40,7 +40,7 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 #endif
 */
 #define uECC_secp256k1 4
-#define uECC_CURVE 4
+#define uECC_CURVE uECC_secp256k1
 
 /* uECC_SQUARE_FUNC - If enabled (defined as nonzero), this will cause a specific function to be used for (scalar) squaring
     instead of the generic multiplication function. This will make things faster by about 8% but increases the code size. */
@@ -54,8 +54,8 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 #define uECC_size_3 32 /* secp256r1 */
 #define uECC_size_4 32 /* secp256k1 */
 
-//#define uECC_BYTES uECC_CONCAT(uECC_size_, uECC_CURVE)
-#define uECC_BYTES  32
+#define uECC_BYTES uECC_CONCAT(uECC_size_, uECC_CURVE)
+//#define uECC_BYTES  32
 
 #ifdef __cplusplus
 extern "C"
@@ -152,9 +152,17 @@ Outputs:
 
 Returns 1 if the signature generated successfully, 0 if an error occurred.
 */
-int uECC_sign(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES*2]);
+int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES*2]);
 
-/* uECC_verify() function.
+// Performs double sha256 hash on msg before verification
+int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature);
+
+// Performs sha256 hash on msg before verification
+int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature);
+
+
+
+/* uECC_verify_digest() function.
 Verify an ECDSA signature.
 
 Usage: Compute the hash of the signed data using the same hash as the signer and
@@ -167,7 +175,30 @@ Inputs:
 
 Returns 1 if the signature is valid, 0 if it is invalid.
 */
-int uECC_verify(const uint8_t p_publicKey[uECC_BYTES*2], const uint8_t p_hash[uECC_BYTES], const uint8_t p_signature[uECC_BYTES*2]);
+int uECC_verify_digest(const uint8_t p_publicKey[uECC_BYTES*2], 
+                       const uint8_t p_hash[uECC_BYTES], 
+                       const uint8_t p_signature[uECC_BYTES*2]);
+
+// Performs sha256 hash on msg before verification
+int uECC_verify(const uint8_t *p_publicKey, const uint8_t *p_signature, 
+                const uint8_t *msg, uint32_t msg_len);
+
+// Performs double sha256 hash on msg before verification
+int uECC_verify_double(const uint8_t *p_publicKey, const uint8_t *p_signature, 
+                       const uint8_t *msg, uint32_t msg_len);
+
+
+
+// djb
+void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES*2]);
+void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES*2]);
+void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES+1]);
+int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey);
+
+
+
+
+
 
 #ifdef __cplusplus
 } /* end of extern "C" */

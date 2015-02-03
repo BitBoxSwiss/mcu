@@ -41,7 +41,7 @@
 #include "sd.h"
 #ifndef TESTING
 #include "mcu.h"
-#include "ataes132.h" /* Atmel AES132 crypto chip */
+#include "ataes132.h"
 #else
 #include "sham.h"
 #endif

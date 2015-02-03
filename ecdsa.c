@@ -34,6 +34,7 @@
 #include "sha2.h"
 #include "hmac.h"
 #include "ecdsa.h"
+#include "uECC.h"
 #include "utils.h"
 
 
@@ -493,7 +494,7 @@ static void reverse_hex(char *h, int len)
     }   
 }
 
-static void varint(char * vi, uint64_t i)
+static void varint(char *vi, uint64_t i)
 {
     memset(vi, 0, LENVARINT); 
     int len = 0;
@@ -525,7 +526,7 @@ static void varint(char * vi, uint64_t i)
     }
 }
 
-static int message_magic(const char * msg, int msg_len, char * out)
+static int message_magic(const char *msg, int msg_len, char *out)
 {
     const char *header = "\030Bitcoin Signed Message:\n";
     uint64_t vilen = strlen(msg); 
@@ -541,7 +542,7 @@ static int message_magic(const char * msg, int msg_len, char * out)
 }
 
 
-static int verify_message(const uint8_t * sig_m, const char * msg, int msg_len, const uint8_t * pubkey)
+static int verify_message(const uint8_t *sig_m, const char *msg, int msg_len, const uint8_t *pubkey)
 {
     uint8_t r[32], s[32], h[32], Qxy[64], odd;
     uint8_t nV = sig_m[0];
@@ -592,6 +593,8 @@ static int verify_message(const uint8_t * sig_m, const char * msg, int msg_len, 
 }
 
 
+// maybe not working....
+// also too slow...
 int ecdsa_sign_message(const uint8_t *priv_key, const char *msg, uint32_t msg_len, uint8_t *sig_m)
 {
     int ret;
@@ -601,8 +604,8 @@ int ecdsa_sign_message(const uint8_t *priv_key, const char *msg, uint32_t msg_le
     uint8_t public_key[64];
     uint8_t sig[64];
     
-    ret = ecdsa_sign_double(priv_key, (uint8_t *)msg_m, msg_m_len, sig); 
-    ecdsa_get_public_key64(priv_key, public_key);
+    ret = !uECC_sign_double(priv_key, (uint8_t *)msg_m, msg_m_len, sig); 
+    uECC_get_public_key64(priv_key, public_key);
    
     if (!ret) {
         memcpy(sig_m+1, sig, 64);
@@ -615,6 +618,12 @@ int ecdsa_sign_message(const uint8_t *priv_key, const char *msg, uint32_t msg_le
         }
         while (ret && nV < 31);
     }
+    
+    //if( nV>28 )
+        //printf(".");
+    //else
+        //printf(" ");
+    
     return ret;
 }
 
@@ -665,7 +674,7 @@ int generate_k_rfc6979(bignum256 *secret, const uint8_t *priv_key, const uint8_t
 	// we generated 10000 numbers, none of them is good -> fail
 	return 1;
 }
-
+/*
 int ecdsa_sign(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_len, uint8_t *sig)
 {
 	uint8_t hash[32];
@@ -689,7 +698,7 @@ int ecdsa_sign_double(const uint8_t *priv_key, const uint8_t *msg, uint32_t msg_
 int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *sig)
 {
 	
-    if(!uECC_sign(priv_key, digest, sig))
+    if(!uECC_sign_digest(priv_key, digest, sig))
     {
         printf("uECC_sign() failed\n");
         return 1;
@@ -741,7 +750,13 @@ int ecdsa_sign_digest(const uint8_t *priv_key, const uint8_t *digest, uint8_t *s
 
 	return 0;
 }
+*/
 
+/*
+// Error?? 
+// gives first value 0x04 but should be either 0x02 or 0x03 for privkeys:
+// c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5  or
+// 509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a
 void ecdsa_get_public_key33(const uint8_t *priv_key, uint8_t *pub_key)
 {
 	curve_point R;
@@ -787,7 +802,8 @@ void ecdsa_get_public_key64(const uint8_t *priv_key, uint8_t *pub_key)
     memset(&R,0,sizeof(curve_point));
     memset(&k,0,sizeof(bignum256));
 }
-
+*/
+/*
 int ecdsa_verify(const uint8_t *pub_key, const uint8_t *sig, const uint8_t *msg, uint32_t msg_len)
 {
 	uint8_t hash[32];
@@ -855,7 +871,7 @@ int ecdsa_verify_digest(const uint8_t *pub_key, const uint8_t *sig, const uint8_
 	// all OK
 	return 0;
 }
-
+*/
 
 void ecdsa_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
 {
@@ -902,7 +918,7 @@ int ecdsa_address_decode(const char *addr, uint8_t *out)
 	return base58_decode_check(addr, out, 21) == 21;
 }
 
-
+/*
 int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub)
 {
 	if (pub_key[0] == 0x04) {
@@ -926,7 +942,7 @@ int ecdsa_read_pubkey(const uint8_t *pub_key, curve_point *pub)
 	// error
 	return 0;
 }
-
+*/
 
 // Verifies that:
 //   - pub is not the point at infinity.

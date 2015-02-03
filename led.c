@@ -34,6 +34,7 @@
 #include <delay.h>
 #include <ioport.h>
 #else
+#include "sham.h"
 
 #define LED_0_PIN               0
 #define IOPORT_PIN_LEVEL_LOW    1

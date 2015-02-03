@@ -2272,8 +2272,8 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
     
     
     random_init();
-    random_bytes(l_tmp, sizeof(l_tmp) / 2, 0); // call random once to improve speed
-                                               // this multiplies by a 16 instead of 32 byte number
+    random_bytes((uint8_t *)l_tmp, sizeof(l_tmp) / 2, 0); // call random once to improve speed
+                                               // multiplies by a 16 instead of 32 byte number
     //l_tries = 0;
     //do
     //{

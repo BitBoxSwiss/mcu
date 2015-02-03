@@ -114,9 +114,5 @@ void fill_report_len(const char *attr, const char *val, int err, int vallen);
 char *commander(const char *instruction_encrypted);
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len);
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *declen);
-#ifdef TESTING
-void delay_ms(int delay);
-#endif
-
 
 #endif

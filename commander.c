@@ -31,17 +31,17 @@
 #include "random.h"
 #include "memory.h"
 #include "base64.h"
-#include "touch.h"
 #include "utils.h"
 #include "sha2.h"
 #include "keys.h"
 #include "jsmn.h"
 #include "aes.h"
 #include "led.h"
-#include "sd.h"
 #ifndef TESTING
-#include "mcu.h"
 #include "ataes132.h"
+#include "touch.h"
+#include "mcu.h"
+#include "sd.h"
 #else
 #include "sham.h"
 #endif

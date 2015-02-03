@@ -35,10 +35,10 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 #define uECC_secp256r1 3
 #define uECC_secp256k1 4
 #ifndef uECC_CURVE
-    #define uECC_CURVE uECC_secp160r1
+//    #define uECC_CURVE uECC_secp160r1
+    #define uECC_secp256k1 4
 #endif
-//#define uECC_secp256k1 4
-//#define uECC_CURVE uECC_secp256k1
+#define uECC_CURVE uECC_secp256k1
 
 /* uECC_SQUARE_FUNC - If enabled (defined as nonzero), this will cause a specific function to be used for (scalar) squaring
     instead of the generic multiplication function. This will make things faster by about 8% but increases the code size. */

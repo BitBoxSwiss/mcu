@@ -2179,7 +2179,7 @@ static void vli_modMult_n(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_
 #include "sha2.h"
 #include "ecdsa.h"
 #include "bignum.h"
-
+#include "random.h"
 
 int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature)
 {

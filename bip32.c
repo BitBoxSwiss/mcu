@@ -1,35 +1,11 @@
 #include <string.h>
 
 #include "ripemd160.h"
-#include "bignum.h"
-#include "ecdsa.h"
 #include "uECC.h"
 #include "bip32.h"
 #include "sha2.h"
 #include "hmac.h"
 
-/*
-void hdnode_from_xpub(uint32_t depth, uint32_t fingerprint, uint32_t child_num, uint8_t *chain_code, uint8_t *public_key, HDNode *out)
-{
-	out->depth = depth;
-	out->fingerprint = fingerprint;
-	out->child_num = child_num;
-	memcpy(out->chain_code, chain_code, 32);
-	memset(out->private_key, 0, 32);
-	memcpy(out->public_key, public_key, 33);
-}
-
-
-void hdnode_from_xprv(uint32_t depth, uint32_t fingerprint, uint32_t child_num, uint8_t *chain_code, uint8_t *private_key, HDNode *out)
-{
-	out->depth = depth;
-	out->fingerprint = fingerprint;
-	out->child_num = child_num;
-	memcpy(out->chain_code, chain_code, 32);
-	memcpy(out->private_key, private_key, 32);
-	hdnode_fill_public_key(out);
-}
-*/
 
 int hdnode_from_seed(uint8_t *seed, int seed_len, HDNode *out)
 {
@@ -40,16 +16,26 @@ int hdnode_from_seed(uint8_t *seed, int seed_len, HDNode *out)
     out->child_num = 0;
 	hmac_sha512((uint8_t *)"Bitcoin seed", 12, seed, seed_len, I);
 	memcpy(out->private_key, I, 32);
-	bignum256 a;
-	bn_read_be(out->private_key, &a);
-	if (bn_is_zero(&a) || !bn_is_less(&a, &order256k1)) { // == 0 or >= order
+	
+    if (!uECC_isValid(out->private_key)) {
 		memset(I, 0, sizeof(I));
         return 0;
-	}
-	memcpy(out->chain_code, I + 32, 32);
+    }
+    
+    memcpy(out->chain_code, I + 32, 32);
 	hdnode_fill_public_key(out);
     memset(I, 0, sizeof(I));
 	return 1;
+}
+
+
+// write 4 big endian bytes
+static void write_be(uint8_t *data, uint32_t x)
+{
+	data[0] = x >> 24;
+	data[1] = x >> 16;
+	data[2] = x >> 8;
+	data[3] = x;
 }
 
 
@@ -58,7 +44,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 	uint8_t data[1 + 32 + 4];
 	uint8_t I[32 + 32];
 	uint8_t fingerprint[32];
-    bignum256 a, b;
+    uint8_t p[32], z[32];
 
 	if (i & 0x80000000) { // private derivation
 		data[0] = 0;
@@ -72,92 +58,36 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 	ripemd160(fingerprint, 32, fingerprint);
 	inout->fingerprint = (fingerprint[0] << 24) + (fingerprint[1] << 16) + (fingerprint[2] << 8) + fingerprint[3];
 
-	bn_read_be(inout->private_key, &a);
+	memcpy(p, inout->private_key, 32);
 
 	hmac_sha512(inout->chain_code, 32, data, sizeof(data), I);
 	memcpy(inout->chain_code, I + 32, 32);
 	memcpy(inout->private_key, I, 32);
 
-	bn_read_be(inout->private_key, &b);
+	memcpy(z, inout->private_key, 32);
 
-	if (!bn_is_less(&b, &order256k1)) { // >= order
+    if (!uECC_isValid(z)) {
 	    memset(data, 0, sizeof(data));	
-	    memset(I, 0, sizeof(I));	
+		memset(I, 0, sizeof(I));
         return 0;
-	}
+    }
 
-	bn_addmod(&a, &b, &order256k1);
 
-	if (bn_is_zero(&a)) {
+    uECC_generate_private_key(inout->private_key, p, z);
+	
+    if (!uECC_isValid(inout->private_key)) {
 	    memset(data, 0, sizeof(data));	
-	    memset(I, 0, sizeof(I));	
-		return 0;
-	}
+		memset(I, 0, sizeof(I));
+        return 0;
+    }
 
 	inout->depth++;
 	inout->child_num = i;
-	bn_write_be(&a, inout->private_key);
 
 	hdnode_fill_public_key(inout); // very slow
 
     memset(data, 0, sizeof(data));	
     memset(I, 0, sizeof(I));	
-	return 1;
-}
-
-
-int hdnode_public_ckd(HDNode *inout, uint32_t i)
-{
-	uint8_t data[1 + 32 + 4];
-	uint8_t I[32 + 32];
-	uint8_t fingerprint[32];
-	uint8_t pub_key64[64];
-    curve_point a, b;
-	bignum256 c;
-
-	if (i & 0x80000000) { // private derivation
-		return 0;
-	} else { // public derivation
-		memcpy(data, inout->public_key, 33);
-	}
-	write_be(data + 33, i);
-
-    sha256_Raw(inout->public_key, 33, fingerprint);
-	ripemd160(fingerprint, 32, fingerprint);
-	inout->fingerprint = (fingerprint[0] << 24) + (fingerprint[1] << 16) + (fingerprint[2] << 8) + fingerprint[3];
-
-	memset(inout->private_key, 0, 32);
-	//if (!ecdsa_read_pubkey(inout->public_key, &a)) {
-	if (!uECC_read_pubkey(inout->public_key, pub_key64)) {
-		return 0;
-	}
-    bn_read_be(pub_key64, &(a.x));
-    bn_read_be(pub_key64 + 32, &(a.y));
-
-	hmac_sha512(inout->chain_code, 32, data, sizeof(data), I);
-	memcpy(inout->chain_code, I + 32, 32);
-	bn_read_be(I, &c);
-
-	if (!bn_is_less(&c, &order256k1)) { // >= order
-		return 0;
-	}
-
-	//scalar_multiply(&c, &b);        // b = c * G
-	scalar_multiply_jacobian(&c, &b); // b = c * G
-	point_add(&a, &b);                // b = a + b
-
-#if USE_PUBKEY_VALIDATE
-	if (!ecdsa_validate_pubkey(&b)) {
-		return 0;
-	}
-#endif	
-    
-    inout->public_key[0] = 0x02 | (b.y.val[0] & 0x01);
-	bn_write_be(&b.x, inout->public_key + 1);
-
-	inout->depth++;
-	inout->child_num = i;
-
 	return 1;
 }
 

@@ -86,7 +86,6 @@
         ATTR(electrum)          \
         ATTR(bip32)             \
         ATTR(der)               \
-        ATTR(message)           \
         ATTR(enable)            \
         ATTR(disable)           \
         ATTR(true)              \

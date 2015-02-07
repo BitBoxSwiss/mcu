@@ -39,12 +39,12 @@ void usage(char * argv[])
     
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
     printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"wallet\\\":\\\"bip32\\\"},  "
-           "\\\"sign\\\":{\\\"wallet\\\":\\\"bip32\\\", \\\"data\\\":\\\"Hello.\\\", "
-           "\\\"encoding\\\":\\\"message\\\", \\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
+           "\\\"sign\\\":{\\\"wallet\\\":\\\"bip32\\\", \\\"data\\\":\\\"<unsigned transaction>\\\", "
+           "\\\"encoding\\\":\\\"der\\\", \\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
     
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "
             "Multiple commands can be sent within a single\nJSON object. This is shown in the "
-            "example where a BIP32-type wallet\nis first generated and then used to sign a message.\n\n\n");
+            "example above where a BIP32-type\nwallet is first generated and then used to sign a transaction.\n\n\n");
 }
 
 

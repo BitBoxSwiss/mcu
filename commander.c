@@ -268,8 +268,6 @@ static void process_sign(char *message)
         return;  
     } else if (strncmp(encoding, ATTR_STR[ATTR_der_], strlen(ATTR_STR[ATTR_der_])) == 0) { 
         enc = ATTR_der_; 
-    } else if (strncmp(encoding, ATTR_STR[ATTR_message_], strlen(ATTR_STR[ATTR_message_])) == 0) { 
-        enc = ATTR_message_; 
     } else if (strncmp(encoding, ATTR_STR[ATTR_none_], strlen(ATTR_STR[ATTR_none_])) == 0) { 
         enc = ATTR_none_; 
     } else { 

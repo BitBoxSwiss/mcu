@@ -1,6 +1,6 @@
 CC     = gcc
 CFLAGS = -g -Os # optimized compile
-#CFLAGS += -W -Wall -Wextra -Wimplicit-function-declaration -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wformat -Wreturn-type -Wsign-compare -Wmultichar -Wformat-nonliteral -Winit-self -Wuninitialized -Wformat-security -Werror 
+CFLAGS += -W -Wall -Wextra -Wimplicit-function-declaration -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wformat -Wreturn-type -Wsign-compare -Wmultichar -Wformat-nonliteral -Winit-self -Wuninitialized -Wformat-security -Werror 
 
 # disable deprecated warnings for openssl on mac
 CFLAGS += -Wno-deprecated-declarations
@@ -12,7 +12,7 @@ CFLAGS += -D TESTING
 TESTSSLLIBS = -lcrypto
 
 
-OBJS =  keys.o bignum.o ecdsa.o secp256k1.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o bip39.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o
+OBJS =  keys.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o bip39.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o
 OBJS += uECC.o
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<

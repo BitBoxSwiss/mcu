@@ -30,7 +30,6 @@
 #include "keys.h"
 #include "sha2.h"
 #include "uECC.h"
-#include "ecdsa.h"
 #include "memory.h"
 #include "commander.h"
 #include "wordlist_electrum.h"
@@ -88,10 +87,6 @@ static int split_seed(char **seed_words, const char *message)
 }
 
 
-// TEST for both wallet types
-// original trezor code does not double sha256 the utx... electrum and standard protocol double hashes...
-// trezor ecdsa has extra step for sig=(r,s) where if s>order/2, then s = -s... electrum does not do this...
-// ref: https://bitcointalk.org/index.php?topic=285142.25
 static void sign_generic_report(const uint8_t *priv_key, const char *message, int msg_len, int encoding)
 {
     if (encoding == ATTR_der_) {
@@ -101,19 +96,8 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
         if (!uECC_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
             fill_report("sign", "Could not sign data.", ERROR);
         } else {
-            der_len = ecdsa_sig_to_der(sig, der);
+            der_len = uECC_sig_to_der(sig, der);
             fill_report("sign", uint8_to_hex(der, der_len), SUCCESS);
-        } 
-    } else if (encoding == ATTR_message_) {
-        int b64len;     
-        uint8_t sig_m[65]; 
-        if (ecdsa_sign_message(priv_key, message, msg_len, sig_m)) {
-            fill_report("sign", "Could not sign data.", ERROR);
-        } else {
-            char *b64;
-            b64 = base64((char *)sig_m, 65, &b64len);
-            fill_report("sign", b64, SUCCESS);
-            free(b64);
         } 
     } else if (encoding == ATTR_none_) {
         uint8_t sig[64]; 
@@ -405,17 +389,7 @@ static void generate_key_electrum(uint8_t *privkeychild, char *keypath, const ui
     sha256_Raw((uint8_t *)tohash, len, z); 
 	sha256_Raw(z, 32, z);
    
-    // privat_key_child = (privat_key_master + z) % order
-    // public_key_child = (pubkeymaster + z) % order
-    bignum256 bn_z, bn_privkey;
-	bn_read_be(z, &bn_z);
-	bn_read_be(privkeymaster, &bn_privkey);
-    bn_addmod(&bn_privkey, &bn_z, &order256k1);
-    bn_write_be(&bn_privkey, privkeychild);
-    
-    memset(&bn_privkey, 0, sizeof(bignum256));
-    memset(&bn_z, 0, sizeof(bignum256));
-    memset(z, 0, sizeof(z));
+    uECC_generate_private_key(privkeychild, privkeymaster, z);
 }
 
 

@@ -29,7 +29,6 @@
 #include <stdint.h>
 
 #include "uECC.h"
-#include "ecdsa.h"
 #include "random.h"
 
 int main(int argc, char *argv[])

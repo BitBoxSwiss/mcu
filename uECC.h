@@ -35,6 +35,9 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 #define uECC_WORD_SIZE 4
 #define uECC_BYTES  32
 
+#define uECC_CONCAT1(a, b) a##b
+#define uECC_CONCAT(a, b) uECC_CONCAT1(a, b)
+
 
 // Compress a public key.
 void uECC_compress(const uint8_t p_publicKey[uECC_BYTES * 2], 

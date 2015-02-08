@@ -85,7 +85,7 @@ int hdnode_from_xprv(uint32_t depth, uint32_t fingerprint, uint32_t child_num, c
 }
 */
 
-#include "stdio.h"
+
 int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
 {
 	uint8_t I[32 + 32];

@@ -50,6 +50,7 @@
 const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
+
 static char json_report[JSON_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
 static int BUTTON_TOUCHED = 0;

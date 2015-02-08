@@ -30,12 +30,14 @@
 #include "keys.h"
 #include "sha2.h"
 #include "uECC.h"
+#include "utils.h"
 #include "memory.h"
+#include "random.h"
 #include "commander.h"
 #include "wordlist_electrum.h"
+#include "ripemd160.h"
 #include "base64.h"
-#include "random.h"
-#include "utils.h"
+#include "base58.h"
 #include "bip32.h"
 #include "bip39.h"
 #include "led.h"
@@ -47,7 +49,7 @@ extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
 #define ELECTRUM_NUM_WORDS  12
 
 
-static HDNode hd_master;
+static HDNode node;
 static uint16_t seed_index[25]; // longer than max numwords + 1
 static char seed_hex[33];
 static uint8_t seed[64];
@@ -62,7 +64,7 @@ static uint8_t priv_key_child[32];
 // Avoid leaving secrets in RAM
 static void clear_static_variables(void)
 {
-    memset(&hd_master, 0, sizeof(HDNode));
+    memset(&node, 0, sizeof(HDNode));
     memset(seed_index, 0, sizeof(seed_index));
     memset(seed_hex, 0, sizeof(seed_hex));
     memset(seed, 0, sizeof(seed));
@@ -87,7 +89,7 @@ static int split_seed(char **seed_words, const char *message)
 }
 
 
-static void sign_generic_report(const uint8_t *priv_key, const char *message, int msg_len, int encoding)
+static void keys_sign_generic_report(const uint8_t *priv_key, const char *message, int msg_len, int encoding)
 {
     if (encoding == ATTR_der_) {
         int der_len;
@@ -96,7 +98,7 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
         if (!uECC_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
             fill_report("sign", "Could not sign data.", ERROR);
         } else {
-            der_len = uECC_sig_to_der(sig, der);
+            der_len = keys_sig_to_der(sig, der);
             fill_report("sign", uint8_to_hex(der, der_len), SUCCESS);
         } 
     } else if (encoding == ATTR_none_) {
@@ -115,7 +117,7 @@ static void sign_generic_report(const uint8_t *priv_key, const char *message, in
 }
 
 
-static uint16_t *index_from_mnemonic(const char *mnemo, const char **wordlist)
+static uint16_t *keys_index_from_mnemonic(const char *mnemo, const char **wordlist)
 {
     int i, j, k, seed_words_n;
     char *seed_word[24] = {NULL}; 
@@ -135,13 +137,13 @@ static uint16_t *index_from_mnemonic(const char *mnemo, const char **wordlist)
 }
 
 
-uint16_t *index_from_mnemonic_bip32(const char *mnemo)
+uint16_t *keys_index_from_mnemonic_bip32(const char *mnemo)
 {
-    return index_from_mnemonic(mnemo, mnemonic_wordlist());
+    return keys_index_from_mnemonic(mnemo, mnemonic_wordlist());
 }
 
 
-char *mnemonic_from_index_bip32(const uint16_t *idx)
+char *keys_mnemonic_from_index_bip32(const uint16_t *idx)
 {
     if (!memcmp(idx, MEM_PAGE_ERASE_2X, 64)) {
        return NULL;
@@ -158,7 +160,7 @@ char *mnemonic_from_index_bip32(const uint16_t *idx)
 }
 
 
-void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength)
+void keys_master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength)
 {
     clear_static_variables();
 
@@ -188,11 +190,11 @@ void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_
         mnemonic_to_seed(mnemonic, s, seed, 0); 
     } 
 
-	hdnode_from_seed(seed, sizeof(seed), &hd_master);
+	hdnode_from_seed(seed, sizeof(seed), &node);
     
-    if (!memcmp(memory_bip32_master(hd_master.private_key), MEM_PAGE_ERASE, 32)  ||
-        !memcmp(memory_bip32_chaincode(hd_master.chain_code), MEM_PAGE_ERASE, 32) ||
-        !memcmp(memory_bip32_mnemonic(index_from_mnemonic_bip32(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {    
+    if (!memcmp(memory_bip32_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
+        !memcmp(memory_bip32_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
+        !memcmp(memory_bip32_mnemonic(keys_index_from_mnemonic_bip32(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {    
         fill_report("seed", "Problem saving BIP32 master key.", ERROR); 
     } else {
         fill_report("seed", "success", SUCCESS);
@@ -201,39 +203,37 @@ void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_
 }
 
 
-void generate_key_bip32(uint8_t *privkeychild, char *key_path,
-                        const uint8_t *privkeymaster, const uint8_t *chaincode)
+static void keys_generate_key_bip32(char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
     unsigned long idx;
     char *pch;
    
-    HDNode hd_node;
-    hd_node.depth = 0;
-    hd_node.child_num = 0;
-    memcpy(hd_node.chain_code, chaincode, 32);
-    memcpy(hd_node.private_key, privkeymaster, 32);
-	//hdnode_fill_public_key(&hd_node); // very slow
+    node.depth = 0;
+    node.child_num = 0;
+	node.fingerprint = 0x00000000;
+    memcpy(node.chain_code, chaincode, 32);
+    memcpy(node.private_key, privkeymaster, 32);
+	hdnode_fill_public_key(&node);
     
     pch = strtok(key_path, " /,m\\");
     while (pch != NULL) {
         sscanf(pch, "%lu", &idx); 
-        if (pch[strlen(pch)-1] == '\'') {
-            hdnode_private_ckd_prime(&hd_node, idx); 
+        if (pch[strlen(pch)-1] == '\'' ||
+            pch[strlen(pch)-1] == 'p'  ||
+            pch[strlen(pch)-1] == 'h'  ||
+            pch[strlen(pch)-1] == 'H') {
+            hdnode_private_ckd_prime(&node, idx); 
         } else {
-            hdnode_private_ckd(&hd_node, idx); 
+            hdnode_private_ckd(&node, idx); 
         }
-        memcpy(privkeychild, hd_node.private_key, 32);
         pch = strtok(NULL, " /,m\\");
     } 
-    
-    
-    memset(&hd_node, 0, sizeof(HDNode));
 }
 
 
-void report_master_public_key_bip32(void)
+void keys_report_master_xpub_bip32(void)
 {
-    uint8_t pub_key_master[33];
+	char xpub[112];
     uint8_t *priv_key_master = memory_bip32_master(NULL);
     uint8_t *chain_code = memory_bip32_chaincode(NULL);
     
@@ -241,34 +241,59 @@ void report_master_public_key_bip32(void)
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         fill_report("master_public_key", "A bip32 master private key is not set.", ERROR);
     } else {
-	    uECC_get_public_key33(priv_key_master, pub_key_master);
-        fill_report("master_public_key", uint8_to_hex(pub_key_master,33), SUCCESS);
-    }
-}   
-
-
-void sign_bip32(const char *message, int msg_len, char *keypath, int encoding)
-{
-    uint8_t *priv_key_master = memory_bip32_master(NULL);
-    uint8_t *chain_code = memory_bip32_chaincode(NULL);
-    
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {    
-        fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
-    } else {
-        generate_key_bip32(priv_key_child, keypath, priv_key_master, chain_code);
-        sign_generic_report(priv_key_child, message, msg_len, encoding);
+        keys_generate_key_bip32("m/", priv_key_master, chain_code);
+	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
+        fill_report("master_public_key", xpub, SUCCESS);
     }
     clear_static_variables();
 }
 
 
-uint16_t *index_from_mnemonic_electrum(const char *mnemo)
+void keys_report_child_xpub_bip32(char *keypath)
 {
-    return index_from_mnemonic(mnemo, electrum_wordlist);
+	char xpub[112];
+    uint8_t *priv_key_master = memory_bip32_master(NULL);
+    uint8_t *chain_code = memory_bip32_chaincode(NULL);
+    
+    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
+        !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+        fill_report("child_xpub", "A bip32 master private key is not set.", ERROR);
+    } else {
+        keys_generate_key_bip32(keypath, priv_key_master, chain_code);
+	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
+        fill_report("child_xpub", xpub, SUCCESS);
+    }
+    clear_static_variables();
+}    
+
+
+void keys_sign_bip32(const char *message, int msg_len, char *keypath, int encoding)
+{
+    uint8_t *priv_key_master = memory_bip32_master(NULL);
+    uint8_t *chain_code = memory_bip32_chaincode(NULL);
+    
+    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
+        !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {    
+        fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
+    } else {
+        keys_generate_key_bip32(keypath, priv_key_master, chain_code);
+        keys_sign_generic_report(node.private_key, message, msg_len, encoding);
+    }
+    clear_static_variables();
 }
 
 
-char *mnemonic_from_seed_electrum(char *seedhex)
+
+// -- Electrum 1.9.8 -- //
+
+
+uint16_t *keys_index_from_mnemonic_electrum(const char *mnemo)
+{
+    return keys_index_from_mnemonic(mnemo, electrum_wordlist);
+}
+
+
+char *keys_mnemonic_from_seed_electrum(char *seedhex)
 {
 	if (!seedhex) {
 		return NULL;
@@ -298,7 +323,7 @@ char *mnemonic_from_seed_electrum(char *seedhex)
 }
 
 
-void master_from_mnemonic_electrum(const char *mnemo, int m_len)
+void keys_master_from_mnemonic_electrum(const char *mnemo, int m_len)
 {
     int i;
     int64_t index0, index1, index2, index_x;
@@ -309,10 +334,10 @@ void master_from_mnemonic_electrum(const char *mnemo, int m_len)
     if (mnemo == NULL) {
         random_bytes(rand_data_16, 16, 1);
         memcpy(seed_hex, uint8_to_hex(rand_data_16, 16), 32);
-        mnemonic_from_seed_electrum(seed_hex);
+        keys_mnemonic_from_seed_electrum(seed_hex);
     } else {
 		memcpy(mnemonic, mnemo, m_len);
-        uint16_t *idx = index_from_mnemonic_electrum(mnemonic); // offset 1
+        uint16_t *idx = keys_index_from_mnemonic_electrum(mnemonic); // offset 1
 		
         if (idx[0] == 0) {
 			fill_report("seed", "Invalid mnemonic.", ERROR);
@@ -362,7 +387,7 @@ void master_from_mnemonic_electrum(const char *mnemo, int m_len)
 }
 
 
-static void generate_key_electrum(uint8_t *privkeychild, char *keypath, const uint8_t *privkeymaster)
+static void keys_generate_key_electrum(uint8_t *privkeychild, char *keypath, const uint8_t *privkeymaster)
 {
     int len;
     unsigned long idx, change;
@@ -393,21 +418,21 @@ static void generate_key_electrum(uint8_t *privkeychild, char *keypath, const ui
 }
 
 
-void sign_electrum(const char *message, int msg_len, char *keypath, int encoding)
+void keys_sign_electrum(const char *message, int msg_len, char *keypath, int encoding)
 {
     uint8_t *priv_key_master = memory_electrum_master(NULL);
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32)) {
         fill_report("sign", "An Electrum master private key is not set.", ERROR);
     } else {
-        generate_key_electrum(priv_key_child, keypath, priv_key_master);
-        sign_generic_report(priv_key_child, message, msg_len, encoding);
+        keys_generate_key_electrum(priv_key_child, keypath, priv_key_master);
+        keys_sign_generic_report(priv_key_child, message, msg_len, encoding);
     }
     clear_static_variables();
 }
 
 
-void report_master_public_key_electrum(void)
+void keys_report_master_public_key_electrum(void)
 {
     uint8_t pub_key_master[64];
     uint8_t *priv_key_master = memory_electrum_master(NULL);
@@ -420,3 +445,80 @@ void report_master_public_key_electrum(void)
     }
 }   
 
+
+
+// -- bitcoin formats -- //
+// from: github.com/trezor/trezor-crypto 
+
+
+void keys_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
+{
+	uint8_t h[32];
+	if (pub_key[0] == 0x04) {        // uncompressed format
+		sha256_Raw(pub_key, 65, h);
+	} else if (pub_key[0] == 0x00) { // point at infinity
+		sha256_Raw(pub_key, 1, h);
+	} else {
+		sha256_Raw(pub_key, 33, h);  // expecting compressed format
+	}
+	ripemd160(h, 32, pubkeyhash);
+}
+
+void keys_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw)
+{
+	addr_raw[0] = version;
+	keys_get_pubkeyhash(pub_key, addr_raw + 1);
+}
+
+void keys_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize)
+{
+	uint8_t raw[21];
+	keys_get_address_raw(pub_key, version, raw);
+	base58_encode_check(raw, 21, addr, addrsize);
+}
+
+void keys_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize)
+{
+	uint8_t data[34];
+	data[0] = version;
+	memcpy(data + 1, priv_key, 32);
+	data[33] = 0x01;
+	base58_encode_check(data, 34, wif, wifsize);
+}
+
+int keys_sig_to_der(const uint8_t *sig, uint8_t *der)
+{
+	int i;
+	uint8_t *p = der, *len, *len1, *len2;
+	*p = 0x30; p++;                        // sequence
+	*p = 0x00; len = p; p++;               // len(sequence)
+
+	*p = 0x02; p++;                        // integer
+	*p = 0x00; len1 = p; p++;              // len(integer)
+
+	// process R
+	i = 0;
+	while (sig[i] == 0 && i < 32) { i++; } // skip leading zeroes
+	if (sig[i] >= 0x80) { // put zero in output if MSB set
+		*p = 0x00; p++; *len1 = *len1 + 1;
+	}
+	while (i < 32) { // copy bytes to output
+		*p = sig[i]; p++; *len1 = *len1 + 1; i++;
+	}
+
+	*p = 0x02; p++;                        // integer
+	*p = 0x00; len2 = p; p++;              // len(integer)
+
+	// process S
+	i = 32;
+	while (sig[i] == 0 && i < 64) { i++; } // skip leading zeroes
+	if (sig[i] >= 0x80) { // put zero in output if MSB set
+		*p = 0x00; p++; *len2 = *len2 + 1;
+	}
+	while (i < 64) { // copy bytes to output
+		*p = sig[i]; p++; *len2 = *len2 + 1; i++;
+	}
+
+	*len = *len1 + *len2 + 4;
+	return *len + 2;
+}

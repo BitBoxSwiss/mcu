@@ -7,9 +7,7 @@
 #include "uECC.h"
 #include "sha2.h"
 #include "hmac.h"
-#include "base58.h"
 #include "random.h"
-#include "ripemd160.h"
 
 
 #ifndef uECC_PLATFORM
@@ -994,6 +992,21 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
     return 1;
 }
 
+/* Returns the decompressed public key in p_publicKey */
+static int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey)
+{
+    if (publicKey[0] == 0x04) {
+		memcpy(p_publicKey, publicKey + 1, uECC_BYTES * 2);
+        return 1;
+	}
+	if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
+        uECC_decompress(publicKey, p_publicKey);
+		return 1;
+	}
+	// error
+	return 0;
+}
+
 /* Performs sha256 hash on msg before verification */
 int uECC_verify(const uint8_t *publicKey, const uint8_t *p_signature, 
                  const uint8_t *msg, uint32_t msg_len)
@@ -1136,13 +1149,6 @@ int uECC_isValid(uint8_t *p_key)
     return(!vli_isZero(l_key) && vli_cmp(curve_n, l_key) == 1);
 }
 
-
-
-/* 
-   -------- Code adapted from the trezor crypto library -------- 
-   github.com/trezor/trezor-crypto 
-*/
-
 /* Get the public key from the private key */
 void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], 
                            uint8_t p_publicKey[uECC_BYTES + 1])
@@ -1174,60 +1180,6 @@ void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES],
     
     vli_nativeToBytes(p_publicKey, l_public.x);
     vli_nativeToBytes(p_publicKey + uECC_BYTES, l_public.y);
-}
-
-/* Returns the decompressed public key in p_publicKey */
-int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey)
-{
-    if (publicKey[0] == 0x04) {
-		memcpy(p_publicKey, publicKey + 1, uECC_BYTES * 2);
-        return 1;
-	}
-	if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
-        uECC_decompress(publicKey, p_publicKey);
-		return 1;
-	}
-	// error
-	return 0;
-}
-
-/* Add DER encoding to the signature */
-int uECC_sig_to_der(const uint8_t *sig, uint8_t *der)
-{
-	int i;
-	uint8_t *p = der, *len, *len1, *len2;
-	*p = 0x30; p++;                        // sequence
-	*p = 0x00; len = p; p++;               // len(sequence)
-
-	*p = 0x02; p++;                        // integer
-	*p = 0x00; len1 = p; p++;              // len(integer)
-
-	// process R
-	i = 0;
-	while (sig[i] == 0 && i < 32) { i++; } // skip leading zeroes
-	if (sig[i] >= 0x80) { // put zero in output if MSB set
-		*p = 0x00; p++; *len1 = *len1 + 1;
-	}
-	while (i < 32) { // copy bytes to output
-		*p = sig[i]; p++; *len1 = *len1 + 1; i++;
-	}
-
-	*p = 0x02; p++;                        // integer
-	*p = 0x00; len2 = p; p++;              // len(integer)
-
-	// process S
-	i = 32;
-	while (sig[i] == 0 && i < 64) { i++; } // skip leading zeroes
-	if (sig[i] >= 0x80) { // put zero in output if MSB set
-		*p = 0x00; p++; *len2 = *len2 + 1;
-	}
-	while (i < 64) { // copy bytes to output
-		*p = sig[i]; p++; *len2 = *len2 + 1; i++;
-	}
-
-	*len = *len1 + *len2 + 4;
-	return *len + 2;
-
 }
 
 /* generate K in a deterministic way, according to RFC6979
@@ -1282,41 +1234,3 @@ int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint
 	return 1;
 }
 
-/* Bitcoin notations */
-void uECC_bitcoin_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
-{
-	uint8_t h[32];
-	if (pub_key[0] == 0x04) {        // uncompressed format
-		sha256_Raw(pub_key, 65, h);
-	} else if (pub_key[0] == 0x00) { // point at infinity
-		sha256_Raw(pub_key, 1, h);
-	} else {
-		sha256_Raw(pub_key, 33, h);  // expecting compressed format
-	}
-	ripemd160(h, 32, pubkeyhash);
-}
-
-/* Bitcoin notations */
-void uECC_bitcoin_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw)
-{
-	addr_raw[0] = version;
-	uECC_bitcoin_get_pubkeyhash(pub_key, addr_raw + 1);
-}
-
-/* Bitcoin notations */
-void uECC_bitcoin_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize)
-{
-	uint8_t raw[21];
-	uECC_bitcoin_get_address_raw(pub_key, version, raw);
-	base58_encode_check(raw, 21, addr, addrsize);
-}
-
-/* Bitcoin notations */
-void uECC_bitcoin_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize)
-{
-	uint8_t data[34];
-	data[0] = version;
-	memcpy(data + 1, priv_key, 32);
-	data[33] = 0x01;
-	base58_encode_check(data, 34, wif, wifsize);
-}

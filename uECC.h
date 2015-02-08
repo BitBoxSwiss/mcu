@@ -82,11 +82,6 @@ void uECC_generate_private_key(uint8_t *p_privateChild,
 // Returns 1 if valid
 int uECC_isValid(uint8_t *p_key);
 
-
-// The functions below were adapted from the trezor crypto library
-// Add DER encoding to the signature
-int uECC_sig_to_der(const uint8_t *sig, uint8_t *der);
-
 // Deterministic signatures following RFC6979
 int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint8_t *hash);
 
@@ -94,15 +89,5 @@ int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint
 void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2 + 1]);
 void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2]);
 void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES + 1]);
-
-// Returns the decompressed public key in p_publicKey
-int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey);
-
-// Bitcoin notations
-void uECC_bitcoin_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
-void uECC_bitcoin_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);
-void uECC_bitcoin_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize);
-void uECC_bitcoin_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize);
-
 
 #endif /* _MICRO_ECC_H_ */

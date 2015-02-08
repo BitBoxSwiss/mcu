@@ -183,8 +183,6 @@ bool b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
 	return true;
 }
 
-#include <stdio.h>
-
 int base58_encode_check(const uint8_t *data, int datalen, char *str, int strsize)
 {
 	if (datalen > 128) {

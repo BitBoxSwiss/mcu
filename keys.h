@@ -31,16 +31,24 @@
 
 #define LENVARINT 20
 
-uint16_t *index_from_mnemonic_bip32(const char *mnemonic);
-char *mnemonic_from_index_bip32(const uint16_t *index);
-void master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength);
-void sign_bip32(const char *message, int msg_len, char *keypath, int encoding);
-void report_master_public_key_bip32(void);
-
-uint16_t *index_from_mnemonic_electrum(const char *mnemonic);
-char *mnemonic_from_seed_electrum(char *seed_hex);
-void master_from_mnemonic_electrum(const char *mnemo, int m_len);
-void sign_electrum(const char *message, int msg_len, char *keypath, int encoding);
-void report_master_public_key_electrum(void); 
+/* BIP32 */
+uint16_t *keys_index_from_mnemonic_bip32(const char *mnemonic);
+char *keys_mnemonic_from_index_bip32(const uint16_t *index);
+void keys_master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength);
+void keys_sign_bip32(const char *message, int msg_len, char *keypath, int encoding);
+void keys_report_child_xpub_bip32(char *keypath);
+void keys_report_master_xpub_bip32(void);
+/* Electrum 1.9.8 */
+uint16_t *keys_index_from_mnemonic_electrum(const char *mnemonic);
+char *keys_mnemonic_from_seed_electrum(char *seed_hex);
+void keys_master_from_mnemonic_electrum(const char *mnemo, int m_len);
+void keys_sign_electrum(const char *message, int msg_len, char *keypath, int encoding);
+void keys_report_master_public_key_electrum(void);
+/* Bitcoin formats */
+int  keys_sig_to_der(const uint8_t *sig, uint8_t *der);
+void keys_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
+void keys_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);
+void keys_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize);
+void keys_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize);
 
 #endif

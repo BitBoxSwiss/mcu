@@ -57,6 +57,7 @@
         CMD(password)           \
         CMD(touchbutton)        \
         CMD(master_public_key)  \
+        CMD(child_xpub)         \
         CMD(random)             \
         CMD(device)             \
         CMD(reset)              \

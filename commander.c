@@ -140,9 +140,9 @@ static void process_load(char *message)
         if (BUTTON_TOUCHED) {
             if (mnemonic) {
                 if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                    master_from_mnemonic_electrum(mnemonic, mnemonic_len);
+                    keys_master_from_mnemonic_electrum(mnemonic, mnemonic_len);
                 } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                    master_from_mnemonic_bip32((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
+                    keys_master_from_mnemonic_bip32((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
                 } 
             } else if (sd_file) {
                 char *mnemo = load_sd(sd_file, sd_file_len);
@@ -158,9 +158,9 @@ static void process_load(char *message)
 
                 if (mnemo) {
                     if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                        master_from_mnemonic_electrum(mnemo, strlen(mnemo));
+                        keys_master_from_mnemonic_electrum(mnemo, strlen(mnemo));
                     } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                        master_from_mnemonic_bip32(mnemo, strlen(mnemo), salt, salt_len, 0);
+                        keys_master_from_mnemonic_bip32(mnemo, strlen(mnemo), salt, salt_len, 0);
                     }
                 }
             } else {
@@ -184,9 +184,9 @@ static void process_seed(char *message)
         }
         if (BUTTON_TOUCHED) {
             if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                master_from_mnemonic_electrum(NULL, 0);
+                keys_master_from_mnemonic_electrum(NULL, 0);
             } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_],strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                master_from_mnemonic_bip32(NULL, 0, salt, salt_len, jsmn_get_value_uint(message, CMD_STR[CMD_strength_]));
+                keys_master_from_mnemonic_bip32(NULL, 0, salt, salt_len, jsmn_get_value_uint(message, CMD_STR[CMD_strength_]));
             }
         }
     } else {
@@ -225,7 +225,7 @@ static void process_backup(char *message)
         }
         if (BUTTON_TOUCHED) {
             if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                char *text = mnemonic_from_seed_electrum(memory_electrum_mnemonic(NULL));
+                char *text = keys_mnemonic_from_seed_electrum(memory_electrum_mnemonic(NULL));
                 if (!text) {
                     fill_report("backup", "Electrum mnemonic not present.", ERROR);
                 } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt
@@ -237,7 +237,7 @@ static void process_backup(char *message)
                     backup_sd(filename, filename_len, text, strlen(text));  
                 }
             } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                char *text = mnemonic_from_index_bip32(memory_bip32_mnemonic(NULL)); // TEST
+                char *text = keys_mnemonic_from_index_bip32(memory_bip32_mnemonic(NULL)); // TEST
                 if (!text) {
                     fill_report("backup", "BIP32 mnemonic not present.", ERROR);
                 } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
@@ -280,9 +280,9 @@ static void process_sign(char *message)
     }
     if (BUTTON_TOUCHED) {
         if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-            sign_electrum(data, data_len, (char *)keypath, enc);
+            keys_sign_electrum(data, data_len, (char *)keypath, enc);
         } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-            sign_bip32(data, data_len, (char *)keypath, enc);
+            keys_sign_bip32(data, data_len, (char *)keypath, enc);
         } else {
             fill_report("sign", "Invalid wallet type.", ERROR);
             return;
@@ -359,12 +359,16 @@ static int commander_process_token(int cmd, char *message)
         case CMD_random_:
             process_random(message);
             break;
-        
+      
+        case CMD_child_xpub_:
+            keys_report_child_xpub_bip32(message);
+            break;
+
         case CMD_master_public_key_: {
             if (strcmp(message, ATTR_STR[ATTR_electrum_]) == 0) {
-                report_master_public_key_electrum();
+                keys_report_master_public_key_electrum();
 	        } else if (strcmp(message, ATTR_STR[ATTR_bip32_]) == 0) {
-                report_master_public_key_bip32();
+                keys_report_master_xpub_bip32();
             } else {
                 fill_report("master_public_key", "Invalid command.", ERROR);
             }

@@ -49,11 +49,9 @@ static uint8_t MEM_led_ = DEFAULT_led_;
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
 static uint8_t MEM_aeskey_cmd_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_res_[MEM_PAGE_LEN] = {0xFF};
-static uint8_t MEM_mnemonic_electrum_[MEM_PAGE_LEN+1] = {0xFF};
-static uint8_t MEM_master_electrum_[MEM_PAGE_LEN] = {0xFF};
-static uint8_t MEM_master_bip32_[MEM_PAGE_LEN] = {0xFF};
-static uint8_t MEM_master_bip32_chain_[MEM_PAGE_LEN] = {0xFF};
-static uint16_t MEM_mnemonic_bip32_[MEM_PAGE_LEN] = {0xFFFF};
+static uint8_t MEM_master_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_master_chain_[MEM_PAGE_LEN] = {0xFF};
+static uint16_t MEM_mnemonic_[MEM_PAGE_LEN] = {0xFFFF};
 
 const uint8_t MEM_PAGE_ERASE[] = { [0 ... MEM_PAGE_LEN] = 0xFF }; // EEPROM
 const uint16_t MEM_PAGE_ERASE_2X[] = { [0 ... MEM_PAGE_LEN] = 0xFFFF };
@@ -86,12 +84,9 @@ void memory_erase(void)
     
     memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_COMMAND);
     memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_RESPONSE);
-    memory_electrum_mnemonic((char *)MEM_PAGE_ERASE);
-    memory_electrum_master(MEM_PAGE_ERASE);
-	
-    memory_bip32_mnemonic(MEM_PAGE_ERASE_2X);
-    memory_bip32_chaincode(MEM_PAGE_ERASE);
-    memory_bip32_master(MEM_PAGE_ERASE);
+    memory_mnemonic(MEM_PAGE_ERASE_2X);
+    memory_chaincode(MEM_PAGE_ERASE);
+    memory_master(MEM_PAGE_ERASE);
 }
 
 
@@ -105,11 +100,9 @@ void memory_clear_variables(void)
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_cmd_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_res_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_mnemonic_electrum_, MEM_PAGE_ERASE, MEM_PAGE_LEN+1);
-    memcpy(MEM_master_electrum_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_bip32_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_bip32_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_mnemonic_bip32_, MEM_PAGE_ERASE_2X, MEM_PAGE_LEN*2);
+    memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_mnemonic_, MEM_PAGE_ERASE_2X, MEM_PAGE_LEN*2);
 #endif
 }
 
@@ -163,54 +156,37 @@ uint8_t *memory_name(const char *name)
 }
 
 
-uint8_t *memory_electrum_master(const uint8_t *master)
+uint8_t *memory_master(const uint8_t *master)
 {
-    memory_eeprom(master, MEM_master_electrum_, 
-                MEM_MASTER_ELECTRUM_ADDR, MEM_PAGE_LEN);
-    return MEM_master_electrum_;
-}
-
-
-uint8_t *memory_bip32_master(const uint8_t *master)
-{
-    memory_eeprom(master, MEM_master_bip32_, 
+    memory_eeprom(master, MEM_master_, 
                 MEM_MASTER_BIP32_ADDR, MEM_PAGE_LEN);
-    return MEM_master_bip32_;
+    return MEM_master_;
 }
 
 
-uint8_t *memory_bip32_chaincode(const uint8_t *chain)
+uint8_t *memory_chaincode(const uint8_t *chain)
 {
-    memory_eeprom(chain, MEM_master_bip32_chain_, 
+    memory_eeprom(chain, MEM_master_chain_, 
                 MEM_MASTER_BIP32_CHAIN_ADDR, MEM_PAGE_LEN);
-    return MEM_master_bip32_chain_;
+    return MEM_master_chain_;
 }
 
 
-uint16_t *memory_bip32_mnemonic(const uint16_t *idx)
+uint16_t *memory_mnemonic(const uint16_t *idx)
 {
     if (idx) {
-        memory_eeprom((uint8_t *)idx, (uint8_t *)MEM_mnemonic_bip32_, 
+        memory_eeprom((uint8_t *)idx, (uint8_t *)MEM_mnemonic_, 
                     MEM_MNEMONIC_BIP32_ADDR_0, MEM_PAGE_LEN);
         memory_eeprom((uint8_t *)idx + MEM_PAGE_LEN, 
-                    (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN,
+                    (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
                     MEM_MNEMONIC_BIP32_ADDR_1, MEM_PAGE_LEN);
     } else {
-        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_bip32_, 
+        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_, 
                     MEM_MNEMONIC_BIP32_ADDR_0, MEM_PAGE_LEN);
-        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_bip32_ + MEM_PAGE_LEN, 
+        memory_eeprom(NULL, (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN, 
                     MEM_MNEMONIC_BIP32_ADDR_1, MEM_PAGE_LEN);
     }
-    return MEM_mnemonic_bip32_;
-}
-
-
-char *memory_electrum_mnemonic(const char *seed_hex)
-{
-    memory_eeprom((uint8_t *)seed_hex, MEM_mnemonic_electrum_, 
-                MEM_MNEMONIC_ELECTRUM_ADDR, MEM_PAGE_LEN);
-    MEM_mnemonic_electrum_[MEM_PAGE_LEN] = '\0';
-    return((char *)MEM_mnemonic_electrum_);
+    return MEM_mnemonic_;
 }
 
 

@@ -28,37 +28,29 @@
 #include <stdio.h>
 
 #include "commander.h"
+#include "ripemd160.h"
 #include "wallet.h"
 #include "memory.h"
 #include "random.h"
-#include "utils.h"
-#include "sha2.h"
-#include "uECC.h"
-#include "wordlist_electrum.h"
-#include "ripemd160.h"
 #include "base64.h"
 #include "base58.h"
+#include "utils.h"
 #include "bip32.h"
 #include "bip39.h"
+#include "sha2.h"
+#include "uECC.h"
 #include "led.h"
 
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
 
-#define ELECTRUM_NUM_WORDS  12
-
-
 static HDNode node;
-static uint16_t seed_index[25]; // longer than max numwords + 1
-static char seed_hex[33];
-static uint8_t seed[64];
 static char mnemonic[256]; // longer than max wordlength+1  *  max numwords  +  1 
 						   //		for bip32/39_english -> (8+1)*24+1 = 217
-						   //		for electrum -> (12+1)*12+1 = 157
+static uint16_t seed_index[25]; // longer than max numwords + 1
+static uint8_t seed[64];
 static uint8_t rand_data_32[32];
-static uint8_t rand_data_16[16];
-static uint8_t priv_key_child[32];
 
 
 // Avoid leaving secrets in RAM
@@ -66,12 +58,9 @@ static void clear_static_variables(void)
 {
     memset(&node, 0, sizeof(HDNode));
     memset(seed_index, 0, sizeof(seed_index));
-    memset(seed_hex, 0, sizeof(seed_hex));
     memset(seed, 0, sizeof(seed));
     memset(mnemonic, 0, sizeof(mnemonic));
     memset(rand_data_32, 0, sizeof(rand_data_32));
-    memset(rand_data_16, 0, sizeof(rand_data_16));
-    memset(priv_key_child, 0, sizeof(priv_key_child));
 }
 
 
@@ -117,7 +106,7 @@ static void wallet_sign_generic_report(const uint8_t *priv_key, const char *mess
 }
 
 
-static uint16_t *wallet_index_from_mnemonic(const char *mnemo, const char **wordlist)
+uint16_t *wallet_index_from_mnemonic(const char *mnemo, const char **wordlist)
 {
     int i, j, k, seed_words_n;
     char *seed_word[24] = {NULL}; 
@@ -137,13 +126,7 @@ static uint16_t *wallet_index_from_mnemonic(const char *mnemo, const char **word
 }
 
 
-uint16_t *wallet_index_from_mnemonic_bip32(const char *mnemo)
-{
-    return wallet_index_from_mnemonic(mnemo, mnemonic_wordlist());
-}
-
-
-char *wallet_mnemonic_from_index_bip32(const uint16_t *idx)
+char *wallet_mnemonic_from_index(const uint16_t *idx)
 {
     if (!memcmp(idx, MEM_PAGE_ERASE_2X, 64)) {
        return NULL;
@@ -160,7 +143,7 @@ char *wallet_mnemonic_from_index_bip32(const uint16_t *idx)
 }
 
 
-void wallet_master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt, int s_len, int strength)
+void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength)
 {
     clear_static_variables();
 
@@ -192,9 +175,9 @@ void wallet_master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt,
 
 	hdnode_from_seed(seed, sizeof(seed), &node);
     
-    if (!memcmp(memory_bip32_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
-        !memcmp(memory_bip32_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
-        !memcmp(memory_bip32_mnemonic(wallet_index_from_mnemonic_bip32(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {    
+    if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
+        !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
+        !memcmp(memory_mnemonic(wallet_index_from_mnemonic(mnemonic, mnemonic_wordlist())), MEM_PAGE_ERASE_2X, 64)) {    
         fill_report("seed", "Problem saving BIP32 master key.", ERROR); 
     } else {
         fill_report("seed", "success", SUCCESS);
@@ -203,7 +186,7 @@ void wallet_master_from_mnemonic_bip32(char *mnemo, int m_len, const char *salt,
 }
 
 
-static void wallet_generate_key_bip32(char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode)
+static void wallet_generate_key(char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
     unsigned long idx;
     char *pch;
@@ -234,17 +217,17 @@ static void wallet_generate_key_bip32(char *key_path, const uint8_t *privkeymast
 }
 
 
-void wallet_report_master_xpub_bip32(void)
+void wallet_report_master_xpub(void)
 {
 	char xpub[112];
-    uint8_t *priv_key_master = memory_bip32_master(NULL);
-    uint8_t *chain_code = memory_bip32_chaincode(NULL);
+    uint8_t *priv_key_master = memory_master(NULL);
+    uint8_t *chain_code = memory_chaincode(NULL);
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         fill_report("master_public_key", "A bip32 master private key is not set.", ERROR);
     } else {
-        wallet_generate_key_bip32("m/", priv_key_master, chain_code);
+        wallet_generate_key("m/", priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
         fill_report("master_public_key", xpub, SUCCESS);
     }
@@ -252,34 +235,42 @@ void wallet_report_master_xpub_bip32(void)
 }
 
 
-void wallet_report_child_xpub_bip32(char *keypath)
+void wallet_report_xpub(char *keypath)
 {
 	char xpub[112];
-    uint8_t *priv_key_master = memory_bip32_master(NULL);
-    uint8_t *chain_code = memory_bip32_chaincode(NULL);
+    uint8_t *priv_key_master = memory_master(NULL);
+    uint8_t *chain_code = memory_chaincode(NULL);
+    
+        
+    printf("keypath  %s\n", keypath); 
+    
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        fill_report("child_xpub", "A bip32 master private key is not set.", ERROR);
+        fill_report("xpub", "A bip32 master private key is not set.", ERROR);
     } else {
-        wallet_generate_key_bip32(keypath, priv_key_master, chain_code);
+        wallet_generate_key(keypath, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
-        fill_report("child_xpub", xpub, SUCCESS);
+        fill_report("xpub", xpub, SUCCESS);
+    
+        printf("pubkey   %s\n", uint8_to_hex(node.public_key,33)); 
+
+    
     }
     clear_static_variables();
 }    
 
 
-void wallet_sign_bip32(const char *message, int msg_len, char *keypath, int encoding)
+void wallet_sign(const char *message, int msg_len, char *keypath, int encoding)
 {
-    uint8_t *priv_key_master = memory_bip32_master(NULL);
-    uint8_t *chain_code = memory_bip32_chaincode(NULL);
+    uint8_t *priv_key_master = memory_master(NULL);
+    uint8_t *chain_code = memory_chaincode(NULL);
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {    
         fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
     } else {
-        wallet_generate_key_bip32(keypath, priv_key_master, chain_code);
+        wallet_generate_key(keypath, priv_key_master, chain_code);
         wallet_sign_generic_report(node.private_key, message, msg_len, encoding);
     }
     clear_static_variables();
@@ -287,172 +278,8 @@ void wallet_sign_bip32(const char *message, int msg_len, char *keypath, int enco
 
 
 
-// -- Electrum 1.9.8 -- //
-
-
-uint16_t *wallet_index_from_mnemonic_electrum(const char *mnemo)
-{
-    return wallet_index_from_mnemonic(mnemo, electrum_wordlist);
-}
-
-
-char *wallet_mnemonic_from_seed_electrum(char *seedhex)
-{
-	if (!seedhex) {
-		return NULL;
-	}
-    if (!memcmp(seedhex, MEM_PAGE_ERASE, 32)) {
-       return NULL;
-    }
-	
-    static char s[9] = {0};
-    long unsigned int idx = 0, w1, w2, w3;
-	int i, n = electrum_wordlist_len;
-    
-    memset(mnemonic, 0, sizeof(mnemonic));
-    
-    for (i = 0; i < 32; i += 8) {
-        memcpy(s, seed_hex + i, 8);
-        sscanf(s, "%lx", &idx);
-        w1 =  (idx % n);
-        w2 = ((idx / n) + w1) % n;
-        w3 = ((idx / n / n) + w2) % n;
-        strcat(mnemonic, electrum_wordlist[ w1 ]); mnemonic[strlen(mnemonic)] = ' ';
-        strcat(mnemonic, electrum_wordlist[ w2 ]); mnemonic[strlen(mnemonic)] = ' ';
-        strcat(mnemonic, electrum_wordlist[ w3 ]);
-        mnemonic[strlen(mnemonic)] = (i < 32 - 8) ? ' ' : 0;
-    }
-    return mnemonic; 
-}
-
-
-void wallet_master_from_mnemonic_electrum(const char *mnemo, int m_len)
-{
-    int i;
-    int64_t index0, index1, index2, index_x;
-    char index_c[8 + 1];
-    
-    clear_static_variables();
-
-    if (mnemo == NULL) {
-        random_bytes(rand_data_16, 16, 1);
-        memcpy(seed_hex, uint8_to_hex(rand_data_16, 16), 32);
-        wallet_mnemonic_from_seed_electrum(seed_hex);
-    } else {
-		memcpy(mnemonic, mnemo, m_len);
-        uint16_t *idx = wallet_index_from_mnemonic_electrum(mnemonic); // offset 1
-		
-        if (idx[0] == 0) {
-			fill_report("seed", "Invalid mnemonic.", ERROR);
-			goto end;
-		}
-        for (i = 0; idx[i]; i += 3) {
-            index0 = idx[i] - 1;  // remove offset
-            index1 = idx[i + 1] - 1;
-            index2 = idx[i + 2] - 1;
-            if (index0 < 0 || index1 < 0 || index2 < 0 || i > ELECTRUM_NUM_WORDS) {
-                fill_report("seed", "Invalid mnemonic.", ERROR);
-			    goto end;
-            }    
-            index_x  = index0;
-            index_x += ((index1 - index0) < 0 
-                        ? electrum_wordlist_len + (index1 - index0) 
-                        : (index1-index0) % electrum_wordlist_len) * electrum_wordlist_len ;
-            index_x += ((index2 - index1) < 0
-                        ? electrum_wordlist_len + (index2 - index1)
-                        : (index2 - index1) % electrum_wordlist_len) * electrum_wordlist_len * electrum_wordlist_len;
-            sprintf(index_c, "%08llx", index_x);
-            strncat(seed_hex, index_c, 8);
-        }
-    }
-       
-    // key stretching
-    // electrum:  s = sha256( s || seed_hex ) for 100000 iterations
-    memcpy(seed, seed_hex, 32);
-    memcpy(seed + 32, seed_hex, 32);
-	for (i = 0; i < 100000; i++) {
-        sha256_Raw(seed, 64, seed);
-		if ((i % 4000) == 0) {
-			led_toggle();
-		}    
-    }
-   
-    // seed[0:31] == private key master // TODO double check
-    if (!memcmp(memory_electrum_master(seed), MEM_PAGE_ERASE, 32) ||
-        !memcmp(memory_electrum_mnemonic(seed_hex), MEM_PAGE_ERASE, 32)) {    
-        fill_report("seed", "Problem saving Electrum master key.", ERROR); 
-    } else {
-        fill_report("seed", "success", SUCCESS);
-    }
-    
-    end:
-        clear_static_variables();
-}
-
-
-static void wallet_generate_key_electrum(uint8_t *privkeychild, char *keypath, const uint8_t *privkeymaster)
-{
-    int len;
-    unsigned long idx, change;
-    char tohash[256], index_b[16], change_b[16];
-    uint8_t z[32], pubkeymaster[64];
-    char *pch;
-    
-    uECC_get_public_key64(privkeymaster, pubkeymaster);
-    
-    // z = sha256_x2( n: || change: || pubkeymaster )
-    pch = strtok(keypath, " /,m\\");    sscanf(pch, "%lu", &change); 
-    pch = strtok(NULL, " /,m\\");        sscanf(pch, "%lu", &idx); 
-   
-    // TEST key gen for large idx and change values
-    sprintf(index_b, "%lx:", idx);
-    sprintf(change_b, "%lx:", change);
-    
-    memset(tohash, 0, sizeof(tohash));
-    strncat(tohash, index_b, strlen(index_b));
-    strncat(tohash, change_b, strlen(change_b));
-    memcpy(tohash + strlen(tohash), pubkeymaster, 64);
-   
-    len = strlen(index_b) + strlen(change_b) + 64;
-    sha256_Raw((uint8_t *)tohash, len, z); 
-	sha256_Raw(z, 32, z);
-   
-    uECC_generate_private_key(privkeychild, privkeymaster, z);
-}
-
-
-void wallet_sign_electrum(const char *message, int msg_len, char *keypath, int encoding)
-{
-    uint8_t *priv_key_master = memory_electrum_master(NULL);
-    
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32)) {
-        fill_report("sign", "An Electrum master private key is not set.", ERROR);
-    } else {
-        wallet_generate_key_electrum(priv_key_child, keypath, priv_key_master);
-        wallet_sign_generic_report(priv_key_child, message, msg_len, encoding);
-    }
-    clear_static_variables();
-}
-
-
-void wallet_report_master_public_key_electrum(void)
-{
-    uint8_t pub_key_master[64];
-    uint8_t *priv_key_master = memory_electrum_master(NULL);
-    
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32)) {
-        fill_report("master_public_key", "An Electrum master private key is not set.", ERROR);
-    } else {
-        uECC_get_public_key64(priv_key_master, pub_key_master);
-        fill_report("master_public_key", uint8_to_hex(pub_key_master, 64), SUCCESS);
-    }
-}   
-
-
-
 // -- bitcoin formats -- //
 // from: github.com/trezor/trezor-crypto 
-
 
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash)
 {

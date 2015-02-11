@@ -128,79 +128,56 @@ static void device_reset(const char *r)
 
 static void process_load(char *message)
 {
-    int wallet_len, mnemonic_len, sd_file_len, salt_len, decrypt_len;
+    int mnemonic_len, sd_file_len, salt_len, decrypt_len;
     const char *mnemonic = jsmn_get_value_string(message, CMD_STR[CMD_mnemonic_], &mnemonic_len);
     const char *sd_file = jsmn_get_value_string(message, CMD_STR[CMD_sd_file_], &sd_file_len);
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
-    const char *wallet = jsmn_get_value_string(message, CMD_STR[CMD_wallet_], &wallet_len);
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
-    if (wallet) {
-        if (!BUTTON_TOUCHED) {
-            if (touch_button_press()) { BUTTON_TOUCHED = 1; }
-        }
-        if (BUTTON_TOUCHED) {
-            if (mnemonic) {
-                if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                    wallet_master_from_mnemonic_electrum(mnemonic, mnemonic_len);
-                } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                    wallet_master_from_mnemonic_bip32((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
-                } 
-            } else if (sd_file) {
-                char *mnemo = load_sd(sd_file, sd_file_len);
-                if (decrypt ? strncmp(decrypt, "no", 2) : 1) { // default = decrypt
-                    int dec_len;
-                    char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len);
-                    memset(mnemo, 0, strlen(mnemo));
-                    memcpy(mnemo, dec, dec_len);
-                    memset(dec, 0, dec_len);
-                    free(dec);							
-                }
-                //fill_report("debug sd read", mnemo, SUCCESS); // debug
-
-                if (mnemo) {
-                    if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                        wallet_master_from_mnemonic_electrum(mnemo, strlen(mnemo));
-                    } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                        wallet_master_from_mnemonic_bip32(mnemo, strlen(mnemo), salt, salt_len, 0);
-                    }
-                }
-            } else {
-                fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
-            }
-        }  
-    } else {
-        fill_report("load", "Invalid command.", ERROR);
+    if (!BUTTON_TOUCHED) {
+        if (touch_button_press()) { BUTTON_TOUCHED = 1; }
     }
+    if (BUTTON_TOUCHED) {
+        if (mnemonic) {
+            wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
+        } else if (sd_file) {
+            char *mnemo = load_sd(sd_file, sd_file_len);
+            if (decrypt ? strncmp(decrypt, "no", 2) : 1) { // default = decrypt
+                int dec_len;
+                char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len);
+                memset(mnemo, 0, strlen(mnemo));
+                memcpy(mnemo, dec, dec_len);
+                memset(dec, 0, dec_len);
+                free(dec);							
+            }
+            //fill_report("debug sd read", mnemo, SUCCESS); // debug
+            // TEST sd load
+            if (mnemo) {
+                wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len, 0);
+            }
+        } else {
+            fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
+        }
+    }  
 }
 			
 
 static void process_seed(char *message)
 { 
-    int wallet_len, salt_len;
-    const char *wallet = jsmn_get_value_string(message, CMD_STR[CMD_wallet_], &wallet_len);
+    int salt_len;
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
-    if (wallet) {
-        if (!BUTTON_TOUCHED) {
-            if (touch_button_press()) { BUTTON_TOUCHED = 1; }
-        }
-        if (BUTTON_TOUCHED) {
-            if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                wallet_master_from_mnemonic_electrum(NULL, 0);
-            } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_],strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                wallet_master_from_mnemonic_bip32(NULL, 0, salt, salt_len, jsmn_get_value_uint(message, CMD_STR[CMD_strength_]));
-            }
-        }
-    } else {
-        fill_report("seed", "Invalid command.", ERROR);
-    }   
+    if (!BUTTON_TOUCHED) {
+        if (touch_button_press()) { BUTTON_TOUCHED = 1; }
+    }
+    if (BUTTON_TOUCHED) {
+        wallet_master_from_mnemonic(NULL, 0, salt, salt_len, jsmn_get_value_uint(message, CMD_STR[CMD_strength_]));
+    }
 }
 
 
 // TODO add verification routine
 static void process_backup(char *message)
 { 
-    int wallet_len, encrypt_len, format_len, filename_len;
-    const char *wallet = jsmn_get_value_string(message, CMD_STR[CMD_wallet_], &wallet_len);
+    int encrypt_len, format_len, filename_len;
     const char *format = jsmn_get_value_string(message, CMD_STR[CMD_format_sd_card_], &format_len);
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
@@ -216,8 +193,8 @@ static void process_backup(char *message)
             return; // button not touched
         }
     }
-    if (!filename || !wallet) {
-        if (!(format && !filename && !wallet)) {
+    if (!filename) {
+        if (!(format && !filename)) {
             fill_report("backup", "Incomplete command.", ERROR);
         }
     } else {
@@ -225,30 +202,16 @@ static void process_backup(char *message)
             if (touch_button_press()) { BUTTON_TOUCHED = 1; }
         }
         if (BUTTON_TOUCHED) {
-            if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-                char *text = wallet_mnemonic_from_seed_electrum(memory_electrum_mnemonic(NULL));
-                if (!text) {
-                    fill_report("backup", "Electrum mnemonic not present.", ERROR);
-                } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt
-                    int enc_len;
-                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
-                    backup_sd(filename, filename_len, enc, enc_len);
-                    free(enc);
-                } else {
-                    backup_sd(filename, filename_len, text, strlen(text));  
-                }
-            } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-                char *text = wallet_mnemonic_from_index_bip32(memory_bip32_mnemonic(NULL)); // TEST
-                if (!text) {
-                    fill_report("backup", "BIP32 mnemonic not present.", ERROR);
-                } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
-                    int enc_len;
-                    char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
-                    backup_sd(filename, filename_len, enc, enc_len);
-                    free(enc);
-                } else {
-                    backup_sd(filename, filename_len, text, strlen(text));  
-                }
+            char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
+            if (!text) {
+                fill_report("backup", "BIP32 mnemonic not present.", ERROR);
+            } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
+                int enc_len;
+                char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
+                backup_sd(filename, filename_len, enc, enc_len);
+                free(enc);
+            } else {
+                backup_sd(filename, filename_len, text, strlen(text));  
             }
         }
     }	
@@ -257,14 +220,13 @@ static void process_backup(char *message)
 
 static void process_sign(char *message)
 { 
-    int wallet_len, data_len, keypath_len, encoding_len;		
+    int data_len, keypath_len, encoding_len;		
     const char *data = jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
-    const char *wallet = jsmn_get_value_string(message,CMD_STR[CMD_wallet_], &wallet_len);
     const char *keypath = jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
     const char *encoding = jsmn_get_value_string(message,CMD_STR[CMD_encoding_], &encoding_len);
     
     int enc;
-    if (!wallet || !data || !encoding || !keypath) {
+    if (!data || !encoding || !keypath) {
         fill_report("sign", "Incomplete command.", ERROR);
         return;  
     } else if (strncmp(encoding, ATTR_STR[ATTR_der_], strlen(ATTR_STR[ATTR_der_])) == 0) { 
@@ -280,14 +242,7 @@ static void process_sign(char *message)
         if (touch_button_press()) { BUTTON_TOUCHED = 1; }
     }
     if (BUTTON_TOUCHED) {
-        if (strncmp(wallet, ATTR_STR[ATTR_electrum_], strlen(ATTR_STR[ATTR_electrum_])) == 0) {
-            wallet_sign_electrum(data, data_len, (char *)keypath, enc);
-        } else if (strncmp(wallet, ATTR_STR[ATTR_bip32_], strlen(ATTR_STR[ATTR_bip32_])) == 0) {
-            wallet_sign_bip32(data, data_len, (char *)keypath, enc);
-        } else {
-            fill_report("sign", "Invalid wallet type.", ERROR);
-            return;
-        }
+        wallet_sign(data, data_len, (char *)keypath, enc);
     }
 }
 
@@ -361,21 +316,10 @@ static int commander_process_token(int cmd, char *message)
             process_random(message);
             break;
       
-        case CMD_child_xpub_:
-            wallet_report_child_xpub_bip32(message);
+        case CMD_xpub_:
+            wallet_report_xpub(message);
             break;
 
-        case CMD_master_public_key_: {
-            if (strcmp(message, ATTR_STR[ATTR_electrum_]) == 0) {
-                wallet_report_master_public_key_electrum();
-	        } else if (strcmp(message, ATTR_STR[ATTR_bip32_]) == 0) {
-                wallet_report_master_xpub_bip32();
-            } else {
-                fill_report("master_public_key", "Invalid command.", ERROR);
-            }
-            break;
-        }
-        
         case CMD_touchbutton_: {
 		    // TEST disable function
             int status_len;
@@ -574,7 +518,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
-        fill_report("input", "Invalid encryption. "
+        fill_report("input", "Invalid encryption. This can be caused by an incorrect password.\n"
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
         decrypt_len = 0;

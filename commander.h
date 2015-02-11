@@ -56,8 +56,7 @@
         CMD(backup)             \
         CMD(password)           \
         CMD(touchbutton)        \
-        CMD(master_public_key)  \
-        CMD(child_xpub)         \
+        CMD(xpub)               \
         CMD(random)             \
         CMD(device)             \
         CMD(reset)              \
@@ -66,10 +65,8 @@
         CMD(timeout)            \
         CMD(threshold)          \
         CMD(button)             \
-        CMD(generate_electrum)  \
-        CMD(generate_bip32)     \
+        CMD(generate)           \
         CMD(sd_file)            \
-        CMD(wallet)             \
         CMD(mnemonic)           \
         CMD(data)               \
         CMD(keypath)            \
@@ -84,8 +81,6 @@
 
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
-        ATTR(electrum)          \
-        ATTR(bip32)             \
         ATTR(der)               \
         ATTR(enable)            \
         ATTR(disable)           \

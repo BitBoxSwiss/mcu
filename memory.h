@@ -41,8 +41,6 @@
 #define MEM_ERASED_ADDR 	    	0x0028
 #define MEM_SETUP_ADDR      		0x0030
 #define MEM_DELAY_ADDR      		0x0032
-#define MEM_MASTER_ELECTRUM_ADDR	0x0100// Zone 1
-#define MEM_MNEMONIC_ELECTRUM_ADDR	0x0120
 #define MEM_MASTER_BIP32_ADDR		0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR	0x0220
 #define MEM_MNEMONIC_BIP32_ADDR_0	0x0240
@@ -74,11 +72,9 @@ void memory_clear_variables(void);
 int memory_aeskey_write(const char *password, int len, int id);
 uint8_t *memory_aeskey_read(int id);
 uint8_t *memory_name(const char *name);
-uint8_t *memory_bip32_master(const uint8_t *master_priv_key);
-uint8_t *memory_bip32_chaincode(const uint8_t *chain_code);
-uint16_t *memory_bip32_mnemonic(const uint16_t *index);
-uint8_t *memory_electrum_master(const uint8_t *master_priv_key);
-char *memory_electrum_mnemonic(const char *seed_hex);
+uint8_t *memory_master(const uint8_t *master_priv_key);
+uint8_t *memory_chaincode(const uint8_t *chain_code);
+uint16_t *memory_mnemonic(const uint16_t *index);
 
 uint16_t memory_delay_read(void);
 uint16_t memory_touch_timeout_read(void);

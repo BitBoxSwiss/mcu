@@ -217,33 +217,11 @@ static void wallet_generate_key(char *key_path, const uint8_t *privkeymaster, co
 }
 
 
-void wallet_report_master_xpub(void)
-{
-	char xpub[112];
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
-    
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
-        !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        fill_report("master_public_key", "A bip32 master private key is not set.", ERROR);
-    } else {
-        wallet_generate_key("m/", priv_key_master, chain_code);
-	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
-        fill_report("master_public_key", xpub, SUCCESS);
-    }
-    clear_static_variables();
-}
-
-
 void wallet_report_xpub(char *keypath)
 {
 	char xpub[112];
     uint8_t *priv_key_master = memory_master(NULL);
     uint8_t *chain_code = memory_chaincode(NULL);
-    
-        
-    printf("keypath  %s\n", keypath); 
-    
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
@@ -252,10 +230,6 @@ void wallet_report_xpub(char *keypath)
         wallet_generate_key(keypath, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
         fill_report("xpub", xpub, SUCCESS);
-    
-        printf("pubkey   %s\n", uint8_to_hex(node.public_key,33)); 
-
-    
     }
     clear_static_variables();
 }    

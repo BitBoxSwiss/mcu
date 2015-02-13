@@ -37,7 +37,6 @@ char *wallet_mnemonic_from_index(const uint16_t *index);
 void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
 void wallet_sign(const char *message, int msg_len, char *keypath, int encoding);
 void wallet_report_xpub(char *keypath);
-void wallet_report_master_xpub(void);
 /* Bitcoin formats */
 int  wallet_sig_to_der(const uint8_t *sig, uint8_t *der);
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);

@@ -112,8 +112,8 @@ static void device_reset(const char *r)
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
             led_state("enable");
 			led_on();
-            if (touch_button_press()) { delay_ms(1500);
-            if (touch_button_press()) { delay_ms(1500);
+            if (touch_button_press()) { //delay_ms(1500);
+            if (touch_button_press()) { //delay_ms(1500);
             if (touch_button_press()) {
                 memory_erase();
 				memset(json_report, 0, JSON_REPORT_SIZE);

@@ -102,7 +102,7 @@ void force_reset(void)
 {
     memory_erase();
     memset(json_report, 0, JSON_REPORT_SIZE);
-    fill_report("reset", "Too many failed access attempts.", ERROR);
+    fill_report("reset", "Too many failed access attempts. Device reset.", ERROR);
 }
 
 
@@ -329,14 +329,14 @@ static int commander_process_token(int cmd, char *message)
                 if (strncmp(status, ATTR_STR[ATTR_disable_], strlen(ATTR_STR[ATTR_disable_])) == 0) { s = 0; }
                 else if (strncmp(status, ATTR_STR[ATTR_enable_], strlen(ATTR_STR[ATTR_enable_])) == 0) { s = 1; }
 			}
-            touch_button_parameters(jsmn_get_value_uint(message,CMD_STR[CMD_timeout_]), 
+            touch_button_parameters(jsmn_get_value_uint(message,CMD_STR[CMD_timeout_]) * 1000, 
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]), s);
             break;
         }
 
         case CMD_device_: {
             if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
-	            fill_report("serial", "...", SUCCESS); // TODO get serial number
+	            fill_report("serial", "...", SUCCESS); // TODO get serial number - fill only first 16bytes
             } else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
                 fill_report("version", (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
             } else {

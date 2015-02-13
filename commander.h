@@ -40,7 +40,6 @@
 #define DIGITAL_BITBOX_VERSION  "1.0"
 
 #define MAX_ATTEMPTS        5
-#define FORCE_RESET         "___"
 
 #define GENERATE_STRING(STRING) #STRING,
 #define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,

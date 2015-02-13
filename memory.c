@@ -192,7 +192,7 @@ uint16_t *memory_mnemonic(const uint16_t *idx)
 
 int memory_aeskey_write(const char *password, int len, int id)
 {
-	int ret;
+	int ret = 0;
     uint8_t password_b[MEM_PAGE_LEN];
 	memset(password_b, 0, MEM_PAGE_LEN);
     

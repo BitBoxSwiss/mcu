@@ -27,9 +27,9 @@
 #ifndef _WALLET_H_
 #define _WALLET_H_
 
+
 #include <stdint.h>
 
-#define LENVARINT 20
 
 /* BIP32 */
 uint16_t *wallet_index_from_mnemonic(const char *mnemo, const char **wordlist);

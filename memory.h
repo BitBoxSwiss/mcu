@@ -29,33 +29,35 @@
 
 #include <stdint.h>
 
-#define MEM_PAGE_LEN                32
-#define MEM_AESKEY_LEN_MIN			4
+#define MEM_PAGE_LEN                    32
+#define MEM_AESKEY_LEN_MIN	    		4
 
 // User Zones: 0x0000 to 0x0FFF
-#define MEM_NAME_ADDR   			0x0000// Zone 0
-#define MEM_LED_ADDR			    0x0020
-#define MEM_TOUCH_TIMEOUT_ADDR	   	0x0022
-#define MEM_TOUCH_THRESH_ADDR	    0x0024
-#define MEM_TOUCH_ENABLE_ADDR   	0x0026
-#define MEM_ERASED_ADDR 	    	0x0028
-#define MEM_SETUP_ADDR      		0x0030
-#define MEM_DELAY_ADDR      		0x0032
-#define MEM_MASTER_BIP32_ADDR		0x0200// Zone 2
-#define MEM_MASTER_BIP32_CHAIN_ADDR	0x0220
-#define MEM_MNEMONIC_BIP32_ADDR_0	0x0240
-#define MEM_MNEMONIC_BIP32_ADDR_1	0x0260
-#define MEM_AESKEY_CMD_ADDR			0x0300// Zone 3
-#define MEM_AESKEY_RES_ADDR			0x0400// Zone 4
+#define MEM_NAME_ADDR   			    0x0000// Zone 0
+#define MEM_LED_ADDR			        0x0020
+#define MEM_TOUCH_HOLDTIME_ADDR         0x0022
+#define MEM_TOUCH_TIMEOUT_ADDR	   	    0x0024
+#define MEM_TOUCH_THRESH_ADDR	        0x0026
+#define MEM_TOUCH_ENABLE_ADDR   	    0x0028
+#define MEM_ERASED_ADDR 	    	    0x0030
+#define MEM_SETUP_ADDR      		    0x0040
+#define MEM_DELAY_ADDR      		    0x0042
+#define MEM_MASTER_BIP32_ADDR		    0x0200// Zone 2
+#define MEM_MASTER_BIP32_CHAIN_ADDR	    0x0220
+#define MEM_MNEMONIC_BIP32_ADDR_0	    0x0240
+#define MEM_MNEMONIC_BIP32_ADDR_1	    0x0260
+#define MEM_AESKEY_CMD_ADDR			    0x0300// Zone 3
+#define MEM_AESKEY_RES_ADDR			    0x0400// Zone 4
 
 // Default settings
-#define DEFAULT_erased_             0xFF
-#define DEFAULT_setup_              0xFF
-#define DEFAULT_delay_              0
-#define DEFAULT_led_                0
-#define DEFAULT_touch_timeout_      5
-#define DEFAULT_touch_thresh_       100
-#define DEFAULT_touch_enable_       1
+#define DEFAULT_erased_                 0xFF
+#define DEFAULT_setup_                  0xFF
+#define DEFAULT_delay_                  0
+#define DEFAULT_led_                    0
+#define DEFAULT_touch_holdtime_         2
+#define DEFAULT_touch_timeout_          5
+#define DEFAULT_touch_thresh_           100
+#define DEFAULT_touch_enable_           1
 
 
 typedef enum PASSWORD_ID { 
@@ -77,6 +79,7 @@ uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint16_t *memory_mnemonic(const uint16_t *index);
 
 uint16_t memory_delay_read(void);
+uint16_t memory_touch_holdtime_read(void);
 uint16_t memory_touch_timeout_read(void);
 uint16_t memory_touch_thresh_read(void);
 uint8_t memory_touch_enable_read(void);
@@ -85,6 +88,7 @@ uint8_t memory_setup_read(void);
 int memory_led_read(void);
 
 void memory_delay_iterate(const uint16_t d);
+void memory_touch_holdtime_write(const uint16_t t);
 void memory_touch_timeout_write(const uint16_t t);
 void memory_touch_thresh_write(const uint16_t t);
 void memory_touch_enable_write(const uint8_t e);

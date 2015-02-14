@@ -141,7 +141,7 @@ static void process_load(char *message)
             wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
         } else if (sd_file) {
             char *mnemo = load_sd(sd_file, sd_file_len);
-            if (decrypt ? strncmp(decrypt, "no", 2) : 1) { // default = decrypt
+            if (mnemo && (decrypt ? strncmp(decrypt, "no", 2) : 1)) { // default = decrypt
                 int dec_len;
                 char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len);
                 memset(mnemo, 0, strlen(mnemo));
@@ -150,7 +150,10 @@ static void process_load(char *message)
                 free(dec);							
             }
             //fill_report("debug sd read", mnemo, SUCCESS); // debug
+            // 
             // TEST sd load
+            //
+            //
             if (mnemo) {
                 wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len, 0);
             }
@@ -329,7 +332,8 @@ static int commander_process_token(int cmd, char *message)
                 if (strncmp(status, ATTR_STR[ATTR_disable_], strlen(ATTR_STR[ATTR_disable_])) == 0) { s = 0; }
                 else if (strncmp(status, ATTR_STR[ATTR_enable_], strlen(ATTR_STR[ATTR_enable_])) == 0) { s = 1; }
 			}
-            touch_button_parameters(jsmn_get_value_uint(message,CMD_STR[CMD_timeout_]) * 1000, 
+            touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000, 
+                                    jsmn_get_value_uint(message, CMD_STR[CMD_holdtime_]) * 1000, 
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]), s);
             break;
         }
@@ -464,7 +468,7 @@ char *commander(const char *instruction_encrypted)
         free(instruction);
 	}
 	memory_clear_variables();
-    delay_ms(100);
+    //delay_ms(100);
 	led_off();
     return json_report;
 }
@@ -518,7 +522,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
-        fill_report("input", "Invalid encryption. This can be caused by an incorrect password."
+        fill_report("input", "Invalid encryption. This can be caused by an incorrect password. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
         decrypt_len = 0;

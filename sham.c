@@ -67,10 +67,11 @@ uint8_t touch_button_press(void)
 }
 
 
-void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status)
+void touch_button_parameters(uint16_t timeout, uint16_t threshold, uint16_t holdtime, int status)
 {
     (void)timeout;
     (void)threshold;
+    (void)holdtime;
     (void)status;
     fill_report("touchbutton", "touched (hard coded)", SUCCESS);
 }

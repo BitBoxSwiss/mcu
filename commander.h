@@ -62,6 +62,7 @@
         CMD(ciphertext)         \
   /*    child commands      */  \
         CMD(timeout)            \
+        CMD(holdtime)           \
         CMD(threshold)          \
         CMD(button)             \
         CMD(generate)           \

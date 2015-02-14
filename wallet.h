@@ -32,7 +32,7 @@
 
 
 /* BIP32 */
-uint16_t *wallet_index_from_mnemonic(const char *mnemo, const char **wordlist);
+uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
 void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
 void wallet_sign(const char *message, int msg_len, char *keypath, int encoding);

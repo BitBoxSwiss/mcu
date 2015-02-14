@@ -30,7 +30,7 @@
 #include <stdint.h>
 
 #define MEM_PAGE_LEN                32
-#define MEM_AESKEY_LEN_MIN			10
+#define MEM_AESKEY_LEN_MIN			4
 
 // User Zones: 0x0000 to 0x0FFF
 #define MEM_NAME_ADDR   			0x0000// Zone 0
@@ -53,7 +53,7 @@
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_delay_              0
 #define DEFAULT_led_                0
-#define DEFAULT_touch_timeout_      4
+#define DEFAULT_touch_timeout_      5
 #define DEFAULT_touch_thresh_       100
 #define DEFAULT_touch_enable_       1
 

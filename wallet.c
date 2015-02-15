@@ -22,11 +22,14 @@
 
 */
 
+/* Some functions adapted from the Trezor crypto library. */
+
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "bip39_english.h"
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
@@ -34,9 +37,10 @@
 #include "random.h"
 #include "base64.h"
 #include "base58.h"
+#include "pbkdf2.h"
 #include "utils.h"
 #include "bip32.h"
-#include "bip39.h"
+#include "hmac.h"
 #include "sha2.h"
 #include "uECC.h"
 #include "led.h"
@@ -56,10 +60,10 @@ static uint8_t rand_data_32[32];
 // Avoid leaving secrets in RAM
 static void clear_static_variables(void)
 {
-    memset(&node, 0, sizeof(HDNode));
-    memset(seed_index, 0, sizeof(seed_index));
     memset(seed, 0, sizeof(seed));
+    memset(&node, 0, sizeof(HDNode));
     memset(mnemonic, 0, sizeof(mnemonic));
+    memset(seed_index, 0, sizeof(seed_index));
     memset(rand_data_32, 0, sizeof(rand_data_32));
 }
 
@@ -74,6 +78,12 @@ static int split_seed(char **seed_words, const char *message)
     seed_words[i] = strtok(msg, " ,");
     for (i = 0; seed_words[i] != NULL; seed_words[++i] = strtok(NULL, " ,")) { }
     return i;
+}
+
+
+const char **wallet_mnemonic_wordlist(void)
+{
+	return wordlist;
 }
 
 
@@ -108,7 +118,7 @@ static void wallet_sign_generic_report(const uint8_t *priv_key, const char *mess
 uint16_t *wallet_index_from_mnemonic(const char *mnemo)
 {
     int i, j, k, seed_words_n;
-	const char **wordlist = mnemonic_wordlist();
+	//const char **wordlist = wallet_mnemonic_wordlist();
     char *seed_word[25] = {NULL}; 
     memset(seed_index, 0, sizeof(seed_index));
     seed_words_n = split_seed(seed_word, mnemo);
@@ -132,7 +142,7 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
        return NULL;
     }
     int i;
-	const char **wordlist = mnemonic_wordlist();
+	//const char **wordlist = wallet_mnemonic_wordlist();
     
     memset(mnemonic, 0, sizeof(mnemonic));
     for (i = 0; idx[i]; i++) {
@@ -154,23 +164,23 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
 		    return;
 	    }
         random_bytes(rand_data_32, 32, 1);
-	    mnemo = mnemonic_from_data(rand_data_32, strength / 8);
+	    mnemo = wallet_mnemonic_from_data(rand_data_32, strength / 8);
 		memcpy(mnemonic, mnemo, strlen(mnemo));
     } else {
 		memcpy(mnemonic, mnemo, m_len);
 	}
 
-    if (mnemonic_check(mnemonic) == 0) {
+    if (wallet_mnemonic_check(mnemonic) == 0) {
         // error report is filled inside mnemonic_check()
         return;
     }
 
     if (salt == NULL) {
-        mnemonic_to_seed(mnemonic, "", seed, 0); 
+        wallet_mnemonic_to_seed(mnemonic, "", seed, 0); 
     } else { 
 		char s[s_len];
 		memcpy(s, salt, s_len);
-        mnemonic_to_seed(mnemonic, s, seed, 0); 
+        wallet_mnemonic_to_seed(mnemonic, s, seed, 0); 
     } 
 
 	hdnode_from_seed(seed, sizeof(seed), &node);
@@ -248,6 +258,136 @@ void wallet_sign(const char *message, int msg_len, char *keypath, int encoding)
         wallet_sign_generic_report(node.private_key, message, msg_len, encoding);
     }
     clear_static_variables();
+}
+
+
+char *wallet_mnemonic_from_data(const uint8_t *data, int len)
+{
+	if (len % 4 || len < 16 || len > 32) {
+		return 0;
+	}
+
+	uint8_t bits[32 + 1];
+
+	sha256_Raw(data, len, bits);
+	bits[len] = bits[0];
+	memcpy(bits, data, len);
+
+	int mlen = len * 3 / 4;
+	static char mnemo[24 * 10];
+
+	int i, j, idx;
+	char *p = mnemo;
+	for (i = 0; i < mlen; i++) {
+		idx = 0;
+		for (j = 0; j < 11; j++) {
+			idx <<= 1;
+			idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;
+		}
+		strcpy(p, wordlist[idx]);
+		p += strlen(wordlist[idx]);
+		*p = (i < mlen - 1) ? ' ' : 0;
+		p++;
+	}
+
+	return mnemo;
+}
+
+
+int wallet_mnemonic_check(const char *mnemo)
+{
+	if (!mnemo) {
+        fill_report("seed", "Empty mnemonic.", ERROR);
+		return 0;
+	}
+
+	uint32_t i, n;
+    /*
+	i = 0; n = 0;
+	while (mnemo[i]) {
+		if (mnemo[i] == ' ') {
+			n++;
+		}
+		i++;
+	}
+	n++;
+    */
+	// check number of words
+    char *sham[25] = {NULL}; 
+    n = split_seed(sham, mnemo);
+    
+    
+    
+    if (n != 12 && n != 18 && n != 24) {
+        fill_report("seed", "Mnemonic must have 12, 18, or 24 words.", ERROR);
+		return 0;
+	}
+
+	char current_word[10];
+	uint32_t j, k, ki, bi;
+	uint8_t bits[32 + 1];
+	memset(bits, 0, sizeof(bits));
+	i = 0; bi = 0;
+	while (mnemo[i]) {
+		j = 0;
+		while (mnemo[i] != ' ' && mnemo[i] != 0) {
+			if (j >= sizeof(current_word)) {
+                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+				return 0;
+			}
+			current_word[j] = mnemo[i];
+			i++; j++;
+		}
+		current_word[j] = 0;
+		if (mnemo[i] != 0) i++;
+		k = 0;
+		for (;;) {
+			if (!wordlist[k]) { // word not found
+                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+				return 0;
+			}
+			if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
+				for (ki = 0; ki < 11; ki++) {
+					if (k & (1 << (10 - ki))) {
+						bits[bi / 8] |= 1 << (7 - (bi % 8));
+					}
+					bi++;
+				}
+				break;
+			}
+			k++;
+		}
+	}
+	if (bi != n * 11) {
+        fill_report("seed", "Mnemonic check error. [0]", ERROR);
+		return 0;
+	}
+	bits[32] = bits[n * 4 / 3];
+	sha256_Raw(bits, n * 4 / 3, bits);
+	if (n == 12) {
+		return (bits[0] & 0xF0) == (bits[32] & 0xF0); // compare first 4 bits
+	} else
+	if (n == 18) {
+		return (bits[0] & 0xFC) == (bits[32] & 0xFC); // compare first 6 bits
+	} else
+	if (n == 24) {
+		return bits[0] == bits[32]; // compare 8 bits
+	}
+   
+    fill_report("seed", "Invalid mnemonic: checksum error.", ERROR);
+    return 0;
+}
+
+
+void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t s[512 / 8],
+                             void (*progress_callback)(uint32_t current, uint32_t total))
+{
+	static uint8_t salt[8 + 256 + 4];
+	int saltlen = strlen(passphrase);
+	memcpy(salt, "mnemonic", 8);
+	memcpy(salt + 8, passphrase, saltlen);
+	saltlen += 8;
+	pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlen(mnemo), salt, saltlen, BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
 }
 
 

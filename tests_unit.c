@@ -37,7 +37,6 @@
 #include "pbkdf2.h"
 #include "base64.h"
 #include "bip32.h"
-#include "bip39.h"
 #include "utils.h"
 #include "utest.h"
 #include "uECC.h"
@@ -564,9 +563,9 @@ static void test_mnemonic(void)
 	b = vectors + 1;
 	c = vectors + 2;
 	while (*a && *b && *c) {
-		m = mnemonic_from_data(hex_to_uint8(*a), strlen(*a) / 2);
+		m = wallet_mnemonic_from_data(hex_to_uint8(*a), strlen(*a) / 2);
 		u_assert_str_eq(m, *b);
-		mnemonic_to_seed(m, "TREZOR", seed, 0);
+		wallet_mnemonic_to_seed(m, "TREZOR", seed, 0);
 		u_assert_mem_eq(seed, hex_to_uint8(*c), strlen(*c) / 2);
 		a += 3; b += 3; c += 3;
 	}
@@ -657,13 +656,13 @@ static void test_mnemonic_check(void)
 	int r;
 	m = vectors_ok;
 	while (*m) {
-		r = mnemonic_check(*m);
+		r = wallet_mnemonic_check(*m);
 		u_assert_int_eq(r, 1);
 		m++;
 	}
 	m = vectors_fail;
 	while (*m) {
-		r = mnemonic_check(*m);
+		r = wallet_mnemonic_check(*m);
 		u_assert_int_eq(r, 0);
 		m++;
 	}

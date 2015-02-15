@@ -31,18 +31,27 @@
 #include <stdint.h>
 
 
+#define BIP39_PBKDF2_ROUNDS 2048
+
+
 /* BIP32 */
+const char **wallet_mnemonic_wordlist(void);
 uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
 void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
 void wallet_sign(const char *message, int msg_len, char *keypath, int encoding);
 void wallet_report_xpub(char *keypath);
+char *wallet_mnemonic_from_data(const uint8_t *data, int len);
+int wallet_mnemonic_check(const char *mnemo);
+void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t s[512 / 8],
+                             void (*progress_callback)(uint32_t current, uint32_t total));
 /* Bitcoin formats */
 int  wallet_sig_to_der(const uint8_t *sig, uint8_t *der);
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);
 void wallet_get_address(const uint8_t *pub_key, uint8_t version, char *addr, int addrsize);
 void wallet_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize);
+
 
 
 #endif

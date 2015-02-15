@@ -34,14 +34,14 @@ void delay_ms(int delay)
 }
 
 
-int format_sd(void)
+int sd_format(void)
 {
     fill_report("backup", "Formatting ignored for non-embedded testing.", ERROR);
     return 1;
 }
 
 
-void backup_sd(const char *f, int f_len, const char *t, int t_len)
+void sd_backup(const char *f, int f_len, const char *t, int t_len)
 {
     (void)f;
     (void)f_len;
@@ -51,12 +51,19 @@ void backup_sd(const char *f, int f_len, const char *t, int t_len)
 }
 
 
-char *load_sd(const char *f, int f_len)
+char *sd_load(const char *f, int f_len)
 {
     (void)f;
     (void)f_len;
 	fill_report("load", "Ignored for non-embedded testing.", ERROR);
     return 0;
+}
+
+
+void sd_list(void)
+{
+    fill_report("backup", "No files to list for non-embedded testing.", ERROR);
+    return;
 }
 
 

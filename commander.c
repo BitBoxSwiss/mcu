@@ -174,7 +174,6 @@ static void process_seed(char *message)
 }
 
 
-// TODO add verification routine
 static void process_backup(char *message)
 { 
     int encrypt_len, format_len, filename_len;
@@ -212,17 +211,26 @@ static void process_backup(char *message)
             char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
             if (!text) {
                 fill_report("backup", "BIP32 mnemonic not present.", ERROR);
-            } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
+                return;
+            } 
+            if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
                 int enc_len;
                 char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
                 if (enc) {
                     sd_backup(filename, filename_len, enc, enc_len);
+                    if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
+                        fill_report("backup", "Corrupted file.", ERROR);
+                    }
                     free(enc);
                 } else {
                     fill_report("backup", "Could not allocate memory for encryption.", ERROR);
+                    return;
                 }
             } else {
                 sd_backup(filename, filename_len, text, strlen(text));  
+                if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
+                    fill_report("backup", "Corrupted file.", ERROR);
+                }
             }
         }
     }	

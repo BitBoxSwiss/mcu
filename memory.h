@@ -53,7 +53,7 @@
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_delay_              0
 #define DEFAULT_led_                0
-#define DEFAULT_touch_timeout_      5
+#define DEFAULT_touch_timeout_      5000// msec
 #define DEFAULT_touch_thresh_       100
 #define DEFAULT_touch_enable_       1
 

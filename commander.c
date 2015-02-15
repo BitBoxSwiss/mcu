@@ -548,7 +548,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec)
     {
-        fill_report("input", "Could not allocate memory for decryption. "
+        fill_report("input", "Could not allocate enough memory for decryption. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
         memset(dec_pad, 0, sizeof(dec_pad));

@@ -140,7 +140,7 @@ static void process_load(char *message)
         if (mnemonic) {
             wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
         } else if (sd_file) {
-            char *mnemo = load_sd(sd_file, sd_file_len);
+            char *mnemo = sd_load(sd_file, sd_file_len);
             if (mnemo && (decrypt ? strncmp(decrypt, "no", 2) : 1)) { // default = decrypt
                 int dec_len;
                 char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
@@ -181,19 +181,26 @@ static void process_backup(char *message)
     const char *format = jsmn_get_value_string(message, CMD_STR[CMD_format_sd_card_], &format_len);
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
-    if (format ? !strncmp(format, "yes", 3) : 0) { // default = do not format
+	
+	if (strcmp(message, ATTR_STR[ATTR_list_]) == 0) {
+		sd_list();
+		return;
+	}
+	
+	if (format ? !strncmp(format, "yes", 3) : 0) { // default = do not format
         if (!BUTTON_TOUCHED) {
             if (touch_button_press()) { BUTTON_TOUCHED = 1; }
         }
         if (BUTTON_TOUCHED) {
-            if (format_sd()) {
+            if (sd_format()) {
                 return; // could not format
             }
         } else {
             return; // button not touched
         }
     }
-    if (!filename) {
+    
+	if (!filename) {
         if (!(format && !filename)) {
             fill_report("backup", "Incomplete command.", ERROR);
         }
@@ -209,13 +216,13 @@ static void process_backup(char *message)
                 int enc_len;
                 char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
                 if (enc) {
-                    backup_sd(filename, filename_len, enc, enc_len);
+                    sd_backup(filename, filename_len, enc, enc_len);
                     free(enc);
                 } else {
                     fill_report("backup", "Could not allocate memory for encryption.", ERROR);
                 }
             } else {
-                backup_sd(filename, filename_len, text, strlen(text));  
+                sd_backup(filename, filename_len, text, strlen(text));  
             }
         }
     }	

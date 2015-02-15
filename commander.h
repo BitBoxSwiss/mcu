@@ -84,6 +84,7 @@
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
         ATTR(der)               \
+        ATTR(list)              \
         ATTR(enable)            \
         ATTR(disable)           \
         ATTR(true)              \

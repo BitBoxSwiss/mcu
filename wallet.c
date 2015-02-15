@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "bip39_english.h"
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
@@ -45,6 +44,7 @@
 #include "uECC.h"
 #include "led.h"
 
+#include "bip39_english.h"
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];

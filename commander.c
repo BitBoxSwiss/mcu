@@ -130,7 +130,7 @@ static void process_load(char *message)
 {
     int mnemonic_len, sd_file_len, salt_len, decrypt_len;
     const char *mnemonic = jsmn_get_value_string(message, CMD_STR[CMD_mnemonic_], &mnemonic_len);
-    const char *sd_file = jsmn_get_value_string(message, CMD_STR[CMD_sd_file_], &sd_file_len);
+    const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &sd_file_len);
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
     if (!BUTTON_TOUCHED) {
@@ -139,8 +139,8 @@ static void process_load(char *message)
     if (BUTTON_TOUCHED) {
         if (mnemonic) {
             wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
-        } else if (sd_file) {
-            char *mnemo = sd_load(sd_file, sd_file_len);
+        } else if (filename) {
+            char *mnemo = sd_load(filename, sd_file_len);
             if (mnemo && (decrypt ? strncmp(decrypt, "no", 2) : 1)) { // default = decrypt
                 int dec_len;
                 char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
@@ -289,7 +289,7 @@ static void process_random(char *message)
 
 static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 {
-    int ret;
+    int ret = 0;
     if (id == PASSWORD_MULTI) {
         if (touch_button_press()) {
              ret = memory_aeskey_write(message, msg_len, id);

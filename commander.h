@@ -68,7 +68,6 @@
         CMD(threshold)          \
         CMD(button)             \
         CMD(generate)           \
-        CMD(sd_file)            \
         CMD(mnemonic)           \
         CMD(data)               \
         CMD(keypath)            \

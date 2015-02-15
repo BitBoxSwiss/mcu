@@ -522,7 +522,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
-        fill_report("input", "Invalid encryption. This can be caused by an incorrect password. "
+        fill_report("input", "Invalid encryption. This can be caused by an incorrect password.\n"
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
         decrypt_len = 0;

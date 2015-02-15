@@ -79,7 +79,7 @@ char *uint8_to_hex(const uint8_t *bin, size_t l)
 extern const char *CMD_STR[];
 
 
-void print_report(const char *report)
+void print_report(const char *report, PASSWORD_ID dec_id)
 {
     int decrypt_len, r, i;
     jsmntok_t json_token[MAX_TOKENS];
@@ -90,16 +90,14 @@ void print_report(const char *report)
         return;
     }
     
-    printf("\n\nReport:     \t%s    \n", report);
-    
     for (i = 0; i < r; i++) {
         if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
             int len = json_token[i + 1].end - json_token[i + 1].start;
             char cipher[len + 1];
             memcpy(cipher, report + json_token[i + 1].start, len);
             cipher[len] = '\0';
-            char *dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len);
-            printf("ciphertext:\t%.*s\n\n", decrypt_len,dec);
+            char *dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
+            printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
             free(dec);
             break;
         }
@@ -107,11 +105,11 @@ void print_report(const char *report)
 }
 
 
-void send_encrypted_cmd(const char *instruction)
+void send_encrypted_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
 {
     int encrypt_len;
-    char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), &encrypt_len);
-    print_report(commander(enc));
+    char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), &encrypt_len, enc_id);
+    print_report(commander(enc), dec_id);
     free(enc); 
 }
 

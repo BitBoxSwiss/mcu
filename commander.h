@@ -29,6 +29,7 @@
 
 
 #include <stdint.h>
+#include "memory.h"
 #ifndef TESTING
 #include "conf_usb.h"
 
@@ -54,6 +55,7 @@
         CMD(load)               \
         CMD(backup)             \
         CMD(password)           \
+        CMD(multipass)          \
         CMD(touchbutton)        \
         CMD(xpub)               \
         CMD(random)             \
@@ -107,7 +109,7 @@ void force_reset(void);
 void fill_report(const char *attr, const char *val, int err);
 void fill_report_len(const char *attr, const char *val, int err, int vallen);
 char *commander(const char *instruction_encrypted);
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len);
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *declen);
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id);
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id);
 
 #endif

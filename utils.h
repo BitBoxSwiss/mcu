@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
+#include "memory.h"
 
 #define TO_UINT8_HEX_BUF_LEN 2048
 
@@ -37,8 +37,8 @@
 uint8_t *hex_to_uint8(const char *str);
 char *uint8_to_hex(const uint8_t *bin, size_t l);
 #ifdef TESTING
-void print_report(const char *report);
-void send_encrypted_cmd(const char *instruction);
+void print_report(const char *report, PASSWORD_ID dec_id);
+void send_encrypted_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id);
 #endif
 
 

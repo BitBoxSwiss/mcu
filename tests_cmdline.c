@@ -50,13 +50,19 @@ void usage(char * argv[])
 
 int main ( int argc, char *argv[] )
 {
+    PASSWORD_ID encrypt_id = PASSWORD_STAND;// Standard password
+    PASSWORD_ID decrypt_id = PASSWORD_MULTI;// Multipass password
+    
     if (argc != 2) {
         usage(argv);
     } else {
         random_init(); 
         memory_erase();
         commander("{\"password\":\"passwordpassword\"}" ); // A password is required before sending commands.
-        send_encrypted_cmd(argv[1]); 
+                                                           // The initial password sets both the standard and 
+                                                           // multipass passwords to the same value. Refer to 
+                                                           // the API documentation for more details.
+        send_encrypted_cmd(argv[1], encrypt_id, decrypt_id); 
     }
     return 0;
 }

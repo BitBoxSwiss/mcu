@@ -59,7 +59,7 @@ static int BUTTON_TOUCHED = 0;
 // TODO use msg and error codes to pass to fill_report
 void fill_report(const char *attr, const char *val, int err)
 {
-	fill_report_len(attr, val, err, strlen(val));
+    fill_report_len(attr, val, err, strlen(val));
 }
 
 
@@ -143,7 +143,7 @@ static void process_load(char *message)
             char *mnemo = load_sd(sd_file, sd_file_len);
             if (mnemo && (decrypt ? strncmp(decrypt, "no", 2) : 1)) { // default = decrypt
                 int dec_len;
-                char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len);
+                char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
                 memset(mnemo, 0, strlen(mnemo));
                 memcpy(mnemo, dec, dec_len);
                 memset(dec, 0, dec_len);
@@ -207,7 +207,7 @@ static void process_backup(char *message)
                 fill_report("backup", "BIP32 mnemonic not present.", ERROR);
             } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
                 int enc_len;
-                char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len);
+                char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
                 backup_sd(filename, filename_len, enc, enc_len);
                 free(enc);
             } else {
@@ -268,12 +268,16 @@ static void process_random(char *message)
 }
 
 
-static int process_password(const char *message, int msg_len)
+static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 {
-    PASSWORD_ID id;
-    // fixed (not multipass)
-    id = 0; // TODO multipass, extract from string
-    return(memory_aeskey_write(message, msg_len, id));
+    int ret;
+    if (id == PASSWORD_MULTI) {
+        if (touch_button_press()) {
+             ret = memory_aeskey_write(message, msg_len, id);
+        }
+    } else { ret = memory_aeskey_write(message, msg_len, id); }
+    
+    return ret;
 }
 
 
@@ -285,7 +289,15 @@ static int commander_process_token(int cmd, char *message)
             return -1;
         
         case CMD_password_:
-		    process_password(message, strlen(message));
+		    if (process_password(message, strlen(message), PASSWORD_STAND)) {
+                fill_report("password", "success", SUCCESS);
+            }
+            break;
+        
+        case CMD_multipass_:
+		    if (process_password(message, strlen(message), PASSWORD_MULTI)) {
+                fill_report("multipass", "success", SUCCESS);
+            }
             break;
        
         case CMD_load_:
@@ -356,7 +368,7 @@ static int commander_process_token(int cmd, char *message)
 
 char *commander(const char *instruction_encrypted)
 {
-    //printf("Command:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);
+    //printf("\n\nCommand:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);
     memset(json_report, 0, JSON_REPORT_SIZE);
     //memory_load_parameters();
     REPORT_BUF_OVERFLOW = 0;
@@ -368,114 +380,172 @@ char *commander(const char *instruction_encrypted)
         fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
+        goto exit;
     } 
     
-    else if (!strlen(instruction_encrypted)) {
+    if (!strlen(instruction_encrypted)) {
         fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
+        goto exit;
     }
+    
     // In case of a forgotten password, allow reset from an unencrypted instructions.
-    else if (strstr(instruction_encrypted, CMD_STR[CMD_reset_]) != NULL) {
+    if (strstr(instruction_encrypted, CMD_STR[CMD_reset_]) != NULL) {
         int r_len;
         const char *r = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_reset_], &r_len);
         device_reset(r);
+        goto exit;
 	}
     
     // Force setting a password for encryption before processing instructions.
-    else if (memory_erased_read()) {		
+    if (memory_erased_read()) {		
         if (strstr(instruction_encrypted, CMD_STR[CMD_password_]) != NULL) {
-            memory_erase();
+            //memory_erase();
             memset(json_report, 0, JSON_REPORT_SIZE);
             int pw_len;
             const char *pw = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
-                if (process_password(pw, pw_len)) { memory_erased_write(0); }
+                // For initialization, set both passwords to be the same. Then, the same code
+                // is used independently of whether or not a multipass second password was set.
+                // Add a multipass second password using a separate JSON command.
+                if (process_password(pw, pw_len, PASSWORD_STAND) && process_password(pw, pw_len, PASSWORD_MULTI)) { 
+                    memory_erased_write(0); 
+                    fill_report("password", "success", SUCCESS);
+                }
             } else {
                 fill_report("input", "JSON parse error.", ERROR);
             }
         } else {
 			fill_report("input", "Please set a password.", ERROR);
 		}
+        goto exit;
 	}
-	
-    // Process one or more instructions.
-    else
-	{
-        // Decrypt instructions
-        int instruction_len;
-		char *instruction = aes_cbc_b64_decrypt((unsigned char*)instruction_encrypted, 
-                                                strlen(instruction_encrypted), 
-                                                &instruction_len);
-       
-        // Parse instructions
-	    if (instruction) {
-            int r, j, cmd, found, msglen;
-            jsmntok_t json_token[MAX_TOKENS];
-            r = jsmn_parse_init(instruction, instruction_len, json_token, MAX_TOKENS);
-            if (json_token[0].type != JSMN_OBJECT  ||  r < 0) 
-            {
-                fill_report("input", "JSON parse error. "
-                            "Too many access errors will cause the device to reset. "
-                            "Is the command enclosed by curly brackets?", ERROR);
-                memory_delay_iterate(1);
-            } else {
-                found = 0;
-                for (j = 0; j < r; j++) {
-                    if (json_token[j].parent != 0)
-                    {
-                        continue; // skip child tokens
-                    }
-                    for (cmd = 0; cmd < CMD_NUM; cmd++) {    
-                        if (jsmn_token_equals(instruction, &json_token[j], CMD_STR[cmd]) == 0) {
-                            found = 1;
-                            msglen = json_token[j + 1].end-json_token[j + 1].start;
-                            char message[msglen + 1];
-                            memcpy(message, instruction + json_token[j + 1].start, msglen);
-                            message[msglen] = '\0';
-                            if (commander_process_token(cmd, message) < 0) {
-                                free(instruction);
-                                return json_report; // _reset_ called
-                            }
-                            memset(message, 0, msglen);
-                            break;
-                        }
-                    }
+
+    // Allow unencrypted instruction to set multipass second password (first time only)
+    // A multipass password reset is done via encrypted JSON instruction or here after a device reset
+    if (memory_multipass_read()) {
+        if (strstr(instruction_encrypted, CMD_STR[CMD_multipass_]) != NULL) {
+            memset(json_report, 0, JSON_REPORT_SIZE);
+            int pw_len;
+            const char *pw = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_multipass_], &pw_len);
+            if (pw != NULL) {
+                if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
+                    memory_multipass_write(0); 
+                    fill_report("multipass", "success", SUCCESS);
                 }
-                if (found) {
-                    memory_delay_iterate(0);
-                } else {
-                    // Assume incorrect password and exponentially 
-                    // increase delay before processing next instructions 
-                    fill_report("input", "A valid command was not found. "
-                                "Too many access errors will cause the device to reset.", ERROR);
-                    memory_delay_iterate(1);
+            } else {
+                fill_report("input", "JSON parse error.", ERROR);
+            }
+            goto exit;
+        } 
+    }
+
+        
+        // Process one or more instructions
+        PASSWORD_ID id = PASSWORD_NONE;
+		char *instruction = NULL;//, *instruction_stand, *instruction_multi;
+        int instruction_len;
+        int r, j, cmd, found, msglen;
+        jsmntok_t json_token[MAX_TOKENS];
+
+        // Decrypt & parse instructions
+        instruction = aes_cbc_b64_decrypt((unsigned char*)instruction_encrypted, 
+                                          strlen(instruction_encrypted), 
+                                          &instruction_len,
+                                          PASSWORD_STAND);
+	    
+        if (instruction) {
+            memset(json_token, 0, sizeof(json_token));
+            r = jsmn_parse_init(instruction, instruction_len, json_token, MAX_TOKENS);
+            if (json_token[0].type == JSMN_OBJECT  &&  r > 0) 
+            {
+                id = PASSWORD_STAND;
+            }
+        } 
+        if (id == PASSWORD_NONE && !instruction) {
+            instruction = aes_cbc_b64_decrypt((unsigned char*)instruction_encrypted, 
+                                              strlen(instruction_encrypted), 
+                                              &instruction_len,
+                                              PASSWORD_MULTI);
+                
+            if (instruction) {
+                memset(json_token, 0, sizeof(json_token));
+                r = jsmn_parse_init(instruction, instruction_len, json_token, MAX_TOKENS);
+                if (json_token[0].type == JSMN_OBJECT  &&  r > 0) 
+                {
+                    id = PASSWORD_MULTI;
                 }
             }
+        }
 
+        if (instruction == NULL) {
+            fill_report("input", "Could not decrypt. "
+                        "Too many access errors will cause the device to reset. ", ERROR);
+            memory_delay_iterate(1);
+        } 
+        else if (id == PASSWORD_NONE) {
+            fill_report("input", "JSON parse error. "
+                        "Too many access errors will cause the device to reset. "
+                        "Is the command enclosed by curly brackets?", ERROR);
+            memory_delay_iterate(1);
+        }
+        // Process instructions
+        else {
+            found = 0;
+            for (j = 0; j < r; j++) {
+                if (json_token[j].parent != 0) {
+                    continue; // skip child tokens
+                }
+                for (cmd = 0; cmd < CMD_NUM; cmd++) {    
+                    if (jsmn_token_equals(instruction, &json_token[j], CMD_STR[cmd]) == 0) {
+                        found = 1;
+                        msglen = json_token[j + 1].end-json_token[j + 1].start;
+                        char message[msglen + 1];
+                        memcpy(message, instruction + json_token[j + 1].start, msglen);
+                        message[msglen] = '\0';
+                        if (commander_process_token(cmd, message) < 0) {
+                            free(instruction);
+                            return json_report; // _reset_ called
+                        }
+                        memset(message, 0, msglen);
+                        break;
+                    }
+                }
+            }
+            if (found) {
+                memory_delay_iterate(0);
+            } else {
+                fill_report("input", "A valid command was not found.", ERROR);
+            }
+
+            
             // Encrypt report
-		    int encrypt_len;
+            int encrypt_len;
 		    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                                     strlen(json_report), 
-                                                    &encrypt_len);
-		    memset(json_report, 0, JSON_REPORT_SIZE);
+                                                    &encrypt_len,
+                                                    !id); // encrypt output with the opposite password used to encrypt input`
+		    
+            // Fill report to send
+            memset(json_report, 0, JSON_REPORT_SIZE);
             fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
             free(encoded_report);
 		    memset(instruction, 0, instruction_len);
     	}
         free(instruction);
-	}
-	memory_clear_variables();
-    delay_ms(100);
-	led_off();
-    return json_report;
+
+
+    exit:
+        memory_clear_variables();
+	    led_off();
+        return json_report;
 }
 
 
 // Must free() returned value (allocated inside base64() function)
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len)
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id)
 {
-    PASSWORD_ID id;
     int  pads;
     int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
     unsigned char inpad[inpadlen];
@@ -484,8 +554,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len)
     unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
     aes_context ctx[1]; 
     
-        // Set cipher key
-    id = 0; // TODO multipass
+    // Set cipher key
     memset(ctx, 0, sizeof(ctx));  
     aes_set_key(memory_aeskey_read(id), 32, ctx); 
     
@@ -507,32 +576,29 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len)
     int b64len;
     char * b64;
     b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
-    
+    if (!b64)
+    {
+        fill_report("output", "Could not allocate memory for encryption.", ERROR);
+    }
     *out_b64len = b64len;
     return b64;
 }
 
 
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
 {
     
     // unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
-        fill_report("input", "Invalid encryption. This can be caused by an incorrect password. "
-                    "Too many access errors will cause the device to reset.", ERROR);
-        memory_delay_iterate(1);
         decrypt_len = 0;
         free(ub64);
         return NULL;
     }
     
     // Set cipher key
-    PASSWORD_ID id;
     aes_context ctx[1]; 
-   
-    id = 0; // TODO multipass
     memset(ctx, 0, sizeof(ctx));  
     aes_set_key(memory_aeskey_read(id), 32, ctx); 
     
@@ -546,9 +612,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len)
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec)
     {
-        fill_report("input", "Could not allocate memory for decryption. "
-                    "Too many access errors will cause the device to reset.", ERROR);
-        memory_delay_iterate(1);
+        fill_report("input", "Could not allocate memory for decryption.", ERROR);
         memset(dec_pad, 0, sizeof(dec_pad));
         decrypt_len = 0;
         return NULL;

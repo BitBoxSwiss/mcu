@@ -41,7 +41,6 @@ static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
 static uint16_t MEM_delay_ = DEFAULT_delay_;
 
-static uint16_t MEM_touch_holdtime_ = DEFAULT_touch_holdtime_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
 static uint8_t MEM_touch_enable_ = DEFAULT_erased_;
@@ -78,7 +77,6 @@ void memory_erase(void)
     memory_name("Digital Bitbox");
     memory_erased_write(DEFAULT_erased_);
     memory_led_write(DEFAULT_led_);
-    memory_touch_holdtime_write(DEFAULT_touch_holdtime_);
     memory_touch_timeout_write(DEFAULT_touch_timeout_);
     memory_touch_thresh_write(DEFAULT_touch_thresh_);
     memory_touch_enable_write(DEFAULT_touch_enable_);
@@ -334,16 +332,5 @@ uint16_t memory_touch_thresh_read(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
     return MEM_touch_thresh_;
-}
-
-
-void memory_touch_holdtime_write(const uint16_t t)
-{
-    memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_holdtime_, MEM_TOUCH_HOLDTIME_ADDR, 2);
-}
-uint16_t memory_touch_holdtime_read(void)
-{
-    memory_eeprom(NULL, (uint8_t *)&MEM_touch_holdtime_, MEM_TOUCH_HOLDTIME_ADDR, 2);
-    return MEM_touch_holdtime_;
 }
 

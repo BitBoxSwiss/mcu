@@ -34,7 +34,7 @@ void delay_ms(int delay);
 int format_sd(void);
 void backup_sd(const char *f, int f_len, const char *t, int t_len);
 char *load_sd(const char *f, int f_len);
-void touch_button_parameters(uint16_t timeout, uint16_t threshold, uint16_t holdtime, int status);
+void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status);
 uint8_t touch_button_press(void);
 
 

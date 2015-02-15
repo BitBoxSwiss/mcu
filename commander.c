@@ -208,8 +208,12 @@ static void process_backup(char *message)
             } else if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
                 int enc_len;
                 char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
-                backup_sd(filename, filename_len, enc, enc_len);
-                free(enc);
+                if (enc) {
+                    backup_sd(filename, filename_len, enc, enc_len);
+                    free(enc);
+                } else {
+                    fill_report("backup", "Could not allocate memory for encryption.", ERROR);
+                }
             } else {
                 backup_sd(filename, filename_len, text, strlen(text));  
             }
@@ -529,8 +533,12 @@ char *commander(const char *instruction_encrypted)
 		    
             // Fill report to send
             memset(json_report, 0, JSON_REPORT_SIZE);
-            fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
-            free(encoded_report);
+            if (encoded_report) {
+                fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
+                free(encoded_report);
+            } else {
+                fill_report("output", "Could not allocate memory for encryption.", ERROR);
+            }
 		    memset(instruction, 0, instruction_len);
     	}
         free(instruction);
@@ -576,10 +584,6 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
     int b64len;
     char * b64;
     b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
-    if (!b64)
-    {
-        fill_report("output", "Could not allocate memory for encryption.", ERROR);
-    }
     *out_b64len = b64len;
     return b64;
 }

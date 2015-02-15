@@ -50,8 +50,8 @@ extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
 
 static HDNode node;
-static char mnemonic[256]; // longer than max wordlength+1  *  max numwords  +  1 
-						   //		for bip32/39_english -> (8+1)*24+1 = 217
+static char mnemonic[256];      // longer than max wordlength+1  *  max numwords  +  1 
+						        //		for bip32/39_english -> (8+1)*24+1 = 217
 static uint16_t seed_index[25]; // longer than max numwords + 1
 static uint8_t seed[64];
 static uint8_t rand_data_32[32];
@@ -118,7 +118,6 @@ static void wallet_sign_generic_report(const uint8_t *priv_key, const char *mess
 uint16_t *wallet_index_from_mnemonic(const char *mnemo)
 {
     int i, j, k, seed_words_n;
-	//const char **wordlist = wallet_mnemonic_wordlist();
     char *seed_word[25] = {NULL}; 
     memset(seed_index, 0, sizeof(seed_index));
     seed_words_n = split_seed(seed_word, mnemo);
@@ -142,13 +141,12 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
        return NULL;
     }
     int i;
-	//const char **wordlist = wallet_mnemonic_wordlist();
-    
     memset(mnemonic, 0, sizeof(mnemonic));
     for (i = 0; idx[i]; i++) {
         strcat(mnemonic, wordlist[idx[i] - 1]);
         strcat(mnemonic, " ");
     }
+    mnemonic[strlen(mnemonic)-1] = '\0';
     return mnemonic;
 }
 

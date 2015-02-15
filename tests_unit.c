@@ -567,9 +567,15 @@ static void test_mnemonic(void)
 		u_assert_str_eq(m, *b);
 		wallet_mnemonic_to_seed(m, "TREZOR", seed, 0);
 		u_assert_mem_eq(seed, hex_to_uint8(*c), strlen(*c) / 2);
-		a += 3; b += 3; c += 3;
+        u_assert_str_eq(wallet_mnemonic_from_index(wallet_index_from_mnemonic(*b)), *b);
+        a += 3; b += 3; c += 3;
 	}
 }
+
+uint16_t *wallet_index_from_mnemonic(const char *mnemo);
+char *wallet_mnemonic_from_index(const uint16_t *index);
+
+
 
 static void test_mnemonic_check(void)
 {
@@ -936,6 +942,7 @@ int main(void)
 	u_run_test(test_pbkdf2_hmac_sha512);
 	u_run_test(test_mnemonic);
 	u_run_test(test_mnemonic_check);
+	u_run_test(test_mnemonic);
     
     if (!U_TESTS_FAIL) {   
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

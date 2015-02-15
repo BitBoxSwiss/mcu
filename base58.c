@@ -38,7 +38,7 @@ static const int8_t b58digits_map[] = {
 	47,48,49,50,51,52,53,54,55,56,57,-1,-1,-1,-1,-1,
 };
 
-bool b58tobin(void *bin, size_t *binszp, const char *b58)
+static int b58tobin(void *bin, size_t *binszp, const char *b58)
 {
 	size_t binsz = *binszp;
 	const unsigned char *b58u = (void*)b58;
@@ -118,7 +118,7 @@ bool b58tobin(void *bin, size_t *binszp, const char *b58)
 	return true;
 }
 
-int b58check(const void *bin, size_t binsz, const char *base58str)
+static int b58check(const void *bin, size_t binsz, const char *base58str)
 {
 	unsigned char buf[32];
 	const uint8_t *binc = bin;
@@ -141,7 +141,7 @@ int b58check(const void *bin, size_t binsz, const char *base58str)
 
 static const char b58digits_ordered[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-bool b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
+static int b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
 {
 	const uint8_t *bin = data;
 	int carry;

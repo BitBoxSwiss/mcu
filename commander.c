@@ -369,8 +369,13 @@ static int commander_process_token(int cmd, char *message)
 
         case CMD_device_: {
             if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
-	            fill_report("serial", "...", SUCCESS); // TODO get serial number - fill only first 16bytes
-            } else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
+				uint32_t serial[4];
+				if (!flash_read_unique_id(serial, 16)) {
+					fill_report("serial", uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
+				} else {
+					fill_report("serial", "Could not read flash.", ERROR);         
+				}
+			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
                 fill_report("version", (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
             } else {
                 fill_report("device", "Invalid command.", ERROR);

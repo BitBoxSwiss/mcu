@@ -68,7 +68,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         }
         if (ataes_ret[0]) {
             // TEST for len > 16 and len%16!=0
-            memcpy(buf + cnt, ataes_ret + 1, (len - cnt) < 16 ? (len - cnt) : 16); 
+            memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16); 
         } else {
             return 1; // error
         }

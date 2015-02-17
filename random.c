@@ -53,7 +53,6 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 void random_init(void) { };
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
-    // TEST bit order 00000010=0x02 or 01000000=0x40 ?
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
     uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]

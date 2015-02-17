@@ -26,8 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "memory.h"
 #include "commander.h"
+#include "memory.h"
+#include "utils.h"
 #include "sha2.h"
 #ifndef TESTING
 #include "ataes132.h"
@@ -67,6 +68,24 @@ void memory_setup(void)
         // ....
         // TODO key matching ataes to mcu, etc.
         // ....
+
+
+		if (0) {
+			// Lock Configuration Memory (only get one chance)
+			// Lock command:              OP   MODE  PARAMETER1  PARAMETER2
+			const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00}; 
+			
+			// Return packet [Count(1) || Return Code (1) || CRC (2)]
+			// Check that return code == 0x00 (success)
+			uint8_t ataes_ret[4] = {0}; 
+			aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
+			if (ataes_ret[1]) {
+				fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);				
+			} else {
+				fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
+			}
+		}
+		
         memory_setup_write(0x00);
         
     }

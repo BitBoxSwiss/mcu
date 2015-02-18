@@ -69,7 +69,8 @@ void memory_setup(void)
         // TODO key matching ataes to mcu, etc.
         // ....
 
-
+        
+#ifndef TESTING
 		if (0) {
 			// Lock Configuration Memory (only get one chance)
 			// Lock command:              OP   MODE  PARAMETER1  PARAMETER2
@@ -85,6 +86,7 @@ void memory_setup(void)
 				fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
 			}
 		}
+#endif
 		
         memory_setup_write(0x00);
         

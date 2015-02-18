@@ -24,6 +24,7 @@
 
 
 #include <stdint.h>
+#include <string.h>
 
 #include "commander.h"
 
@@ -80,4 +81,11 @@ void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status)
     (void)threshold;
     (void)status;
     fill_report("touchbutton", "touched (hard coded)", SUCCESS);
+}
+
+
+uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len)
+{
+    memset(serial, 0, len);
+    return 0; // success
 }

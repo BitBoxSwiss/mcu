@@ -37,6 +37,7 @@ char *sd_load(const char *f, int f_len);
 void sd_list(void);
 void touch_button_parameters(uint16_t timeout, uint16_t threshold, int status);
 uint8_t touch_button_press(void);
+uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
 
 
 

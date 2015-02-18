@@ -572,10 +572,6 @@ static void test_mnemonic(void)
 	}
 }
 
-uint16_t *wallet_index_from_mnemonic(const char *mnemo);
-char *wallet_mnemonic_from_index(const uint16_t *index);
-
-
 
 static void test_mnemonic_check(void)
 {

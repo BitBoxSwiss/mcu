@@ -738,7 +738,7 @@ static void test_wif(void)
 	wallet_get_wif(priv_key, 0xEF, wif, sizeof(wif)); u_assert_str_eq(wif, "cPzbT6tbXyJNWY6oKeVabbXwSvsN6qhTHV8ZrtvoDBJV5BRY1G5Q");
 }
 
-
+/*
 static void test_wallet_der(void)
 {
 	uint8_t sig[64], der[72];
@@ -798,6 +798,7 @@ static void test_wallet_der(void)
 	u_assert_int_eq(res, 10);
 	u_assert_mem_eq(der, hex_to_uint8("3008020200ee020200ff"), 10);
 }
+*/
 
 
 // from https://github.com/bitcoin/bitcoin/blob/master/src/test/data/base58_keys_valid.json
@@ -932,7 +933,7 @@ int main(void)
 	u_run_test(test_rfc6979);
 	u_run_test(test_address);
 	u_run_test(test_wif);
-	u_run_test(test_wallet_der);
+	//u_run_test(test_wallet_der);
 	u_run_test(test_aes_cbc);
 	u_run_test(test_pbkdf2_hmac_sha256);
 	u_run_test(test_pbkdf2_hmac_sha512);

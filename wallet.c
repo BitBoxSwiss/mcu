@@ -87,34 +87,6 @@ const char **wallet_mnemonic_wordlist(void)
 }
 
 
-static void wallet_sign_generic_report(const uint8_t *priv_key, const char *message, int msg_len, int encoding)
-{
-    if (encoding == ATTR_der_) {
-        int der_len;
-        uint8_t sig[64]; 
-        uint8_t der[64]; 
-        if (!uECC_sign_double(priv_key, hex_to_uint8(message), msg_len / 2, sig)) {
-            fill_report("sign", "Could not sign data.", ERROR);
-        } else {
-            der_len = wallet_sig_to_der(sig, der);
-            fill_report("sign", uint8_to_hex(der, der_len), SUCCESS);
-        } 
-    } else if (encoding == ATTR_none_) {
-        uint8_t sig[64]; 
-        if (msg_len != (32 * 2)) {
-            fill_report("sign", "Incorrect data length. "
-                        "A 32-byte hexadecimal (64 characters) is expected.", ERROR);
-        } else if (!uECC_sign_digest(priv_key, hex_to_uint8(message), sig)) {
-            fill_report("sign", "Could not sign data.", ERROR);
-        } else {
-            fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
-        }
-    } else {
-        fill_report("sign", "Invalid encoding method [1].", ERROR);
-    }
-}
-
-
 uint16_t *wallet_index_from_mnemonic(const char *mnemo)
 {
     int i, j, k, seed_words_n;
@@ -243,17 +215,25 @@ void wallet_report_xpub(char *keypath)
 }    
 
 
-void wallet_sign(const char *message, int msg_len, char *keypath, int encoding)
+void wallet_sign(const char *message, int msg_len, char *keypath)
 {
+    uint8_t sig[64];
     uint8_t *priv_key_master = memory_master(NULL);
     uint8_t *chain_code = memory_chaincode(NULL);
-    
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
+       
+    if (msg_len != (32 * 2)) {
+        fill_report("sign", "Incorrect data length. "
+                    "A 32-byte hexadecimal value (64 characters) is expected.", ERROR);
+    } else if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {    
         fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
     } else {
         wallet_generate_key(keypath, priv_key_master, chain_code);
-        wallet_sign_generic_report(node.private_key, message, msg_len, encoding);
+        if (!uECC_sign_digest(node.private_key, hex_to_uint8(message), sig)) {
+            fill_report("sign", "Could not sign data.", ERROR);
+        } else {
+            fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
+        }
     }
     clear_static_variables();
 }
@@ -300,20 +280,11 @@ int wallet_mnemonic_check(const char *mnemo)
 	}
 
 	uint32_t i, n;
-    /*
-	i = 0; n = 0;
-	while (mnemo[i]) {
-		if (mnemo[i] == ' ') {
-			n++;
-		}
-		i++;
-	}
-	n++;
-    */
-	// check number of words
+	
+    // check number of words
     char *sham[25] = {NULL}; 
     n = split_seed(sham, mnemo);
-    
+    memset(sham, 0, sizeof(sham)); 
     
     
     if (n != 12 && n != 18 && n != 24) {
@@ -428,6 +399,7 @@ void wallet_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wif
 	base58_encode_check(data, 34, wif, wifsize);
 }
 
+/*
 int wallet_sig_to_der(const uint8_t *sig, uint8_t *der)
 {
 	int i;
@@ -464,3 +436,4 @@ int wallet_sig_to_der(const uint8_t *sig, uint8_t *der)
 	*len = *len1 + *len2 + 4;
 	return *len + 2;
 }
+*/

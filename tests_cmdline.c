@@ -39,8 +39,9 @@ void usage(char * argv[])
     
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
     printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"wallet\\\":\\\"bip32\\\"},  "
-           "\\\"sign\\\":{\\\"wallet\\\":\\\"bip32\\\", \\\"data\\\":\\\"<unsigned transaction>\\\", "
-           "\\\"encoding\\\":\\\"der\\\", \\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
+           "\\\"sign\\\":{\\\"wallet\\\":\\\"bip32\\\", \\\"data\\\":"
+           "\\\"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\\\", "
+           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
     
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "
             "Multiple commands can be sent within a single\nJSON object. This is shown in the "
@@ -62,7 +63,7 @@ int main ( int argc, char *argv[] )
                                                            // The initial password sets both the standard and 
                                                            // multipass passwords to the same value. Refer to 
                                                            // the API documentation for more details.
-        send_encrypted_cmd(argv[1], encrypt_id, decrypt_id); 
+        utils_send_encrypted_cmd(argv[1], encrypt_id, decrypt_id); 
     }
     return 0;
 }

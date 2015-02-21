@@ -239,21 +239,12 @@ static void process_backup(char *message)
 
 static void process_sign(char *message)
 { 
-    int data_len, keypath_len, encoding_len;		
+    int data_len, keypath_len;		
     const char *data = jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
     const char *keypath = jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
-    const char *encoding = jsmn_get_value_string(message,CMD_STR[CMD_encoding_], &encoding_len);
     
-    int enc;
-    if (!data || !encoding || !keypath) {
+    if (!data || !keypath) {
         fill_report("sign", "Incomplete command.", ERROR);
-        return;  
-    } else if (strncmp(encoding, ATTR_STR[ATTR_der_], strlen(ATTR_STR[ATTR_der_])) == 0) { 
-        enc = ATTR_der_; 
-    } else if (strncmp(encoding, ATTR_STR[ATTR_none_], strlen(ATTR_STR[ATTR_none_])) == 0) { 
-        enc = ATTR_none_; 
-    } else { 
-        fill_report("sign", "Invalid encoding method.", ERROR); 
         return;  
     }
    
@@ -261,7 +252,7 @@ static void process_sign(char *message)
         if (touch_button_press()) { BUTTON_TOUCHED = 1; }
     }
     if (BUTTON_TOUCHED) {
-        wallet_sign(data, data_len, (char *)keypath, enc);
+        wallet_sign(data, data_len, (char *)keypath);
     }
 }
 

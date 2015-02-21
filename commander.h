@@ -71,7 +71,6 @@
         CMD(mnemonic)           \
         CMD(data)               \
         CMD(keypath)            \
-        CMD(encoding)           \
         CMD(strength)           \
         CMD(salt)               \
         CMD(filename)           \
@@ -82,7 +81,6 @@
 
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
-        ATTR(der)               \
         ATTR(list)              \
         ATTR(enable)            \
         ATTR(disable)           \

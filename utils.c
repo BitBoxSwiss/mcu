@@ -74,12 +74,23 @@ char *uint8_to_hex(const uint8_t *bin, size_t l)
 #include "commander.h"
 #include "memory.h"
 #include "jsmn.h"
+#include "sha2.h"
 
 
 extern const char *CMD_STR[];
 
 
-void print_report(const char *report, PASSWORD_ID dec_id)
+uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
+{
+	static uint8_t hash[32];
+    memset(hash, 0, 32);
+    sha256_Raw(msg, msg_len, hash);
+	sha256_Raw(hash, 32, hash);
+    return hash;
+}
+
+
+void utils_print_report(const char *report, PASSWORD_ID dec_id)
 {
     int decrypt_len, r, i;
     jsmntok_t json_token[MAX_TOKENS];
@@ -105,13 +116,11 @@ void print_report(const char *report, PASSWORD_ID dec_id)
 }
 
 
-void send_encrypted_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
+void utils_send_encrypted_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
 {
     int encrypt_len;
     char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), &encrypt_len, enc_id);
-    print_report(commander(enc), dec_id);
+    utils_print_report(commander(enc), dec_id);
     free(enc); 
 }
-
-
 #endif

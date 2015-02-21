@@ -130,7 +130,7 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
     if (mnemo == NULL) {
         if (!strength) { strength = 256; }
 	    if (strength % 32 || strength < 128 || strength > 256) {
-            fill_report("seed", "Strength must be a multiple of 32 between 128 and 256.", ERROR); 
+            commander_fill_report("seed", "Strength must be a multiple of 32 between 128 and 256.", ERROR); 
 		    return;
 	    }
         random_bytes(rand_data_32, 32, 1);
@@ -158,9 +158,9 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
     if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
         !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
         !memcmp(memory_mnemonic(wallet_index_from_mnemonic(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {    
-        fill_report("seed", "Problem saving BIP32 master key.", ERROR); 
+        commander_fill_report("seed", "Problem saving BIP32 master key.", ERROR); 
     } else {
-        fill_report("seed", "success", SUCCESS);
+        commander_fill_report("seed", "success", SUCCESS);
     }
     clear_static_variables();
 }
@@ -205,11 +205,11 @@ void wallet_report_xpub(char *keypath)
     
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        fill_report("xpub", "A bip32 master private key is not set.", ERROR);
+        commander_fill_report("xpub", "A bip32 master private key is not set.", ERROR);
     } else {
         wallet_generate_key(keypath, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
-        fill_report("xpub", xpub, SUCCESS);
+        commander_fill_report("xpub", xpub, SUCCESS);
     }
     clear_static_variables();
 }    
@@ -222,17 +222,17 @@ void wallet_sign(const char *message, int msg_len, char *keypath)
     uint8_t *chain_code = memory_chaincode(NULL);
        
     if (msg_len != (32 * 2)) {
-        fill_report("sign", "Incorrect data length. "
+        commander_fill_report("sign", "Incorrect data length. "
                     "A 32-byte hexadecimal value (64 characters) is expected.", ERROR);
     } else if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {    
-        fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
+        commander_fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
     } else {
         wallet_generate_key(keypath, priv_key_master, chain_code);
         if (!uECC_sign_digest(node.private_key, hex_to_uint8(message), sig)) {
-            fill_report("sign", "Could not sign data.", ERROR);
+            commander_fill_report("sign", "Could not sign data.", ERROR);
         } else {
-            fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
+            commander_fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
         }
     }
     clear_static_variables();
@@ -275,7 +275,7 @@ char *wallet_mnemonic_from_data(const uint8_t *data, int len)
 int wallet_mnemonic_check(const char *mnemo)
 {
 	if (!mnemo) {
-        fill_report("seed", "Empty mnemonic.", ERROR);
+        commander_fill_report("seed", "Empty mnemonic.", ERROR);
 		return 0;
 	}
 
@@ -288,7 +288,7 @@ int wallet_mnemonic_check(const char *mnemo)
     
     
     if (n != 12 && n != 18 && n != 24) {
-        fill_report("seed", "Mnemonic must have 12, 18, or 24 words.", ERROR);
+        commander_fill_report("seed", "Mnemonic must have 12, 18, or 24 words.", ERROR);
 		return 0;
 	}
 
@@ -301,7 +301,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		j = 0;
 		while (mnemo[i] != ' ' && mnemo[i] != 0) {
 			if (j >= sizeof(current_word)) {
-                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+                commander_fill_report("seed", "Word not in bip39 wordlist.", ERROR);
 				return 0;
 			}
 			current_word[j] = mnemo[i];
@@ -312,7 +312,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		k = 0;
 		for (;;) {
 			if (!wordlist[k]) { // word not found
-                fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+                commander_fill_report("seed", "Word not in bip39 wordlist.", ERROR);
 				return 0;
 			}
 			if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
@@ -328,7 +328,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		}
 	}
 	if (bi != n * 11) {
-        fill_report("seed", "Mnemonic check error. [0]", ERROR);
+        commander_fill_report("seed", "Mnemonic check error. [0]", ERROR);
 		return 0;
 	}
 	bits[32] = bits[n * 4 / 3];
@@ -343,7 +343,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		return bits[0] == bits[32]; // compare 8 bits
 	}
    
-    fill_report("seed", "Invalid mnemonic: checksum error.", ERROR);
+    commander_fill_report("seed", "Invalid mnemonic: checksum error.", ERROR);
     return 0;
 }
 

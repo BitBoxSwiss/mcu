@@ -81,9 +81,9 @@ void memory_setup(void)
 			uint8_t ataes_ret[4] = {0}; 
 			aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
 			if (ataes_ret[1]) {
-				fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);				
+				commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);				
 			} else {
-				fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
+				commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
 			}
 		}
 #endif
@@ -225,7 +225,7 @@ int memory_aeskey_write(const char *password, int len, int id)
         char errormsg[128];
 		//sprintf(errormsg,"The password length must be between %i and %i characters.", MEM_AESKEY_LEN_MIN, MEM_PAGE_LEN);
 		sprintf(errormsg,"The password length must be at least %i characters.", MEM_AESKEY_LEN_MIN);
-		fill_report("password", errormsg, ERROR);
+		commander_fill_report("password", errormsg, ERROR);
 		return 0;
 	}
     
@@ -244,7 +244,7 @@ int memory_aeskey_write(const char *password, int len, int id)
     if (ret) {
         return 1;
     } else { 
-        fill_report("password", "Password saving error.", ERROR);
+        commander_fill_report("password", "Password saving error.", ERROR);
         return 0;
     }
 }

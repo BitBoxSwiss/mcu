@@ -51,19 +51,21 @@ const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
-static char json_report[JSON_REPORT_SIZE] = {0};
+static char json_command[COMMANDER_REPORT_SIZE] = {0};
+static char json_report[COMMANDER_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
 static int BUTTON_TOUCHED = 0;
+static int ECHO_COMMAND = 1;
 
 
 // TODO use msg and error codes to pass to fill_report
-void fill_report(const char *attr, const char *val, int err)
+void commander_fill_report(const char *attr, const char *val, int err)
 {
-    fill_report_len(attr, val, err, strlen(val));
+    commander_fill_report_len(attr, val, err, strlen(val));
 }
 
 
-void fill_report_len(const char *attr, const char *val, int err, int vallen)
+void commander_fill_report_len(const char *attr, const char *val, int err, int vallen)
 {
     size_t len = strlen(json_report);
     if (len == 0) {
@@ -72,7 +74,7 @@ void fill_report_len(const char *attr, const char *val, int err, int vallen)
         json_report[len - 1] = ','; // replace closing '}' with continuing ','
     }
 
-    if (len > (JSON_REPORT_SIZE - (21 + strlen(attr) + strlen(val))) || len > (JSON_REPORT_SIZE - 128)) {
+    if (len > (COMMANDER_REPORT_SIZE - (21 + strlen(attr) + strlen(val))) || len > (COMMANDER_REPORT_SIZE - 128)) {
         // TEST the overflow error condition
         if (!REPORT_BUF_OVERFLOW) {
             strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
@@ -97,12 +99,18 @@ void fill_report_len(const char *attr, const char *val, int err, int vallen)
     }
 }
 
+static void commander_clear_report(void)
+{
+	memset(json_report, 0, COMMANDER_REPORT_SIZE);
+	REPORT_BUF_OVERFLOW = 0;	
+}
+
 
 void force_reset(void)
 {
     memory_erase();
-    memset(json_report, 0, JSON_REPORT_SIZE);
-    fill_report("reset", "Too many failed access attempts. Device reset.", ERROR);
+	commander_clear_report();
+    commander_fill_report("reset", "Too many failed access attempts. Device reset.", ERROR);
 }
 
 
@@ -116,13 +124,13 @@ static void device_reset(const char *r)
             if (touch_button_press()) { //delay_ms(1500);
             if (touch_button_press()) {
                 memory_erase();
-				memset(json_report, 0, JSON_REPORT_SIZE);
-                fill_report("reset", "success", SUCCESS);
+                commander_clear_report();
+                commander_fill_report("reset", "success", SUCCESS);
             }}}
             return; 
         }
     }
-    fill_report("reset", "Incorrect syntax.", ERROR);
+    commander_fill_report("reset", "Incorrect syntax.", ERROR);
 }
 
 
@@ -155,7 +163,7 @@ static void process_load(char *message)
                 wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len, 0);
             }
         } else {
-            fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
+            commander_fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
         }
     }  
 }
@@ -201,7 +209,7 @@ static void process_backup(char *message)
     
 	if (!filename) {
         if (!(format && !filename)) {
-            fill_report("backup", "Incomplete command.", ERROR);
+            commander_fill_report("backup", "Incomplete command.", ERROR);
         }
     } else {
         if (!BUTTON_TOUCHED) {
@@ -210,7 +218,7 @@ static void process_backup(char *message)
         if (BUTTON_TOUCHED) {
             char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
             if (!text) {
-                fill_report("backup", "BIP32 mnemonic not present.", ERROR);
+                commander_fill_report("backup", "BIP32 mnemonic not present.", ERROR);
                 return;
             } 
             if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
@@ -219,17 +227,17 @@ static void process_backup(char *message)
                 if (enc) {
                     sd_backup(filename, filename_len, enc, enc_len);
                     if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-                        fill_report("backup", "Corrupted file.", ERROR);
+                        commander_fill_report("backup", "Corrupted file.", ERROR);
                     }
                     free(enc);
                 } else {
-                    fill_report("backup", "Could not allocate memory for encryption.", ERROR);
+                    commander_fill_report("backup", "Could not allocate memory for encryption.", ERROR);
                     return;
                 }
             } else {
                 sd_backup(filename, filename_len, text, strlen(text));  
                 if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-                    fill_report("backup", "Corrupted file.", ERROR);
+                    commander_fill_report("backup", "Corrupted file.", ERROR);
                 }
             }
         }
@@ -244,7 +252,7 @@ static void process_sign(char *message)
     const char *keypath = jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
     
     if (!data || !keypath) {
-        fill_report("sign", "Incomplete command.", ERROR);
+        commander_fill_report("sign", "Incomplete command.", ERROR);
         return;  
     }
    
@@ -266,14 +274,14 @@ static void process_random(char *message)
     } else if (strcmp(message, ATTR_STR[ATTR_pseudo_]) == 0) {
         update_seed = 0;
     } else {
-        fill_report("random", "Invalid command.", ERROR);
+        commander_fill_report("random", "Invalid command.", ERROR);
         return;
     }
 
     if (random_bytes(number, sizeof(number), update_seed)) {
-        fill_report("random", "Chip communication error.", ERROR);
+        commander_fill_report("random", "Chip communication error.", ERROR);
     } else {
-        fill_report("random", uint8_to_hex(number,sizeof(number)), SUCCESS);
+        commander_fill_report("random", uint8_to_hex(number,sizeof(number)), SUCCESS);
     }
 }
 
@@ -300,22 +308,22 @@ static int commander_process_token(int cmd, char *message)
         
         case CMD_password_:
 		    if (process_password(message, strlen(message), PASSWORD_STAND)) {
-                fill_report("password", "success", SUCCESS);
+                commander_fill_report("password", "success", SUCCESS);
             }
             break;
         
         case CMD_multipass_:
 		    if (process_password(message, strlen(message), PASSWORD_MULTI)) {
-                fill_report("multipass", "success", SUCCESS);
+                commander_fill_report("multipass", "success", SUCCESS);
             }
             break;
         
         case CMD_led_:
-		    fill_report("led", (char *)led_state(message), SUCCESS);
+		    commander_fill_report("led", (char *)led_state(message), SUCCESS);
             break;
         
         case CMD_name_:
-            fill_report("name", (char *)memory_name(message), SUCCESS);
+            commander_fill_report("name", (char *)memory_name(message), SUCCESS);
             break;      
        
         case CMD_load_:
@@ -362,14 +370,14 @@ static int commander_process_token(int cmd, char *message)
             if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
 				uint32_t serial[4];
 				if (!flash_read_unique_id(serial, 16)) {
-					fill_report("serial", uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
+					commander_fill_report("serial", uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
 				} else {
-					fill_report("serial", "Could not read flash.", ERROR);         
+					commander_fill_report("serial", "Could not read flash.", ERROR);         
 				}
 			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
-                fill_report("version", (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
+                commander_fill_report("version", (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
             } else {
-                fill_report("device", "Invalid command.", ERROR);
+                commander_fill_report("device", "Invalid command.", ERROR);
             }
             break;
         }
@@ -396,7 +404,7 @@ static char *commander_decrypt(const char *instruction_encrypted, PASSWORD_ID *I
                                       PASSWORD_STAND);
     
     if (instruction) {
-        memset(json_token, 0, sizeof(json_token));
+        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
         n = jsmn_parse_init(instruction, instruction_len, json_token, MAX_TOKENS);
         if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
         {
@@ -410,7 +418,7 @@ static char *commander_decrypt(const char *instruction_encrypted, PASSWORD_ID *I
                                           PASSWORD_MULTI);
             
         if (instruction) {
-            memset(json_token, 0, sizeof(json_token));
+	        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
             n = jsmn_parse_init(instruction, instruction_len, json_token, MAX_TOKENS);
             if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
             {
@@ -420,12 +428,12 @@ static char *commander_decrypt(const char *instruction_encrypted, PASSWORD_ID *I
     }
 
     if (instruction == NULL) {
-        fill_report("input", "Could not decrypt. "
+        commander_fill_report("input", "Could not decrypt. "
                     "Too many access errors will cause the device to reset. ", ERROR);
         memory_delay_iterate(1);
     } 
     else if (id == PASSWORD_NONE) {
-        fill_report("input", "JSON parse error. "
+        commander_fill_report("input", "JSON parse error. "
                     "Too many access errors will cause the device to reset. "
                     "Is the command enclosed by curly brackets?", ERROR);
         memory_delay_iterate(1);
@@ -439,23 +447,22 @@ static char *commander_decrypt(const char *instruction_encrypted, PASSWORD_ID *I
 
 // Check if OK to process instructions
 // Returns NULL if OK. Otherwise returns a status message.
-char *commander_check_input(const char *instruction_encrypted)
+static int commander_check_input(const char *instruction_encrypted)
 {
-    memset(json_report, 0, JSON_REPORT_SIZE);
-    REPORT_BUF_OVERFLOW = 0;
+	commander_clear_report();
 
     if (!instruction_encrypted) {
-        fill_report("input", "No input received. "
+        commander_fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
-        return json_report;
+        return 1;
     } 
     
     if (!strlen(instruction_encrypted)) {
-        fill_report("input", "No input received. "
+        commander_fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
-        return json_report;
+        return 2;
     }
     
     // In case of a forgotten password, allow reset from an unencrypted instructions.
@@ -463,14 +470,14 @@ char *commander_check_input(const char *instruction_encrypted)
         int r_len;
         const char *r = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_reset_], &r_len);
         device_reset(r);
-        return json_report;
+        return 3;
 	}
     
     // Force setting a password for encryption before processing instructions.
     if (memory_erased_read()) {		
         if (strstr(instruction_encrypted, CMD_STR[CMD_password_]) != NULL) {
             //memory_erase();
-            //memset(json_report, 0, JSON_REPORT_SIZE);
+            //commander_clear_report();
             int pw_len;
             const char *pw = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
@@ -479,47 +486,46 @@ char *commander_check_input(const char *instruction_encrypted)
                 // Add a multipass second password using a separate JSON command.
                 if (process_password(pw, pw_len, PASSWORD_STAND) && process_password(pw, pw_len, PASSWORD_MULTI)) { 
                     memory_erased_write(0); 
-                    fill_report("password", "success", SUCCESS);
+                    commander_fill_report("password", "success", SUCCESS);
                 }
             } else {
-                fill_report("input", "JSON parse error.", ERROR);
+                commander_fill_report("input", "JSON parse error.", ERROR);
             }
         } else {
-			fill_report("input", "Please set a password.", ERROR);
+			commander_fill_report("input", "Please set a password.", ERROR);
 		}
-        return json_report;
+        return 4;
 	}
 
     // Allow unencrypted instruction to set multipass second password (first time only)
     // A multipass password reset is done via encrypted JSON instruction or here after a device reset
     if (memory_multipass_read()) {
         if (strstr(instruction_encrypted, CMD_STR[CMD_multipass_]) != NULL) {
-            memset(json_report, 0, JSON_REPORT_SIZE);
+	        commander_clear_report();
             int pw_len;
             const char *pw = jsmn_get_value_string(instruction_encrypted, CMD_STR[CMD_multipass_], &pw_len);
             if (pw != NULL) {
                 if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
                     memory_multipass_write(0); 
-                    fill_report("multipass", "success", SUCCESS);
+                    commander_fill_report("multipass", "success", SUCCESS);
                 }
             } else {
-                fill_report("input", "JSON parse error.", ERROR);
+                commander_fill_report("input", "JSON parse error.", ERROR);
             }
-            return json_report;
+            return 5;
         } 
     }
     
-    return NULL; // ok 
+    return 0; // ok 
 }
 
 
 // Echo the input instruction. Encrypt the echo with the opposite multipass password.
 // Useful for user verification of input instructions.
-char *commander_echo(const char *instruction_encrypted)
+static void commander_echo(const char *instruction_encrypted)
 {
     //printf("\n\nCommand:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);
-    memset(json_report, 0, JSON_REPORT_SIZE);
-    REPORT_BUF_OVERFLOW = 0;
+    commander_clear_report();
     
     PASSWORD_ID id;
     int n_tokens;
@@ -527,11 +533,8 @@ char *commander_echo(const char *instruction_encrypted)
 
     char *instruction = commander_decrypt(instruction_encrypted, &id, json_token, &n_tokens);
     
-    if (id == PASSWORD_NONE) {
-        return NULL;
-    } else {
-        // Encrypt the instruction to echo
-        // Encrypt output with the opposite password used to encrypt input`
+    if (id != PASSWORD_NONE) {
+        // Encrypt the echo with the opposite password used to encrypt input`
         int encrypt_len;
         char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)instruction,
                                                 strlen(instruction), 
@@ -539,34 +542,24 @@ char *commander_echo(const char *instruction_encrypted)
                                                 !id); 
         
         // Fill report to send
-        memset(json_report, 0, JSON_REPORT_SIZE);
-        REPORT_BUF_OVERFLOW = 0;
+        commander_clear_report();
         if (encoded_report) {
-            fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
+            commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
             free(encoded_report);
         } else {
-            fill_report("output", "Could not allocate memory for encryption.", ERROR);
-        }
-        
-        memset(instruction, 0, strlen(instruction)); // TEST strlen
-        free(instruction);
-        return json_report;
+            commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
+        }    
+		memset(instruction, 0, strlen(instruction)); // TEST strlen
     }
+    free(instruction);    
 }
 
-
+ 
 // Parse and process instructions
-// Before running this function, run:
-//                      char *msg = commander_check_input(instruction_encrypted) 
-//                      msg==NULL means it is ok to continue
-char *commander(const char *instruction_encrypted)
-{
-    //printf("\n\nCommand:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);
-    memset(json_report, 0, JSON_REPORT_SIZE);
-    REPORT_BUF_OVERFLOW = 0;
+static void commander_parse(const char *instruction_encrypted)
+{ 
+    commander_clear_report();
     BUTTON_TOUCHED = 0;
-    led_on();
-
         
     // Process instructions
     PASSWORD_ID id;
@@ -574,8 +567,6 @@ char *commander(const char *instruction_encrypted)
     int n_tokens, j, cmd, found, msglen;
     jsmntok_t json_token[MAX_TOKENS];
 
-
-    //id = commander_decrypt(instruction_encrypted, instruction, json_token, &n_tokens);
     char *instruction = commander_decrypt(instruction_encrypted, &id, json_token, &n_tokens);
 
     // Process instructions
@@ -594,7 +585,7 @@ char *commander(const char *instruction_encrypted)
                     message[msglen] = '\0';
                     if (commander_process_token(cmd, message) < 0) {
                         free(instruction);
-                        return json_report; // _reset_ called
+                        return; // _reset_ called
                     }
                     memset(message, 0, msglen);
                     break;
@@ -604,7 +595,7 @@ char *commander(const char *instruction_encrypted)
         if (found) {
             memory_delay_iterate(0);
         } else {
-            fill_report("input", "A valid command was not found.", ERROR);
+            commander_fill_report("input", "A valid command was not found.", ERROR);
         }
         
         // Encrypt report
@@ -615,22 +606,49 @@ char *commander(const char *instruction_encrypted)
                                                 !id); // encrypt output with the opposite password used to encrypt input`
         
         // Fill report to send
-        memset(json_report, 0, JSON_REPORT_SIZE);
-        REPORT_BUF_OVERFLOW = 0;
+        commander_clear_report();
         if (encoded_report) {
-            fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
+            commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
             free(encoded_report);
         } else {
-            fill_report("output", "Could not allocate memory for encryption.", ERROR);
+            commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
         }
         memset(instruction, 0, strlen(instruction)); // TEST strlen
     }
     free(instruction);
 
     memory_clear_variables();
-    led_off();
-    return json_report;
 }
+
+
+// Alternate between:
+//  I:  Echo the input command, using the opposite multipass password to encrypt the output (useful for user verification)
+// II:  Process the input command and report results
+char *commander(const char *command)
+{
+	//printf("\n\nCommand:\t%lu %s\n",strlen(instruction_encrypted),instruction_encrypted);		
+	if (ECHO_COMMAND) {
+		if (commander_check_input(command)) {
+			// not ready to process
+			ECHO_COMMAND = 1;
+		} else {
+			// ready to process
+			memset(json_command, 0, COMMANDER_REPORT_SIZE);
+			memcpy(json_command, command, 
+					strlen(command) < COMMANDER_REPORT_SIZE ? 
+					strlen(command) : COMMANDER_REPORT_SIZE);
+			commander_echo(json_command);
+			ECHO_COMMAND = 0;	
+		}
+	} else {
+		// input 'command' is ignored, previous command is used
+		commander_parse(json_command);
+		ECHO_COMMAND = 1;
+	}
+	return json_report;
+}
+
+
 
 
 // Must free() returned value (allocated inside base64() function)
@@ -698,7 +716,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec)
     {
-        fill_report("input", "Could not allocate memory for decryption.", ERROR);
+        commander_fill_report("input", "Could not allocate memory for decryption.", ERROR);
         memset(dec_pad, 0, sizeof(dec_pad));
         decrypt_len = 0;
         return NULL;

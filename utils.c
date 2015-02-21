@@ -92,7 +92,8 @@ uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
 
 void utils_print_report(const char *report, PASSWORD_ID dec_id)
 {
-    int decrypt_len, r, i;
+    int decrypt_len, r, i, len;
+    char cipher[COMMANDER_REPORT_SIZE], *dec;
     jsmntok_t json_token[MAX_TOKENS];
     r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
      
@@ -102,34 +103,37 @@ void utils_print_report(const char *report, PASSWORD_ID dec_id)
     }
     
     for (i = 0; i < r; i++) {
-        if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0 ||
-            jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_echo_]) == 0) 
-        {
-            int len = json_token[i + 1].end - json_token[i + 1].start;
-            char cipher[len + 1];
+        len = json_token[i + 1].end - json_token[i + 1].start;
+        if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
             memcpy(cipher, report + json_token[i + 1].start, len);
             cipher[len] = '\0';
-            char *dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
+            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
             printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
             free(dec);
-            //break;
             return;
+        } else if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_echo_]) == 0) {
+            memcpy(cipher, report + json_token[i + 1].start, len);
+            cipher[len] = '\0';
+            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
+            printf("echo:      \t%.*s\n", decrypt_len, dec);
+            free(dec);
+            return;
+    
         }
     }
-
-    printf("report:    \t%s\n",report);
+    printf("report:    \t%s\n\n",report);
 }
 
 
 void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
 {
-    char *check = commander_check_input(instruction);
-    if (check) {
-        utils_print_report(check, dec_id);
+    if (enc_id == PASSWORD_NONE) {
+        utils_print_report(commander(instruction), dec_id);
     } else {
         int encrypt_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), &encrypt_len, enc_id);
         utils_print_report(commander(enc), dec_id);
+        utils_print_report(commander("echo sham command"), dec_id);
         free(enc); 
     }
 }

@@ -63,7 +63,7 @@ int main ( int argc, char *argv[] )
         // The initial password sets both the standard and 
         // multipass passwords to the same value. Refer to 
         // the API documentation for more details.
-        utils_send_cmd("{\"password\":\"passwordpassword\"}", encrypt_id, decrypt_id); 
+        utils_send_cmd("{\"password\":\"passwordpassword\"}", PASSWORD_NONE, decrypt_id); 
         utils_send_cmd(argv[1], encrypt_id, decrypt_id); 
     }
     return 0;

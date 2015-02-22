@@ -29,6 +29,7 @@
 
 
 #include <stdint.h>
+#include "bip32.h"
 
 
 #define BIP39_PBKDF2_ROUNDS 2048
@@ -41,6 +42,7 @@ char *wallet_mnemonic_from_index(const uint16_t *index);
 void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
 void wallet_sign(const char *message, int msg_len, char *keypath);
 void wallet_report_xpub(char *keypath);
+void wallet_generate_key(HDNode *node, char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode);
 char *wallet_mnemonic_from_data(const uint8_t *data, int len);
 int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t s[512 / 8],

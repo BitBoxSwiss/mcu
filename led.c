@@ -46,96 +46,18 @@ int ioport_get_pin_level(int led) { (void)led; return 0; }
 #endif
 
 
-LED_STATE LED_State = LED_ENABLE; 
-
-
-void led_init(void)
-{
-	LED_State = memory_led_read();	
-}
-
 void led_off(void)
 {
-	if (LED_State == LED_ENABLE || LED_State == LED_OFF) {
-		ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
-	}
+    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
 }
 
 void led_on(void)
 {
-	if (LED_State == LED_ENABLE || LED_State == LED_ON) {
-		ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);
-	}
+    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);
 }
 
 void led_toggle(void)
 {
-	if (LED_State != LED_DISABLE) {
-		ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));
-	}
+    ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));
 }
-
-
-void led_off_flash(void)
-{
-	if (LED_State != LED_DISABLE) {
-		ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH); delay_ms(300);
-		ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);	delay_ms(300);
-		ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
-	}
-}
-
-
-static int get_led_state(const char *state)
-{
-	if (strcmp(state, "disable") == 0)  {       return LED_DISABLE; } 
-    else if (strcmp(state, "enable") == 0) {	return LED_ENABLE;  } 
-    else if (strcmp(state, "on") == 0)  {		return LED_ON;  } 
-    else if (strcmp(state, "off") == 0) {		return LED_OFF; } 
-    else {	
-		return -1; // Invalid state
-	}
-}
-
-const char *led_state(const char *state)
-{
-    if (!state) {
-        return "Invalid state. [NULL]"; 
-    }
-
-    int s = get_led_state(state); 
-
-    if (s < 0) {
-        return "Invalid state.";
-    }
-
-	if (s != (int)LED_State) {
-		memory_led_write(s); 
-	}
-	
-	switch(s)
-	{
-		case LED_DISABLE:
-			LED_State = LED_DISABLE;
-			ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
-			return "disable";
-		
-		case LED_ENABLE:
-			LED_State = LED_ENABLE;
-			led_off_flash();
-			return "enable";
-		
-		case LED_ON:
-			LED_State = LED_ON;
-			ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);
-			return "on";
-		
-		case LED_OFF:
-			LED_State = LED_OFF;
-			ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
-			return "off";	
-	}	
-	return "Invalid state. [ret]";
-}
-
 

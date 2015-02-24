@@ -27,20 +27,8 @@
 #ifndef _LED_H_
 #define _LED_H_
 
-typedef enum LED_STATE
-{
-	LED_ENABLE,
-	LED_DISABLE,
-	LED_ON,
-	LED_OFF	
-} LED_STATE;
-
-void led_init(void);
 void led_off(void);
 void led_on(void);
 void led_toggle(void);
-void led_off_flash(void);
-
-const char *led_state(const char *state);
 
 #endif

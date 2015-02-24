@@ -117,8 +117,6 @@ static void device_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            led_state("enable");
-			led_on();
             if (touch_button_press()) { //delay_ms(1500);
             if (touch_button_press()) { //delay_ms(1500);
             if (touch_button_press()) {
@@ -290,7 +288,13 @@ static int commander_process_token(int cmd, char *message)
             break;
         
         case CMD_led_:
-		    commander_fill_report("led", (char *)led_state(message), SUCCESS);
+            if (strncmp(message, ATTR_STR[ATTR_toggle_], strlen(ATTR_STR[ATTR_toggle_])) == 0) {
+                led_toggle(); delay_ms(300);	
+                led_toggle();  
+                commander_fill_report("led", "toggled", SUCCESS);
+            } else {
+                commander_fill_report("led", "Invalid command.", ERROR);
+            }
             break;
         
         case CMD_name_:

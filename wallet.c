@@ -219,6 +219,7 @@ void wallet_sign(const char *message, int msg_len, char *keypath)
     uint8_t sig[64];
     uint8_t *priv_key_master = memory_master(NULL);
     uint8_t *chain_code = memory_chaincode(NULL);
+	uint8_t pub_key[33];
     HDNode node;
     
     if (msg_len != (32 * 2)) 
@@ -238,7 +239,9 @@ void wallet_sign(const char *message, int msg_len, char *keypath)
         if (!uECC_sign_digest(node.private_key, data, sig)) {
             commander_fill_report("sign", "Could not sign data.", ERROR);
         } else {
+            uECC_get_public_key33(node.private_key, pub_key);
             commander_fill_report("sign", uint8_to_hex(sig, 64), SUCCESS);
+	        commander_fill_report("pubkey", uint8_to_hex(pub_key, 33), SUCCESS);
         }
     }
     clear_static_variables();

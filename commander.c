@@ -257,14 +257,7 @@ static void process_random(char *message)
 
 static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 {
-    int ret = 0;
-    if (id == PASSWORD_MULTI) {
-        if (touch_button_press()) {
-             ret = memory_aeskey_write(message, msg_len, id);
-        }
-    } else { ret = memory_aeskey_write(message, msg_len, id); }
-    
-    return ret;
+    return(memory_aeskey_write(message, msg_len, id));
 }
 
 
@@ -472,23 +465,25 @@ static int commander_check_input(const char *encrypted_command)
         return 4;
 	}
 
-    // Allow unencrypted command to set multipass second password (first time only)
-    // A multipass password reset is done via encrypted JSON command or here after a device reset
+    // Allow an unencrypted command to set a multipass second password (first time only)
+    // A multipass password reset is done via an encrypted JSON command, or here after a device reset
     if (memory_multipass_read()) {
         if (strstr(encrypted_command, CMD_STR[CMD_multipass_]) != NULL) {
 	        commander_clear_report();
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_multipass_], &pw_len);
             if (pw != NULL) {
-                if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
-                    memory_multipass_write(0); 
-                    commander_fill_report("multipass", "success", SUCCESS);
+                if (touch_button_press()) {
+                    if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
+                        memory_multipass_write(0); 
+                        commander_fill_report("multipass", "success", SUCCESS);
+                    }
                 }
             } else {
                 commander_fill_report("input", "JSON parse error.", ERROR);
             }
             return 5;
-        } 
+        }
     }
     
     return 0; // ok 

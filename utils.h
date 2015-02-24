@@ -40,6 +40,7 @@ char *uint8_to_hex(const uint8_t *bin, size_t l);
 uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len);
 void utils_print_report(const char *report, PASSWORD_ID dec_id);
 void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id);
+void utils_send_cmd_x2(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id);
 #endif
 
 

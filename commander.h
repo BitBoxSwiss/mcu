@@ -49,15 +49,19 @@
 
 #define FOREACH_CMD(CMD)        \
   /*    parent commands     */  \
-        CMD(led)                \
+  /*    requiring touch     */  \
         CMD(sign)               \
-        CMD(name)               \
         CMD(seed)               \
         CMD(load)               \
         CMD(backup)             \
         CMD(password)           \
         CMD(multipass)          \
         CMD(touchbutton)        \
+  /* placeholder don't move */  \
+        CMD(require_touch)      \
+  /*    parent commands     */  \
+        CMD(led)                \
+        CMD(name)               \
         CMD(xpub)               \
         CMD(random)             \
         CMD(device)             \

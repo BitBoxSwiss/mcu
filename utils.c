@@ -125,16 +125,26 @@ void utils_print_report(const char *report, PASSWORD_ID dec_id)
 }
 
 
-void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
+void utils_send_cmd(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
 {
     if (enc_id == PASSWORD_NONE) {
-        utils_print_report(commander(instruction), dec_id);
+        utils_print_report(commander(command), dec_id);
     } else {
         int encrypt_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)instruction, strlen(instruction), &encrypt_len, enc_id);
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
         utils_print_report(commander(enc), dec_id);
-        utils_print_report(commander("echo sham command"), dec_id);
         free(enc); 
     }
+}
+
+
+// Send command twice in case of command being echoed (i.e. when touch button is required)
+void utils_send_cmd_x2(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
+{
+    int encrypt_len;
+    char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
+    utils_print_report(commander(enc), dec_id);
+    utils_print_report(commander(enc), dec_id);
+    free(enc); 
 }
 #endif

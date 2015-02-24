@@ -72,7 +72,6 @@
         CMD(timeout)            \
         CMD(holdtime)           \
         CMD(threshold)          \
-        CMD(button)             \
         CMD(generate)           \
         CMD(mnemonic)           \
         CMD(data)               \
@@ -89,8 +88,6 @@
   /*    command attributes  */  \
         ATTR(list)              \
         ATTR(toggle)            \
-        ATTR(enable)            \
-        ATTR(disable)           \
         ATTR(true)              \
         ATTR(pseudo)            \
         ATTR(serial)            \

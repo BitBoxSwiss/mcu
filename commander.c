@@ -117,8 +117,8 @@ static void device_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (touch_button_press()) { //delay_ms(1500);
-            if (touch_button_press()) { //delay_ms(1500);
+            if (touch_button_press()) { //delay_ms(1000);
+            if (touch_button_press()) { //delay_ms(1000);
             if (touch_button_press()) {
                 memory_erase();
                 commander_clear_report();
@@ -318,21 +318,10 @@ static int commander_process_token(int cmd, char *message)
             wallet_report_xpub(message);
             break;
 
-        case CMD_touchbutton_: {
-		    // TEST disable function
-            int status_len;
-            const char *status = jsmn_get_value_string(message, CMD_STR[CMD_button_], &status_len);
-            int s = -1; 
-            if (status) {
-                if (strncmp(status, ATTR_STR[ATTR_disable_], strlen(ATTR_STR[ATTR_disable_])) == 0) { s = 0; }
-                else if (strncmp(status, ATTR_STR[ATTR_enable_], strlen(ATTR_STR[ATTR_enable_])) == 0) { s = 1; }
-			} else {
-                s = memory_touch_enable_read();
-            }
+        case CMD_touchbutton_:
             touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000, 
-                                    jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]), s);
+                                    jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
             break;
-        }
 
         case CMD_device_: {
             if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {

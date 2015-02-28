@@ -142,7 +142,7 @@ static void process_load(char *message)
         wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
     } else if (filename) {
         char *mnemo = sd_load(filename, sd_file_len);
-        if (mnemo && (decrypt ? strncmp(decrypt, "no", 2) : 1)) { // default = decrypt
+        if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
             int dec_len;
             char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
             memset(mnemo, 0, strlen(mnemo));
@@ -197,7 +197,7 @@ static void process_backup(char *message)
             commander_fill_report("backup", "BIP32 mnemonic not present.", ERROR);
             return;
         } 
-        if (encrypt ? strncmp(encrypt, "no", 2) : 1) { // default = encrypt	
+        if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt	
             int enc_len;
             char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
             if (enc) {

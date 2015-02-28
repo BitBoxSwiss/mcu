@@ -213,7 +213,7 @@ void wallet_report_xpub(char *keypath)
 }    
 
 
-void wallet_sign(const char *message, int msg_len, char *keypath, char *id, int id_len)
+void wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, char *id, int id_len)
 {
     uint8_t data[32];
     uint8_t sig[64];
@@ -221,8 +221,9 @@ void wallet_sign(const char *message, int msg_len, char *keypath, char *id, int 
     uint8_t *chain_code = memory_chaincode(NULL);
 	uint8_t pub_key[33];
     HDNode node;
-    
-    if (msg_len != (32 * 2)) 
+    int ret;
+
+    if (!to_hash && msg_len != (32 * 2)) 
     {
         commander_fill_report("sign", "Incorrect data length. "
                     "A 32-byte hexadecimal value (64 characters) is expected.", ERROR);
@@ -234,9 +235,15 @@ void wallet_sign(const char *message, int msg_len, char *keypath, char *id, int 
     } 
     else 
     {
-        memcpy(data, hex_to_uint8(message), 32);
         wallet_generate_key(&node, keypath, priv_key_master, chain_code);
-        if (!uECC_sign_digest(node.private_key, data, sig)) {
+        if (to_hash) {
+            ret = uECC_sign_double(node.private_key, hex_to_uint8(message), msg_len / 2, sig);
+        } else {
+            memcpy(data, hex_to_uint8(message), 32);
+            ret = uECC_sign_digest(node.private_key, data, sig);
+        }
+        
+        if (!ret) {
             commander_fill_report("sign", "Could not sign data.", ERROR);
         } else {
             uECC_get_public_key33(node.private_key, pub_key);

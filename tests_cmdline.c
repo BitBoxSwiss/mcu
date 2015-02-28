@@ -38,9 +38,12 @@ void usage(char * argv[])
     printf("\nThis function provides a command line interface to the Digital Bitbox code.\n");
     
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"strength\\\":\\\"256\\\"},  "
-           "\\\"sign\\\":[{\\\"id\\\":\\\"id_1\\\", \\\"data\\\":"
-           "\\\"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\\\", "
+    printf("  Example:\n\t./tests_cmdline \"{ "
+           "\\\"seed\\\":{\\\"strength\\\":\\\"256\\\"},  "
+           "\\\"sign\\\":[{"
+           "\\\"id\\\":\\\"id_1\\\", "
+           "\\\"hash\\\":\\\"yes\\\", "
+           "\\\"data\\\":\\\"unsigned data\\\", "
            "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"}] }\"\n\n" );
     
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "

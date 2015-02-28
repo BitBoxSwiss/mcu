@@ -75,6 +75,7 @@
         CMD(generate)           \
         CMD(mnemonic)           \
         CMD(id)                 \
+        CMD(hash)               \
         CMD(data)               \
         CMD(keypath)            \
         CMD(strength)           \

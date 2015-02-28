@@ -261,23 +261,27 @@ static void process_backup(char *message)
 
 static void process_sign(char *array)
 { 
-    int data_len, keypath_len, item_len, id_len, id_cnt = 0;
-    char *item, *data, *keypath, *id;
+    int data_len, keypath_len, hash_len, item_len, id_len, id_cnt = 0, to_hash = 0;
+    char *item, *data, *keypath, *hash, *id;
 
     while ((item = (char *)jsmn_get_item(array, id_cnt, &item_len))) {
         char message[item_len + 1];
         memcpy(message, item, item_len);
         message[item_len] = '\0';
-        
+       
         id = (char *)jsmn_get_value_string(message,CMD_STR[CMD_id_], &id_len);
+        hash = (char *)jsmn_get_value_string(message,CMD_STR[CMD_hash_], &hash_len);
         data = (char *)jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
         keypath = (char *)jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
         
-        if (!data || !keypath || !id) {
+        if (!data || !keypath || !id || !hash) {
             commander_fill_report("sign", "Incomplete command.", ERROR);
             return;  
         }
-        wallet_sign(data, data_len, keypath, id, id_len);
+        if (strncmp(hash, "yes", 3) == 0) {
+            to_hash = 1;
+        }    
+        wallet_sign(data, data_len, keypath, to_hash, id, id_len);
         id_cnt++;
     }
 
@@ -405,17 +409,17 @@ static char *commander_decrypt(const char *encrypted_command, PASSWORD_ID *ID,
     // Process instructions
     PASSWORD_ID id = PASSWORD_NONE;
     char *command;
-    int instruction_len, n = 0;
+    int command_len, n = 0;
 
     // Decrypt & parse instructions
     command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
                                       strlen(encrypted_command), 
-                                      &instruction_len,
+                                      &command_len,
                                       PASSWORD_STAND);
     
     if (command) {
         memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
-        n = jsmn_parse_init(command, instruction_len, json_token, MAX_TOKENS);
+        n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
         if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
         {
             id = PASSWORD_STAND;
@@ -424,12 +428,12 @@ static char *commander_decrypt(const char *encrypted_command, PASSWORD_ID *ID,
     if (id == PASSWORD_NONE && !command) {
         command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
                                           strlen(encrypted_command), 
-                                          &instruction_len,
+                                          &command_len,
                                           PASSWORD_MULTI);
             
         if (command) {
 	        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
-            n = jsmn_parse_init(command, instruction_len, json_token, MAX_TOKENS);
+            n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
             if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
             {
                 id = PASSWORD_MULTI;

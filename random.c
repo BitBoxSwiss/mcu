@@ -66,7 +66,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
             aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ataes_ret[0]) {
-            // TEST for len > 16 and len%16!=0
+            // TEST for len > 16 and len % 16 != 0
             memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16); 
         } else {
             return 1; // error

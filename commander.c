@@ -307,7 +307,7 @@ static void process_random(char *message)
     if (random_bytes(number, sizeof(number), update_seed)) {
         commander_fill_report("random", "Chip communication error.", ERROR);
     } else {
-        commander_fill_report("random", uint8_to_hex(number,sizeof(number)), SUCCESS);
+        commander_fill_report("random", uint8_to_hex(number, sizeof(number)), SUCCESS);
     }
 }
 

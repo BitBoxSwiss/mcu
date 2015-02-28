@@ -55,6 +55,7 @@
         CMD(seed)               \
         CMD(load)               \
         CMD(backup)             \
+        CMD(device)             \
         CMD(password)           \
         CMD(multipass)          \
         CMD(touchbutton)        \
@@ -65,7 +66,6 @@
         CMD(name)               \
         CMD(xpub)               \
         CMD(random)             \
-        CMD(device)             \
         CMD(reset)              \
         CMD(echo)               \
         CMD(ciphertext)         \

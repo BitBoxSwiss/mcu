@@ -34,14 +34,15 @@
 #ifndef TESTING
 #include "conf_usb.h"
 
+
+#define DIGITAL_BITBOX_VERSION  "1.0"
+
+#define COMMANDER_MAX_ATTEMPTS	5// max attempts before device reset
+
 #define COMMANDER_REPORT_SIZE   UDI_HID_REPORT_OUT_SIZE
 #else
 #define COMMANDER_REPORT_SIZE   4096
 #endif
-
-#define DIGITAL_BITBOX_VERSION  "1.0"
-
-#define MAX_ATTEMPTS			5
 
 #define GENERATE_STRING(STRING) #STRING,
 #define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,
@@ -108,11 +109,11 @@ enum REPORT_FLAGS {
     ERROR = 1, 
 };
 
-void force_reset(void);
+
+void commander_force_reset(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 void commander_fill_report_len(const char *attr, const char *val, int err, int vallen);
 void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, const char *id, size_t id_len);
-
 char *commander(const char *instruction_encrypted);
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id);

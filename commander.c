@@ -153,7 +153,7 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
 }
 
 
-void force_reset(void)
+void commander_force_reset(void)
 {
     memory_erase();
 	commander_clear_report();

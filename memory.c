@@ -333,8 +333,8 @@ void memory_delay_iterate(const uint16_t d)
     }
     
     // Force reset after too many failed attempts
-    if (delay >= MAX_ATTEMPTS) {
-        force_reset();
+    if (delay >= COMMANDER_MAX_ATTEMPTS) {
+        commander_force_reset();
     } else {
         memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
     }

@@ -32,7 +32,7 @@ extern "C" {
 
 #define JSMN_PARENT_LINKS
 
-#define MAX_TOKENS  64
+#define MAX_TOKENS  256
 
 /**
  * JSON type identifier. Basic types are:

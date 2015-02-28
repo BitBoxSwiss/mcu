@@ -81,7 +81,6 @@
         CMD(filename)           \
         CMD(decrypt)            \
         CMD(encrypt)            \
-        CMD(format_sd_card)     \
         CMD(none)                /* keep last */
 
 #define FOREACH_ATTR(ATTR)      \

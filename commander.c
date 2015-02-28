@@ -171,8 +171,7 @@ static void process_seed(char *message)
 
 static void process_backup(char *message)
 { 
-    int encrypt_len, format_len, filename_len;
-    const char *format = jsmn_get_value_string(message, CMD_STR[CMD_format_sd_card_], &format_len);
+    int encrypt_len, filename_len;
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 	
@@ -180,17 +179,9 @@ static void process_backup(char *message)
 		sd_list();
 		return;
 	}
-	
-	if (format ? !strncmp(format, "yes", 3) : 0) { // default = do not format
-        if (sd_format()) {
-            return; // could not format
-        }
-    }
     
 	if (!filename) {
-        if (!(format && !filename)) {
-            commander_fill_report("backup", "Incomplete command.", ERROR);
-        }
+        commander_fill_report("backup", "Incomplete command.", ERROR);
     } else {
         char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
         if (!text) {

@@ -165,9 +165,9 @@ static void device_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (touch_button_press()) { //delay_ms(1000);
-            if (touch_button_press()) { //delay_ms(1000);
-            if (touch_button_press()) {
+            if (!touch_button_press()) { //delay_ms(1000);
+            if (!touch_button_press()) { //delay_ms(1000);
+            if (!touch_button_press()) {
                 memory_erase();
                 commander_clear_report();
                 commander_fill_report("reset", "success", SUCCESS);
@@ -519,7 +519,7 @@ static int commander_check_input(const char *encrypted_command)
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_multipass_], &pw_len);
             if (pw != NULL) {
-                if (touch_button_press()) {
+                if (!touch_button_press()) {
                     if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
                         memory_multipass_write(0); 
                         commander_fill_report("multipass", "success", SUCCESS);
@@ -612,7 +612,7 @@ static void commander_parse(const char *encrypted_command)
                     if (cmd < CMD_require_touch_) 
                     {
                         if (!BUTTON_TOUCHED) {
-                            if (touch_button_press()) { 
+                            if (!touch_button_press()) { 
                                 BUTTON_TOUCHED = 1;
                             } else {
                                 break;

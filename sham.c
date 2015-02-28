@@ -71,7 +71,7 @@ void sd_list(void)
 uint8_t touch_button_press(void)
 {
     commander_fill_report("touchbutton", "touched (hard coded)", SUCCESS);
-    return 1;
+    return 0;
 }
 
 

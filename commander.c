@@ -55,9 +55,17 @@ static char previous_command[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
 static int ECHO_COMMAND = 1;
+static int SIG_COUNT = 0;
 
 
-// TODO use msg and error codes to pass to fill_report
+static void commander_clear_report(void)
+{
+	memset(json_report, 0, COMMANDER_REPORT_SIZE);
+	REPORT_BUF_OVERFLOW = 0;	
+    SIG_COUNT = 0;
+}
+
+
 void commander_fill_report(const char *attr, const char *val, int err)
 {
     commander_fill_report_len(attr, val, err, strlen(val));
@@ -98,10 +106,50 @@ void commander_fill_report_len(const char *attr, const char *val, int err, int v
     }
 }
 
-static void commander_clear_report(void)
+
+void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, const char *id, size_t id_len)
 {
-	memset(json_report, 0, COMMANDER_REPORT_SIZE);
-	REPORT_BUF_OVERFLOW = 0;	
+    size_t len = strlen(json_report);
+    if (len == 0) {
+        strncat(json_report, "{", 1);
+    } else {    
+        json_report[len - 1] = ','; // replace closing '}' with continuing ','
+    }
+    
+    if (len > (COMMANDER_REPORT_SIZE - (40 + 64 + 33 + id_len))) {
+        // TEST the overflow error condition
+        if (!REPORT_BUF_OVERFLOW) {
+            strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
+            REPORT_BUF_OVERFLOW = 1;
+        }
+    } else {
+        if (SIG_COUNT == 0) {
+            strcat(json_report, " \"sign\":[");
+        } else {    
+            json_report[len - 2] = ','; // replace closing ']}' with continuing ', '
+            json_report[len - 1] = ' '; // replace closing ']}' with continuing ', '
+        }
+        strcat(json_report, "{");
+        
+        strcat(json_report, "\"id\":\"");
+        strncat(json_report, id, id_len);
+        strcat(json_report, "\", ");
+
+        strcat(json_report, "\"sig\":\"");
+        strncat(json_report, uint8_to_hex(sig, 64), 128);
+        strcat(json_report, "\", ");
+
+        strcat(json_report, "\"pubkey\":\"");
+        strncat(json_report, uint8_to_hex(pubkey, 33), 66);
+        strcat(json_report, "\"");
+        
+        strcat(json_report, "}");
+
+        // Add closing ']}'
+        strcat(json_report, "]}"); 
+    }
+
+    SIG_COUNT++;
 }
 
 
@@ -211,17 +259,31 @@ static void process_backup(char *message)
 }
 
 
-static void process_sign(char *message)
+static void process_sign(char *array)
 { 
-    int data_len, keypath_len;		
-    const char *data = jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
-    const char *keypath = jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
-    
-    if (!data || !keypath) {
-        commander_fill_report("sign", "Incomplete command.", ERROR);
-        return;  
+    int data_len, keypath_len, item_len, id_len, id_cnt = 0;
+    char *item, *data, *keypath, *id;
+
+    while ((item = (char *)jsmn_get_item(array, id_cnt, &item_len))) {
+        char message[item_len + 1];
+        memcpy(message, item, item_len);
+        message[item_len] = '\0';
+        
+        id = (char *)jsmn_get_value_string(message,CMD_STR[CMD_id_], &id_len);
+        data = (char *)jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
+        keypath = (char *)jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
+        
+        if (!data || !keypath || !id) {
+            commander_fill_report("sign", "Incomplete command.", ERROR);
+            return;  
+        }
+        wallet_sign(data, data_len, keypath, id, id_len);
+        id_cnt++;
     }
-    wallet_sign(data, data_len, (char *)keypath);
+
+    if (id_cnt == 0) {
+        commander_fill_report("sign", "Parse error. Data to sign should be a list enclosed by square brackets.", ERROR);
+    }
 }
 
 
@@ -510,8 +572,6 @@ static void commander_parse(const char *encrypted_command)
     
     char *command = commander_decrypt(encrypted_command, &id, json_token, &n_tokens);
 
-    printf("\n\nCommand:\t %s\n",command);		
-    
     // Echo instructions if a command requires touch confirmation
     if (id != PASSWORD_NONE && !ECHO_COMMAND) {
         for (j = 0; j < n_tokens; j++) {

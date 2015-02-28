@@ -107,7 +107,7 @@ jsmnerr_t jsmn_parse_init(const char *js, size_t len,
 int jsmn_token_equals(const char *js, const jsmntok_t *tok, const char *s);
 
 /**
- * Get the string and string length of the value and associated with name
+ * Get the string and string length of the value associated with name
  */
 const char *jsmn_get_value_string(const char *js, const char *name, int *len);
 
@@ -115,6 +115,11 @@ const char *jsmn_get_value_string(const char *js, const char *name, int *len);
  * Get an unsigned int value associated with name
  */
 unsigned int jsmn_get_value_uint(const char *js, const char *name);
+
+/**
+ * Get the string and string length of an item in an array
+ */
+const char *jsmn_get_item(const char *js, int id, int *len);
 
 
 #ifdef __cplusplus

@@ -38,10 +38,10 @@ void usage(char * argv[])
     printf("\nThis function provides a command line interface to the Digital Bitbox code.\n");
     
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"wallet\\\":\\\"bip32\\\"},  "
-           "\\\"sign\\\":{\\\"wallet\\\":\\\"bip32\\\", \\\"data\\\":"
+    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"strength\\\":\\\"256\\\"},  "
+           "\\\"sign\\\":[{\\\"id\\\":\\\"id_1\\\", \\\"data\\\":"
            "\\\"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\\\", "
-           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
+           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"}] }\"\n\n" );
     
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "
             "Multiple commands can be sent within a single\nJSON object. This is shown in the "
@@ -60,7 +60,7 @@ int main ( int argc, char *argv[] )
         random_init(); 
         memory_erase();
         // A password is required before sending commands.
-        // The initial password sets both the standard and 
+        // This initial password sets both the standard and 
         // multipass passwords to the same value. Refer to 
         // the API documentation for more details.
         utils_send_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE, decrypt_id); 

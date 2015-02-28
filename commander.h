@@ -74,6 +74,7 @@
         CMD(threshold)          \
         CMD(generate)           \
         CMD(mnemonic)           \
+        CMD(id)                 \
         CMD(data)               \
         CMD(keypath)            \
         CMD(strength)           \
@@ -109,6 +110,7 @@ enum REPORT_FLAGS {
 void force_reset(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 void commander_fill_report_len(const char *attr, const char *val, int err, int vallen);
+void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, const char *id, size_t id_len);
 
 char *commander(const char *instruction_encrypted);
 

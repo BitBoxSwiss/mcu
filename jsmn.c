@@ -357,7 +357,7 @@ int jsmn_token_equals(const char *js, const jsmntok_t *tok, const char *s) {
 }
 
 /**
- * Get the string and string length of the value and associated with name
+ * Get the string and string length of the value associated with name
  */
 const char *jsmn_get_value_string(const char *js, const char *name, int *len) {
     int r, i;
@@ -395,4 +395,36 @@ unsigned int jsmn_get_value_uint(const char *js, const char *name) {
         }
     }
     return 0;
+}
+
+/**
+ * Get the string and string length of an item in an array
+ * id = 0 corresponds to the first item
+ */
+const char *jsmn_get_item(const char *js, int id, int *len) {
+    int n, i, cnt = 0;
+	jsmntok_t json_token[MAX_TOKENS];
+	
+    *len = 0;
+    n = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
+	
+    if (json_token[0].type != JSMN_ARRAY  ||  n == 0) {
+        return NULL;
+    }
+    
+    if (id > n) {
+        return NULL;
+    }
+
+    for (i = 0; i < n; i++) {
+        (void)id;
+        if (json_token[i].parent == 0) {
+            if (cnt == id) {
+			    *len = json_token[i].end - json_token[i].start;
+			    return(js + json_token[i].start);
+            } 
+            cnt++;
+        }
+	}
+    return NULL;
 }

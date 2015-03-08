@@ -40,7 +40,7 @@ const char **wallet_mnemonic_wordlist(void);
 uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
 void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
-void wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, char *id, int id_len);
+int wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, char *id, int id_len);
 void wallet_report_xpub(char *keypath);
 void wallet_generate_key(HDNode *node, char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode);
 char *wallet_mnemonic_from_data(const uint8_t *data, int len);

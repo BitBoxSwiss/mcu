@@ -34,15 +34,15 @@
 #ifndef TESTING
 #include "conf_usb.h"
 
+#define COMMANDER_REPORT_SIZE   UDI_HID_REPORT_OUT_SIZE
+#else
+#define COMMANDER_REPORT_SIZE   4096
+#endif
 
 #define DIGITAL_BITBOX_VERSION  "1.0"
 
 #define COMMANDER_MAX_ATTEMPTS	5// max attempts before device reset
 
-#define COMMANDER_REPORT_SIZE   UDI_HID_REPORT_OUT_SIZE
-#else
-#define COMMANDER_REPORT_SIZE   4096
-#endif
 
 #define GENERATE_STRING(STRING) #STRING,
 #define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,

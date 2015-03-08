@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 		}
 
 		// use our ECDSA signer to sign the message with the key
-		if (!uECC_sign(priv_key, msg, msg_len, sig) != 0) {
+		if (uECC_sign(priv_key, msg, msg_len, sig)) {
 			printf("signing failed\n");
 			break;
 		}
@@ -95,11 +95,11 @@ int main(int argc, char *argv[])
 		uECC_get_public_key65(priv_key, pub_key65);
 
 		// verify the message signature
-		if (uECC_verify(pub_key65, sig, msg, msg_len) == 0) {
+		if (uECC_verify(pub_key65, sig, msg, msg_len)) {
 			printf("verification failed (pub_key_len = 65)\n");
 			break;
 		}
-		if (uECC_verify(pub_key33, sig, msg, msg_len) == 0) {
+		if (uECC_verify(pub_key33, sig, msg, msg_len)) {
 			printf("verification failed (pub_key_len = 33)\n");
 			break;
 		}

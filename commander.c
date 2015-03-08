@@ -281,7 +281,11 @@ static void process_sign(char *array)
         if (strncmp(hash, "yes", 3) == 0) {
             to_hash = 1;
         }    
-        wallet_sign(data, data_len, keypath, to_hash, id, id_len);
+        
+        if (wallet_sign(data, data_len, keypath, to_hash, id, id_len)) {
+            // error signing
+            return;
+        }
         id_cnt++;
     }
 

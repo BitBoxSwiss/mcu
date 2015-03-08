@@ -348,13 +348,13 @@ static void test_sign_speed(void)
     memcpy(priv_key, hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"), 32);
 	for (i = 0 ; i < N; i++) {
 		res = uECC_sign(priv_key, msg, sizeof(msg), sig);
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 	}
 
 	memcpy(priv_key, hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"), 32);
 	for (i = 0 ; i < N; i++) {
 		res = uECC_sign(priv_key, msg, sizeof(msg), sig);
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 	}
 
 	printf("  Signing speed: %0.2f sig/s\n", N * 2 / ((float)(clock() - t) / CLOCKS_PER_SEC));
@@ -382,9 +382,9 @@ static void test_verify_speed(void)
 
 	for (i = 0 ; i < 25; i++) {
 		res = uECC_verify(pub_key65, sig, msg, sizeof(msg));
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 		res = uECC_verify(pub_key33, sig, msg, sizeof(msg));
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 	}
 
 	memcpy(sig, hex_to_uint8("067040a2adb3d9deefeef95dae86f69671968a0b90ee72c2eab54369612fd524eb6756c5a1bb662f1175a5fa888763cddc3a07b8a045ef6ab358d8d5d1a9a745"), 64);
@@ -393,9 +393,9 @@ static void test_verify_speed(void)
 
 	for (i = 0 ; i < 25; i++) {
 		res = uECC_verify(pub_key65, sig, msg, sizeof(msg));
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 		res = uECC_verify(pub_key33, sig, msg, sizeof(msg));
-		u_assert_int_eq(res, 1);
+		u_assert_int_eq(res, 0);
 	}
 
 	printf("  Verifying speed: %0.2f sig/s\n", 100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));

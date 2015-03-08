@@ -903,29 +903,31 @@ static bitcount_t smax(bitcount_t a, bitcount_t b)
     return (a > b ? a : b);
 }
 
-/* Performs sha256 hash on msg before signing. */
+/* Performs sha256 hash on msg before signing.
+   Returns 0 on success. */
 int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature)
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
-        return 0;
+        return 1;
 	sha256_Raw(msg, msg_len, p_hash);
     return uECC_sign_digest(p_privateKey, p_hash, p_signature);
 }
 
-/* Performs a double sha256 hash on msg before signing. */
+/* Performs a double sha256 hash on msg before signing.
+   Returns 0 on success. */
 int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len, uint8_t *p_signature)
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
-        return 0;
+        return 1;
 	sha256_Raw(msg, msg_len, p_hash);
 	sha256_Raw(p_hash, uECC_BYTES, p_hash);
     return uECC_sign_digest(p_privateKey, p_hash, p_signature);
 }
 
 /* Verify an ECDSA signature.
-   Returns 1 if the signature is valid, 0 if it is invalid. */
+   Returns 0 always. */
 int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES*2])
 {
     uECC_word_t k[uECC_N_WORDS];
@@ -989,7 +991,7 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
     vli_modMult_n(s, s, k); /* s = (e + r*d) / k */
     vli_nativeToBytes(p_signature + uECC_BYTES, s);
     
-    return 1;
+    return 0;
 }
 
 /* Returns the decompressed public key in p_publicKey */
@@ -1013,7 +1015,7 @@ int uECC_verify(const uint8_t *publicKey, const uint8_t *p_signature,
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
-        return 0;
+        return 1;
 	sha256_Raw(msg, msg_len, p_hash);
 	return uECC_verify_digest(publicKey, p_hash, p_signature);
 }
@@ -1024,7 +1026,7 @@ int uECC_verify_double(const uint8_t *publicKey, const uint8_t *p_signature,
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
-        return 0;
+        return 1;
 	sha256_Raw(msg, msg_len, p_hash);
 	sha256_Raw(p_hash, uECC_BYTES, p_hash);
     return uECC_verify_digest(publicKey, p_hash, p_signature);
@@ -1039,7 +1041,7 @@ int uECC_verify_digest(const uint8_t *publicKey,
     uint8_t p_publicKey[uECC_BYTES * 2];
 	
     if (!uECC_read_pubkey(publicKey, p_publicKey)) {
-		return 0;
+		return 1;
 	}
     
     uECC_word_t u1[uECC_N_WORDS], u2[uECC_N_WORDS];
@@ -1062,7 +1064,7 @@ int uECC_verify_digest(const uint8_t *publicKey,
     
     if(vli_isZero(r) || vli_isZero(s))
     { /* r, s must not be 0. */
-        return 0;
+        return 1;
     }
 
     /* Calculate u1 and u2. */
@@ -1120,7 +1122,7 @@ int uECC_verify_digest(const uint8_t *publicKey,
     }
 
     /* Accept only if v == r. */
-    return (vli_cmp(rx, r) == 0);
+    return !(vli_cmp(rx, r) == 0); // 0 on success
 }
 
 /* Get a child private key

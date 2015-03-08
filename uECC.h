@@ -48,21 +48,23 @@ void uECC_decompress(const uint8_t p_compressed[uECC_BYTES + 1],
                      uint8_t p_publicKey[uECC_BYTES * 2]);
 
 // Generate an ECDSA signature for a given hash value.
-// Returns 1 if the signature generated successfully, 0 if an error occurred.
+// Returns 0 always.
 int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], 
                      const uint8_t p_hash[uECC_BYTES],
                      uint8_t p_signature[uECC_BYTES * 2]);
 
 // Performs sha256 hash on msg before signing.
+// Returns 0 if the signature generated successfully, 1 if an error occurred.
 int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, 
               uint32_t msg_len, uint8_t *p_signature);
 
 // Performs double sha256 hash on msg before signing.
+// Returns 0 if the signature generated successfully, 1 if an error occurred.
 int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, 
                      uint32_t msg_len, uint8_t *p_signature);
 
 // Verify an ECDSA signature.
-// Returns 1 if the signature is valid, 0 if it is invalid.
+// Returns 0 if the signature is valid, 1 if it is invalid.
 int uECC_verify_digest(const uint8_t p_publicKey[uECC_BYTES * 2], 
                        const uint8_t p_hash[uECC_BYTES], 
                        const uint8_t p_signature[uECC_BYTES * 2]);

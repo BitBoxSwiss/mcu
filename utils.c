@@ -23,8 +23,9 @@
 */
 
 
-#include "utils.h"
 #include <string.h>
+#include <stdio.h>
+#include "utils.h"
 
 
 uint8_t *hex_to_uint8(const char *str)
@@ -66,6 +67,82 @@ char *uint8_to_hex(const uint8_t *bin, size_t l)
 	buf[l * 2] = 0;
 	return buf;
 }
+
+
+void reverse_hex(char *h, int len)
+{
+    char copy[len];
+    strncpy(copy, h, len);
+    int i;
+    for (i = 0; i<len; i += 2) {
+        h[i] = copy[len - i - 2];
+        h[i + 1] = copy[len - i - 1];
+    }   
+}
+
+
+void uint64_to_varint(char *vi, int *l, uint64_t i)
+{
+    int len;
+    char v[VARINT_LEN];  
+    
+    if (i<0xfd) {
+        sprintf(v, "%02llx", i);
+        len = 2;
+    } else if (i <= 0xffff) {
+        sprintf(v, "%04llx", i);
+        sprintf(vi, "fd");
+        len = 4;
+    } else if (i <= 0xffffffff) {
+        sprintf(v, "%08llx", i);
+        sprintf(vi, "fe");
+        len = 8;
+    } else {
+        sprintf(v, "%016llx", i);
+        sprintf(vi, "ff");
+        len = 16;
+    }
+  
+    // reverse order
+    if (len > 2) {
+        reverse_hex(v, len); 
+        strncat(vi, v, len);
+    } else {
+        strncpy(vi, v, len);
+    }
+
+    *l = len;
+}
+
+
+int varint_to_uint64(const char *vi, uint64_t *i)
+{
+    char v[VARINT_LEN] = {0};
+    int len; 
+    
+    if (!strncmp(vi, "ff", 2)) {
+        len = 16;
+    } else if (!strncmp(vi, "fe", 2)) {
+        len = 8;
+    } else if (!strncmp(vi, "fd", 2)) {
+        len = 4;
+    } else {
+        len = 2;
+    }
+        
+    if (len > 2) {
+        strncpy(v, vi + 2, len);
+        reverse_hex(v, len);
+    } else {
+        strncpy(v, vi, len);
+    }
+    sscanf(v, "%llx", i);
+   
+    return len;
+}
+
+
+
 
 
 #ifdef TESTING

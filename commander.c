@@ -52,6 +52,8 @@ const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
 static char previous_command[COMMANDER_REPORT_SIZE] = {0};
+static char previous_output[COMMANDER_REPORT_SIZE] = {0};
+static char previous_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
 static int ECHO_COMMAND = 1;
@@ -117,14 +119,14 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
     }
     
     if (len > (COMMANDER_REPORT_SIZE - (40 + 64 + 33 + id_len))) {
-        // TEST the overflow error condition
         if (!REPORT_BUF_OVERFLOW) {
             strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
             REPORT_BUF_OVERFLOW = 1;
         }
     } else {
         if (SIG_COUNT == 0) {
-            strcat(json_report, " \"sign\":[");
+            strcat(json_report, " \"sign\": ");
+            //strcat(json_report, " \"sign\":[");
         } else {    
             json_report[len - 2] = ','; // replace closing ']}' with continuing ', '
             json_report[len - 1] = ' '; // replace closing ']}' with continuing ', '
@@ -146,7 +148,8 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
         strcat(json_report, "}");
 
         // Add closing ']}'
-        strcat(json_report, "]}"); 
+        strcat(json_report, " }"); 
+        //strcat(json_report, "]}"); 
     }
 
     SIG_COUNT++;
@@ -258,11 +261,11 @@ static void process_backup(char *message)
     }	
 }
 
-
+/*
 static void process_sign(char *array)
 { 
-    int data_len, keypath_len, hash_len, item_len, id_len, id_cnt = 0, to_hash = 0;
-    char *item, *data, *keypath, *hash, *id;
+    int data_len, keypath_len, type_len, item_len, id_len, id_cnt = 0, to_hash = 0;
+    char *item, *data, *keypath, *type, *id;
 
     while ((item = (char *)jsmn_get_item(array, id_cnt, &item_len))) {
         char message[item_len + 1];
@@ -270,15 +273,15 @@ static void process_sign(char *array)
         message[item_len] = '\0';
        
         id = (char *)jsmn_get_value_string(message,CMD_STR[CMD_id_], &id_len);
-        hash = (char *)jsmn_get_value_string(message,CMD_STR[CMD_hash_], &hash_len);
+        type = (char *)jsmn_get_value_string(message,CMD_STR[CMD_type_], &type_len);
         data = (char *)jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
         keypath = (char *)jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
         
-        if (!data || !keypath || !id || !hash) {
+        if (!data || !keypath || !id || !type) {
             commander_fill_report("sign", "Incomplete command.", ERROR);
             return;  
         }
-        if (strncmp(hash, "yes", 3) == 0) {
+        if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
             to_hash = 1;
         }    
         
@@ -291,6 +294,52 @@ static void process_sign(char *array)
 
     if (id_cnt == 0) {
         commander_fill_report("sign", "Parse error. Data to sign should be a list enclosed by square brackets.", ERROR);
+    }
+}
+*/
+
+static void process_sign(char *message)
+{ 
+    int data_len, keypath_len, type_len, id_len, to_hash = 0;
+    char *data, *keypath, *type, *id;
+       
+    id = (char *)jsmn_get_value_string(message, CMD_STR[CMD_id_], &id_len);
+    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+    keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
+    
+    if (!data || !keypath || !id || !type) {
+        commander_fill_report("sign", "Incomplete command.", ERROR);
+        return;  
+    }
+    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
+        to_hash = 1;
+    } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
+        commander_fill_report("sign", "Unknown type value.", ERROR);
+        return;
+    }
+    wallet_sign(data, data_len, keypath, to_hash, id, id_len);
+}
+                          
+
+// Returns 0 if inputs and outputs are the same
+static int process_sign_check(char *message)
+{
+    int data_len, type_len;
+    char *data, *type;
+    
+    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+   
+
+    if (!data || !type) {
+        commander_fill_report("sign", "Incomplete command.", ERROR);
+        return 2;  
+    }
+    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
+        return wallet_check_input_output(data, data_len, previous_input, previous_output);
+    } else {
+        return 1;
     }
 }
 
@@ -465,7 +514,7 @@ static char *commander_decrypt(const char *encrypted_command, PASSWORD_ID *ID,
 
 // Check if OK to process instructions
 // Returns NULL if OK. Otherwise returns a status message.
-static int commander_check_input(const char *encrypted_command)
+static int commander_check_init(const char *encrypted_command)
 {
 	commander_clear_report();
 
@@ -573,7 +622,8 @@ static void commander_parse(const char *encrypted_command)
     
     PASSWORD_ID id;
     int BUTTON_TOUCHED = 0;
-    int n_tokens, j, cmd, found, msglen;
+    int SAME_SIG_KEYS = 0;
+    int n_tokens, j, cmd, found, msglen, r;
     jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
@@ -590,6 +640,16 @@ static void commander_parse(const char *encrypted_command)
                 if (jsmn_token_equals(command, &json_token[j], CMD_STR[cmd]) == 0) 
                 {    
                     if (cmd < CMD_require_touch_) {
+                        if (cmd == CMD_sign_) {
+                            r = process_sign_check(command + json_token[j + 1].start);
+                            if (r == 0) {
+                                SAME_SIG_KEYS = 1;
+                                continue; // Continue without echo if inputs and outputs 
+                                          // are the same as previously verified.
+                            } else if (r == 2) {
+                                return; // error
+                            }
+                        }
                         commander_echo(command, id);
                         ECHO_COMMAND = 1;
                         free(command);
@@ -615,7 +675,7 @@ static void commander_parse(const char *encrypted_command)
                     found = 1;
                     if (cmd < CMD_require_touch_) 
                     {
-                        if (!BUTTON_TOUCHED) {
+                        if (!BUTTON_TOUCHED && !SAME_SIG_KEYS) {
                             if (!touch_button_press()) { 
                                 BUTTON_TOUCHED = 1;
                             } else {
@@ -628,6 +688,7 @@ static void commander_parse(const char *encrypted_command)
                     memcpy(message, command + json_token[j + 1].start, msglen);
                     message[msglen] = '\0';
                     if (commander_process_token(cmd, message) < 0) {
+                    //if (commander_process_token(cmd, command + json_token[j + 1].start) < 0) {
                         free(command);
                         return; // _reset_ called
                     }
@@ -671,14 +732,14 @@ static void commander_parse(const char *encrypted_command)
 // II:  Process the input command (must be sent from the client a second time), and report results
 char *commander(const char *command)
 {
-    if (commander_check_input(command)) {
-        // Not ready to process
+    if (commander_check_init(command)) {
+        // Not initialized
         ECHO_COMMAND = 0;
     } else {
         // Ready to process
         if (ECHO_COMMAND) {
             if (memcmp(previous_command, command, strlen(previous_command))) {
-                // Different command received, so reset ECHO_COMMAND
+                // Different command received, so do not echo the command
                 ECHO_COMMAND = 0;
             }
         }

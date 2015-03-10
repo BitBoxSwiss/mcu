@@ -250,6 +250,9 @@ int wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, ch
         } else {
             uECC_get_public_key33(node.private_key, pub_key);
             commander_fill_report_signature(sig, pub_key, id, id_len);
+            //commander_fill_report("sig", uint8_to_hex(sig, 64), SUCCESS);
+            //commander_fill_report("pubkey", uint8_to_hex(pub_key, 33), SUCCESS);
+            //commander_fill_report_len("id", id, SUCCESS, id_len);
         }
     }
     clear_static_variables();
@@ -376,6 +379,58 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t 
 	saltlen += 8;
 	pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlen(mnemo), salt, saltlen, BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
 }
+
+
+// Returns 0 if inputs (i.e. prevOutHash) and outputs are the same as previously used
+int wallet_check_input_output(const char *hex, uint64_t hex_len, char *prev_input, char *prev_output)
+{
+    uint64_t j, n_cnt, n_len, id_start, idx = 0;
+    int len, not_same_input, not_same_output;
+    char input[COMMANDER_REPORT_SIZE] = {0};
+
+    idx += 8;                                       // skip version number
+    
+    // Inputs
+    if (hex_len < idx + 16) {return 1;}
+    idx += varint_to_uint64(hex + idx, &n_cnt);     // skip inCount
+    for (j = 0; j < n_cnt; j++) {
+        strncat(input, hex + idx, 64);              // copy prevOutHash
+        idx += 64;                                  // skip prevOutHash
+        idx += 8;                                   // skip preOutIndex
+        if (hex_len < idx + 16) {return 1;}
+        idx += varint_to_uint64(hex + idx, &n_len); // skip scriptSigLen
+        idx += n_len * 2;                           // skip scriptSig (chars = 2 * bytes) 
+        idx += 8;                                   // skip sequence number
+    }
+
+    // Outputs
+    id_start = idx;
+    if (hex_len < idx + 16) {return 1;}
+    idx += varint_to_uint64(hex + idx, &n_cnt);     // skip outCount
+    for (j = 0; j < n_cnt; j++) {
+        idx += 16;                                  // skip outValue
+        if (hex_len < idx + 16) {return 1;}
+        idx += varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
+        idx += n_len * 2;                           // skip outScript (chars = 2 * bytes) 
+    }
+    len = idx - id_start;
+
+    not_same_input  = memcmp(prev_input, input, COMMANDER_REPORT_SIZE);
+    not_same_output = memcmp(prev_output, hex + id_start,
+                                len < COMMANDER_REPORT_SIZE ? 
+                                len : COMMANDER_REPORT_SIZE);
+                
+    // Update 
+    memcpy(prev_input, input, COMMANDER_REPORT_SIZE);
+    memset(prev_output, 0, COMMANDER_REPORT_SIZE);
+    memcpy(prev_output, hex + id_start, 
+            len < COMMANDER_REPORT_SIZE ? 
+            len : COMMANDER_REPORT_SIZE);
+   
+
+    return (not_same_input || not_same_output);
+}
+
 
 
 

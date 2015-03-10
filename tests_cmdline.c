@@ -40,11 +40,11 @@ void usage(char * argv[])
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
     printf("  Example:\n\t./tests_cmdline \"{ "
            "\\\"seed\\\":{\\\"strength\\\":\\\"256\\\"},  "
-           "\\\"sign\\\":[{"
+           "\\\"sign\\\": {"
            "\\\"id\\\":\\\"id_1\\\", "
-           "\\\"hash\\\":\\\"yes\\\", "
+           "\\\"type\\\":\\\"rawtx\\\", "
            "\\\"data\\\":\\\"unsigned data\\\", "
-           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"}] }\"\n\n" );
+           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
     
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "
             "Multiple commands can be sent within a single\nJSON object. This is shown in the "

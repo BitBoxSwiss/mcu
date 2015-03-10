@@ -32,10 +32,14 @@
 #include "memory.h"
 
 #define TO_UINT8_HEX_BUF_LEN 2048
+#define VARINT_LEN 20
 
 
 uint8_t *hex_to_uint8(const char *str);
 char *uint8_to_hex(const uint8_t *bin, size_t l);
+void reverse_hex(char *h, int len);
+void uint64_to_varint(char *vi, int *l, uint64_t i);
+int varint_to_uint64(const char *vi, uint64_t *i);
 #ifdef TESTING
 uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len);
 void utils_print_report(const char *report, PASSWORD_ID dec_id);

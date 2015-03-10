@@ -76,7 +76,7 @@
         CMD(generate)           \
         CMD(mnemonic)           \
         CMD(id)                 \
-        CMD(hash)               \
+        CMD(type)               \
         CMD(data)               \
         CMD(keypath)            \
         CMD(strength)           \
@@ -88,9 +88,11 @@
 
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
+        ATTR(raw)               \
+        ATTR(hash)              \
         ATTR(list)              \
-        ATTR(toggle)            \
         ATTR(true)              \
+        ATTR(toggle)            \
         ATTR(pseudo)            \
         ATTR(serial)            \
         ATTR(version)           \

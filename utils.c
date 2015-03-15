@@ -209,8 +209,10 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
     } else {
         int encrypt_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
-        utils_print_report(commander(enc), dec_id);
+        char cmd[COMMANDER_REPORT_SIZE] = {0};
+        memcpy(cmd, enc, encrypt_len);
         free(enc); 
+        utils_print_report(commander(cmd), dec_id);
     }
 }
 
@@ -220,8 +222,10 @@ void utils_send_cmd_x2(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_
 {
     int encrypt_len;
     char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
-    utils_print_report(commander(enc), dec_id);
-    utils_print_report(commander(enc), dec_id);
+    char cmd[COMMANDER_REPORT_SIZE] = {0};
+    memcpy(cmd, enc, encrypt_len);
     free(enc); 
+    utils_print_report(commander(cmd), dec_id);
+    utils_print_report(commander(cmd), dec_id);
 }
 #endif

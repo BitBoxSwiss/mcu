@@ -54,6 +54,7 @@
         CMD(sign)               \
         CMD(seed)               \
         CMD(load)               \
+        CMD(xpub)               \
         CMD(backup)             \
         CMD(device)             \
         CMD(password)           \
@@ -64,10 +65,9 @@
   /*    parent commands     */  \
         CMD(led)                \
         CMD(name)               \
-        CMD(xpub)               \
-        CMD(random)             \
-        CMD(reset)              \
         CMD(echo)               \
+        CMD(reset)              \
+        CMD(random)             \
         CMD(ciphertext)         \
   /*    child commands      */  \
         CMD(timeout)            \

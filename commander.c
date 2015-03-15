@@ -646,13 +646,19 @@ static void commander_parse(const char *encrypted_command)
 							memcpy(message, command + json_token[j + 1].start, msglen);
 							message[msglen] = '\0';
 							r = process_sign_check(message);
-							//r = process_sign_check(command + json_token[j + 1].start);
 							if (r == 0) {
 								SAME_SIG_KEYS = 1;
 								continue; // Continue without echo if inputs and outputs
 										  // are the same as previously verified.
-								} else if (r == 2) {
-								return; // error
+                            } else if (r == 1) {
+                                commander_echo(previous_output, id); 
+                                ECHO_COMMAND = 1;
+								free(command);
+                                return; 
+                            } else if (r == 2) {
+                                // error
+								free(command);
+                                return;
 							}
                         }
                         commander_echo(command, id);

@@ -641,14 +641,19 @@ static void commander_parse(const char *encrypted_command)
                 {    
                     if (cmd < CMD_require_touch_) {
                         if (cmd == CMD_sign_) {
-                            r = process_sign_check(command + json_token[j + 1].start);
-                            if (r == 0) {
-                                SAME_SIG_KEYS = 1;
-                                continue; // Continue without echo if inputs and outputs 
-                                          // are the same as previously verified.
-                            } else if (r == 2) {
-                                return; // error
-                            }
+							msglen = json_token[j + 1].end-json_token[j + 1].start;
+							char message[msglen + 1];
+							memcpy(message, command + json_token[j + 1].start, msglen);
+							message[msglen] = '\0';
+							r = process_sign_check(message);
+							//r = process_sign_check(command + json_token[j + 1].start);
+							if (r == 0) {
+								SAME_SIG_KEYS = 1;
+								continue; // Continue without echo if inputs and outputs
+										  // are the same as previously verified.
+								} else if (r == 2) {
+								return; // error
+							}
                         }
                         commander_echo(command, id);
                         ECHO_COMMAND = 1;

@@ -56,7 +56,7 @@ static char previous_output[COMMANDER_REPORT_SIZE] = {0};
 static char previous_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
-static int ECHO_COMMAND = 1;
+static int ECHO_COMMAND = 0;
 static int SIG_COUNT = 0;
 
 
@@ -679,6 +679,10 @@ static void commander_parse(const char *encrypted_command)
                             if (!touch_button_press()) { 
                                 BUTTON_TOUCHED = 1;
                             } else {
+                                // Clear previous signing information to force touch 
+                                // for next sign command.
+                                memset(previous_input, 0, COMMANDER_REPORT_SIZE);
+                                memset(previous_output, 0, COMMANDER_REPORT_SIZE);
                                 break;
                             }
                         }
@@ -688,7 +692,6 @@ static void commander_parse(const char *encrypted_command)
                     memcpy(message, command + json_token[j + 1].start, msglen);
                     message[msglen] = '\0';
                     if (commander_process_token(cmd, message) < 0) {
-                    //if (commander_process_token(cmd, command + json_token[j + 1].start) < 0) {
                         free(command);
                         return; // _reset_ called
                     }

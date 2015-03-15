@@ -746,16 +746,13 @@ char *commander(const char *command)
     } else {
         // Ready to process
         if (ECHO_COMMAND) {
-            if (memcmp(previous_command, command, strlen(previous_command))) {
+            if (memcmp(previous_command, command, COMMANDER_REPORT_SIZE)) {
                 // Different command received, so do not echo the command
                 ECHO_COMMAND = 0;
             }
         }
         // Copy current command to memory 
-        memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-        memcpy(previous_command, command, 
-                strlen(command) < COMMANDER_REPORT_SIZE ? 
-                strlen(command) : COMMANDER_REPORT_SIZE);
+        memcpy(previous_command, command, COMMANDER_REPORT_SIZE);
        
         // Process
         commander_parse(command);

@@ -51,7 +51,6 @@ const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
-static char verify_command[COMMANDER_REPORT_SIZE] = {0};
 static char verify_output[COMMANDER_REPORT_SIZE] = {0};
 static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
@@ -508,7 +507,40 @@ static int commander_check_init(const char *encrypted_command)
     
     return SUCCESS; 
 }
-                          
+ 
+
+// Echo the signing information for user verification.
+static void commander_echo(const char *command)
+{
+    commander_clear_report();
+    
+    // Encrypt the echo with multipass password
+    int encrypt_len;
+    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
+                                            strlen(command), 
+                                            &encrypt_len,
+                                            PASSWORD_MULTI); 
+    // Fill report to send
+    commander_clear_report();
+    if (encoded_report) {
+        commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
+        free(encoded_report);
+    } else {
+        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
+    }    
+}
+                        
+
+static char *commander_format_output(const char *output) 
+{
+    static char out[COMMANDER_REPORT_SIZE];
+    memset(out, 0, COMMANDER_REPORT_SIZE);
+    strcat(out, "{\"serialized_outputs\":\"");
+    strncat(out, output, strlen(output));
+    strcat(out, "\"}");
+    return out;
+}
+
 
 // Returns 0 if inputs and outputs are the same
 static int commander_verify_signing(const char *message)
@@ -528,14 +560,21 @@ static int commander_verify_signing(const char *message)
     {
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different)
         // Updates verify_input and verify_output
-        return wallet_check_input_output(data, data_len, verify_input, verify_output);
+        if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
+            return SAME;
+        } else {
+            commander_echo(commander_format_output(verify_output)); 
+            return DIFFERENT;
+        }
     } 
     else 
     {
         // Check whole input command instead of inputs/outputs since data is hashed
-        if (memcmp(verify_output, verify_command, COMMANDER_REPORT_SIZE)) {
+        if (memcmp(verify_output, message, strlen(message))) {
             // Different command received, reset
-            memcpy(verify_output, verify_command, COMMANDER_REPORT_SIZE);
+            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+            memcpy(verify_output, message, strlen(message));
+            commander_echo(verify_output); 
             return DIFFERENT;
         } else {
             // Same command received
@@ -545,30 +584,6 @@ static int commander_verify_signing(const char *message)
 }
 
 
-// Echo the signing information for user verification.
-static void commander_echo(const char *command)
-{
-    commander_clear_report();
-    
-    // Encrypt the echo with multipass password
-    int encrypt_len;
-    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
-                                            strlen(command), 
-                                            &encrypt_len,
-                                            PASSWORD_MULTI); 
-    
-    // Fill report to send
-    commander_clear_report();
-    if (encoded_report) {
-        commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
-        free(encoded_report);
-    } else {
-        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
-    }    
-}
-
-
-// Returns 0 for successful touch
 static int commander_touch_button(int found_cmd, const char *message)
 {
     int t, c, ret;
@@ -582,11 +597,9 @@ static int commander_touch_button(int found_cmd, const char *message)
                 // to force touch for next sign command.
                 memset(verify_input, 0, COMMANDER_REPORT_SIZE);
                 memset(verify_output, 0, COMMANDER_REPORT_SIZE);
-                memset(verify_command, 0, COMMANDER_REPORT_SIZE);
             }
             ret = t;
         } else if (c == DIFFERENT) {
-            commander_echo(verify_output); 
             ret = ECHO; 
         } else {
             ret = ERROR;
@@ -617,7 +630,7 @@ static void commander_parse(const char *encrypted_command)
     if (!command) {
         return;
     }
-
+    
     // Extract commands
     found = 0;
     for (j = 0; j < n_tokens; j++) {
@@ -656,7 +669,7 @@ static void commander_parse(const char *encrypted_command)
             }
             memset(message, 0, msglen);
         } else {
-            // error
+            // error or not touched
         }
     }
 
@@ -685,7 +698,6 @@ static void commander_parse(const char *encrypted_command)
 // Single gateway function to the MCU code
 char *commander(const char *command)
 {
-    memcpy(verify_command, command, COMMANDER_REPORT_SIZE);
     if (commander_check_init(command) == SUCCESS) {
         commander_parse(command);
     }

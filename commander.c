@@ -626,7 +626,7 @@ static int commander_touch_button(int found_cmd, const char *message)
         } else if (c == 1) {
             // new signing command, echo for verification 
             commander_echo(verify_output); 
-            ret = 1; 
+            ret = -1; 
         } else {
             // error
             ret = 1;
@@ -648,7 +648,7 @@ static void commander_parse(const char *encrypted_command)
 { 
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
     
-    int n_tokens, j, cmd, found, found_cmd, found_j, msglen;
+    int n_tokens, j, t, cmd, found, found_cmd, found_j, msglen;
     jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
@@ -686,7 +686,10 @@ static void commander_parse(const char *encrypted_command)
         char message[msglen + 1];
         memcpy(message, command + json_token[found_j + 1].start, msglen);
         message[msglen] = '\0';
-        if (!commander_touch_button(found_cmd, message)) {
+        t = commander_touch_button(found_cmd, message);
+        if (t < 0) {
+            return; // echo called
+        } else if (!t) {
             if (commander_process_token(found_cmd, message) < 0) {
                 free(command);
                 return; // _reset_ called

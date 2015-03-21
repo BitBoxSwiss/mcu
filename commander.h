@@ -54,7 +54,6 @@
         CMD(sign)               \
         CMD(seed)               \
         CMD(load)               \
-        CMD(xpub)               \
         CMD(backup)             \
         CMD(device)             \
         CMD(password)           \
@@ -65,6 +64,7 @@
   /*    parent commands     */  \
   /*    not requiring touch */  \
         CMD(led)                \
+        CMD(xpub)               \
         CMD(name)               \
         CMD(echo)               \
         CMD(reset)              \

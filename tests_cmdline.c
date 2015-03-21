@@ -35,28 +35,15 @@
 
 void usage(char * argv[])
 {
-    printf("\nThis function provides a command line interface to the Digital Bitbox code.\n");
-    
+    printf("\nExample code to run the Digital Bitbox MCU code.\n");
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline \"{ "
-           "\\\"seed\\\":{\\\"strength\\\":\\\"256\\\"},  "
-           "\\\"sign\\\": {"
-           "\\\"id\\\":\\\"id_1\\\", "
-           "\\\"type\\\":\\\"rawtx\\\", "
-           "\\\"data\\\":\\\"unsigned data\\\", "
-           "\\\"keypath\\\":\\\"m/44'/0'/1'/0/1\\\"} }\"\n\n" );
-    
-    printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com. "
-            "Multiple commands can be sent within a single\nJSON object. This is shown in the "
-            "example above where a BIP32-type\nwallet is first generated and then used to sign a transaction.\n\n\n");
+    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"strength\\\":\\\"256\\\"} }\"\n\n" );
+    printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com.\n\n\n");
 }
 
 
 int main ( int argc, char *argv[] )
 {
-    PASSWORD_ID encrypt_id = PASSWORD_STAND;// Standard password
-    PASSWORD_ID decrypt_id = PASSWORD_MULTI;// Multipass password
-    
     if (argc != 2) {
         usage(argv);
     } else {
@@ -66,9 +53,9 @@ int main ( int argc, char *argv[] )
         // This initial password sets both the standard and 
         // multipass passwords to the same value. Refer to 
         // the API documentation for more details.
-        utils_send_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE, decrypt_id); 
-        utils_send_cmd("{\"multipass\":\"multipass_password\"}", PASSWORD_NONE, decrypt_id); // if not set, uses the standard password 
-        utils_send_cmd_x2(argv[1], encrypt_id, decrypt_id); 
+        utils_send_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE); 
+        utils_send_cmd("{\"multipass\":\"multipass_password\"}", PASSWORD_NONE); // if not set, uses the standard password 
+        utils_send_cmd(argv[1], PASSWORD_STAND); 
     }
     return 0;
 }

@@ -42,9 +42,9 @@ void uint64_to_varint(char *vi, int *l, uint64_t i);
 int varint_to_uint64(const char *vi, uint64_t *i);
 #ifdef TESTING
 uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len);
-void utils_print_report(const char *report, PASSWORD_ID dec_id);
-void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id);
-void utils_send_cmd_x2(const char *instruction, PASSWORD_ID enc_id, PASSWORD_ID dec_id);
+void utils_print_report(const char *report);
+void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id);
+void utils_send_cmd_x2(const char *instruction);
 #endif
 
 

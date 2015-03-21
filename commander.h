@@ -63,6 +63,7 @@
   /* placeholder don't move */  \
         CMD(require_touch)      \
   /*    parent commands     */  \
+  /*    not requiring touch */  \
         CMD(led)                \
         CMD(name)               \
         CMD(echo)               \
@@ -84,6 +85,7 @@
         CMD(filename)           \
         CMD(decrypt)            \
         CMD(encrypt)            \
+  /* placeholder don't move */  \
         CMD(none)                /* keep last */
 
 #define FOREACH_ATTR(ATTR)      \

@@ -51,12 +51,11 @@ const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
-static char previous_command[COMMANDER_REPORT_SIZE] = {0};
-static char previous_output[COMMANDER_REPORT_SIZE] = {0};
-static char previous_input[COMMANDER_REPORT_SIZE] = {0};
+static char verify_command[COMMANDER_REPORT_SIZE] = {0};
+static char verify_output[COMMANDER_REPORT_SIZE] = {0};
+static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 static int REPORT_BUF_OVERFLOW = 0;
-static int ECHO_COMMAND = 0;
 static int SIG_COUNT = 0;
 
 
@@ -168,9 +167,9 @@ static void device_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (!touch_button_press()) { //delay_ms(1000);
-            if (!touch_button_press()) { //delay_ms(1000);
-            if (!touch_button_press()) {
+            if (!touch_button_press(0)) { //delay_ms(1000);
+            if (!touch_button_press(0)) { //delay_ms(1000);
+            if (!touch_button_press(0)) {
                 memory_erase();
                 commander_clear_report();
                 commander_fill_report("reset", "success", SUCCESS);
@@ -323,7 +322,7 @@ static void process_sign(char *message)
                           
 
 // Returns 0 if inputs and outputs are the same
-static int process_sign_check(char *message)
+static int process_sign_check(const char *message)
 {
     int data_len, type_len;
     char *data, *type;
@@ -331,15 +330,28 @@ static int process_sign_check(char *message)
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
    
-
     if (!data || !type) {
         commander_fill_report("sign", "Incomplete command.", ERROR);
         return 2;  
     }
-    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
-        return wallet_check_input_output(data, data_len, previous_input, previous_output);
-    } else {
-        return 1;
+    
+    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) 
+    {
+        // Check if deserialized inputs and outputs are the same (scriptSig's could be different)
+        // Updates verify_input and verify_output
+        return wallet_check_input_output(data, data_len, verify_input, verify_output);
+    } 
+    else 
+    {
+        // Check whole input command instead of inputs/outputs since data is hashed
+        if (memcmp(verify_output, verify_command, COMMANDER_REPORT_SIZE)) {
+            // Different command received, reset
+            memcpy(verify_output, verify_command, COMMANDER_REPORT_SIZE);
+            return 1;
+        } else {
+            // Same command received
+            return 0;
+        }
     }
 }
 
@@ -456,59 +468,40 @@ static int commander_process_token(int cmd, char *message)
 }
 
 
-static char *commander_decrypt(const char *encrypted_command, PASSWORD_ID *ID, 
-                              jsmntok_t json_token[MAX_TOKENS], int *n_tokens)
+static char *commander_decrypt(const char *encrypted_command,  
+                              jsmntok_t json_token[MAX_TOKENS],
+                              int *n_tokens)
 {
     // Process instructions
-    PASSWORD_ID id = PASSWORD_NONE;
     char *command;
     int command_len, n = 0;
-
+    
     // Decrypt & parse instructions
     command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
                                       strlen(encrypted_command), 
                                       &command_len,
                                       PASSWORD_STAND);
     
-    if (command) {
-        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
-        n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
-        if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
-        {
-            id = PASSWORD_STAND;
-        }
-    } 
-    if (id == PASSWORD_NONE && !command) {
-        command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
-                                          strlen(encrypted_command), 
-                                          &command_len,
-                                          PASSWORD_MULTI);
-            
-        if (command) {
-	        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
-            n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
-            if (json_token[0].type == JSMN_OBJECT  &&  n > 0) 
-            {
-                id = PASSWORD_MULTI;
-            }
-        }
-    }
-
     if (command == NULL) {
         commander_fill_report("input", "Could not decrypt. "
                     "Too many access errors will cause the device to reset. ", ERROR);
         memory_delay_iterate(1);
-    } 
-    else if (id == PASSWORD_NONE) {
+    } else {
+        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
+        n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
+    }
+    *n_tokens = n;
+    
+    if (!(json_token[0].type == JSMN_OBJECT  &&  n > 0))
+    {
         commander_fill_report("input", "JSON parse error. "
                     "Too many access errors will cause the device to reset. "
                     "Is the command enclosed by curly brackets?", ERROR);
         memory_delay_iterate(1);
+        return NULL;
+    } else {
+        return command;
     }
-    
-    *n_tokens = n;
-    *ID = id;
-    return command;
 }
 
 
@@ -572,7 +565,7 @@ static int commander_check_init(const char *encrypted_command)
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_multipass_], &pw_len);
             if (pw != NULL) {
-                if (!touch_button_press()) {
+                if (!touch_button_press(0)) {
                     if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
                         memory_multipass_write(0); 
                         commander_fill_report("multipass", "success", SUCCESS);
@@ -589,184 +582,150 @@ static int commander_check_init(const char *encrypted_command)
 }
 
 
-// Echo the input command. Encrypt the echo with the opposite multipass password.
-// Useful for user verification of input instructions.
-static void commander_echo(const char *command, PASSWORD_ID id)
+// Echo the signing information for user verification.
+static void commander_echo(const char *command)
 {
     commander_clear_report();
     
-    if (id != PASSWORD_NONE) {
-        // Encrypt the echo with the opposite password used to encrypt input`
-        int encrypt_len;
-        char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
-                                                strlen(command), 
-                                                &encrypt_len,
-                                                !id); 
-        
-        // Fill report to send
-        commander_clear_report();
-        if (encoded_report) {
-            commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
-            free(encoded_report);
-        } else {
-            commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
-        }    
-    }
+    // Encrypt the echo with multipass password
+    int encrypt_len;
+    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
+                                            strlen(command), 
+                                            &encrypt_len,
+                                            PASSWORD_MULTI); 
+    
+    // Fill report to send
+    commander_clear_report();
+    if (encoded_report) {
+        commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
+        free(encoded_report);
+    } else {
+        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
+    }    
 }
 
- 
+
+// Returns 0 for successful touch
+static int commander_touch_button(int found_cmd, const char *message)
+{
+    int t, c, ret;
+    
+    if (found_cmd == CMD_sign_) {
+        c = process_sign_check(message);
+        if (c == 0) {
+            // OK. Same signing information received.
+            t = touch_button_press(1);
+            if (t) {
+                // Button not touched. Clear previous signing information
+                // to force touch for next sign command.
+                memset(verify_input, 0, COMMANDER_REPORT_SIZE);
+                memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+                memset(verify_command, 0, COMMANDER_REPORT_SIZE);
+            }
+            ret = t;
+        } else if (c == 1) {
+            // new signing command, echo for verification 
+            commander_echo(verify_output); 
+            ret = 1; 
+        } else {
+            // error
+            ret = 1;
+        }
+        
+    } else if (found_cmd < CMD_require_touch_) {
+        ret = touch_button_press(0);
+
+    } else {
+        ret = 0;
+    }
+    
+    return ret;
+}
+
+
 // Parse and process instructions
 static void commander_parse(const char *encrypted_command)
 { 
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
     
-    PASSWORD_ID id;
-    int BUTTON_TOUCHED = 0;
-    int SAME_SIG_KEYS = 0;
-    int n_tokens, j, cmd, found, msglen, r;
+    int n_tokens, j, cmd, found, found_cmd, found_j, msglen;
     jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
     
-    char *command = commander_decrypt(encrypted_command, &id, json_token, &n_tokens);
+    char *command = commander_decrypt(encrypted_command, json_token, &n_tokens);
+    if (!command) {
+        return;
+    }
 
-    // Echo instructions if a command requires touch confirmation
-    if (id != PASSWORD_NONE && !ECHO_COMMAND) {
-        for (j = 0; j < n_tokens; j++) {
-            if (json_token[j].parent != 0) {
-                continue; // Skip child tokens
-            }
-            for (cmd = 0; cmd < CMD_NUM; cmd++) {    
-                if (jsmn_token_equals(command, &json_token[j], CMD_STR[cmd]) == 0) 
-                {    
-                    if (cmd < CMD_require_touch_) {
-                        if (cmd == CMD_sign_) {
-							msglen = json_token[j + 1].end-json_token[j + 1].start;
-							char message[msglen + 1];
-							memcpy(message, command + json_token[j + 1].start, msglen);
-							message[msglen] = '\0';
-							r = process_sign_check(message);
-							if (r == 0) {
-								SAME_SIG_KEYS = 1;
-								continue; // Continue without echo if inputs and outputs
-										  // are the same as previously verified.
-                            } else if (r == 1) {
-                                commander_echo(previous_output, id); 
-                                ECHO_COMMAND = 1;
-								free(command);
-                                return; 
-                            } else if (r == 2) {
-                                // error
-								free(command);
-                                return;
-							}
-                        }
-                        commander_echo(command, id);
-                        ECHO_COMMAND = 1;
-                        free(command);
-                        return; // Echo command; do not process
-                    }
-                }
+    // Extract commands
+    found = 0;
+    for (j = 0; j < n_tokens; j++) {
+        if (json_token[j].parent != 0) {
+            continue; // Skip child tokens
+        }
+        for (cmd = 0; cmd < CMD_NUM; cmd++) {    
+            if (jsmn_token_equals(command, &json_token[j], CMD_STR[cmd]) == 0) 
+            {                    
+                found++;
+                found_j = j;
+                found_cmd = cmd;
+                break;
             }
         }
+    }
+
+    // Process commands
+    if (!found) {
+        commander_fill_report("input", "A valid command was not found.", ERROR);
+    } else if (found > 1) {
+        commander_fill_report("input", "Only one command allowed at a time.", ERROR);
+    } else {
+        memory_delay_iterate(0); // reset to 0
+        msglen = json_token[found_j + 1].end-json_token[found_j + 1].start;
+        char message[msglen + 1];
+        memcpy(message, command + json_token[found_j + 1].start, msglen);
+        message[msglen] = '\0';
+        if (!commander_touch_button(found_cmd, message)) {
+            if (commander_process_token(found_cmd, message) < 0) {
+                free(command);
+                return; // _reset_ called
+            }
+            memset(message, 0, msglen);
+        }
+    }
+
+    // Encrypt report
+    int encrypt_len;
+    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
+                                            strlen(json_report), 
+                                            &encrypt_len,
+                                            PASSWORD_STAND); // encrypt output with the opposite password used to encrypt input`
+    
+    // Fill encrypted JSON report to send
+    commander_clear_report();
+    if (encoded_report) {
+        commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
+        free(encoded_report);
+    } else {
+        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
     }
     
-    ECHO_COMMAND = 0; // Reset
-
-    // Process instructions
-    if (id != PASSWORD_NONE) {
-        found = 0;
-        for (j = 0; j < n_tokens; j++) {
-            if (json_token[j].parent != 0) {
-                continue; // Skip child tokens
-            }
-            for (cmd = 0; cmd < CMD_NUM; cmd++) {    
-                if (jsmn_token_equals(command, &json_token[j], CMD_STR[cmd]) == 0) 
-                {                    
-                    found = 1;
-                    if (cmd < CMD_require_touch_) 
-                    {
-                        if (!BUTTON_TOUCHED && !SAME_SIG_KEYS) {
-                            if (!touch_button_press()) { 
-                                BUTTON_TOUCHED = 1;
-                            } else {
-                                // Clear previous signing information to force touch 
-                                // for next sign command.
-                                memset(previous_input, 0, COMMANDER_REPORT_SIZE);
-                                memset(previous_output, 0, COMMANDER_REPORT_SIZE);
-                                break;
-                            }
-                        }
-                    }
-                    msglen = json_token[j + 1].end-json_token[j + 1].start;
-                    char message[msglen + 1];
-                    memcpy(message, command + json_token[j + 1].start, msglen);
-                    message[msglen] = '\0';
-                    if (commander_process_token(cmd, message) < 0) {
-                        free(command);
-                        return; // _reset_ called
-                    }
-                    memset(message, 0, msglen);
-                    break;
-                }
-            }
-        }
-
-        if (found) {
-            memory_delay_iterate(0);
-        } else {
-            commander_fill_report("input", "A valid command was not found.", ERROR);
-        }
-        
-        // Encrypt report
-        int encrypt_len;
-        char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-                                                strlen(json_report), 
-                                                &encrypt_len,
-                                                !id); // encrypt output with the opposite password used to encrypt input`
-        
-        // Fill JSON report to send
-        commander_clear_report();
-        if (encoded_report) {
-            commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
-            free(encoded_report);
-        } else {
-            commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
-        }
-        memset(command, 0, strlen(command)); // TEST strlen
-    }
+    memset(command, 0, strlen(command));
     free(command);
-
     memory_clear_variables();
 }
 
 
-// For commands requiring touch confirmation, perform two steps:
-//  I:  Echo the input command, using the opposite multipass password to encrypt the output (useful for user verification)
-// II:  Process the input command (must be sent from the client a second time), and report results
+// Single gateway function to the MCU code
 char *commander(const char *command)
 {
-    if (commander_check_init(command)) {
-        // Not initialized
-        ECHO_COMMAND = 0;
-    } else {
-        // Ready to process
-        if (ECHO_COMMAND) {
-            if (memcmp(previous_command, command, COMMANDER_REPORT_SIZE)) {
-                // Different command received, so do not echo the command
-                ECHO_COMMAND = 0;
-            }
-        }
-        // Copy current command to memory 
-        memcpy(previous_command, command, COMMANDER_REPORT_SIZE);
-       
-        // Process
+    memcpy(verify_command, command, COMMANDER_REPORT_SIZE);
+    if (!commander_check_init(command)) {
         commander_parse(command);
     }
 	return json_report;
 }
-
-
 
 
 // Must free() returned value (allocated inside base64() function)
@@ -809,7 +768,6 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
 
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
 {
-    
     // unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);

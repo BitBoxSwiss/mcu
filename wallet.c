@@ -381,8 +381,8 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t 
 }
 
 
-// Returns 0 if inputs (i.e. prevOutHash) and outputs are the same as previously used
-int wallet_check_input_output(const char *hex, uint64_t hex_len, char *prev_input, char *prev_output)
+// Returns 0 if inputs (i.e. prevOutHash's) and outputs are the same as previously used
+int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, char *v_output)
 {
     uint64_t j, n_cnt, n_len, id_start, idx = 0;
     int len, not_same_input, not_same_output;
@@ -415,15 +415,15 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *prev_inpu
     }
     len = idx - id_start;
 
-    not_same_input  = memcmp(prev_input, input, COMMANDER_REPORT_SIZE);
-    not_same_output = memcmp(prev_output, hex + id_start,
+    not_same_input  = memcmp(v_input, input, COMMANDER_REPORT_SIZE);
+    not_same_output = memcmp(v_output, hex + id_start,
                                 len < COMMANDER_REPORT_SIZE ? 
                                 len : COMMANDER_REPORT_SIZE);
                 
-    // Update 
-    memcpy(prev_input, input, COMMANDER_REPORT_SIZE);
-    memset(prev_output, 0, COMMANDER_REPORT_SIZE);
-    memcpy(prev_output, hex + id_start, 
+    // Return current inputs and outputs
+    memcpy(v_input, input, COMMANDER_REPORT_SIZE);
+    memset(v_output, 0, COMMANDER_REPORT_SIZE);
+    memcpy(v_output, hex + id_start, 
             len < COMMANDER_REPORT_SIZE ? 
             len : COMMANDER_REPORT_SIZE);
    

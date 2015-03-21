@@ -167,7 +167,7 @@ uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
 }
 
 
-void utils_print_report(const char *report, PASSWORD_ID dec_id)
+void utils_print_report(const char *report)
 {
     int decrypt_len, r, i, len;
     char cipher[COMMANDER_REPORT_SIZE], *dec;
@@ -184,14 +184,14 @@ void utils_print_report(const char *report, PASSWORD_ID dec_id)
         if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
             memcpy(cipher, report + json_token[i + 1].start, len);
             cipher[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
+            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_STAND);
             printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
             free(dec);
             return;
         } else if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_echo_]) == 0) {
             memcpy(cipher, report + json_token[i + 1].start, len);
             cipher[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, dec_id);
+            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_MULTI);
             printf("echo:      \t%.*s\n", decrypt_len, dec);
             free(dec);
             return;
@@ -202,30 +202,30 @@ void utils_print_report(const char *report, PASSWORD_ID dec_id)
 }
 
 
-void utils_send_cmd(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
+void utils_send_cmd(const char *command, PASSWORD_ID enc_id )
 {
     if (enc_id == PASSWORD_NONE) {
-        utils_print_report(commander(command), dec_id);
+        utils_print_report(commander(command));
     } else {
         int encrypt_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};
         memcpy(cmd, enc, encrypt_len);
         free(enc); 
-        utils_print_report(commander(cmd), dec_id);
+        utils_print_report(commander(cmd));
     }
 }
 
 
 // Send command twice in case of command being echoed (i.e. when touch button is required)
-void utils_send_cmd_x2(const char *command, PASSWORD_ID enc_id, PASSWORD_ID dec_id)
+void utils_send_cmd_x2(const char *command)
 {
     int encrypt_len;
-    char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
+    char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, PASSWORD_STAND);
     char cmd[COMMANDER_REPORT_SIZE] = {0};
     memcpy(cmd, enc, encrypt_len);
     free(enc); 
-    utils_print_report(commander(cmd), dec_id);
-    utils_print_report(commander(cmd), dec_id);
+    utils_print_report(commander(cmd));
+    utils_print_report(commander(cmd));
 }
 #endif

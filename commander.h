@@ -111,6 +111,12 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 enum REPORT_FLAGS { 
     SUCCESS = 0, 
     ERROR = 1, 
+    ECHO = 2,
+    SAME = 3,
+    DIFFERENT = 4,
+    TOUCHED = 5,
+    NOT_TOUCHED = 6,
+    RESET = 7,
 };
 
 

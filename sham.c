@@ -72,7 +72,7 @@ uint8_t touch_button_press(int long_touch)
 {
     (void) long_touch;
     commander_fill_report("touchbutton", "touched (hard coded)", SUCCESS);
-    return 0;
+    return TOUCHED;
 }
 
 

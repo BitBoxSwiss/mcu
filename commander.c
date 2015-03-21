@@ -260,42 +260,6 @@ static void process_backup(char *message)
     }	
 }
 
-/*
-static void process_sign(char *array)
-{ 
-    int data_len, keypath_len, type_len, item_len, id_len, id_cnt = 0, to_hash = 0;
-    char *item, *data, *keypath, *type, *id;
-
-    while ((item = (char *)jsmn_get_item(array, id_cnt, &item_len))) {
-        char message[item_len + 1];
-        memcpy(message, item, item_len);
-        message[item_len] = '\0';
-       
-        id = (char *)jsmn_get_value_string(message,CMD_STR[CMD_id_], &id_len);
-        type = (char *)jsmn_get_value_string(message,CMD_STR[CMD_type_], &type_len);
-        data = (char *)jsmn_get_value_string(message,CMD_STR[CMD_data_], &data_len);
-        keypath = (char *)jsmn_get_value_string(message,CMD_STR[CMD_keypath_], &keypath_len);
-        
-        if (!data || !keypath || !id || !type) {
-            commander_fill_report("sign", "Incomplete command.", ERROR);
-            return;  
-        }
-        if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
-            to_hash = 1;
-        }    
-        
-        if (wallet_sign(data, data_len, keypath, to_hash, id, id_len)) {
-            // error signing
-            return;
-        }
-        id_cnt++;
-    }
-
-    if (id_cnt == 0) {
-        commander_fill_report("sign", "Parse error. Data to sign should be a list enclosed by square brackets.", ERROR);
-    }
-}
-*/
 
 static void process_sign(char *message)
 { 
@@ -318,41 +282,6 @@ static void process_sign(char *message)
         return;
     }
     wallet_sign(data, data_len, keypath, to_hash, id, id_len);
-}
-                          
-
-// Returns 0 if inputs and outputs are the same
-static int process_sign_check(const char *message)
-{
-    int data_len, type_len;
-    char *data, *type;
-    
-    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
-    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
-   
-    if (!data || !type) {
-        commander_fill_report("sign", "Incomplete command.", ERROR);
-        return 2;  
-    }
-    
-    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) 
-    {
-        // Check if deserialized inputs and outputs are the same (scriptSig's could be different)
-        // Updates verify_input and verify_output
-        return wallet_check_input_output(data, data_len, verify_input, verify_output);
-    } 
-    else 
-    {
-        // Check whole input command instead of inputs/outputs since data is hashed
-        if (memcmp(verify_output, verify_command, COMMANDER_REPORT_SIZE)) {
-            // Different command received, reset
-            memcpy(verify_output, verify_command, COMMANDER_REPORT_SIZE);
-            return 1;
-        } else {
-            // Same command received
-            return 0;
-        }
-    }
 }
 
 
@@ -388,16 +317,16 @@ static int commander_process_token(int cmd, char *message)
     switch (cmd) {
         case CMD_reset_:
             device_reset(message);
-            return -1;
+            return RESET;
         
         case CMD_password_:
-		    if (process_password(message, strlen(message), PASSWORD_STAND)) {
+		    if (process_password(message, strlen(message), PASSWORD_STAND) == SUCCESS) {
                 commander_fill_report("password", "success", SUCCESS);
             }
             break;
         
         case CMD_multipass_:
-		    if (process_password(message, strlen(message), PASSWORD_MULTI)) {
+		    if (process_password(message, strlen(message), PASSWORD_MULTI) == SUCCESS) {
                 commander_fill_report("multipass", "success", SUCCESS);
             }
             break;
@@ -464,7 +393,7 @@ static int commander_process_token(int cmd, char *message)
         case CMD_none_:
             break;
     }
-    return 0;
+    return SUCCESS;
 }
 
 
@@ -472,11 +401,11 @@ static char *commander_decrypt(const char *encrypted_command,
                               jsmntok_t json_token[MAX_TOKENS],
                               int *n_tokens)
 {
-    // Process instructions
+    // Process command
     char *command;
     int command_len, n = 0;
     
-    // Decrypt & parse instructions
+    // Decrypt & parse command
     command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
                                       strlen(encrypted_command), 
                                       &command_len,
@@ -505,8 +434,7 @@ static char *commander_decrypt(const char *encrypted_command,
 }
 
 
-// Check if OK to process instructions
-// Returns NULL if OK. Otherwise returns a status message.
+// Check if OK to process command.
 static int commander_check_init(const char *encrypted_command)
 {
 	commander_clear_report();
@@ -515,25 +443,25 @@ static int commander_check_init(const char *encrypted_command)
         commander_fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
-        return 1;
+        return ERROR;
     } 
     
     if (!strlen(encrypted_command)) {
         commander_fill_report("input", "No input received. "
                     "Too many access errors will cause the device to reset.", ERROR);
         memory_delay_iterate(1);
-        return 2;
+        return ERROR;
     }
     
-    // In case of a forgotten password, allow reset from an unencrypted instructions.
+    // In case of a forgotten password, allow reset from an unencrypted command.
     if (strstr(encrypted_command, CMD_STR[CMD_reset_]) != NULL) {
         int r_len;
         const char *r = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_reset_], &r_len);
         device_reset(r);
-        return 3;
+        return ERROR;
 	}
     
-    // Force setting a password for encryption before processing instructions.
+    // Force setting a password for encryption before processing command.
     if (memory_erased_read()) {		
         if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
             //memory_erase();
@@ -544,7 +472,7 @@ static int commander_check_init(const char *encrypted_command)
                 // For initialization, set both passwords to be the same. Then, the same code
                 // is used independently of whether or not a multipass second password was set.
                 // Add a multipass second password using a separate JSON command.
-                if (process_password(pw, pw_len, PASSWORD_STAND) && process_password(pw, pw_len, PASSWORD_MULTI)) { 
+                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS && process_password(pw, pw_len, PASSWORD_MULTI) == SUCCESS) { 
                     memory_erased_write(0); 
                     commander_fill_report("password", "success", SUCCESS);
                 }
@@ -554,7 +482,7 @@ static int commander_check_init(const char *encrypted_command)
         } else {
 			commander_fill_report("input", "Please set a password.", ERROR);
 		}
-        return 4;
+        return ERROR;
 	}
 
     // Allow an unencrypted command to set a multipass second password (first time only)
@@ -566,7 +494,7 @@ static int commander_check_init(const char *encrypted_command)
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_multipass_], &pw_len);
             if (pw != NULL) {
                 if (!touch_button_press(0)) {
-                    if (process_password(pw, pw_len, PASSWORD_MULTI)) { 
+                    if (process_password(pw, pw_len, PASSWORD_MULTI) == SUCCESS) { 
                         memory_multipass_write(0); 
                         commander_fill_report("multipass", "success", SUCCESS);
                     }
@@ -574,11 +502,46 @@ static int commander_check_init(const char *encrypted_command)
             } else {
                 commander_fill_report("input", "JSON parse error.", ERROR);
             }
-            return 5;
+            return ERROR;
         }
     }
     
-    return 0; // ok 
+    return SUCCESS; 
+}
+                          
+
+// Returns 0 if inputs and outputs are the same
+static int commander_verify_signing(const char *message)
+{
+    int data_len, type_len;
+    char *data, *type;
+    
+    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+   
+    if (!data || !type) {
+        commander_fill_report("sign", "Incomplete command.", ERROR);
+        return ERROR;  
+    }
+    
+    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) 
+    {
+        // Check if deserialized inputs and outputs are the same (scriptSig's could be different)
+        // Updates verify_input and verify_output
+        return wallet_check_input_output(data, data_len, verify_input, verify_output);
+    } 
+    else 
+    {
+        // Check whole input command instead of inputs/outputs since data is hashed
+        if (memcmp(verify_output, verify_command, COMMANDER_REPORT_SIZE)) {
+            // Different command received, reset
+            memcpy(verify_output, verify_command, COMMANDER_REPORT_SIZE);
+            return DIFFERENT;
+        } else {
+            // Same command received
+            return SAME;
+        }
+    }
 }
 
 
@@ -611,39 +574,36 @@ static int commander_touch_button(int found_cmd, const char *message)
     int t, c, ret;
     
     if (found_cmd == CMD_sign_) {
-        c = process_sign_check(message);
-        if (c == 0) {
-            // OK. Same signing information received.
+        c = commander_verify_signing(message);
+        if (c == SAME) {
             t = touch_button_press(1);
-            if (t) {
-                // Button not touched. Clear previous signing information
+            if (t == NOT_TOUCHED) {
+                // Clear previous signing information
                 // to force touch for next sign command.
                 memset(verify_input, 0, COMMANDER_REPORT_SIZE);
                 memset(verify_output, 0, COMMANDER_REPORT_SIZE);
                 memset(verify_command, 0, COMMANDER_REPORT_SIZE);
             }
             ret = t;
-        } else if (c == 1) {
-            // new signing command, echo for verification 
+        } else if (c == DIFFERENT) {
             commander_echo(verify_output); 
-            ret = -1; 
+            ret = ECHO; 
         } else {
-            // error
-            ret = 1;
+            ret = ERROR;
         }
         
     } else if (found_cmd < CMD_require_touch_) {
         ret = touch_button_press(0);
 
     } else {
-        ret = 0;
+        ret = TOUCHED;
     }
     
     return ret;
 }
 
 
-// Parse and process instructions
+// Parse and process command
 static void commander_parse(const char *encrypted_command)
 { 
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
@@ -687,14 +647,16 @@ static void commander_parse(const char *encrypted_command)
         memcpy(message, command + json_token[found_j + 1].start, msglen);
         message[msglen] = '\0';
         t = commander_touch_button(found_cmd, message);
-        if (t < 0) {
-            return; // echo called
-        } else if (!t) {
-            if (commander_process_token(found_cmd, message) < 0) {
+        if (t == ECHO) {
+            return;
+        } else if (t == TOUCHED) {
+            if (commander_process_token(found_cmd, message) == RESET) {
                 free(command);
-                return; // _reset_ called
+                return;
             }
             memset(message, 0, msglen);
+        } else {
+            // error
         }
     }
 
@@ -724,7 +686,7 @@ static void commander_parse(const char *encrypted_command)
 char *commander(const char *command)
 {
     memcpy(verify_command, command, COMMANDER_REPORT_SIZE);
-    if (!commander_check_init(command)) {
+    if (commander_check_init(command) == SUCCESS) {
         commander_parse(command);
     }
 	return json_report;

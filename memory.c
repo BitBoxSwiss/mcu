@@ -226,7 +226,7 @@ int memory_aeskey_write(const char *password, int len, int id)
 		//sprintf(errormsg,"The password length must be between %i and %i characters.", MEM_AESKEY_LEN_MIN, MEM_PAGE_LEN);
 		sprintf(errormsg,"The password length must be at least %i characters.", MEM_AESKEY_LEN_MIN);
 		commander_fill_report("password", errormsg, ERROR);
-		return 0;
+		return ERROR;
 	}
     
 	sha256_Raw((uint8_t *)password, len, password_b);
@@ -242,10 +242,10 @@ int memory_aeskey_write(const char *password, int len, int id)
     }
 
     if (ret) {
-        return 1;
+        return SUCCESS;
     } else { 
         commander_fill_report("password", "Password saving error.", ERROR);
-        return 0;
+        return ERROR;
     }
 }
 

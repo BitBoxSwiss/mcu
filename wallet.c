@@ -391,13 +391,13 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
     idx += 8;                                       // skip version number
     
     // Inputs
-    if (hex_len < idx + 16) {return 1;}
+    if (hex_len < idx + 16) {return ERROR;}
     idx += varint_to_uint64(hex + idx, &n_cnt);     // skip inCount
     for (j = 0; j < n_cnt; j++) {
         strncat(input, hex + idx, 64);              // copy prevOutHash
         idx += 64;                                  // skip prevOutHash
         idx += 8;                                   // skip preOutIndex
-        if (hex_len < idx + 16) {return 1;}
+        if (hex_len < idx + 16) {return ERROR;}
         idx += varint_to_uint64(hex + idx, &n_len); // skip scriptSigLen
         idx += n_len * 2;                           // skip scriptSig (chars = 2 * bytes) 
         idx += 8;                                   // skip sequence number
@@ -405,11 +405,11 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
 
     // Outputs
     id_start = idx;
-    if (hex_len < idx + 16) {return 1;}
+    if (hex_len < idx + 16) {return ERROR;}
     idx += varint_to_uint64(hex + idx, &n_cnt);     // skip outCount
     for (j = 0; j < n_cnt; j++) {
         idx += 16;                                  // skip outValue
-        if (hex_len < idx + 16) {return 1;}
+        if (hex_len < idx + 16) {return ERROR;}
         idx += varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
         idx += n_len * 2;                           // skip outScript (chars = 2 * bytes) 
     }
@@ -427,8 +427,11 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
             len < COMMANDER_REPORT_SIZE ? 
             len : COMMANDER_REPORT_SIZE);
    
-
-    return (not_same_input || not_same_output);
+    if (not_same_input || not_same_output) {
+        return DIFFERENT;
+    } else {
+        return SAME;
+    }
 }
 
 

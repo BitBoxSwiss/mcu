@@ -177,7 +177,7 @@ void wallet_generate_key(HDNode *node, char *key_path, const uint8_t *privkeymas
     memcpy(node->chain_code, chaincode, 32);
     memcpy(node->private_key, privkeymaster, 32);
 	hdnode_fill_public_key(node);
-    
+   
     pch = strtok(key_path, " /,m\\");
     while (pch != NULL) {
         sscanf(pch, "%lu", &idx); 
@@ -435,11 +435,18 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
 }
 
 
-char *wallet_deserialize_output(const char *hex, uint64_t hex_len)
+char *wallet_deserialize_output(const char *hex, uint64_t hex_len, char *keypath)
 {
-    uint64_t j, n_cnt, n_len, idx = 0, outValue;
+    uint64_t j, cnt = 0, n_cnt, n_len, idx = 0, outValue;
     static char output[COMMANDER_REPORT_SIZE] = {0};
-    char outValueStr[16], outtmp[256];
+    char outval[64], outaddr[256];
+   
+    int change_addr_present = 0;
+    uint8_t pubkeyhash[20];
+    uint8_t pub_key33[33];    
+    uint8_t *priv_key_master = memory_master(NULL);
+    uint8_t *chain_code = memory_chaincode(NULL);
+    HDNode node;
     
     // Outputs
     if (hex_len < idx + 16) {return NULL;}
@@ -447,23 +454,41 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len)
     strcat(output, "{\"verify_output\": [ ");
     for (j = 0; j < n_cnt; j++) {
         // outValue
-        strncpy(outValueStr, hex + idx, 16);
-        reverse_hex(outValueStr, 16);
-        sscanf(outValueStr, "%llx", &outValue);
-        sprintf(outtmp, "{\"value\": %llu, ", outValue);
-        strcat(output, outtmp);
+        memset(outaddr, 0, sizeof(outaddr));
+        strncpy(outval, hex + idx, 16);
+        reverse_hex(outval, 16);
+        sscanf(outval, "%llx", &outValue);
         idx += 16;                               
         if (hex_len < idx + 16) {return NULL;}
         idx += varint_to_uint64(hex + idx, &n_len);
-        sprintf(outtmp, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
-        strcat(output, outtmp);
-        idx += n_len * 2; // chars = 2 * bytes 
-        if (j < n_cnt - 1) {
-            strcat(output, ", ");
+       
+        
+        wallet_generate_key(&node, keypath, priv_key_master, chain_code);
+        uECC_get_public_key33(node.private_key, pub_key33);
+        wallet_get_pubkeyhash(pub_key33, pubkeyhash);
+            
+        memset(outval, 0, sizeof(outval));
+        memset(outaddr, 0, sizeof(outaddr));
+        sprintf(outval, "{\"value\": %llu, ", outValue);
+        sprintf(outaddr, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
+        
+        if (strstr(outaddr, uint8_to_hex(pubkeyhash, 20))) {
+            change_addr_present++;
+        } else {
+            if (cnt > 0) { strcat(output, ", "); }
+            strcat(output, outval);
+            strcat(output, outaddr);
+            cnt++;
         }
+        idx += n_len * 2; // chars = 2 * bytes 
     }
     strcat(output, " ] }");
-    return output;
+    
+    if (change_addr_present) {
+        return output;
+    } else {
+        return NULL;
+    }
 }
 
 

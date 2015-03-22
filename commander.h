@@ -80,6 +80,7 @@
         CMD(type)               \
         CMD(data)               \
         CMD(keypath)            \
+        CMD(change_keypath)     \
         CMD(strength)           \
         CMD(salt)               \
         CMD(filename)           \
@@ -90,7 +91,7 @@
 
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
-        ATTR(raw)               \
+        ATTR(transaction)       \
         ATTR(hash)              \
         ATTR(list)              \
         ATTR(true)              \

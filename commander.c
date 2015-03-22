@@ -274,13 +274,18 @@ static void process_sign(char *message)
         commander_fill_report("sign", "Incomplete command.", ERROR);
         return;  
     }
-    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) {
+    
+    char kp[keypath_len + 1];
+    memcpy(kp, keypath, keypath_len);
+    kp[keypath_len] = '\0';
+    
+    if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) {
         to_hash = 1;
     } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
         commander_fill_report("sign", "Unknown type value.", ERROR);
         return;
     }
-    wallet_sign(data, data_len, keypath, to_hash, id, id_len);
+    wallet_sign(data, data_len, kp, to_hash, id, id_len);
 }
 
 
@@ -527,47 +532,61 @@ static void commander_echo(const char *command)
         free(encoded_report);
     } else {
         commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
-    }    
+    }
 }
                         
 
 // Returns 0 if inputs and outputs are the same
 static int commander_verify_signing(const char *message)
 {
-    int data_len, type_len;
-    char *data, *type;
+    int data_len, type_len, change_keypath_len;
+    char *data, *type, *change_keypath;
     
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
-   
+    change_keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_change_keypath_], &change_keypath_len);
+
     if (!data || !type) {
         commander_fill_report("sign", "Incomplete command.", ERROR);
         return ERROR;  
     }
-    
-    if (strncmp(type, ATTR_STR[ATTR_raw_], strlen(ATTR_STR[ATTR_raw_])) == 0) 
+  
+    if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) 
     {
-        // Check if deserialized inputs and outputs are the same (scriptSig's could be different)
-        // Updates verify_input and verify_output
+        if (!change_keypath) {
+            commander_fill_report("sign", "Incomplete command.", ERROR);
+            return ERROR;  
+        }
+        char ckp[change_keypath_len + 1];
+        memcpy(ckp, change_keypath, change_keypath_len);
+        ckp[change_keypath_len] = '\0';
+        
+        // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
+        // Verify if the change address is present.
+        // Updates verify_input and verify_output.
         if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
             return SAME;
         } else {
-            commander_echo(wallet_deserialize_output(verify_output, strlen(verify_output))); 
-            //commander_echo(commander_format_output(verify_output)); 
-            return DIFFERENT;
+            
+            char *out = wallet_deserialize_output(verify_output, strlen(verify_output), ckp);
+            if (out) {
+                commander_echo(out); 
+                return DIFFERENT;
+            } else {
+                commander_fill_report("sign", "Change address not found or deserialization failed.", ERROR);
+                return ERROR;  
+            }
         }
     } 
     else 
     {
         // Check whole input command instead of inputs/outputs since data is hashed
         if (memcmp(verify_output, message, strlen(message))) {
-            // Different command received, reset
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             memcpy(verify_output, message, strlen(message));
             commander_echo(verify_output); 
             return DIFFERENT;
         } else {
-            // Same command received
             return SAME;
         }
     }
@@ -592,6 +611,8 @@ static int commander_touch_button(int found_cmd, const char *message)
         } else if (c == DIFFERENT) {
             ret = ECHO; 
         } else {
+            memset(verify_input, 0, COMMANDER_REPORT_SIZE);
+            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             ret = ERROR;
         }
         

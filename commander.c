@@ -531,17 +531,6 @@ static void commander_echo(const char *command)
 }
                         
 
-static char *commander_format_output(const char *output) 
-{
-    static char out[COMMANDER_REPORT_SIZE];
-    memset(out, 0, COMMANDER_REPORT_SIZE);
-    strcat(out, "{\"serialized_outputs\":\"");
-    strncat(out, output, strlen(output));
-    strcat(out, "\"}");
-    return out;
-}
-
-
 // Returns 0 if inputs and outputs are the same
 static int commander_verify_signing(const char *message)
 {
@@ -563,7 +552,8 @@ static int commander_verify_signing(const char *message)
         if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
             return SAME;
         } else {
-            commander_echo(commander_format_output(verify_output)); 
+            commander_echo(wallet_deserialize_output(verify_output, strlen(verify_output))); 
+            //commander_echo(commander_format_output(verify_output)); 
             return DIFFERENT;
         }
     } 

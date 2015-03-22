@@ -48,6 +48,7 @@ int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t s[512 / 8],
                              void (*progress_callback)(uint32_t current, uint32_t total));
 int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, char *v_output);
+char *wallet_deserialize_output(const char *hex, uint64_t hex_len);
 /* Bitcoin formats */
 //int  wallet_sig_to_der(const uint8_t *sig, uint8_t *der);
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);

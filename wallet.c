@@ -435,6 +435,37 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
 }
 
 
+char *wallet_deserialize_output(const char *hex, uint64_t hex_len)
+{
+    uint64_t j, n_cnt, n_len, idx = 0, outValue;
+    static char output[COMMANDER_REPORT_SIZE] = {0};
+    char outValueStr[16], outtmp[256];
+    
+    // Outputs
+    if (hex_len < idx + 16) {return NULL;}
+    idx += varint_to_uint64(hex + idx, &n_cnt); // count
+    strcat(output, "{\"verify_output\": [ ");
+    for (j = 0; j < n_cnt; j++) {
+        // outValue
+        strncpy(outValueStr, hex + idx, 16);
+        reverse_hex(outValueStr, 16);
+        sscanf(outValueStr, "%llx", &outValue);
+        sprintf(outtmp, "{\"value\": %llu, ", outValue);
+        strcat(output, outtmp);
+        idx += 16;                               
+        if (hex_len < idx + 16) {return NULL;}
+        idx += varint_to_uint64(hex + idx, &n_len);
+        sprintf(outtmp, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
+        strcat(output, outtmp);
+        idx += n_len * 2; // chars = 2 * bytes 
+        if (j < n_cnt - 1) {
+            strcat(output, ", ");
+        }
+    }
+    strcat(output, " ] }");
+    return output;
+}
+
 
 
 // -- bitcoin formats -- //

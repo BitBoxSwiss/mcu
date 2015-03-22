@@ -166,19 +166,23 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
 }
 
 
-void wallet_generate_key(HDNode *node, char *key_path, const uint8_t *privkeymaster, const uint8_t *chaincode)
+void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len, const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
     unsigned long idx;
     char *pch;
-   
+    char kp[keypath_len + 1];
+
+    memcpy(kp, keypath, keypath_len);
+    kp[keypath_len] = '\0';
+
     node->depth = 0;
     node->child_num = 0;
-	node->fingerprint = 0x00000000;
+	node->fingerprint = 0;
     memcpy(node->chain_code, chaincode, 32);
     memcpy(node->private_key, privkeymaster, 32);
 	hdnode_fill_public_key(node);
    
-    pch = strtok(key_path, " /,m\\");
+    pch = strtok(kp, " /,m\\");
     while (pch != NULL) {
         sscanf(pch, "%lu", &idx); 
         if (pch[strlen(pch)-1] == '\'' ||
@@ -194,7 +198,7 @@ void wallet_generate_key(HDNode *node, char *key_path, const uint8_t *privkeymas
 }
 
 
-void wallet_report_xpub(char *keypath)
+void wallet_report_xpub(const char *keypath, int keypath_len)
 {
 	char xpub[112];
     uint8_t *priv_key_master = memory_master(NULL);
@@ -205,7 +209,7 @@ void wallet_report_xpub(char *keypath)
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         commander_fill_report("xpub", "A bip32 master private key is not set.", ERROR);
     } else {
-        wallet_generate_key(&node, keypath, priv_key_master, chain_code);
+        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
         commander_fill_report("xpub", xpub, SUCCESS);
     }
@@ -214,7 +218,7 @@ void wallet_report_xpub(char *keypath)
 
 
 // Return 0 on success
-int wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, char *id, int id_len)
+int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len, int to_hash, char *id, int id_len)
 {
     uint8_t data[32];
     uint8_t sig[64];
@@ -237,7 +241,7 @@ int wallet_sign(const char *message, int msg_len, char *keypath, int to_hash, ch
     } 
     else 
     {
-        wallet_generate_key(&node, keypath, priv_key_master, chain_code);
+        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
         if (to_hash) {
             ret = uECC_sign_double(node.private_key, hex_to_uint8(message), msg_len / 2, sig);
         } else {
@@ -435,26 +439,36 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
 }
 
 
-char *wallet_deserialize_output(const char *hex, uint64_t hex_len, char *keypath)
+char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *keypath, int keypath_len)
 {
     uint64_t j, cnt = 0, n_cnt, n_len, idx = 0, outValue;
-    static char output[COMMANDER_REPORT_SIZE] = {0};
     char outval[64], outaddr[256];
+    static char output[COMMANDER_REPORT_SIZE] = {0};
    
     int change_addr_present = 0;
+    char address[36];
     uint8_t pubkeyhash[20];
-    uint8_t pub_key33[33];    
+    uint8_t pub_key33[33];
     uint8_t *priv_key_master = memory_master(NULL);
     uint8_t *chain_code = memory_chaincode(NULL);
     HDNode node;
-    
+  
+
+    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
+        !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+        commander_fill_report("sign", "A bip32 master private key is not set.", ERROR);
+        return NULL;
+    } 
+
+    memset(output, 0, COMMANDER_REPORT_SIZE);
+
     // Outputs
     if (hex_len < idx + 16) {return NULL;}
     idx += varint_to_uint64(hex + idx, &n_cnt); // count
     strcat(output, "{\"verify_output\": [ ");
     for (j = 0; j < n_cnt; j++) {
         // outValue
-        memset(outaddr, 0, sizeof(outaddr));
+        memset(outval, 0, sizeof(outval));
         strncpy(outval, hex + idx, 16);
         reverse_hex(outval, 16);
         sscanf(outval, "%llx", &outValue);
@@ -462,16 +476,16 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, char *keypath
         if (hex_len < idx + 16) {return NULL;}
         idx += varint_to_uint64(hex + idx, &n_len);
        
-        
-        wallet_generate_key(&node, keypath, priv_key_master, chain_code);
+        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
         uECC_get_public_key33(node.private_key, pub_key33);
         wallet_get_pubkeyhash(pub_key33, pubkeyhash);
-            
+        wallet_get_address(pub_key33, 0, address, 36);
+        
         memset(outval, 0, sizeof(outval));
         memset(outaddr, 0, sizeof(outaddr));
         sprintf(outval, "{\"value\": %llu, ", outValue);
         sprintf(outaddr, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
-        
+       
         if (strstr(outaddr, uint8_to_hex(pubkeyhash, 20))) {
             change_addr_present++;
         } else {

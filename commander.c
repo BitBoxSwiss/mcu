@@ -275,17 +275,13 @@ static void process_sign(char *message)
         return;  
     }
     
-    char kp[keypath_len + 1];
-    memcpy(kp, keypath, keypath_len);
-    kp[keypath_len] = '\0';
-    
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) {
         to_hash = 1;
     } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
         commander_fill_report("sign", "Unknown type value.", ERROR);
         return;
     }
-    wallet_sign(data, data_len, kp, to_hash, id, id_len);
+    wallet_sign(data, data_len, keypath, keypath_len, to_hash, id, id_len);
 }
 
 
@@ -370,7 +366,7 @@ static int commander_process_token(int cmd, char *message)
             break;
       
         case CMD_xpub_:
-            wallet_report_xpub(message);
+            wallet_report_xpub(message, strlen(message));            
             break;
 
         case CMD_touchbutton_:
@@ -557,10 +553,7 @@ static int commander_verify_signing(const char *message)
             commander_fill_report("sign", "Incomplete command.", ERROR);
             return ERROR;  
         }
-        char ckp[change_keypath_len + 1];
-        memcpy(ckp, change_keypath, change_keypath_len);
-        ckp[change_keypath_len] = '\0';
-        
+       
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
         // Verify if the change address is present.
         // Updates verify_input and verify_output.
@@ -568,7 +561,7 @@ static int commander_verify_signing(const char *message)
             return SAME;
         } else {
             
-            char *out = wallet_deserialize_output(verify_output, strlen(verify_output), ckp);
+            char *out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
             if (out) {
                 commander_echo(out); 
                 return DIFFERENT;

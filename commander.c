@@ -241,7 +241,7 @@ static void process_backup(char *message)
             int enc_len;
             char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
             if (enc) {
-                sd_backup(filename, filename_len, enc, enc_len);
+                sd_write(filename, filename_len, enc, enc_len);
                 if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
                     commander_fill_report("backup", "Corrupted file.", ERROR);
                 }
@@ -251,7 +251,7 @@ static void process_backup(char *message)
                 return;
             }
         } else {
-            sd_backup(filename, filename_len, text, strlen(text));  
+            sd_write(filename, filename_len, text, strlen(text));  
             if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
                 commander_fill_report("backup", "Corrupted file.", ERROR);
             }
@@ -329,9 +329,9 @@ static void process_verifypass(const char *message)
     
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
         memcpy(text, uint8_to_hex(memory_aeskey_read(PASSWORD_VERIFY), 32), 64 + 1);
-        sd_backup(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);  
+        sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);  
         if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
-            commander_fill_report(ATTR_STR[ATTR_create_], "Corrupted file.", ERROR);
+            commander_fill_report(ATTR_STR[ATTR_export_], "Corrupted file.", ERROR);
         }
 
     } else {

@@ -1,6 +1,9 @@
 *.o
 *.swp
+*.swo
 .ycm*
 tests*
 !*.c
 *.bak
+.DS_Store
+backup

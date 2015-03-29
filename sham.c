@@ -57,7 +57,7 @@ char *sd_load(const char *f, int f_len)
     (void)f;
     (void)f_len;
 	commander_fill_report("load", "Ignored for non-embedded testing.", ERROR);
-    return 0;
+    return "--";
 }
 
 

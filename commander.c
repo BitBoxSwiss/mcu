@@ -171,7 +171,7 @@ static void device_reset(const char *r)
             if (!touch_button_press(0)) {
                 memory_erase();
                 commander_clear_report();
-                commander_fill_report("reset", "success", SUCCESS);
+                commander_fill_report(ATTR_STR[ATTR___ERASE___], "success", SUCCESS);
             }}}
             return; 
         }
@@ -312,6 +312,36 @@ static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 }
 
 
+static void process_verifypass(const char *message)
+{
+    
+    uint8_t number[16];
+    char text[64 + 1];
+
+    if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
+        if (random_bytes(number, sizeof(number), 1)) {
+            commander_fill_report("random", "Chip communication error.", ERROR);
+        } else {
+            if (process_password(uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) == SUCCESS) {
+                commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
+            }
+        } 
+    
+    } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
+        memcpy(text, uint8_to_hex(memory_aeskey_read(PASSWORD_VERIFY), 32), 64 + 1);
+        sd_backup(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);  
+        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
+            commander_fill_report(ATTR_STR[ATTR_create_], "Corrupted file.", ERROR);
+        }
+
+    } else {
+        commander_fill_report("verifypass", "Invalid command.", ERROR);
+        return;
+    }
+
+}
+
+
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
@@ -321,28 +351,26 @@ static int commander_process_token(int cmd, char *message)
         
         case CMD_password_:
 		    if (process_password(message, strlen(message), PASSWORD_STAND) == SUCCESS) {
-                commander_fill_report("password", "success", SUCCESS);
+                commander_fill_report(CMD_STR[cmd], "success", SUCCESS);
             }
             break;
         
-        case CMD_multipass_:
-		    if (process_password(message, strlen(message), PASSWORD_MULTI) == SUCCESS) {
-                commander_fill_report("multipass", "success", SUCCESS);
-            }
+        case CMD_verifypass_:
+            process_verifypass(message);
             break;
         
         case CMD_led_:
             if (strncmp(message, ATTR_STR[ATTR_toggle_], strlen(ATTR_STR[ATTR_toggle_])) == 0) {
                 led_toggle(); delay_ms(300);	
                 led_toggle();  
-                commander_fill_report("led", "toggled", SUCCESS);
+                commander_fill_report(CMD_STR[cmd], "toggled", SUCCESS);
             } else {
-                commander_fill_report("led", "Invalid command.", ERROR);
+                commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
             }
             break;
         
         case CMD_name_:
-            commander_fill_report("name", (char *)memory_name(message), SUCCESS);
+            commander_fill_report(CMD_STR[cmd], (char *)memory_name(message), SUCCESS);
             break;      
        
         case CMD_load_:
@@ -378,14 +406,14 @@ static int commander_process_token(int cmd, char *message)
             if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
 				uint32_t serial[4];
 				if (!flash_read_unique_id(serial, 16)) {
-					commander_fill_report("serial", uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
+					commander_fill_report(ATTR_STR[ATTR_serial_], uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
 				} else {
-					commander_fill_report("serial", "Could not read flash.", ERROR);         
+					commander_fill_report(ATTR_STR[ATTR_serial_], "Could not read flash.", ERROR);         
 				}
 			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
-                commander_fill_report("version", (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
+                commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
             } else {
-                commander_fill_report("device", "Invalid command.", ERROR);
+                commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
             }
             break;
         }
@@ -470,11 +498,11 @@ static int commander_check_init(const char *encrypted_command)
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
                 // For initialization, set both passwords to be the same. Then, the same code
-                // is used independently of whether or not a multipass second password was set.
-                // Add a multipass second password using a separate JSON command.
-                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS && process_password(pw, pw_len, PASSWORD_MULTI) == SUCCESS) { 
+                // is used independently of whether or not a verifypass second password was set.
+                // Add a verifypass second password using a separate JSON command.
+                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS && process_password(pw, pw_len, PASSWORD_VERIFY) == SUCCESS) { 
                     memory_erased_write(0); 
-                    commander_fill_report("password", "success", SUCCESS);
+                    commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
                 }
             } else {
                 commander_fill_report("input", "JSON parse error.", ERROR);
@@ -485,27 +513,6 @@ static int commander_check_init(const char *encrypted_command)
         return ERROR;
 	}
 
-    // Allow an unencrypted command to set a multipass second password (first time only)
-    // A multipass password reset is done via an encrypted JSON command, or here after a device reset
-    if (memory_multipass_read()) {
-        if (strstr(encrypted_command, CMD_STR[CMD_multipass_]) != NULL) {
-	        commander_clear_report();
-            int pw_len;
-            const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_multipass_], &pw_len);
-            if (pw != NULL) {
-                if (!touch_button_press(0)) {
-                    if (process_password(pw, pw_len, PASSWORD_MULTI) == SUCCESS) { 
-                        memory_multipass_write(0); 
-                        commander_fill_report("multipass", "success", SUCCESS);
-                    }
-                }
-            } else {
-                commander_fill_report("input", "JSON parse error.", ERROR);
-            }
-            return ERROR;
-        }
-    }
-    
     return SUCCESS; 
 }
  
@@ -515,12 +522,12 @@ static void commander_echo(const char *command)
 {
     commander_clear_report();
     
-    // Encrypt the echo with multipass password
+    // Encrypt the echo with verification password
     int encrypt_len;
     char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
                                             strlen(command), 
                                             &encrypt_len,
-                                            PASSWORD_MULTI); 
+                                            PASSWORD_VERIFY); 
     // Fill report to send
     commander_clear_report();
     if (encoded_report) {
@@ -536,7 +543,7 @@ static void commander_echo(const char *command)
 static int commander_verify_signing(const char *message)
 {
     int data_len, type_len, change_keypath_len;
-    char *data, *type, *change_keypath;
+    char *data, *type, *change_keypath, *out;
     
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
@@ -561,7 +568,7 @@ static int commander_verify_signing(const char *message)
             return SAME;
         } else {
             
-            char *out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
+            out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
             if (out) {
                 commander_echo(out); 
                 return DIFFERENT;

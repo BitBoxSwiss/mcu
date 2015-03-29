@@ -38,7 +38,7 @@
 #endif
 
 
-static uint8_t MEM_multipass_ = DEFAULT_multipass_;
+static uint8_t MEM_verifypass_ = DEFAULT_verifypass_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
 static uint16_t MEM_delay_ = DEFAULT_delay_;
@@ -49,7 +49,7 @@ static uint8_t MEM_touch_enable_ = DEFAULT_enable_;
 static uint8_t MEM_led_ = DEFAULT_led_;
 
 static uint8_t MEM_aeskey_stand_[MEM_PAGE_LEN] = {0xFF};
-static uint8_t MEM_aeskey_multi_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_aeskey_verify_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
 static uint8_t MEM_master_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_master_chain_[MEM_PAGE_LEN] = {0xFF};
@@ -98,7 +98,7 @@ void memory_erase(void)
 {
     memory_name("Digital Bitbox");
     memory_erased_write(DEFAULT_erased_);
-    memory_multipass_write(DEFAULT_multipass_);
+    memory_verifypass_write(DEFAULT_verifypass_);
     memory_led_write(DEFAULT_led_);
     memory_touch_timeout_write(DEFAULT_touch_timeout_);
     memory_touch_thresh_write(DEFAULT_touch_thresh_);
@@ -106,7 +106,7 @@ void memory_erase(void)
     memory_delay_iterate(DEFAULT_delay_);
     
     memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_MULTI);
+    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
@@ -122,7 +122,7 @@ void memory_clear_variables(void)
     // Enable clearing if making a software wallet (variables should get loaded from an encrypted file).
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_multi_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_mnemonic_, MEM_PAGE_ERASE_2X, MEM_PAGE_LEN*2);
@@ -236,8 +236,8 @@ int memory_aeskey_write(const char *password, int len, int id)
         case PASSWORD_STAND:
             ret = memory_eeprom(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
             break;
-        case PASSWORD_MULTI:
-            ret = memory_eeprom(password_b, MEM_aeskey_multi_, MEM_AESKEY_MULTI_ADDR, MEM_PAGE_LEN);
+        case PASSWORD_VERIFY:
+            ret = memory_eeprom(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR, MEM_PAGE_LEN);
             break;
     }
 
@@ -256,9 +256,9 @@ uint8_t *memory_aeskey_read(int id)
             memory_eeprom(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
             return MEM_aeskey_stand_;
 
-        case PASSWORD_MULTI:
-            memory_eeprom(NULL, MEM_aeskey_multi_, MEM_AESKEY_MULTI_ADDR, MEM_PAGE_LEN);
-            return MEM_aeskey_multi_;
+        case PASSWORD_VERIFY:
+            memory_eeprom(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR, MEM_PAGE_LEN);
+            return MEM_aeskey_verify_;
     }
     return 0;
 }
@@ -275,14 +275,14 @@ uint8_t memory_setup_read(void)
 }
 
 
-void memory_multipass_write(const uint8_t m)
+void memory_verifypass_write(const uint8_t m)
 {
-    memory_eeprom(&m, &MEM_multipass_, MEM_MULTIPASS_ADDR, 1);
+    memory_eeprom(&m, &MEM_verifypass_, MEM_VERIFYPASS_ADDR, 1);
 }
-uint8_t memory_multipass_read(void)
+uint8_t memory_verifypass_read(void)
 {
-    memory_eeprom(NULL, &MEM_multipass_, MEM_MULTIPASS_ADDR, 1);
-    return MEM_multipass_;     
+    memory_eeprom(NULL, &MEM_verifypass_, MEM_VERIFYPASS_ADDR, 1);
+    return MEM_verifypass_;     
 }
 
 

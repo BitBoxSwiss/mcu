@@ -43,6 +43,7 @@
 
 #define COMMANDER_MAX_ATTEMPTS	5// max attempts before device reset
 
+#define VERIFYPASS_FILENAME     "verification.txt"
 
 #define GENERATE_STRING(STRING) #STRING,
 #define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,
@@ -57,7 +58,7 @@
         CMD(backup)             \
         CMD(device)             \
         CMD(password)           \
-        CMD(multipass)          \
+        CMD(verifypass)         \
         CMD(touchbutton)        \
   /* placeholder don't move */  \
         CMD(require_touch)      \
@@ -97,6 +98,8 @@
         ATTR(true)              \
         ATTR(toggle)            \
         ATTR(pseudo)            \
+        ATTR(create)            \
+        ATTR(export)            \
         ATTR(serial)            \
         ATTR(version)           \
         ATTR(__ERASE__)         \

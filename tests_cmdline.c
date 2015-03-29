@@ -54,7 +54,7 @@ int main ( int argc, char *argv[] )
         // multipass passwords to the same value. Refer to 
         // the API documentation for more details.
         utils_send_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE); 
-        utils_send_cmd("{\"multipass\":\"multipass_password\"}", PASSWORD_NONE); // if not set, uses the standard password 
+        utils_send_cmd("{\"verifypass\":\"create\"}", PASSWORD_STAND); // if not set, uses the standard password 
         utils_send_cmd(argv[1], PASSWORD_STAND); 
     }
     return 0;

@@ -94,8 +94,9 @@
   /*    command attributes  */  \
         ATTR(transaction)       \
         ATTR(hash)              \
-        ATTR(list)              \
         ATTR(true)              \
+        ATTR(list)              \
+        ATTR(erase)              \
         ATTR(toggle)            \
         ATTR(pseudo)            \
         ATTR(create)            \

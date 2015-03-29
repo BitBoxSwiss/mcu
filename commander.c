@@ -166,9 +166,9 @@ static void device_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (!touch_button_press(0)) { //delay_ms(1000);
-            if (!touch_button_press(0)) { //delay_ms(1000);
-            if (!touch_button_press(0)) {
+            if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
+            if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
+            if (touch_button_press(0) == TOUCHED) {
                 memory_erase();
                 commander_clear_report();
                 commander_fill_report(ATTR_STR[ATTR___ERASE___], "success", SUCCESS);
@@ -229,6 +229,11 @@ static void process_backup(char *message)
 		return;
 	}
     
+    if (strcmp(message, ATTR_STR[ATTR_erase_]) == 0) {
+	    sd_erase();
+	    return;
+    }
+	
 	if (!filename) {
         commander_fill_report("backup", "Incomplete command.", ERROR);
     } else {
@@ -242,19 +247,19 @@ static void process_backup(char *message)
             char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
             if (enc) {
                 sd_write(filename, filename_len, enc, enc_len);
-                if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-                    commander_fill_report("backup", "Corrupted file.", ERROR);
-                }
+				if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
+					commander_fill_report("backup", "Corrupted file.", ERROR);
+				}
                 free(enc);
             } else {
                 commander_fill_report("backup", "Could not allocate memory for encryption.", ERROR);
                 return;
             }
         } else {
-            sd_write(filename, filename_len, text, strlen(text));  
-            if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-                commander_fill_report("backup", "Corrupted file.", ERROR);
-            }
+            sd_write(filename, filename_len, text, strlen(text));
+			if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
+				commander_fill_report("backup", "Corrupted file.", ERROR);
+			}
         }
     }	
 }

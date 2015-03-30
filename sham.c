@@ -35,20 +35,14 @@ void delay_ms(int delay)
 }
 
 
-int sd_format(void)
-{
-    commander_fill_report("backup", "Formatting ignored for non-embedded testing.", ERROR);
-    return 1;
-}
-
-
-void sd_backup(const char *f, int f_len, const char *t, int t_len)
+uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
 {
     (void)f;
     (void)f_len;
     (void)t;
     (void)t_len;
     commander_fill_report("backup", "Ignored for non-embedded testing.", ERROR);
+    return ERROR;
 }
 
 
@@ -56,15 +50,22 @@ char *sd_load(const char *f, int f_len)
 {
     (void)f;
     (void)f_len;
-	commander_fill_report("load", "Ignored for non-embedded testing.", ERROR);
+	commander_fill_report("sd_load", "Ignored for non-embedded testing.", ERROR);
     return "--";
 }
 
 
-void sd_list(void)
+uint8_t sd_list(void)
 {
-    commander_fill_report("backup", "No files to list for non-embedded testing.", ERROR);
-    return;
+    commander_fill_report("sd_list", "Ignored for non-embedded testing.", ERROR);
+    return ERROR;
+}
+
+
+uint8_t sd_erase(void)
+{
+    commander_fill_report("sd_erase", "Ignored for non-embedded testing.", ERROR);
+    return ERROR;
 }
 
 

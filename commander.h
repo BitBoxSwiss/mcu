@@ -118,7 +118,7 @@ enum REPORT_FLAGS {
     ECHO,
     SAME, DIFFERENT,
     TOUCHED, NOT_TOUCHED,
-    RESET,
+    RESET
 };
 
 

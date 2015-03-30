@@ -85,7 +85,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 */
 void random_shuffle(int *array, size_t n)
 {
-    int r_len = 15; // then only one Random command to aes_process()
+    int r_len = 15;
     uint8_t r[r_len + 1];
     random_bytes(r, r_len + 1, 0);
     if (n > 1) {

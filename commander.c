@@ -61,6 +61,7 @@ static int SIG_COUNT = 0;
 static void commander_clear_report(void)
 {
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
+	json_report[0] = '\0';
 	REPORT_BUF_OVERFLOW = 0;	
     SIG_COUNT = 0;
 }
@@ -124,10 +125,9 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
     } else {
         if (SIG_COUNT == 0) {
             strcat(json_report, " \"sign\": ");
-            //strcat(json_report, " \"sign\":[");
         } else {    
-            json_report[len - 2] = ','; // replace closing ']}' with continuing ', '
-            json_report[len - 1] = ' '; // replace closing ']}' with continuing ', '
+            json_report[len - 2] = ','; // replace closing ' }' with continuing ', '
+            json_report[len - 1] = ' ';
         }
         strcat(json_report, "{");
         
@@ -144,10 +144,8 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
         strcat(json_report, "\"");
         
         strcat(json_report, "}");
-
-        // Add closing ']}'
+		
         strcat(json_report, " }"); 
-        //strcat(json_report, "]}"); 
     }
 
     SIG_COUNT++;
@@ -168,8 +166,8 @@ static void device_reset(const char *r)
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
             if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
             if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
-            if (touch_button_press(0) == TOUCHED) {
-                memory_erase();
+            if (touch_button_press(0) == TOUCHED) {                   
+			    memory_erase();
                 commander_clear_report();
                 commander_fill_report(ATTR_STR[ATTR___ERASE___], "success", SUCCESS);
             }}}
@@ -220,7 +218,7 @@ static void process_seed(char *message)
 
 static void process_backup(char *message)
 { 
-    int encrypt_len, filename_len;
+    int encrypt_len, filename_len, ret;
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 	
@@ -246,9 +244,11 @@ static void process_backup(char *message)
             int enc_len;
             char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
             if (enc) {
-                sd_write(filename, filename_len, enc, enc_len);
-				if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-					commander_fill_report("backup", "Corrupted file.", ERROR);
+	            ret = sd_write(filename, filename_len, enc, enc_len);
+		        if (ret == SUCCESS) {
+					if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
+						commander_fill_report("backup", "Corrupted file.", ERROR);
+					}
 				}
                 free(enc);
             } else {
@@ -256,9 +256,11 @@ static void process_backup(char *message)
                 return;
             }
         } else {
-            sd_write(filename, filename_len, text, strlen(text));
-			if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-				commander_fill_report("backup", "Corrupted file.", ERROR);
+            ret = sd_write(filename, filename_len, text, strlen(text));
+            if (ret == SUCCESS) {
+				if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
+					commander_fill_report("backup", "Corrupted file.", ERROR);
+				}
 			}
         }
     }	
@@ -319,7 +321,7 @@ static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 
 static void process_verifypass(const char *message)
 {
-    
+    int ret;
     uint8_t number[16];
     char text[64 + 1];
 
@@ -334,11 +336,12 @@ static void process_verifypass(const char *message)
     
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
         memcpy(text, uint8_to_hex(memory_aeskey_read(PASSWORD_VERIFY), 32), 64 + 1);
-        sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);  
-        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
-            commander_fill_report(ATTR_STR[ATTR_export_], "Corrupted file.", ERROR);
-        }
-
+        ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
+		if (ret == SUCCESS) {
+	        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
+		        commander_fill_report(ATTR_STR[ATTR_export_], "Corrupted file.", ERROR);
+			}
+		}
     } else {
         commander_fill_report("verifypass", "Invalid command.", ERROR);
         return;
@@ -497,14 +500,10 @@ static int commander_check_init(const char *encrypted_command)
     // Force setting a password for encryption before processing command.
     if (memory_erased_read()) {		
         if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
-            //memory_erase();
-            //commander_clear_report();
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
-                // For initialization, set both passwords to be the same. Then, the same code
-                // is used independently of whether or not a verifypass second password was set.
-                // Add a verifypass second password using a separate JSON command.
+                // For initialization, set both passwords to be the same. 
                 if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS && process_password(pw, pw_len, PASSWORD_VERIFY) == SUCCESS) { 
                     memory_erased_write(0); 
                     commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
@@ -568,7 +567,7 @@ static int commander_verify_signing(const char *message)
        
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
         // Verify if the change address is present.
-        // Updates verify_input and verify_output.
+        // The function updates verify_input and verify_output.
         if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
             return SAME;
         } else {
@@ -600,7 +599,7 @@ static int commander_verify_signing(const char *message)
 
 static int commander_touch_button(int found_cmd, const char *message)
 {
-    int t, c, ret;
+    int t, c;
     
     if (found_cmd == CMD_sign_) {
         c = commander_verify_signing(message);
@@ -612,23 +611,21 @@ static int commander_touch_button(int found_cmd, const char *message)
                 memset(verify_input, 0, COMMANDER_REPORT_SIZE);
                 memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             }
-            ret = t;
+            return(t);
         } else if (c == DIFFERENT) {
-            ret = ECHO; 
+            return ECHO; 
         } else {
             memset(verify_input, 0, COMMANDER_REPORT_SIZE);
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
-            ret = ERROR;
+            return ERROR;
         }
         
     } else if (found_cmd < CMD_require_touch_) {
-        ret = touch_button_press(0);
+        return(touch_button_press(0));
 
     } else {
-        ret = TOUCHED;
+        return TOUCHED;
     }
-    
-    return ret;
 }
 
 
@@ -689,6 +686,7 @@ static void commander_parse(const char *encrypted_command)
         }
     }
 
+	
     // Encrypt report
     int encrypt_len;
     char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
@@ -704,7 +702,7 @@ static void commander_parse(const char *encrypted_command)
     } else {
         commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
     }
-    
+	
     memset(command, 0, strlen(command));
     free(command);
     memory_clear_variables();
@@ -743,7 +741,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
     }
     
     // Make a random initialization vector 
-    random_bytes((uint8_t *)iv, N_BLOCK, 0); 
+    random_bytes((uint8_t *)iv, N_BLOCK, 0);
     memcpy(enc_cat, iv, N_BLOCK);
     
     // CBC encrypt multiple blocks

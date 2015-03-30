@@ -59,7 +59,7 @@ const uint8_t MEM_PAGE_ERASE[] = { [0 ... MEM_PAGE_LEN] = 0xFF }; // EEPROM
 const uint16_t MEM_PAGE_ERASE_2X[] = { [0 ... MEM_PAGE_LEN] = 0xFFFF };
 
 
-// one time setup on factory install
+// One time setup on factory install
 void memory_setup(void)
 {
     if (memory_setup_read()) {
@@ -71,22 +71,24 @@ void memory_setup(void)
 
         
 #ifndef TESTING
-		if (0) {
-			// Lock Configuration Memory (only get one chance)
-			// Lock command:              OP   MODE  PARAMETER1  PARAMETER2
-			const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00}; 
+		// Lock Configuration Memory (only get one chance)
+		// Lock command:              OP   MODE  PARAMETER1  PARAMETER2
+		const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00}; 
 			
-			// Return packet [Count(1) || Return Code (1) || CRC (2)]
-			// Check that return code == 0x00 (success)
-			uint8_t ataes_ret[4] = {0}; 
-			aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
-			if (ataes_ret[1]) {
-				commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);				
-			} else {
-				commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
-			}
-		}
+		// Return packet [Count(1) || Return Code (1) || CRC (2)]
+		// Check that return code == 0x00 (success)
+		uint8_t ataes_ret[4] = {0}; 
+		aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
+		if (ataes_ret[1]) {
+			commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);	
+			return;			
+		} else {
+			commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
+		}			
 #endif
+		
+		// Initialize verification password
+		commander_create_verifypass();
 		
         memory_setup_write(0x00);
         

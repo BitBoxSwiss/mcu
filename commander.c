@@ -503,8 +503,7 @@ static int commander_check_init(const char *encrypted_command)
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
-                // For initialization, set both passwords to be the same. 
-                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS && process_password(pw, pw_len, PASSWORD_VERIFY) == SUCCESS) { 
+                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS) { 
                     memory_erased_write(0); 
                     commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
                 }
@@ -708,6 +707,9 @@ static void commander_parse(const char *encrypted_command)
     memory_clear_variables();
 }
 
+void commander_create_verifypass(void) {
+	process_verifypass("create");
+}
 
 // Single gateway function to the MCU code
 char *commander(const char *command)

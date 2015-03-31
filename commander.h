@@ -78,7 +78,6 @@
         CMD(threshold)          \
         CMD(generate)           \
         CMD(source)             \
-        CMD(id)                 \
         CMD(type)               \
         CMD(data)               \
         CMD(keypath)            \
@@ -126,9 +125,9 @@ enum REPORT_FLAGS {
 void commander_force_reset(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 void commander_fill_report_len(const char *attr, const char *val, int err, int vallen);
-void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, const char *id, size_t id_len);
+void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey);
 void commander_create_verifypass(void);
-char *commander(const char *instruction_encrypted);
+char *commander(const char *command);
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id);
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id);

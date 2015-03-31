@@ -110,7 +110,7 @@ void commander_fill_report_len(const char *attr, const char *val, int err, int v
 }
 
 
-void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, const char *id, size_t id_len)
+void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
 {
     size_t len = strlen(json_report);
     if (len == 0) {
@@ -119,7 +119,7 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
         json_report[len - 1] = ','; // replace closing '}' with continuing ','
     }
     
-    if (len > (COMMANDER_REPORT_SIZE - (40 + 64 + 33 + id_len))) {
+    if (len > (COMMANDER_REPORT_SIZE - (40 + 64 + 33))) {
         if (!REPORT_BUF_OVERFLOW) {
             strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
             REPORT_BUF_OVERFLOW = 1;
@@ -133,10 +133,6 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey, 
         }
         strcat(json_report, "{");
         
-        strcat(json_report, "\"id\":\"");
-        strncat(json_report, id, id_len);
-        strcat(json_report, "\", ");
-
         strcat(json_report, "\"sig\":\"");
         strncat(json_report, uint8_to_hex(sig, 64), 128);
         strcat(json_report, "\", ");
@@ -212,53 +208,12 @@ static void process_seed(char *message)
             memset(dec, 0, dec_len);
             free(dec);							
         }
-        //fill_report("debug sd read", mnemo, SUCCESS); // debug
-        // TEST sd load
         if (mnemo) {
             wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
         }
 
     }
 }
-
-/*)
-static void process_load(char *message)
-{
-    int mnemonic_len, sd_file_len, salt_len, decrypt_len;
-    const char *mnemonic = jsmn_get_value_string(message, CMD_STR[CMD_mnemonic_], &mnemonic_len);
-    const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &sd_file_len);
-    const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
-    const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
-    if (mnemonic) {
-        wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len);
-    } else if (filename) {
-        char *mnemo = sd_load(filename, sd_file_len);
-        if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
-            int dec_len;
-            char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
-            memset(mnemo, 0, strlen(mnemo));
-            memcpy(mnemo, dec, dec_len);
-            memset(dec, 0, dec_len);
-            free(dec);							
-        }
-        //fill_report("debug sd read", mnemo, SUCCESS); // debug
-        // TEST sd load
-        if (mnemo) {
-            wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
-        }
-    } else {
-        commander_fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
-    }
-}
-			
-
-static void process_seed(char *message)
-{ 
-    int salt_len;
-    const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
-    wallet_master_from_mnemonic(NULL, 0, salt, salt_len);
-}
-*/
 
 
 static void process_backup(char *message)
@@ -314,15 +269,14 @@ static void process_backup(char *message)
 
 static void process_sign(char *message)
 { 
-    int data_len, keypath_len, type_len, id_len, to_hash = 0;
-    char *data, *keypath, *type, *id;
+    int data_len, keypath_len, type_len, to_hash = 0;
+    char *data, *keypath, *type;
        
-    id = (char *)jsmn_get_value_string(message, CMD_STR[CMD_id_], &id_len);
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
     keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
     
-    if (!data || !keypath || !id || !type) {
+    if (!data || !keypath || !type) {
         commander_fill_report("sign", "Incomplete command.", ERROR);
         return;  
     }
@@ -333,7 +287,7 @@ static void process_sign(char *message)
         commander_fill_report("sign", "Unknown type value.", ERROR);
         return;
     }
-    wallet_sign(data, data_len, keypath, keypath_len, to_hash, id, id_len);
+    wallet_sign(data, data_len, keypath, keypath_len, to_hash);
 }
 
 

@@ -215,7 +215,7 @@ void wallet_report_xpub(const char *keypath, int keypath_len)
 
 
 // Return 0 on success
-int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len, int to_hash, char *id, int id_len)
+int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len, int to_hash)
 {
     uint8_t data[32];
     uint8_t sig[64];
@@ -250,10 +250,7 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
             commander_fill_report("sign", "Could not sign data.", ERROR);
         } else {
             uECC_get_public_key33(node.private_key, pub_key);
-            commander_fill_report_signature(sig, pub_key, id, id_len);
-            //commander_fill_report("sig", uint8_to_hex(sig, 64), SUCCESS);
-            //commander_fill_report("pubkey", uint8_to_hex(pub_key, 33), SUCCESS);
-            //commander_fill_report_len("id", id, SUCCESS, id_len);
+            commander_fill_report_signature(sig, pub_key);
         }
     }
     clear_static_variables();

@@ -213,7 +213,6 @@ static void process_seed(char *message)
         //fill_report("debug sd read", mnemo, SUCCESS); // debug
         // TEST sd load
         if (mnemo) {
-            printf("debug sdload mnemo  >>%s<<\n", mnemo);
             wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
         }
 
@@ -280,9 +279,6 @@ static void process_backup(char *message)
         commander_fill_report("backup", "Incomplete command.", ERROR);
     } else {
         char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
-        
-        printf("debug   backup text    >>%s<<\n", text);
-
         if (!text) {
             commander_fill_report("backup", "BIP32 mnemonic not present.", ERROR);
             return;

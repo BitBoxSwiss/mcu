@@ -135,9 +135,6 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
 		memcpy(mnemonic, mnemo, m_len);
 	}
 
-    printf("debug masterfrommenom  >>%s<<\n", mnemonic);
-
-
     if (wallet_mnemonic_check(mnemonic) == 0) {
         // error report is filled inside mnemonic_check()
         return;

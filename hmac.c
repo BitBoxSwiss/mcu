@@ -1,5 +1,4 @@
 #include <string.h>
-
 #include "hmac.h"
 #include "sha2.h"
 

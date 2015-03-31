@@ -1,6 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Tomas Dzetkulic
  * Copyright (c) 2013-2014 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J. Bakkumk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -50,40 +51,6 @@ static uint32_t read_be(const uint8_t *data)
 	       (((uint32_t)data[2]) << 8)  |
 	       (((uint32_t)data[3]));
 }
-
-
-/*
-int hdnode_from_xpub(uint32_t depth, uint32_t fingerprint, uint32_t child_num, const uint8_t *chain_code, const uint8_t *public_key, HDNode *out)
-{
-	if (public_key[0] != 0x02 && public_key[0] != 0x03) { // invalid pubkey
-		return 0;
-	}
-	out->depth = depth;
-	out->fingerprint = fingerprint;
-	out->child_num = child_num;
-	memcpy(out->chain_code, chain_code, 32);
-	memset(out->private_key, 0, 32);
-	memcpy(out->public_key, public_key, 33);
-	return 1;
-}
-
-
-int hdnode_from_xprv(uint32_t depth, uint32_t fingerprint, uint32_t child_num, const uint8_t *chain_code, const uint8_t *private_key, HDNode *out)
-{
-	bignum256 a;
-	bn_read_be(private_key, &a);
-	if (bn_is_zero(&a) || !bn_is_less(&a, &order256k1)) { // == 0 or >= order
-		return 0;
-	}
-	out->depth = depth;
-	out->fingerprint = fingerprint;
-	out->child_num = child_num;
-	memcpy(out->chain_code, chain_code, 32);
-	memcpy(out->private_key, private_key, 32);
-	hdnode_fill_public_key(out);
-	return 1;
-}
-*/
 
 
 int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
@@ -159,59 +126,6 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
     memset(I, 0, sizeof(I));	
 	return 1;
 }
-
-
-/*
-int hdnode_public_ckd(HDNode *inout, uint32_t i)
-{
-	uint8_t data[1 + 32 + 4];
-	uint8_t I[32 + 32];
-	uint8_t fingerprint[32];
-	curve_point a, b;
-	bignum256 c;
-
-	if (i & 0x80000000) { // private derivation
-		return 0;
-	} else { // public derivation
-		memcpy(data, inout->public_key, 33);
-	}
-	write_be(data + 33, i);
-
-	sha256_Raw(inout->public_key, 33, fingerprint);
-	ripemd160(fingerprint, 32, fingerprint);
-	inout->fingerprint = (fingerprint[0] << 24) + (fingerprint[1] << 16) + (fingerprint[2] << 8) + fingerprint[3];
-
-	memset(inout->private_key, 0, 32);
-	if (!ecdsa_read_pubkey(inout->public_key, &a)) {
-		return 0;
-	}
-
-	hmac_sha512(inout->chain_code, 32, data, sizeof(data), I);
-	memcpy(inout->chain_code, I + 32, 32);
-	bn_read_be(I, &c);
-
-	if (!bn_is_less(&c, &order256k1)) { // >= order
-		return 0;
-	}
-
-	scalar_multiply(&c, &b); // b = c * G
-	point_add(&a, &b);       // b = a + b
-
-#if USE_PUBKEY_VALIDATE
-	if (!ecdsa_validate_pubkey(&b)) {
-		return 0;
-	}
-#endif
-
-	inout->public_key[0] = 0x02 | (b.y.val[0] & 0x01);
-	bn_write_be(&b.x, inout->public_key + 1);
-
-	inout->depth++;
-	inout->child_num = i;
-
-	return 1;
-}
-*/
 
 
 void hdnode_fill_public_key(HDNode *node)

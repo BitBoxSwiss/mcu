@@ -66,7 +66,7 @@ static void clear_static_variables(void)
 }
 
 
-static int split_seed(char **seed_words, const char *message)
+int wallet_split_seed(char **seed_words, const char *message)
 {
     int i = 0;
     static char msg[256];
@@ -90,7 +90,7 @@ uint16_t *wallet_index_from_mnemonic(const char *mnemo)
     int i, j, k, seed_words_n;
     char *seed_word[25] = {NULL}; 
     memset(seed_index, 0, sizeof(seed_index));
-    seed_words_n = split_seed(seed_word, mnemo);
+    seed_words_n = wallet_split_seed(seed_word, mnemo);
    
     k = 0;
     for (i = 0; i < seed_words_n; i++) {
@@ -121,31 +121,29 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
 }
 
 
-void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength)
+void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len)
 {
     HDNode node;
 
     clear_static_variables();
 
     if (mnemo == NULL) {
-        if (!strength) { strength = 256; }
-	    if (strength % 32 || strength < 128 || strength > 256) {
-            commander_fill_report("seed", "Strength must be a multiple of 32 between 128 and 256.", ERROR); 
-		    return;
-	    }
         random_bytes(rand_data_32, 32, 1);
-	    mnemo = wallet_mnemonic_from_data(rand_data_32, strength / 8);
+	    mnemo = wallet_mnemonic_from_data(rand_data_32, 32);
 		memcpy(mnemonic, mnemo, strlen(mnemo));
     } else {
 		memcpy(mnemonic, mnemo, m_len);
 	}
+
+    printf("debug masterfrommenom  >>%s<<\n", mnemonic);
+
 
     if (wallet_mnemonic_check(mnemonic) == 0) {
         // error report is filled inside mnemonic_check()
         return;
     }
 
-    if (salt == NULL) {
+    if (salt == NULL || s_len == 0) {
         wallet_mnemonic_to_seed(mnemonic, "", seed, 0); 
     } else { 
 		char s[s_len];
@@ -308,16 +306,16 @@ int wallet_mnemonic_check(const char *mnemo)
 	
     // check number of words
     char *sham[25] = {NULL}; 
-    n = split_seed(sham, mnemo);
+    n = wallet_split_seed(sham, mnemo);
     memset(sham, 0, sizeof(sham)); 
     
     
     if (n != 12 && n != 18 && n != 24) {
-        commander_fill_report("seed", "Mnemonic must have 12, 18, or 24 words.", ERROR);
+        commander_fill_report("seed", "Wrong number of mnemonic words.", ERROR);
 		return 0;
 	}
-
-	char current_word[10];
+	
+    char current_word[10];
 	uint32_t j, k, ki, bi;
 	uint8_t bits[32 + 1];
 	memset(bits, 0, sizeof(bits));

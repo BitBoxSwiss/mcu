@@ -54,7 +54,6 @@
   /*    requiring touch     */  \
         CMD(sign)               \
         CMD(seed)               \
-        CMD(load)               \
         CMD(password)           \
         CMD(touchbutton)        \
   /* placeholder don't move */  \
@@ -76,7 +75,7 @@
         CMD(holdtime)           \
         CMD(threshold)          \
         CMD(generate)           \
-        CMD(mnemonic)           \
+        CMD(source)             \
         CMD(id)                 \
         CMD(type)               \
         CMD(data)               \

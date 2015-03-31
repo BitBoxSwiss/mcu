@@ -178,6 +178,49 @@ static void device_reset(const char *r)
 }
 
 
+
+static void process_seed(char *message)
+{ 
+    int salt_len, source_len, decrypt_len;
+    char *seed_word[25] = {NULL}; 
+    const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
+    const char *source = jsmn_get_value_string(message, CMD_STR[CMD_source_], &source_len);
+    const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
+    
+    if (!source) {
+        commander_fill_report("seed", "Incomplete command.", ERROR);
+        return;
+    }
+
+    char src[source_len + 1];
+    memcpy(src, source, source_len);
+    src[source_len] = '\0';
+
+	if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
+        wallet_master_from_mnemonic(NULL, 0, salt, salt_len);
+    } else if (wallet_split_seed(seed_word, src) > 1) { 
+        wallet_master_from_mnemonic(src, source_len, salt, salt_len);
+    } else {
+        char *mnemo = sd_load(src, source_len);
+        if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
+            int dec_len;
+            char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlen(mnemo), &dec_len, PASSWORD_STAND);
+            memset(mnemo, 0, strlen(mnemo));
+            memcpy(mnemo, dec, dec_len);
+            memset(dec, 0, dec_len);
+            free(dec);							
+        }
+        //fill_report("debug sd read", mnemo, SUCCESS); // debug
+        // TEST sd load
+        if (mnemo) {
+            printf("debug sdload mnemo  >>%s<<\n", mnemo);
+            wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
+        }
+
+    }
+}
+
+/*)
 static void process_load(char *message)
 {
     int mnemonic_len, sd_file_len, salt_len, decrypt_len;
@@ -186,7 +229,7 @@ static void process_load(char *message)
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
     if (mnemonic) {
-        wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len, 0);
+        wallet_master_from_mnemonic((char *)mnemonic, mnemonic_len, salt, salt_len);
     } else if (filename) {
         char *mnemo = sd_load(filename, sd_file_len);
         if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
@@ -200,7 +243,7 @@ static void process_load(char *message)
         //fill_report("debug sd read", mnemo, SUCCESS); // debug
         // TEST sd load
         if (mnemo) {
-            wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len, 0);
+            wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
         }
     } else {
         commander_fill_report("load", "A mnemonic or micro SD card filename not provided.", ERROR);
@@ -212,8 +255,9 @@ static void process_seed(char *message)
 { 
     int salt_len;
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
-    wallet_master_from_mnemonic(NULL, 0, salt, salt_len, jsmn_get_value_uint(message, CMD_STR[CMD_strength_]));
+    wallet_master_from_mnemonic(NULL, 0, salt, salt_len);
 }
+*/
 
 
 static void process_backup(char *message)
@@ -236,6 +280,9 @@ static void process_backup(char *message)
         commander_fill_report("backup", "Incomplete command.", ERROR);
     } else {
         char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
+        
+        printf("debug   backup text    >>%s<<\n", text);
+
         if (!text) {
             commander_fill_report("backup", "BIP32 mnemonic not present.", ERROR);
             return;
@@ -381,10 +428,6 @@ static int commander_process_token(int cmd, char *message)
             commander_fill_report(CMD_STR[cmd], (char *)memory_name(message), SUCCESS);
             break;      
        
-        case CMD_load_:
-            process_load(message);
-            break; 
-        
         case CMD_seed_:
             process_seed(message);
             break;

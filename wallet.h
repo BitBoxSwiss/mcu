@@ -36,10 +36,11 @@
 
 
 /* BIP32 */
+int wallet_split_seed(char **seed_words, const char *message);
 const char **wallet_mnemonic_wordlist(void);
 uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
-void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len, int strength);
+void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len);
 int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len, int to_hash, char *id, int id_len);
 void wallet_report_xpub(const char *keypath, int keypath_len);
 void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len, const uint8_t *privkeymaster, const uint8_t *chaincode);

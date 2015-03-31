@@ -37,7 +37,7 @@ void usage(char * argv[])
 {
     printf("\nExample code to run the Digital Bitbox MCU code.\n");
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"strength\\\":\\\"256\\\"} }\"\n\n" );
+    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"source\\\":\\\"create\\\"} }\"\n\n" );
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com.\n\n\n");
 }
 

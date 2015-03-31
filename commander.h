@@ -55,10 +55,7 @@
         CMD(sign)               \
         CMD(seed)               \
         CMD(load)               \
-        CMD(backup)             \
-        CMD(device)             \
         CMD(password)           \
-        CMD(verifypass)         \
         CMD(touchbutton)        \
   /* placeholder don't move */  \
         CMD(require_touch)      \
@@ -70,6 +67,9 @@
         CMD(echo)               \
         CMD(reset)              \
         CMD(random)             \
+        CMD(backup)             \
+        CMD(device)             \
+        CMD(verifypass)         \
         CMD(ciphertext)         \
   /*    child commands      */  \
         CMD(timeout)            \

@@ -276,7 +276,7 @@ static void process_sign(char *message)
     keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
     
     if (!data || !keypath || !type) {
-        commander_fill_report("sign", "Incomplete command. [0]", ERROR);
+        commander_fill_report("sign", "Incomplete command.", ERROR);
         return;  
     }
     
@@ -539,7 +539,7 @@ static void commander_echo(char *command)
 
         // Append 2FA PIN to echoed command
         command[strlen(command) - 1] = ','; // replace closing '}' with continuing ','
-        strcat(command, " \"pin\": \"");
+        strcat(command, " \"pin\":\" ");
         strcat(command, pin_c);
         strcat(command, "\" }");
         
@@ -574,14 +574,14 @@ static int commander_verify_signing(const char *message)
     change_keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_change_keypath_], &change_keypath_len);
 
     if (!data || !type) {
-        commander_fill_report("sign", "Incomplete command. [1]", ERROR);
+        commander_fill_report("sign", "Incomplete command.", ERROR);
         return ERROR;  
     }
   
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) 
     {
         if (!change_keypath) {
-            commander_fill_report("sign", "Incomplete command. [2]", ERROR);
+            commander_fill_report("sign", "Incomplete command.", ERROR);
             return ERROR;  
         }
        
@@ -654,8 +654,7 @@ static void commander_parse(const char *encrypted_command)
 { 
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
     
-    char *encoded_report;
-    int n_tokens, j, t, cmd, found, found_cmd, found_j, msglen, encrypt_len;
+    int n_tokens, j, t, cmd, found, found_cmd, found_j, msglen;
     jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
@@ -704,23 +703,26 @@ static void commander_parse(const char *encrypted_command)
             memset(message, 0, msglen);
         } else {
             // error or not touched
-		}
-		
-		if (found_cmd == CMD_sign_ && !memory_read_unlocked()) {
-			encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-												strlen(json_report),
-												&encrypt_len, 
-												PASSWORD_2FA); 
-			commander_clear_report();
-			if (encoded_report) {
-				commander_fill_report_len("2FA", encoded_report, SUCCESS, encrypt_len);
-				free(encoded_report);
-			}
-		}
+        }
     }
 
 	
     // Encrypt report
+    int encrypt_len;
+    char *encoded_report;
+
+    if (found_cmd == CMD_sign_ && !memory_read_unlocked()) {
+        encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
+                                            strlen(json_report),
+                                            &encrypt_len, 
+                                            PASSWORD_2FA); 
+        commander_clear_report();
+        if (encoded_report) {
+            commander_fill_report_len("2FA", encoded_report, SUCCESS, encrypt_len);
+            free(encoded_report);
+        }
+    }
+
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlen(json_report),
                                          &encrypt_len, 

@@ -50,14 +50,14 @@
 #define MEM_AESKEY_VERIFY_ADDR		0x0400// Zone 4
 
 // Default settings
-#define DEFAULT_verifypass_          0xFF
+#define DEFAULT_verifypass_         0xFF
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_enable_             0xFF
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_delay_              0
 #define DEFAULT_led_                0
 #define DEFAULT_touch_timeout_      3000// msec
-#define DEFAULT_touch_thresh_       100
+#define DEFAULT_touch_thresh_       50
 #define DEFAULT_touch_enable_       1
 
 

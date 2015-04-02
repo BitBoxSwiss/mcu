@@ -71,27 +71,27 @@ void memory_erase(void);
 void memory_setup(void);
 void memory_clear_variables(void);
 
-int memory_aeskey_write(const char *password, int len, int id);
-uint8_t *memory_aeskey_read(int id);
+int memory_write_aeskey(const char *password, int len, int id);
+uint8_t *memory_read_aeskey(int id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint16_t *memory_mnemonic(const uint16_t *index);
 
-uint16_t memory_delay_read(void);
-uint16_t memory_touch_timeout_read(void);
-uint16_t memory_touch_thresh_read(void);
-uint8_t memory_erased_read(void);
-uint8_t memory_setup_read(void);
-uint8_t memory_unlocked_read(void);
-int memory_led_read(void);
+uint16_t memory_read_delay(void);
+uint16_t memory_read_touch_timeout(void);
+uint16_t memory_read_touch_thresh(void);
+uint8_t memory_read_erased(void);
+uint8_t memory_read_setup(void);
+uint8_t memory_read_unlocked(void);
+int memory_read_led(void);
 
 void memory_delay_iterate(const uint16_t d);
-void memory_touch_timeout_write(const uint16_t t);
-void memory_touch_thresh_write(const uint16_t t);
-void memory_erased_write(const uint8_t erase);
-void memory_setup_write(const uint8_t setup);
-void memory_unlocked_write(const uint8_t u);
-void memory_led_write(const uint8_t led);
+void memory_write_touch_timeout(const uint16_t t);
+void memory_write_touch_thresh(const uint16_t t);
+void memory_write_erased(const uint8_t erase);
+void memory_write_setup(const uint8_t setup);
+void memory_write_unlocked(const uint8_t u);
+void memory_write_led(const uint8_t led);
 
 #endif  // _MEMORY_H_

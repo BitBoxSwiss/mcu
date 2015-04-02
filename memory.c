@@ -61,7 +61,7 @@ const uint16_t MEM_PAGE_ERASE_2X[] = { [0 ... MEM_PAGE_LEN] = 0xFFFF };
 // One time setup on factory install
 void memory_setup(void)
 {
-    if (memory_setup_read()) {
+    if (memory_read_setup()) {
 
         memory_erase();
         // ....
@@ -89,7 +89,7 @@ void memory_setup(void)
 		// Initialize verification password
 		commander_create_verifypass();
 		
-        memory_setup_write(0x00);
+        memory_write_setup(0x00);
         
     }
 }
@@ -98,15 +98,15 @@ void memory_setup(void)
 void memory_erase(void)
 {
     memory_name("Digital Bitbox");
-    memory_erased_write(DEFAULT_erased_);
-    memory_unlocked_write(DEFAULT_unlocked_);
-    memory_touch_timeout_write(DEFAULT_touch_timeout_);
-    memory_touch_thresh_write(DEFAULT_touch_thresh_);
+    memory_write_erased(DEFAULT_erased_);
+    memory_write_unlocked(DEFAULT_unlocked_);
+    memory_write_touch_timeout(DEFAULT_touch_timeout_);
+    memory_write_touch_thresh(DEFAULT_touch_thresh_);
     memory_delay_iterate(DEFAULT_delay_);
-    memory_led_write(DEFAULT_led_);
+    memory_write_led(DEFAULT_led_);
     
-    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
+    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
@@ -216,7 +216,7 @@ uint16_t *memory_mnemonic(const uint16_t *idx)
 }
 
 
-int memory_aeskey_write(const char *password, int len, int id)
+int memory_write_aeskey(const char *password, int len, int id)
 {
 	int ret = 0;
     uint8_t password_b[MEM_PAGE_LEN];
@@ -256,7 +256,7 @@ int memory_aeskey_write(const char *password, int len, int id)
     }
 }
 
-uint8_t *memory_aeskey_read(int id)
+uint8_t *memory_read_aeskey(int id)
 {
     switch (id) {
         case PASSWORD_2FA:
@@ -274,44 +274,44 @@ uint8_t *memory_aeskey_read(int id)
 }
 
 
-void memory_setup_write(const uint8_t setup)
+void memory_write_setup(const uint8_t setup)
 {
     memory_eeprom(&setup, &MEM_setup_, MEM_SETUP_ADDR, 1);
 }
-uint8_t memory_setup_read(void)
+uint8_t memory_read_setup(void)
 {
     memory_eeprom(NULL, &MEM_setup_, MEM_SETUP_ADDR, 1);
     return MEM_setup_;
 }
 
 
-void memory_unlocked_write(const uint8_t u)
+void memory_write_unlocked(const uint8_t u)
 {
     memory_eeprom(&u, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
 }
-uint8_t memory_unlocked_read(void)
+uint8_t memory_read_unlocked(void)
 {
     memory_eeprom(NULL, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
     return MEM_unlocked_;
 }
 
 
-void memory_erased_write(const uint8_t erased)
+void memory_write_erased(const uint8_t erased)
 {
     memory_eeprom(&erased, &MEM_erased_, MEM_ERASED_ADDR, 1);
 }
-uint8_t memory_erased_read(void)
+uint8_t memory_read_erased(void)
 {
     memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
     return MEM_erased_;     
 }
 
 
-void memory_led_write(const uint8_t led)
+void memory_write_led(const uint8_t led)
 {
     memory_eeprom(&led, &MEM_led_, MEM_LED_ADDR, 1);
 }
-int memory_led_read(void)
+int memory_read_led(void)
 {
     memory_eeprom(NULL, &MEM_led_, MEM_LED_ADDR, 1);
     return MEM_led_;       
@@ -337,29 +337,29 @@ void memory_delay_iterate(const uint16_t d)
         memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
     }
 }
-    uint16_t memory_delay_read(void)
+    uint16_t memory_read_delay(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
     return MEM_delay_;
 }
 
 
-void memory_touch_timeout_write(const uint16_t t)
+void memory_write_touch_timeout(const uint16_t t)
 {
     memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
 }
-uint16_t memory_touch_timeout_read(void)
+uint16_t memory_read_touch_timeout(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
     return MEM_touch_timeout_;
 }
 
 
-void memory_touch_thresh_write(const uint16_t t)
+void memory_write_touch_thresh(const uint16_t t)
 {
     memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
 }
-uint16_t memory_touch_thresh_read(void)
+uint16_t memory_read_touch_thresh(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
     return MEM_touch_thresh_;

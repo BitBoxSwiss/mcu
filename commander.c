@@ -174,7 +174,7 @@ static void process_seed(char *message)
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
    
 
-    if (!memory_unlocked_read()) {
+    if (!memory_read_unlocked()) {
         commander_fill_report("seed", "Device locked. Erase device to change the seed.", ERROR);
         return;
     }
@@ -216,7 +216,7 @@ static void process_backup(char *message)
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 
-    if (!memory_unlocked_read()) {
+    if (!memory_read_unlocked()) {
         commander_fill_report("backup", "Device locked. Erase device to resume access to the micro SD card.", ERROR);
         return;
     }
@@ -313,7 +313,7 @@ static void process_random(char *message)
 
 static int process_password(const char *message, int msg_len, PASSWORD_ID id)
 {
-    return(memory_aeskey_write(message, msg_len, id));
+    return(memory_write_aeskey(message, msg_len, id));
 }
 
 
@@ -323,7 +323,7 @@ static void process_verifypass(const char *message)
     uint8_t number[16];
     char text[64 + 1];
     
-    if (!memory_unlocked_read()) {
+    if (!memory_read_unlocked()) {
         commander_fill_report("verifypass", "Device locked. Erase device to export or create a new verification password.", ERROR);
         return;
     }
@@ -338,7 +338,7 @@ static void process_verifypass(const char *message)
         } 
     
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
-        memcpy(text, uint8_to_hex(memory_aeskey_read(PASSWORD_VERIFY), 32), 64 + 1);
+        memcpy(text, uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
 		if (ret == SUCCESS) {
 	        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
@@ -420,7 +420,7 @@ static int commander_process_token(int cmd, char *message)
 			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
                 commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
 			} else if (strcmp(message, ATTR_STR[ATTR_lock_]) == 0) {
-                memory_unlocked_write(0); 
+                memory_write_unlocked(0); 
                 commander_fill_report(CMD_STR[cmd], "locked", SUCCESS);
             } else {
                 commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
@@ -500,13 +500,13 @@ static int commander_check_init(const char *encrypted_command)
 	}
     
     // Force setting a password for encryption before processing command.
-    if (memory_erased_read()) {		
+    if (memory_read_erased()) {		
         if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
             int pw_len;
             const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
             if (pw != NULL) {
                 if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS) { 
-                    memory_erased_write(0); 
+                    memory_write_erased(0); 
                     commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
                 }
             } else {
@@ -530,7 +530,7 @@ static void commander_echo(char *command)
     
     commander_clear_report();
     
-    if (!memory_unlocked_read()) {
+    if (!memory_read_unlocked()) {
         // Create one-time PIN
         uint8_t pin_b[2];    
         char pin_c[5];
@@ -711,7 +711,7 @@ static void commander_parse(const char *encrypted_command)
     int encrypt_len;
     char *encoded_report;
 
-    if (found_cmd == CMD_sign_ && !memory_unlocked_read()) {
+    if (found_cmd == CMD_sign_ && !memory_read_unlocked()) {
         encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                             strlen(json_report),
                                             &encrypt_len, 
@@ -769,7 +769,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
     
     // Set cipher key
     memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(memory_aeskey_read(id), 32, ctx); 
+    aes_set_key(memory_read_aeskey(id), 32, ctx); 
     
     // PKCS7 padding
     memcpy(inpad, in, inlen);
@@ -808,7 +808,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
     // Set cipher key
     aes_context ctx[1]; 
     memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(memory_aeskey_read(id), 32, ctx); 
+    aes_set_key(memory_read_aeskey(id), 32, ctx); 
     
     unsigned char dec_pad[ub64len - N_BLOCK];
     aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);

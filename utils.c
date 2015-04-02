@@ -148,7 +148,6 @@ int varint_to_uint64(const char *vi, uint64_t *i)
 
 
 #ifdef TESTING
-#include <stdio.h>
 #include <stdlib.h>
 #include "commander.h"
 #include "memory.h"
@@ -157,7 +156,7 @@ int varint_to_uint64(const char *vi, uint64_t *i)
 
 
 extern const char *CMD_STR[];
-
+static char PIN_2FA[5] = {0};
 
 uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
 {
@@ -171,8 +170,8 @@ uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
 
 void utils_print_report(const char *report)
 {
-    int decrypt_len, r, i, len;
-    char cipher[COMMANDER_REPORT_SIZE], *dec;
+    int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i, len;
+    char cipher[COMMANDER_REPORT_SIZE], *dec, *pin, *tfa, *dec_tfa;
     jsmntok_t json_token[MAX_TOKENS];
     r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
      
@@ -188,6 +187,12 @@ void utils_print_report(const char *report)
             cipher[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_STAND);
             printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
+            tfa = (char *)jsmn_get_value_string(dec, "2FA", &tfa_len);
+            if (tfa) {
+                dec_tfa = aes_cbc_b64_decrypt((unsigned char *)tfa, tfa_len, &dec_tfa_len, PASSWORD_2FA);
+                printf("2FA:   \t%.*s\n\n", dec_tfa_len, dec_tfa);
+                free(dec_tfa);
+            }
             free(dec);
             return;
         } else if (jsmn_token_equals(report, &json_token[i], "echo") == 0) {
@@ -195,6 +200,13 @@ void utils_print_report(const char *report)
             cipher[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_VERIFY);
             printf("echo:      \t%.*s\n", decrypt_len, dec);
+            pin = (char *)jsmn_get_value_string(dec, "pin", &pin_len);
+            if (pin) {
+                memcpy(PIN_2FA, pin, 4);
+                //printf("pin: %s\n", PIN_2FA);
+            } else {
+                memset(PIN_2FA, 0, sizeof(PIN_2FA));
+            }
             free(dec);
             return;
     

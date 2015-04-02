@@ -951,7 +951,6 @@ int main(void)
 	u_run_test(test_pbkdf2_hmac_sha512);
 	u_run_test(test_mnemonic);
 	u_run_test(test_mnemonic_check);
-	u_run_test(test_mnemonic);
     
     if (!U_TESTS_FAIL) {   
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

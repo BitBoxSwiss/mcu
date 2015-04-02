@@ -53,11 +53,10 @@ const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
+static int REPORT_BUF_OVERFLOW = 0;
 static char verify_output[COMMANDER_REPORT_SIZE] = {0};
 static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
-static int REPORT_BUF_OVERFLOW = 0;
-static int SIG_COUNT = 0;
 
 
 static void commander_clear_report(void)
@@ -65,7 +64,6 @@ static void commander_clear_report(void)
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
 	json_report[0] = '\0';
 	REPORT_BUF_OVERFLOW = 0;	
-    SIG_COUNT = 0;
 }
 
 
@@ -125,13 +123,7 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
             REPORT_BUF_OVERFLOW = 1;
         }
     } else {
-        if (SIG_COUNT == 0) {
-            strcat(json_report, " \"sign\": ");
-        } else {    
-            json_report[len - 2] = ','; // replace closing ' }' with continuing ', '
-            json_report[len - 1] = ' ';
-        }
-        strcat(json_report, "{");
+        strcat(json_report, " \"sign\": {");
         
         strcat(json_report, "\"sig\":\"");
         strncat(json_report, uint8_to_hex(sig, 64), 128);
@@ -141,12 +133,8 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
         strncat(json_report, uint8_to_hex(pubkey, 33), 66);
         strcat(json_report, "\"");
         
-        strcat(json_report, "}");
-		
-        strcat(json_report, " }"); 
+        strcat(json_report, "} }");
     }
-
-    SIG_COUNT++;
 }
 
 
@@ -184,7 +172,13 @@ static void process_seed(char *message)
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
     const char *source = jsmn_get_value_string(message, CMD_STR[CMD_source_], &source_len);
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
-    
+   
+
+    if (!memory_unlocked_read()) {
+        commander_fill_report("seed", "Device locked. Erase device to change the seed.", ERROR);
+        return;
+    }
+
     if (!source) {
         commander_fill_report("seed", "Incomplete command.", ERROR);
         return;
@@ -221,7 +215,12 @@ static void process_backup(char *message)
     int encrypt_len, filename_len, ret;
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
-	
+
+    if (!memory_unlocked_read()) {
+        commander_fill_report("backup", "Device locked. Erase device to resume access to the micro SD card.", ERROR);
+        return;
+    }
+
 	if (strcmp(message, ATTR_STR[ATTR_list_]) == 0) {
 		sd_list();
 		return;
@@ -323,6 +322,11 @@ static void process_verifypass(const char *message)
     int ret;
     uint8_t number[16];
     char text[64 + 1];
+    
+    if (!memory_unlocked_read()) {
+        commander_fill_report("verifypass", "Device locked. Erase device to export or create a new verification password.", ERROR);
+        return;
+    }
 
     if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
         if (random_bytes(number, sizeof(number), 1)) {
@@ -415,6 +419,9 @@ static int commander_process_token(int cmd, char *message)
 				}
 			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
                 commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
+			} else if (strcmp(message, ATTR_STR[ATTR_lock_]) == 0) {
+                memory_unlocked_write(0); 
+                commander_fill_report(CMD_STR[cmd], "locked", SUCCESS);
             } else {
                 commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
             }
@@ -516,13 +523,32 @@ static int commander_check_init(const char *encrypted_command)
  
 
 // Echo the signing information for user verification.
-static void commander_echo(const char *command)
+static void commander_echo(char *command)
 {
+    int encrypt_len;
+    char *encoded_report;
+    
     commander_clear_report();
     
+    if (!memory_unlocked_read()) {
+        // Create one-time PIN
+        uint8_t pin_b[2];    
+        char pin_c[5];
+        random_bytes(pin_b, 2, 0);
+        sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
+
+        // Append 2FA PIN to echoed command
+        command[strlen(command) - 1] = ','; // replace closing '}' with continuing ','
+        strcat(command, " \"pin\":\" ");
+        strcat(command, pin_c);
+        strcat(command, "\" }");
+        
+        // Create 2FA AES key for encryption
+        process_password(pin_c, 4, PASSWORD_2FA); 
+    }
+
     // Encrypt the echo with verification password
-    int encrypt_len;
-    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
+    encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
                                             strlen(command), 
                                             &encrypt_len,
                                             PASSWORD_VERIFY); 
@@ -683,10 +709,24 @@ static void commander_parse(const char *encrypted_command)
 	
     // Encrypt report
     int encrypt_len;
-    char *encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-                                            strlen(json_report), 
-                                            &encrypt_len,
-                                            PASSWORD_STAND); // encrypt output with the opposite password used to encrypt input`
+    char *encoded_report;
+
+    if (found_cmd == CMD_sign_ && !memory_unlocked_read()) {
+        encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
+                                            strlen(json_report),
+                                            &encrypt_len, 
+                                            PASSWORD_2FA); 
+        commander_clear_report();
+        if (encoded_report) {
+            commander_fill_report_len("2FA", encoded_report, SUCCESS, encrypt_len);
+            free(encoded_report);
+        }
+    }
+
+    encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
+                                         strlen(json_report),
+                                         &encrypt_len, 
+                                         PASSWORD_STAND); 
     
     // Fill encrypted JSON report to send
     commander_clear_report();

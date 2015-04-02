@@ -38,16 +38,15 @@
 #endif
 
 
-static uint8_t MEM_verifypass_ = DEFAULT_verifypass_;
+static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
-static uint16_t MEM_delay_ = DEFAULT_delay_;
-
-static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
-static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
-static uint8_t MEM_touch_enable_ = DEFAULT_enable_;
 static uint8_t MEM_led_ = DEFAULT_led_;
+static uint16_t MEM_delay_ = DEFAULT_delay_;
+static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
+static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
+static uint8_t MEM_aeskey_2FA_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_stand_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_verify_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
@@ -100,18 +99,19 @@ void memory_erase(void)
 {
     memory_name("Digital Bitbox");
     memory_erased_write(DEFAULT_erased_);
-    memory_verifypass_write(DEFAULT_verifypass_);
-    memory_led_write(DEFAULT_led_);
+    memory_unlocked_write(DEFAULT_unlocked_);
     memory_touch_timeout_write(DEFAULT_touch_timeout_);
     memory_touch_thresh_write(DEFAULT_touch_thresh_);
-    memory_touch_enable_write(DEFAULT_touch_enable_);
     memory_delay_iterate(DEFAULT_delay_);
+    memory_led_write(DEFAULT_led_);
     
     memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
     memory_aeskey_write((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
+		
+    commander_create_verifypass();
 }
 
 
@@ -123,6 +123,7 @@ void memory_clear_variables(void)
     // Do not clear for testing routines (i.e. not embedded).
     // Enable clearing if making a software wallet (variables should get loaded from an encrypted file).
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_2FA_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -235,6 +236,10 @@ int memory_aeskey_write(const char *password, int len, int id)
 	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
     switch (id) {
+        case PASSWORD_2FA:
+            memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
+            ret = 1;
+            break;
         case PASSWORD_STAND:
             ret = memory_eeprom(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
             break;
@@ -254,6 +259,9 @@ int memory_aeskey_write(const char *password, int len, int id)
 uint8_t *memory_aeskey_read(int id)
 {
     switch (id) {
+        case PASSWORD_2FA:
+            return MEM_aeskey_2FA_;
+
         case PASSWORD_STAND:
             memory_eeprom(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
             return MEM_aeskey_stand_;
@@ -277,14 +285,14 @@ uint8_t memory_setup_read(void)
 }
 
 
-void memory_verifypass_write(const uint8_t m)
+void memory_unlocked_write(const uint8_t u)
 {
-    memory_eeprom(&m, &MEM_verifypass_, MEM_VERIFYPASS_ADDR, 1);
+    memory_eeprom(&u, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
 }
-uint8_t memory_verifypass_read(void)
+uint8_t memory_unlocked_read(void)
 {
-    memory_eeprom(NULL, &MEM_verifypass_, MEM_VERIFYPASS_ADDR, 1);
-    return MEM_verifypass_;     
+    memory_eeprom(NULL, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
+    return MEM_unlocked_;
 }
 
 
@@ -307,18 +315,6 @@ int memory_led_read(void)
 {
     memory_eeprom(NULL, &MEM_led_, MEM_LED_ADDR, 1);
     return MEM_led_;       
-}
-
-
-// TEST 
-void memory_touch_enable_write(const uint8_t e)
-{
-    memory_eeprom(&e, &MEM_touch_enable_, MEM_TOUCH_ENABLE_ADDR, 1);
-}
-uint8_t memory_touch_enable_read(void)
-{
-    memory_eeprom(NULL, &MEM_touch_enable_, MEM_TOUCH_ENABLE_ADDR, 1);
-    return MEM_touch_enable_;
 }
 
 

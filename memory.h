@@ -41,7 +41,7 @@
 #define MEM_ERASED_ADDR 	    	0x0028
 #define MEM_SETUP_ADDR      		0x0030
 #define MEM_DELAY_ADDR      		0x0032
-#define MEM_VERIFYPASS_ADDR    		0x0034
+#define MEM_UNLOCKED_ADDR      		0x0034
 #define MEM_MASTER_BIP32_ADDR		0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR	0x0220
 #define MEM_MNEMONIC_BIP32_ADDR_0	0x0240
@@ -50,20 +50,19 @@
 #define MEM_AESKEY_VERIFY_ADDR		0x0400// Zone 4
 
 // Default settings
-#define DEFAULT_verifypass_         0xFF
+#define DEFAULT_unlocked_           0xFF
 #define DEFAULT_erased_             0xFF
-#define DEFAULT_enable_             0xFF
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_delay_              0
 #define DEFAULT_led_                0
 #define DEFAULT_touch_timeout_      3000// msec
 #define DEFAULT_touch_thresh_       50
-#define DEFAULT_touch_enable_       1
 
 
 typedef enum PASSWORD_ID { 
     PASSWORD_STAND, 
     PASSWORD_VERIFY, 
+    PASSWORD_2FA,  /* only kept in RAM */ 
     PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 
@@ -82,19 +81,17 @@ uint16_t *memory_mnemonic(const uint16_t *index);
 uint16_t memory_delay_read(void);
 uint16_t memory_touch_timeout_read(void);
 uint16_t memory_touch_thresh_read(void);
-uint8_t memory_touch_enable_read(void);
-uint8_t memory_verifypass_read(void);
 uint8_t memory_erased_read(void);
 uint8_t memory_setup_read(void);
+uint8_t memory_unlocked_read(void);
 int memory_led_read(void);
 
 void memory_delay_iterate(const uint16_t d);
 void memory_touch_timeout_write(const uint16_t t);
 void memory_touch_thresh_write(const uint16_t t);
-void memory_touch_enable_write(const uint8_t e);
-void memory_verifypass_write(const uint8_t m);
 void memory_erased_write(const uint8_t erase);
 void memory_setup_write(const uint8_t setup);
+void memory_unlocked_write(const uint8_t u);
 void memory_led_write(const uint8_t led);
 
 #endif  // _MEMORY_H_

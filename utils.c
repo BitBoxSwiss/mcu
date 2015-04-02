@@ -190,7 +190,7 @@ void utils_print_report(const char *report)
             printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
             free(dec);
             return;
-        } else if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_echo_]) == 0) {
+        } else if (jsmn_token_equals(report, &json_token[i], "echo") == 0) {
             memcpy(cipher, report + json_token[i + 1].start, len);
             cipher[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_VERIFY);

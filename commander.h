@@ -56,6 +56,7 @@
   /*    requiring touch     */  \
         CMD(sign)               \
         CMD(seed)               \
+        CMD(device)             \
         CMD(password)           \
         CMD(touchbutton)        \
   /* placeholder don't move */  \
@@ -65,11 +66,9 @@
         CMD(led)                \
         CMD(xpub)               \
         CMD(name)               \
-        CMD(echo)               \
         CMD(reset)              \
         CMD(random)             \
         CMD(backup)             \
-        CMD(device)             \
         CMD(verifypass)         \
         CMD(ciphertext)         \
   /*    child commands      */  \
@@ -96,7 +95,8 @@
         ATTR(hash)              \
         ATTR(true)              \
         ATTR(list)              \
-        ATTR(erase)              \
+        ATTR(lock)              \
+        ATTR(erase)             \
         ATTR(toggle)            \
         ATTR(pseudo)            \
         ATTR(create)            \

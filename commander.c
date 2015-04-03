@@ -694,6 +694,7 @@ static void commander_parse(const char *encrypted_command)
         message[msglen] = '\0';
         t = commander_touch_button(found_cmd, message);
         if (t == ECHO) {
+            free(command);
             return;
         } else if (t == TOUCHED) {
             if (commander_process_token(found_cmd, message) == RESET) {
@@ -705,6 +706,8 @@ static void commander_parse(const char *encrypted_command)
             // error or not touched
         }
     }
+    //memset(command, 0, strlen(command));
+    free(command);
 
 	
     // Encrypt report
@@ -737,8 +740,6 @@ static void commander_parse(const char *encrypted_command)
         commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
     }
 	
-    memset(command, 0, strlen(command));
-    free(command);
     memory_clear_variables();
 }
 

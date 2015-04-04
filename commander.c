@@ -580,18 +580,12 @@ static int commander_verify_signing(const char *message)
   
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) 
     {
-        if (!change_keypath) {
-            commander_fill_report("sign", "Incomplete command.", ERROR);
-            return ERROR;  
-        }
-       
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
-        // Verify if the change address is present.
         // The function updates verify_input and verify_output.
         if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
             return SAME;
         } else {
-            
+            // Also checks if the change address is present if more than one output given.
             out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
             if (out) {
                 commander_echo(out); 

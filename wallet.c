@@ -470,31 +470,38 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
         if (hex_len < idx + 16) {return NULL;}
         idx += varint_to_uint64(hex + idx, &n_len);
        
-        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
-        uECC_get_public_key33(node.private_key, pub_key33);
-        wallet_get_pubkeyhash(pub_key33, pubkeyhash);
-        wallet_get_address(pub_key33, 0, address, 36);
-        
         memset(outval, 0, sizeof(outval));
         memset(outaddr, 0, sizeof(outaddr));
         sprintf(outval, "{\"value\": %llu, ", outValue);
         sprintf(outaddr, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
+        idx += n_len * 2; // chars = 2 * bytes 
        
-        if (strstr(outaddr, uint8_to_hex(pubkeyhash, 20))) {
-            change_addr_present++;
+        if(keypath && keypath_len > 0) {
+            wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
+            uECC_get_public_key33(node.private_key, pub_key33);
+            wallet_get_pubkeyhash(pub_key33, pubkeyhash);
+            wallet_get_address(pub_key33, 0, address, 36);
+            if (strstr(outaddr, uint8_to_hex(pubkeyhash, 20))) {
+                change_addr_present++;
+                continue;
+            }
+        }
+            
+        if (cnt > 0) {
+            strcat(output, ", ");
         } else {
-            if (cnt > 0) { strcat(output, ", "); }
-            strcat(output, outval);
-            strcat(output, outaddr);
             cnt++;
         }
-        idx += n_len * 2; // chars = 2 * bytes 
+        strcat(output, outval);
+        strcat(output, outaddr);
     }
     strcat(output, " ] }");
     
-    if (change_addr_present) {
+    if (change_addr_present || n_cnt == 1) {
         return output;
     } else {
+        // More than 1 output but a change address is not present.
+        // Consider this an error in order to prevent MITM attacks.
         return NULL;
     }
 }

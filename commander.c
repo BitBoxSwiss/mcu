@@ -741,6 +741,20 @@ void commander_create_verifypass(void) {
 	process_verifypass("create");
 }
 
+    
+// TESTING key matching// 
+void commander_create_mempass(void)
+{
+    uint8_t mempass[32];
+    uint8_t *mp = mempass;
+    random_bytes(mp, 16, 0);
+    flash_read_unique_id((uint32_t *)mp + 4, 16);
+    //printf("debug create mempass  %.*s\n", 64, uint8_to_hex(mempass, 32));
+    memory_write_aeskey(uint8_to_hex(mempass, 32), 64, PASSWORD_MEMORY);
+}
+
+
+
 // Single gateway function to the MCU code
 char *commander(const char *command)
 {
@@ -789,6 +803,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
 }
 
 
+// Must free() returned value
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
 {
     // unbase64

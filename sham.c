@@ -89,6 +89,6 @@ void touch_button_parameters(uint16_t timeout, uint16_t threshold)
 
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len)
 {
-    memset(serial, 0, len);
+    memset(serial, 1, len);
     return 0; // success
 }

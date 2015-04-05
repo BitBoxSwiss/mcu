@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "commander.h"
+#include "random.h"
 #include "memory.h"
 #include "utils.h"
 #include "sha2.h"
@@ -49,6 +50,7 @@ static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 static uint8_t MEM_aeskey_2FA_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_stand_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_verify_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_aeskey_memory_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
 static uint8_t MEM_master_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_master_chain_[MEM_PAGE_LEN] = {0xFF};
@@ -86,17 +88,18 @@ void memory_setup(void)
 		}			
 #endif
 		
-		// Initialize verification password
 		commander_create_verifypass();
-		
+        commander_create_mempass();
         memory_write_setup(0x00);
-        
     }
 }
 
 
 void memory_erase(void)
 {
+    commander_create_verifypass();
+    commander_create_mempass();
+    
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased_);
     memory_write_unlocked(DEFAULT_unlocked_);
@@ -110,8 +113,6 @@ void memory_erase(void)
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
-		
-    commander_create_verifypass();
 }
 
 
@@ -126,6 +127,7 @@ void memory_clear_variables(void)
     memcpy(MEM_aeskey_2FA_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_memory_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_mnemonic_, MEM_PAGE_ERASE_2X, MEM_PAGE_LEN*2);
@@ -167,6 +169,50 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
 	} 
     return 1; 
 }
+
+
+static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const int32_t addr)
+{
+    int enc_len, dec_len, ret = 1;
+    char *enc, *dec;
+    char enc_w[MEM_PAGE_LEN * 4 + 1] = {0}, enc_r[MEM_PAGE_LEN * 4 + 1] = {0};
+    if (read_b) {
+        enc = aes_cbc_b64_encrypt((unsigned char *)uint8_to_hex(read_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        memcpy(enc_r, enc, enc_len);
+        free(enc); 
+    }
+
+    if (write_b) {
+        enc = aes_cbc_b64_encrypt((unsigned char *)uint8_to_hex(write_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        memcpy(enc_w, enc, enc_len);
+        free(enc); 
+        ret = ret * memory_eeprom((uint8_t *)enc_w,                    (uint8_t *)enc_r,                    addr,                    MEM_PAGE_LEN);
+        ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN,     (uint8_t *)enc_r + MEM_PAGE_LEN,     addr + MEM_PAGE_LEN,     MEM_PAGE_LEN);
+        ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 2, (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
+        ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 3, (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3, MEM_PAGE_LEN);
+    } else {
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r,                    addr,                    MEM_PAGE_LEN);
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN,     addr + MEM_PAGE_LEN,     MEM_PAGE_LEN);
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3, MEM_PAGE_LEN);
+    }
+   
+    //printf("debug crypt  w  %s\n", uint8_to_hex(write_b, 32));
+    //printf("debug crypt  r  %s\n", uint8_to_hex(read_b, 32));
+    //printf("debug crypt  ew %s\n", enc_w);
+    //printf("debug crypt  er %s\n", enc_r);
+
+    dec = aes_cbc_b64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len, PASSWORD_MEMORY);
+    if (dec) {
+        memcpy(read_b, hex_to_uint8(dec), MEM_PAGE_LEN);
+        //printf("aes key      r  %s\n\n", uint8_to_hex(read_b, 32) );
+    } else {
+        ret = 0;
+    }
+    free(dec);							
+    return ret; // 1 on success
+}
+
 
 
 uint8_t *memory_name(const char *name)
@@ -236,15 +282,27 @@ int memory_write_aeskey(const char *password, int len, int id)
 	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
     switch (id) {
+        
+        
+        // TODO
+        // only in RAM at the moment //
+        case PASSWORD_MEMORY:
+            memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
+            ret = 1;
+            break;
+        
+        
+        
+        
         case PASSWORD_2FA:
             memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
             ret = 1;
             break;
         case PASSWORD_STAND:
-            ret = memory_eeprom(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
             break;
         case PASSWORD_VERIFY:
-            ret = memory_eeprom(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR, MEM_PAGE_LEN);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             break;
     }
 
@@ -259,15 +317,23 @@ int memory_write_aeskey(const char *password, int len, int id)
 uint8_t *memory_read_aeskey(int id)
 {
     switch (id) {
+       
+
+        // TODO
+        // only in RAM at the moment //
+        case PASSWORD_MEMORY:
+            return MEM_aeskey_memory_;
+        
+        
+        
+        
         case PASSWORD_2FA:
             return MEM_aeskey_2FA_;
-
         case PASSWORD_STAND:
-            memory_eeprom(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR, MEM_PAGE_LEN);
+            memory_eeprom_crypt(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
             return MEM_aeskey_stand_;
-
         case PASSWORD_VERIFY:
-            memory_eeprom(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR, MEM_PAGE_LEN);
+            memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             return MEM_aeskey_verify_;
     }
     return 0;

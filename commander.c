@@ -353,6 +353,21 @@ static void process_verifypass(const char *message)
 }
 
 
+static void process_test(const char *message)
+{
+	uint8_t mempass[32] = {0};
+	uint8_t *mp = mempass;
+
+#ifndef TESTING
+	uint8_t r[2];
+	random_bytes(r, 2, 0);
+	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * r[0], 16);
+	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * r[1], 16);
+#endif
+	commander_fill_report_len("test", uint8_to_hex(mempass, 32), SUCCESS, 64);
+}
+	
+
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
@@ -395,7 +410,11 @@ static int commander_process_token(int cmd, char *message)
         case CMD_sign_:
             process_sign(message);
             break;  
-        
+
+		case CMD_test_:
+			process_test(message);
+			break;
+			        
         case CMD_random_:
             process_random(message);
             break;
@@ -742,19 +761,6 @@ void commander_create_verifypass(void) {
 }
 
     
-// TESTING key matching// 
-void commander_create_mempass(void)
-{
-    uint8_t mempass[32];
-    uint8_t *mp = mempass;
-    random_bytes(mp, 16, 0);
-    flash_read_unique_id((uint32_t *)mp + 4, 16);
-    //printf("debug create mempass  %.*s\n", 64, uint8_to_hex(mempass, 32));
-    memory_write_aeskey(uint8_to_hex(mempass, 32), 64, PASSWORD_MEMORY);
-}
-
-
-
 // Single gateway function to the MCU code
 char *commander(const char *command)
 {

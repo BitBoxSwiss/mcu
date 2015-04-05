@@ -41,6 +41,7 @@
 #define MEM_SETUP_ADDR      		0x0030
 #define MEM_DELAY_ADDR      		0x0032
 #define MEM_UNLOCKED_ADDR      		0x0034
+#define MEM_AESKEY_MEMSEED_ADDR		0x0036
 #define MEM_NAME_ADDR   			0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR		0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR	0x0300// Zone 3
@@ -71,6 +72,7 @@ typedef enum PASSWORD_ID {
 void memory_erase(void);
 void memory_setup(void);
 void memory_clear_variables(void);
+void memory_mempass(uint8_t *seed);
 
 int memory_write_aeskey(const char *password, int len, int id);
 uint8_t *memory_read_aeskey(int id);
@@ -80,6 +82,7 @@ uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint16_t *memory_mnemonic(const uint16_t *index);
 
 uint16_t memory_read_delay(void);
+uint8_t *memory_read_memseed(void);
 uint16_t memory_read_touch_timeout(void);
 uint16_t memory_read_touch_thresh(void);
 uint8_t memory_read_erased(void);
@@ -88,6 +91,7 @@ uint8_t memory_read_unlocked(void);
 int memory_read_led(void);
 
 void memory_delay_iterate(const uint16_t d);
+void memory_write_memseed(const uint8_t *s);
 void memory_write_touch_timeout(const uint16_t t);
 void memory_write_touch_thresh(const uint16_t t);
 void memory_write_erased(const uint8_t erase);

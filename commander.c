@@ -598,8 +598,10 @@ static int commander_verify_signing(const char *message)
     } 
     else 
     {
-        // Check whole input command instead of inputs/outputs since data is hashed
-        if (memcmp(verify_output, message, strlen(message))) {
+        // Check whole input command instead of inputs/outputs since data is hashed.
+        // The commander_echo function replaces ending '}' with ',' and adds PIN information to the end
+        // of verify_output. Therefore, compare verify_output over strlen of message minus 1 characters.
+        if (memcmp(verify_output, message, strlen(message) - 1)) { 
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             memcpy(verify_output, message, strlen(message));
             commander_echo(verify_output); 

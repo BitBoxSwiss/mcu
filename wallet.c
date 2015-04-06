@@ -204,7 +204,7 @@ void wallet_report_xpub(const char *keypath, int keypath_len)
 
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        commander_fill_report("xpub", "A bip32 master private key is not set.", ERROR);
+        commander_fill_report("xpub", "A BIP32 master private key is not set.", ERROR);
     } else {
         wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
@@ -235,6 +235,7 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) 
     {    
         commander_fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
+		ret = 1;
     } 
     else 
     {
@@ -450,7 +451,6 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
 
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        commander_fill_report("sign", "A bip32 master private key is not set.", ERROR);
         return NULL;
     } 
 

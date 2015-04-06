@@ -89,8 +89,6 @@ void memory_setup(void)
 		}			
 #endif
 		
-		commander_create_verifypass();
-        memory_mempass(NULL);
         memory_write_setup(0x00);
     } else {
 		memory_mempass(memory_read_memseed());
@@ -100,8 +98,14 @@ void memory_setup(void)
 
 void memory_erase(void)
 {
-    commander_create_verifypass();
     memory_mempass(NULL);
+    commander_create_verifypass();
+	
+    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
+    memory_mnemonic(MEM_PAGE_ERASE_2X);
+    memory_chaincode(MEM_PAGE_ERASE);
+    memory_master(MEM_PAGE_ERASE);
     
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased_);
@@ -110,12 +114,6 @@ void memory_erase(void)
     memory_write_touch_thresh(DEFAULT_touch_thresh_);
     memory_delay_iterate(DEFAULT_delay_);
     memory_write_led(DEFAULT_led_);
-    
-    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
-    memory_mnemonic(MEM_PAGE_ERASE_2X);
-    memory_chaincode(MEM_PAGE_ERASE);
-    memory_master(MEM_PAGE_ERASE);
 }
 
 
@@ -214,9 +212,12 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
 void memory_mempass(uint8_t *seed)
 {
 	uint8_t mempass[32] = {0};
-	uint8_t *mp = mempass;
 	
-#ifndef TESTING
+#ifdef TESTING
+	(void)seed;
+#else	
+	uint8_t *mp = mempass;
+	/*
 	if (!seed) {
 		// update
 		random_bytes(seed, 2, 0);
@@ -224,6 +225,10 @@ void memory_mempass(uint8_t *seed)
 	}
 	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * seed[0], 16);
 	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * seed[1], 16);
+	*/
+	// TODO set mempass location
+	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * 1, 16);
+	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * 2, 16);
 #endif
 	memory_write_aeskey(uint8_to_hex(mempass, 32), 64, PASSWORD_MEMORY);
 }

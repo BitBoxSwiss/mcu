@@ -39,6 +39,7 @@
 #include "jsmn.h"
 #include "aes.h"
 #include "led.h"
+#include "tests_internal.h"
 #ifndef TESTING
 #include "ataes132.h"
 #include "touch.h"
@@ -353,21 +354,6 @@ static void process_verifypass(const char *message)
 }
 
 
-static void process_test(const char *message)
-{
-	uint8_t mempass[32] = {0};
-	uint8_t *mp = mempass;
-
-#ifndef TESTING
-	uint8_t r[2];
-	random_bytes(r, 2, 0);
-	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * r[0], 16);
-	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * r[1], 16);
-#endif
-	commander_fill_report_len("test", uint8_to_hex(mempass, 32), SUCCESS, 64);
-}
-	
-
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
@@ -412,7 +398,7 @@ static int commander_process_token(int cmd, char *message)
             break;  
 
 		case CMD_test_:
-			process_test(message);
+			tests_internal();
 			break;
 			        
         case CMD_random_:
@@ -611,7 +597,7 @@ static int commander_verify_signing(const char *message)
                 commander_echo(out); 
                 return DIFFERENT;
             } else {
-                commander_fill_report("sign", "Change address not found or deserialization failed.", ERROR);
+                commander_fill_report("sign", "Could not deserialize outputs.", ERROR);
                 return ERROR;  
             }
         }

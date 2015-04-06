@@ -472,6 +472,7 @@ static char *commander_decrypt(const char *encrypted_command,
         commander_fill_report("input", "Could not decrypt. "
                     "Too many access errors will cause the device to reset. ", ERROR);
         memory_delay_iterate(1);
+		return NULL;
     } else {
         memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
         n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
@@ -812,6 +813,10 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, P
 // Must free() returned value
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
 {
+	if (!in || inlen == 0) {
+		return NULL;
+	}
+	
     // unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);

@@ -25,14 +25,16 @@
 */
 
 
+#include <time.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include "tests_internal.h"
 #include "commander.h"
-#include "systick.h"
 #include "utils.h"
 #include "uECC.h"
 #ifndef TESTING
+#include "systick.h"
 #include "mcu.h"
 #endif
 
@@ -44,7 +46,7 @@ static void tests_sign_speed(void)
 {
 	// N = 50 -> 7.5 sig/sec
 	uint8_t sig[64], priv_key_0[32], priv_key_1[32], msg[256];
-	uint16_t time_ms;
+	float time_sec;
 	size_t i, N = 50; 
 	int res;
 	for (i = 0; i < sizeof(msg); i++) {
@@ -53,11 +55,13 @@ static void tests_sign_speed(void)
 
 	memcpy(priv_key_0, hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"), 32);
 	memcpy(priv_key_1, hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"), 32);
-	
-	// Make high priority so that we can timeout
-	NVIC_SetPriority(SysTick_IRQn, 0);
-	
+
+#ifdef TESTING
+    clock_t t = clock();
+#else
+	NVIC_SetPriority(SysTick_IRQn, 0); // Make high priority so that we can timeout
 	systick_current_time_ms = 0;
+#endif
 	
 	for (i = 0 ; i < N; i++) {
 		res = uECC_sign(priv_key_0, msg, sizeof(msg), sig);
@@ -67,16 +71,18 @@ static void tests_sign_speed(void)
 		res += uECC_sign(priv_key_1, msg, sizeof(msg), sig);
 	}
 
-	time_ms = systick_current_time_ms;
-
-	// Reset lower priority
-	NVIC_SetPriority(SysTick_IRQn, 15);
-
-	if (res) {
+#ifdef TESTING
+	time_sec = (float)(clock() - t) / CLOCKS_PER_SEC;
+#else
+    time_sec = systick_current_time_ms * 1000;
+	NVIC_SetPriority(SysTick_IRQn, 15); // Reset lower priority
+#endif
+	
+    if (res) {
 		commander_fill_report("tests_sign_speed", "could not sign", ERROR);
 	} else {
 		char report[64];
-		sprintf(report, "%0.2f sig/s", N * 2 / ((float)time_ms / 1000));
+		sprintf(report, "%0.2f sig/s", N * 2 / time_sec);
 		commander_fill_report("tests_sign_speed", report, SUCCESS);
 	}
 	

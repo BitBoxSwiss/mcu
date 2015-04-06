@@ -1,9 +1,11 @@
+tests*
+!tests_internal.*
+!*.c
+tests.c
+backup
+*.bak
+.DS_Store
+.ycm*
 *.o
 *.swp
 *.swo
-.ycm*
-tests.*
-!*.c
-*.bak
-.DS_Store
-backup

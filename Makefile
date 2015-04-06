@@ -12,7 +12,7 @@ CFLAGS += -D TESTING
 TESTSSLLIBS = -lcrypto
 
 
-OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o
+OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o tests_internal.o sham.o
 OBJS += uECC.o
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<

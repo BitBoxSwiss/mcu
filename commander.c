@@ -656,7 +656,7 @@ static void commander_parse(const char *encrypted_command)
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
     
     char *encoded_report;
-    int n_tokens, j, t, cmd, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
+    int n_tokens, j, t, cmd, ret, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
 	jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
@@ -700,9 +700,12 @@ static void commander_parse(const char *encrypted_command)
             free(command);
             return;
         } else if (t == TOUCHED) {
-            if (commander_process_token(found_cmd, message) == RESET) {
+            ret = commander_process_token(found_cmd, message);
+            if (ret == RESET) {
                 free(command);
                 return;
+            } else if (ret == ERROR) {
+                err++;
             }
             memset(message, 0, msglen);
         } else {

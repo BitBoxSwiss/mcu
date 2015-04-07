@@ -32,7 +32,6 @@
 #include <stdint.h>
 
 #define MEM_PAGE_LEN                32
-#define MEM_AESKEY_LEN_MIN			4
 
 // User Zones: 0x0000 to 0x0FFF
 #define MEM_LED_ADDR			    0x0020// Zone 0

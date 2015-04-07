@@ -35,6 +35,7 @@
 #include "base64.h"
 #include "wallet.h"
 #include "utils.h"
+#include "flags.h"
 #include "sha2.h"
 #include "jsmn.h"
 #include "aes.h"
@@ -143,7 +144,7 @@ void commander_force_reset(void)
 {
     memory_erase();
 	commander_clear_report();
-    commander_fill_report("reset", "Too many failed access attempts. Device reset.", ERROR);
+    commander_fill_report("reset", FLAG_ERR_RESET, ERROR);
 }
 
 
@@ -161,7 +162,7 @@ static void device_reset(const char *r)
             return; 
         }
     }
-    commander_fill_report("reset", "Incorrect syntax.", ERROR);
+    commander_fill_report("reset", FLAG_ERR_INVALID_CMD, ERROR);
 }
 
 
@@ -176,12 +177,12 @@ static void process_seed(char *message)
    
 
     if (!memory_read_unlocked()) {
-        commander_fill_report("seed", "Device locked. Erase device to change the seed.", ERROR);
+        commander_fill_report("seed", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
     }
 
     if (!source) {
-        commander_fill_report("seed", "Incomplete command.", ERROR);
+        commander_fill_report("seed", FLAG_ERR_INVALID_CMD, ERROR);
         return;
     }
 
@@ -218,7 +219,7 @@ static void process_backup(char *message)
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 
     if (!memory_read_unlocked()) {
-        commander_fill_report("backup", "Device locked. Erase device to resume access to the micro SD card.", ERROR);
+        commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
     }
 
@@ -233,11 +234,11 @@ static void process_backup(char *message)
     }
 	
 	if (!filename) {
-        commander_fill_report("backup", "Incomplete command.", ERROR);
+        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
     } else {
         char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
         if (!text) {
-            commander_fill_report("backup", "BIP32 mnemonic not present.", ERROR);
+            commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
             return;
         } 
         if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt	
@@ -247,19 +248,19 @@ static void process_backup(char *message)
 	            ret = sd_write(filename, filename_len, enc, enc_len);
 		        if (ret == SUCCESS) {
 					if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-						commander_fill_report("backup", "Corrupted file.", ERROR);
+						commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
 					}
 				}
                 free(enc);
             } else {
-                commander_fill_report("backup", "Could not allocate memory for encryption.", ERROR);
+                commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
                 return;
             }
         } else {
             ret = sd_write(filename, filename_len, text, strlen(text));
             if (ret == SUCCESS) {
 				if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-					commander_fill_report("backup", "Corrupted file.", ERROR);
+					commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
 				}
 			}
         }
@@ -277,14 +278,14 @@ static int process_sign(char *message)
     keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
     
     if (!data || !keypath || !type) {
-        commander_fill_report("sign", "Incomplete command.", ERROR);
+        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
         return ERROR;  
     }
     
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) {
         to_hash = 1;
     } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
-        commander_fill_report("sign", "Unknown type value.", ERROR);
+        commander_fill_report("sign", FLAG_ERR_SIGN_TYPE, ERROR);
         return ERROR;
     }
     return(wallet_sign(data, data_len, keypath, keypath_len, to_hash));
@@ -300,12 +301,12 @@ static void process_random(char *message)
     } else if (strcmp(message, ATTR_STR[ATTR_pseudo_]) == 0) {
         update_seed = 0;
     } else {
-        commander_fill_report("random", "Invalid command.", ERROR);
+        commander_fill_report("random", FLAG_ERR_INVALID_CMD, ERROR);
         return;
     }
 
     if (random_bytes(number, sizeof(number), update_seed)) {
-        commander_fill_report("random", "Chip communication error.", ERROR);
+        commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
     } else {
         commander_fill_report("random", uint8_to_hex(number, sizeof(number)), SUCCESS);
     }
@@ -325,13 +326,13 @@ static void process_verifypass(const char *message)
     char text[64 + 1];
     
     if (!memory_read_unlocked()) {
-        commander_fill_report("verifypass", "Device locked. Erase device to export or create a new verification password.", ERROR);
+        commander_fill_report("verifypass", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
     }
 
     if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
         if (random_bytes(number, sizeof(number), 1)) {
-            commander_fill_report("random", "Chip communication error.", ERROR);
+            commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
         } else {
             if (process_password(uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) == SUCCESS) {
                 commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
@@ -343,11 +344,11 @@ static void process_verifypass(const char *message)
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
 		if (ret == SUCCESS) {
 	        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
-		        commander_fill_report(ATTR_STR[ATTR_export_], "Corrupted file.", ERROR);
+		        commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
 			}
 		}
     } else {
-        commander_fill_report("verifypass", "Invalid command.", ERROR);
+        commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, ERROR);
         return;
     }
 
@@ -377,7 +378,7 @@ static int commander_process_token(int cmd, char *message)
                 led_toggle();  
                 commander_fill_report(CMD_STR[cmd], "toggled", SUCCESS);
             } else {
-                commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
+                commander_fill_report(CMD_STR[cmd], FLAG_ERR_INVALID_CMD, ERROR);
             }
             break;
         
@@ -419,7 +420,7 @@ static int commander_process_token(int cmd, char *message)
 				if (!flash_read_unique_id(serial, 16)) {
 					commander_fill_report(ATTR_STR[ATTR_serial_], uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
 				} else {
-					commander_fill_report(ATTR_STR[ATTR_serial_], "Could not read flash.", ERROR);         
+					commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, ERROR);         
 				}
 			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
                 commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
@@ -427,7 +428,7 @@ static int commander_process_token(int cmd, char *message)
                 memory_write_unlocked(0); 
                 commander_fill_report(CMD_STR[cmd], "locked", SUCCESS);
             } else {
-                commander_fill_report(CMD_STR[cmd], "Invalid command.", ERROR);
+                commander_fill_report(CMD_STR[cmd], FLAG_ERR_INVALID_CMD, ERROR);
             }
             break;
         }
@@ -454,8 +455,8 @@ static char *commander_decrypt(const char *encrypted_command,
                                       PASSWORD_STAND);
     
     if (command == NULL) {
-        commander_fill_report("input", "Could not decrypt. "
-                    "Too many access errors will cause the device to reset. ", ERROR);
+        commander_fill_report("input", FLAG_ERR_DECRYPT " "           
+                                       FLAG_ERR_RESET_WARNING, ERROR);
         memory_delay_iterate(1);
 		return NULL;
     } else {
@@ -466,9 +467,9 @@ static char *commander_decrypt(const char *encrypted_command,
     
     if (!(json_token[0].type == JSMN_OBJECT  &&  n > 0))
     {
-        commander_fill_report("input", "JSON parse error. "
-                    "Too many access errors will cause the device to reset. "
-                    "Is the command enclosed by curly brackets?", ERROR);
+        commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 
+                                       FLAG_ERR_RESET_WARNING " "
+                                       FLAG_ERR_JSON_BRACKET, ERROR);
         memory_delay_iterate(1);
         return NULL;
     } else {
@@ -483,15 +484,15 @@ static int commander_check_init(const char *encrypted_command)
 	commander_clear_report();
 
     if (!encrypted_command) {
-        commander_fill_report("input", "No input received. "
-                    "Too many access errors will cause the device to reset.", ERROR);
+        commander_fill_report("input", FLAG_ERR_NO_INPUT " "          
+                                       FLAG_ERR_RESET_WARNING, ERROR);
         memory_delay_iterate(1);
         return ERROR;
     } 
     
     if (!strlen(encrypted_command)) {
-        commander_fill_report("input", "No input received. "
-                    "Too many access errors will cause the device to reset.", ERROR);
+        commander_fill_report("input", FLAG_ERR_NO_INPUT " "
+                                       FLAG_ERR_RESET_WARNING, ERROR);
         memory_delay_iterate(1);
         return ERROR;
     }
@@ -515,10 +516,10 @@ static int commander_check_init(const char *encrypted_command)
                     commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
                 }
             } else {
-                commander_fill_report("input", "JSON parse error.", ERROR);
+                commander_fill_report("input", FLAG_ERR_JSON_PARSE, ERROR);
             }
         } else {
-			commander_fill_report("input", "Please set a password.", ERROR);
+			commander_fill_report("input", FLAG_ERR_NO_PASSWORD, ERROR);
 		}
         return ERROR;
 	}
@@ -563,7 +564,7 @@ static void commander_echo(char *command)
         commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
         free(encoded_report);
     } else {
-        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
+        commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
 }
                         
@@ -579,7 +580,7 @@ static int commander_verify_signing(const char *message)
     change_keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_change_keypath_], &change_keypath_len);
 
     if (!data || !type) {
-        commander_fill_report("sign", "Incomplete command.", ERROR);
+        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
         return ERROR;  
     }
   
@@ -596,7 +597,7 @@ static int commander_verify_signing(const char *message)
                 commander_echo(out); 
                 return DIFFERENT;
             } else {
-                commander_fill_report("sign", "Could not deserialize outputs.", ERROR);
+                commander_fill_report("sign", FLAG_ERR_DESERIALIZE, ERROR);
                 return ERROR;  
             }
         }
@@ -686,9 +687,9 @@ static void commander_parse(const char *encrypted_command)
 
     // Process commands
     if (!found) {
-        commander_fill_report("input", "A valid command was not found.", ERROR);
+        commander_fill_report("input", FLAG_ERR_INVALID_CMD, ERROR);
     } else if (found > 1) {
-        commander_fill_report("input", "Only one command allowed at a time.", ERROR);
+        commander_fill_report("input", FLAG_ERR_MULTIPLE_CMD, ERROR);
     } else {
         memory_delay_iterate(0); // reset to 0
         msglen = json_token[found_j + 1].end-json_token[found_j + 1].start;
@@ -741,7 +742,7 @@ static void commander_parse(const char *encrypted_command)
         commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
         free(encoded_report);
     } else {
-        commander_fill_report("output", "Could not allocate memory for encryption.", ERROR);
+        commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
 	
     memory_clear_variables();
@@ -831,7 +832,6 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec)
     {
-        commander_fill_report("input", "Could not allocate memory for decryption.", ERROR);
         memset(dec_pad, 0, sizeof(dec_pad));
         decrypt_len = 0;
         return NULL;

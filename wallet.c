@@ -41,6 +41,7 @@
 #include "pbkdf2.h"
 #include "utils.h"
 #include "bip32.h"
+#include "flags.h"
 #include "hmac.h"
 #include "sha2.h"
 #include "uECC.h"
@@ -155,7 +156,7 @@ void wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s
     if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
         !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
         !memcmp(memory_mnemonic(wallet_index_from_mnemonic(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {    
-        commander_fill_report("seed", "Problem saving BIP32 master key.", ERROR); 
+        commander_fill_report("seed", FLAG_ERR_BIP32_SAVE, ERROR); 
     } else {
         commander_fill_report("seed", "success", SUCCESS);
     }
@@ -204,7 +205,7 @@ void wallet_report_xpub(const char *keypath, int keypath_len)
 
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) || 
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        commander_fill_report("xpub", "A BIP32 master private key is not set.", ERROR);
+        commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, ERROR);
     } else {
         wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
 	    hdnode_serialize_public(&node, xpub, sizeof(xpub));
@@ -227,15 +228,14 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
 
     if (!to_hash && msg_len != (32 * 2)) 
     {
-        commander_fill_report("sign", "Incorrect data length. "
-                    "A 32-byte hexadecimal value (64 characters) is expected.", ERROR);
+        commander_fill_report("sign", FLAG_ERR_SIGN_LEN, ERROR);
         return ERROR; 
     } 
     
 	if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) 
     {    
-        commander_fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
+        commander_fill_report("sign", FLAG_ERR_BIP32_MISSING, ERROR); 
 		return ERROR;
     } 
 
@@ -249,7 +249,7 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     }
         
     if (ret) {
-        commander_fill_report("sign", "Could not sign data.", ERROR);
+        commander_fill_report("sign", FLAG_ERR_SIGN, ERROR);
 		return ERROR;
     } 
 	
@@ -296,7 +296,7 @@ char *wallet_mnemonic_from_data(const uint8_t *data, int len)
 int wallet_mnemonic_check(const char *mnemo)
 {
 	if (!mnemo) {
-        commander_fill_report("seed", "Empty mnemonic.", ERROR);
+        commander_fill_report("seed", FLAG_ERR_MNEMO_EMPTY, ERROR);
 		return 0;
 	}
 
@@ -309,7 +309,7 @@ int wallet_mnemonic_check(const char *mnemo)
     
     
     if (n != 12 && n != 18 && n != 24) {
-        commander_fill_report("seed", "Wrong number of mnemonic words.", ERROR);
+        commander_fill_report("seed", FLAG_ERR_MNEMO_NUM_WORDS, ERROR);
 		return 0;
 	}
 	
@@ -322,7 +322,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		j = 0;
 		while (mnemo[i] != ' ' && mnemo[i] != 0) {
 			if (j >= sizeof(current_word)) {
-                commander_fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+                commander_fill_report("seed", FLAG_ERR_MNEMO_WORD, ERROR);
 				return 0;
 			}
 			current_word[j] = mnemo[i];
@@ -333,7 +333,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		k = 0;
 		for (;;) {
 			if (!wordlist[k]) { // word not found
-                commander_fill_report("seed", "Word not in bip39 wordlist.", ERROR);
+                commander_fill_report("seed", FLAG_ERR_MNEMO_WORD, ERROR);
 				return 0;
 			}
 			if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
@@ -349,7 +349,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		}
 	}
 	if (bi != n * 11) {
-        commander_fill_report("seed", "Mnemonic check error. [0]", ERROR);
+        commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, ERROR);
 		return 0;
 	}
 	bits[32] = bits[n * 4 / 3];
@@ -364,7 +364,7 @@ int wallet_mnemonic_check(const char *mnemo)
 		return bits[0] == bits[32]; // compare 8 bits
 	}
    
-    commander_fill_report("seed", "Invalid mnemonic: checksum error.", ERROR);
+    commander_fill_report("seed", FLAG_ERR_MNEMO_CHECKSUM, ERROR);
     return 0;
 }
 

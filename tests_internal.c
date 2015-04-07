@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include "tests_internal.h"
 #include "commander.h"
+#include "flags.h"
 #include "utils.h"
 #include "uECC.h"
 #ifndef TESTING
@@ -100,5 +101,5 @@ static void tests_backup(void)
 void tests_internal(void)
 {
     tests_backup();
-//	tests_sign_speed();	
+	tests_sign_speed();	
 }

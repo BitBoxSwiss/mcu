@@ -151,6 +151,7 @@ int varint_to_uint64(const char *vi, uint64_t *i)
 #include <stdlib.h>
 #include "commander.h"
 #include "memory.h"
+#include "flags.h"
 #include "jsmn.h"
 #include "sha2.h"
 

@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "commander.h"
+#include "flags.h"
 
 
 void delay_ms(int delay) 
@@ -43,7 +44,7 @@ uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
     (void)f_len;
     (void)t;
     (void)t_len;
-    commander_fill_report("backup", "Ignored for non-embedded testing.", ERROR);
+    commander_fill_report("backup", FLAG_ERR_NO_MCU, ERROR);
     return ERROR;
 }
 
@@ -52,21 +53,21 @@ char *sd_load(const char *f, int f_len)
 {
     (void)f;
     (void)f_len;
-	commander_fill_report("sd_load", "Ignored for non-embedded testing.", ERROR);
+	commander_fill_report("sd_load", FLAG_ERR_NO_MCU, ERROR);
     return "--";
 }
 
 
 uint8_t sd_list(void)
 {
-    commander_fill_report("sd_list", "Ignored for non-embedded testing.", ERROR);
+    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, ERROR);
     return ERROR;
 }
 
 
 uint8_t sd_erase(void)
 {
-    commander_fill_report("sd_erase", "Ignored for non-embedded testing.", ERROR);
+    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, ERROR);
     return ERROR;
 }
 
@@ -74,7 +75,7 @@ uint8_t sd_erase(void)
 uint8_t touch_button_press(int long_touch)
 {
     (void) long_touch;
-    commander_fill_report("touchbutton", "touched (hard coded)", SUCCESS);
+    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, SUCCESS);
     return TOUCHED;
 }
 
@@ -83,7 +84,7 @@ void touch_button_parameters(uint16_t timeout, uint16_t threshold)
 {
     (void)timeout;
     (void)threshold;
-    commander_fill_report("touchbutton", "touched (hard coded)", SUCCESS);
+    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, SUCCESS);
 }
 
 

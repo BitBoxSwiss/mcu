@@ -40,87 +40,9 @@
 #else
 #define COMMANDER_REPORT_SIZE   2048
 #endif
-
 #define DIGITAL_BITBOX_VERSION  "1.0"
-
 #define COMMANDER_MAX_ATTEMPTS	5// max attempts before device reset
-
 #define VERIFYPASS_FILENAME     "verification.txt"
-
-#define GENERATE_STRING(STRING) #STRING,
-#define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,
-#define GENERATE_ENUM_CMD(ENUM) CMD_ ## ENUM ## _,
-
-#define FOREACH_CMD(CMD)        \
-  /*    parent commands     */  \
-  /*    requiring touch     */  \
-        CMD(sign)               \
-        CMD(seed)               \
-        CMD(device)             \
-        CMD(password)           \
-        CMD(touchbutton)        \
-  /* placeholder don't move */  \
-        CMD(require_touch)      \
-  /*    parent commands     */  \
-  /*    not requiring touch */  \
-        CMD(led)                \
-        CMD(xpub)               \
-        CMD(name)               \
-        CMD(test)               \
-        CMD(reset)              \
-        CMD(random)             \
-        CMD(backup)             \
-        CMD(verifypass)         \
-        CMD(ciphertext)         \
-  /*    child commands      */  \
-        CMD(timeout)            \
-        CMD(holdtime)           \
-        CMD(threshold)          \
-        CMD(generate)           \
-        CMD(source)             \
-        CMD(type)               \
-        CMD(data)               \
-        CMD(keypath)            \
-        CMD(change_keypath)     \
-        CMD(strength)           \
-        CMD(salt)               \
-        CMD(filename)           \
-        CMD(decrypt)            \
-        CMD(encrypt)            \
-  /* placeholder don't move */  \
-        CMD(none)                /* keep last */
-
-#define FOREACH_ATTR(ATTR)      \
-  /*    command attributes  */  \
-        ATTR(transaction)       \
-        ATTR(hash)              \
-        ATTR(true)              \
-        ATTR(list)              \
-        ATTR(lock)              \
-        ATTR(erase)             \
-        ATTR(toggle)            \
-        ATTR(pseudo)            \
-        ATTR(create)            \
-        ATTR(export)            \
-        ATTR(serial)            \
-        ATTR(version)           \
-        ATTR(__ERASE__)         \
-        ATTR(__FORCE__)         \
-        ATTR(none)               /* keep last */
-
-enum CMD_ENUM { FOREACH_CMD(GENERATE_ENUM_CMD) };
-enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
-
-#define CMD_NUM      CMD_none_
-#define ATTR_NUM     ATTR_none_
-
-enum REPORT_FLAGS { 
-    SUCCESS, ERROR, 
-    ECHO,
-    SAME, DIFFERENT,
-    TOUCHED, NOT_TOUCHED,
-    RESET
-};
 
 
 void commander_force_reset(void);

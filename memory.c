@@ -32,6 +32,7 @@
 #include "random.h"
 #include "memory.h"
 #include "utils.h"
+#include "flags.h"
 #include "sha2.h"
 #ifndef TESTING
 #include "ataes132.h"
@@ -274,13 +275,8 @@ int memory_write_aeskey(const char *password, int len, int id)
     uint8_t password_b[MEM_PAGE_LEN];
 	memset(password_b, 0, MEM_PAGE_LEN);
     
-    // TEST really need a max condition if later hash it? check against python aes implementation
-	//if (len < MEM_AESKEY_LEN_MIN || len > MEM_PAGE_LEN)
 	if (len < MEM_AESKEY_LEN_MIN) {
-        char errormsg[128];
-		//sprintf(errormsg,"The password length must be between %i and %i characters.", MEM_AESKEY_LEN_MIN, MEM_PAGE_LEN);
-		sprintf(errormsg,"The password length must be at least %i characters.", MEM_AESKEY_LEN_MIN);
-		commander_fill_report("password", errormsg, ERROR);
+		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
 		return ERROR;
 	}
     
@@ -307,7 +303,7 @@ int memory_write_aeskey(const char *password, int len, int id)
     if (ret) {
         return SUCCESS;
     } else { 
-        commander_fill_report("password", "Password saving error.", ERROR);
+        commander_fill_report("password", FLAG_ERR_ATAES, ERROR);
         return ERROR;
     }
 }

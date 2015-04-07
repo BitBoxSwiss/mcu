@@ -38,6 +38,7 @@
 #include "base58.h"
 #include "pbkdf2.h"
 #include "base64.h"
+#include "flags.h"
 #include "bip32.h"
 #include "utils.h"
 #include "utest.h"
@@ -671,13 +672,13 @@ static void test_mnemonic_check(void)
 	m = vectors_ok;
 	while (*m) {
 		r = wallet_mnemonic_check(*m);
-		u_assert_int_eq(r, 1);
+		u_assert_int_eq(r, SUCCESS);
 		m++;
 	}
 	m = vectors_fail;
 	while (*m) {
 		r = wallet_mnemonic_check(*m);
-		u_assert_int_eq(r, 0);
+		u_assert_int_eq(r, ERROR);
 		m++;
 	}
 }

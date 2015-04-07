@@ -54,7 +54,7 @@ char *sd_load(const char *f, int f_len)
     (void)f;
     (void)f_len;
 	commander_fill_report("sd_load", FLAG_ERR_NO_MCU, ERROR);
-    return "--";
+    return NULL;
 }
 
 

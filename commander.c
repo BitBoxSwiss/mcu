@@ -61,7 +61,7 @@ static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 
 
-static void commander_clear_report(void)
+void commander_clear_report(void)
 {
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
 	json_report[0] = '\0';
@@ -169,7 +169,7 @@ static void device_reset(const char *r)
 
 static void process_seed(char *message)
 { 
-    int salt_len, source_len, decrypt_len;
+    int salt_len, source_len, decrypt_len, ret;
     char *seed_word[25] = {NULL}; 
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
     const char *source = jsmn_get_value_string(message, CMD_STR[CMD_source_], &source_len);
@@ -191,9 +191,9 @@ static void process_seed(char *message)
     src[source_len] = '\0';
 
 	if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
-        wallet_master_from_mnemonic(NULL, 0, salt, salt_len);
+        ret = wallet_master_from_mnemonic(NULL, 0, salt, salt_len);
     } else if (wallet_split_seed(seed_word, src) > 1) { 
-        wallet_master_from_mnemonic(src, source_len, salt, salt_len);
+        ret = wallet_master_from_mnemonic(src, source_len, salt, salt_len);
     } else {
         char *mnemo = sd_load(src, source_len);
         if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
@@ -205,16 +205,29 @@ static void process_seed(char *message)
             free(dec);							
         }
         if (mnemo) {
-            wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
+            ret = wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
+        } else {
+            ret = ERROR;
         }
-
     }
+    
+    if (ret == ERROR) {
+        commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, ERROR); 
+        return;
+    } 
+    
+    if (ret == ERROR_MEM) {
+        commander_fill_report("seed", FLAG_ERR_ATAES, ERROR); 
+        return;
+    }
+    
+    commander_fill_report("seed", "success", SUCCESS);
 }
 
 
 static void process_backup(char *message)
 { 
-    int encrypt_len, filename_len, ret;
+    int encrypt_len, filename_len;
     const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 
@@ -235,34 +248,34 @@ static void process_backup(char *message)
 	
 	if (!filename) {
         commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    } 
+    
+    char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
+    if (!text) {
+        commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
+        return;
+    } 
+    
+    if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt	
+        int enc_len;
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
+        if (!enc) {
+            commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
+            free(enc);
+        } else if (sd_write(filename, filename_len, enc, enc_len) != SUCCESS) {
+            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
+            free(enc);
+        } else if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
+            commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+            free(enc);
+        }
+
     } else {
-        char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
-        if (!text) {
-            commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
-            return;
-        } 
-        if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt	
-            int enc_len;
-            char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
-            if (enc) {
-	            ret = sd_write(filename, filename_len, enc, enc_len);
-		        if (ret == SUCCESS) {
-					if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-						commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-					}
-				}
-                free(enc);
-            } else {
-                commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
-                return;
-            }
-        } else {
-            ret = sd_write(filename, filename_len, text, strlen(text));
-            if (ret == SUCCESS) {
-				if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-					commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-				}
-			}
+        if (sd_write(filename, filename_len, text, strlen(text)) != SUCCESS) {
+            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
+        } else if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
+            commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
         }
     }	
 }
@@ -285,9 +298,10 @@ static int process_sign(char *message)
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) {
         to_hash = 1;
     } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
-        commander_fill_report("sign", FLAG_ERR_SIGN_TYPE, ERROR);
+        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
         return ERROR;
     }
+    
     return(wallet_sign(data, data_len, keypath, keypath_len, to_hash));
 }
 
@@ -307,9 +321,10 @@ static void process_random(char *message)
 
     if (random_bytes(number, sizeof(number), update_seed)) {
         commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
-    } else {
-        commander_fill_report("random", uint8_to_hex(number, sizeof(number)), SUCCESS);
+        return;
     }
+    
+    commander_fill_report("random", uint8_to_hex(number, sizeof(number)), SUCCESS);
 }
 
 
@@ -328,30 +343,73 @@ static void process_verifypass(const char *message)
     if (!memory_read_unlocked()) {
         commander_fill_report("verifypass", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
-    }
-
+    } 
+    
     if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
         if (random_bytes(number, sizeof(number), 1)) {
             commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
-        } else {
-            if (process_password(uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) == SUCCESS) {
-                commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
-            }
-        } 
+            return;
+        }
+        if (process_password(uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) != SUCCESS) {
+            return;
+        }
+        commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
     
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
         memcpy(text, uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
-		if (ret == SUCCESS) {
-	        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
-		        commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-			}
-		}
+		if (ret != SUCCESS) {
+            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_WRITE, ERROR);
+	        return;
+        }
+        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
+            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+	        return;
+        }
+        commander_fill_report(ATTR_STR[ATTR_export_], "success", SUCCESS);
+    
     } else {
         commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, ERROR);
+    }
+}
+
+
+static void process_xpub(const char *message)
+{
+    char xpub[112] = {0};
+    wallet_report_xpub(message, strlen(message), xpub);            
+    if (xpub[0]) {
+        commander_fill_report("xpub", xpub, SUCCESS);
+    } else {
+        commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, ERROR);
+    }
+}
+
+
+static void process_device(const char *message)
+{
+    if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
+        uint32_t serial[4];
+        if (!flash_read_unique_id(serial, 16)) {
+            commander_fill_report(ATTR_STR[ATTR_serial_], uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
+        } else {
+            commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, ERROR);         
+        }
+        return;
+    } 
+    
+    if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
+        commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
+        return;
+    } 
+    
+    if (strcmp(message, ATTR_STR[ATTR_lock_]) == 0) {
+        memory_write_unlocked(0); 
+        commander_fill_report("device", "locked", SUCCESS);
         return;
     }
-
+    
+    commander_fill_report("device", FLAG_ERR_INVALID_CMD, ERROR);
 }
 
 
@@ -405,8 +463,8 @@ static int commander_process_token(int cmd, char *message)
             process_random(message);
             break;
       
-        case CMD_xpub_:
-            wallet_report_xpub(message, strlen(message));            
+        case CMD_xpub_: 
+            process_xpub(message);
             break;
 
         case CMD_touchbutton_:
@@ -414,24 +472,9 @@ static int commander_process_token(int cmd, char *message)
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
             break;
 
-        case CMD_device_: {
-            if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
-				uint32_t serial[4];
-				if (!flash_read_unique_id(serial, 16)) {
-					commander_fill_report(ATTR_STR[ATTR_serial_], uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
-				} else {
-					commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, ERROR);         
-				}
-			} else if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
-                commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
-			} else if (strcmp(message, ATTR_STR[ATTR_lock_]) == 0) {
-                memory_write_unlocked(0); 
-                commander_fill_report(CMD_STR[cmd], "locked", SUCCESS);
-            } else {
-                commander_fill_report(CMD_STR[cmd], FLAG_ERR_INVALID_CMD, ERROR);
-            }
+        case CMD_device_: 
+            process_device(message);
             break;
-        }
         
         case CMD_none_:
             break;

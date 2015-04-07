@@ -112,30 +112,28 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define FLAG_ERR_RESET              "Too many failed access attempts. Device reset."
 #define FLAG_ERR_RESET_WARNING      "Too many access errors will cause the device to reset."
 #define FLAG_ERR_SIGN               "Could not sign."
-#define FLAG_ERR_SIGN_TYPE          "Unknown type."
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs."
 #define FLAG_ERR_DEVICE_LOCKED      "Device locked. Erase device to access this command."
 #define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
-#define FLAG_ERR_BIP32_SAVE         "Problem saving BIP32 master key."
 #define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
+#define FLAG_ERR_SD_WRITE           "Could not write."
 #define FLAG_ERR_DECRYPT            "Could not decrypt."
 #define FLAG_ERR_ENCRYPT_MEM        "Could not allocate memory for encryption."
 #define FLAG_ERR_ATAES              "Chip communication error."
 #define FLAG_ERR_FLASH              "Could not read flash."
-#define FLAG_ERR_MNEMO_EMPTY        "Empty mnemonic."
-#define FLAG_ERR_MNEMO_NUM_WORDS    "Wrong number of mnemonic words."
-#define FLAG_ERR_MNEMO_WORD         "Word not in bip39 wordlist."
-#define FLAG_ERR_MNEMO_CHECK        "Mnemonic check error."
-#define FLAG_ERR_MNEMO_CHECKSUM     "Invalid mnemonic: checksum error."
 #define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
 
-
+//#define FLAG_ERR_MNEMO_EMPTY        "Empty mnemonic."
+//#define FLAG_ERR_MNEMO_NUM_WORDS    "Wrong number of mnemonic words."
+//#define FLAG_ERR_MNEMO_WORD         "Word not in BIP39 wordlist."
+//#define FLAG_ERR_MNEMO_CHECKSUM     "Invalid mnemonic checksum."
+#define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
 
 
 
 enum REPORT_FLAGS { 
-    SUCCESS, ERROR, 
+    SUCCESS, ERROR, ERROR_MEM,
     ECHO,
     SAME, DIFFERENT,
     TOUCHED, NOT_TOUCHED,

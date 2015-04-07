@@ -228,7 +228,7 @@ uint8_t *memory_name(const char *name)
 {
     uint8_t name_b[MEM_PAGE_LEN] = {0};
     if (strlen(name)) {
-        memcpy(name_b,name,(strlen(name)>MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlen(name));
+        memcpy(name_b, name, (strlen(name)>MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlen(name));
         memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
     } else {   
         memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);

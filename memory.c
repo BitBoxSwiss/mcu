@@ -196,7 +196,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
 
 void memory_mempass(void)
 {
-	uint8_t mempass[48] = {0};
+	uint8_t mempass[88] = {0};
 #ifndef TESTING
 	uint8_t *mp = mempass;
     int r[8] = {0};
@@ -217,7 +217,7 @@ void memory_mempass(void)
 	memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
 	memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
 	memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
-	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[7], 8);
+	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
 #endif
 	memory_write_aeskey(uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
 }

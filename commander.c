@@ -267,7 +267,7 @@ static void process_backup(char *message)
 }
 
 
-static void process_sign(char *message)
+static int process_sign(char *message)
 { 
     int data_len, keypath_len, type_len, to_hash = 0;
     char *data, *keypath, *type;
@@ -278,16 +278,16 @@ static void process_sign(char *message)
     
     if (!data || !keypath || !type) {
         commander_fill_report("sign", "Incomplete command.", ERROR);
-        return;  
+        return ERROR;  
     }
     
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) {
         to_hash = 1;
     } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlen(ATTR_STR[ATTR_hash_]))) {
         commander_fill_report("sign", "Unknown type value.", ERROR);
-        return;
+        return ERROR;
     }
-    wallet_sign(data, data_len, keypath, keypath_len, to_hash);
+    return(wallet_sign(data, data_len, keypath, keypath_len, to_hash));
 }
 
 
@@ -394,8 +394,7 @@ static int commander_process_token(int cmd, char *message)
             break;
                         
         case CMD_sign_:
-            process_sign(message);
-            break;  
+            return process_sign(message);
 
 		case CMD_test_:
 			tests_internal();
@@ -657,7 +656,7 @@ static void commander_parse(const char *encrypted_command)
     //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
     
     char *encoded_report;
-    int n_tokens, j, t, cmd, found, found_cmd, found_j, msglen, encrypt_len;
+    int n_tokens, j, t, cmd, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
 	jsmntok_t json_token[MAX_TOKENS];
 
     commander_clear_report();
@@ -668,6 +667,7 @@ static void commander_parse(const char *encrypted_command)
     }
     
     // Extract commands
+	err = 0;
     found = 0;
     for (j = 0; j < n_tokens; j++) {
         if (json_token[j].parent != 0) {
@@ -707,9 +707,10 @@ static void commander_parse(const char *encrypted_command)
             memset(message, 0, msglen);
         } else {
             // error or not touched
+			err++;
         }
 		
-		if (found_cmd == CMD_sign_ && !memory_read_unlocked()) {
+		if (found_cmd == CMD_sign_ && !memory_read_unlocked() && !err) {
 			encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
 												  strlen(json_report),
 												  &encrypt_len,

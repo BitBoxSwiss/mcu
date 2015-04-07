@@ -229,33 +229,34 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     {
         commander_fill_report("sign", "Incorrect data length. "
                     "A 32-byte hexadecimal value (64 characters) is expected.", ERROR);
-        ret = 1; 
+        return ERROR; 
     } 
-    else if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
+    
+	if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
         !memcmp(chain_code, MEM_PAGE_ERASE, 32)) 
     {    
         commander_fill_report("sign", "A BIP32 master private key is not set.", ERROR); 
-		ret = 1;
+		return ERROR;
     } 
-    else 
-    {
-        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
-        if (to_hash) {
-            ret = uECC_sign_double(node.private_key, hex_to_uint8(message), msg_len / 2, sig);
-        } else {
-            memcpy(data, hex_to_uint8(message), 32);
-            ret = uECC_sign_digest(node.private_key, data, sig);
-        }
-        
-        if (ret) {
-            commander_fill_report("sign", "Could not sign data.", ERROR);
-        } else {
-            uECC_get_public_key33(node.private_key, pub_key);
-            commander_fill_report_signature(sig, pub_key);
-        }
+
+    
+    wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
+    if (to_hash) {
+        ret = uECC_sign_double(node.private_key, hex_to_uint8(message), msg_len / 2, sig);
+    } else {
+        memcpy(data, hex_to_uint8(message), 32);
+        ret = uECC_sign_digest(node.private_key, data, sig);
     }
-    clear_static_variables();
-    return ret;
+        
+    if (ret) {
+        commander_fill_report("sign", "Could not sign data.", ERROR);
+		return ERROR;
+    } 
+	
+	uECC_get_public_key33(node.private_key, pub_key);
+    commander_fill_report_signature(sig, pub_key);
+	clear_static_variables();
+    return SUCCESS;
 }
 
 

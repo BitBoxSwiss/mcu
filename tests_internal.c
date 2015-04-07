@@ -90,7 +90,56 @@ static void tests_sign_speed(void)
 }
 
 
+static void tests_backup(void)
+{
+    //commander("{\"device\": \"serial\"}");
+    utils_send_cmd("{\"device\":\"serial\"}", PASSWORD_STAND); 
+}
+
+
+// TODO remove for production
+static void tests_mempass(void)
+{
+    int r[8] = {0};
+    char c[3] = {0};
+    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
+    sscanf(__DATE__, "%c%c%c %d ", &c[0], &c[1], &c[2], &r[3]);
+    r[4] = c[0];
+    r[5] = c[1];
+    r[6] = c[2];
+    r[7] = __LINE__ % 1028;
+
+#ifdef TESTING
+    printf("debug mempass  %d \n", __LINE__);
+    printf("debug mempass  %s \n", __DATE__);
+    printf("debug mempass  %s \n", __TIME__);
+    printf("debug mempass %d %d %d\n", r[0], r[1], r[2]);
+    printf("debug mempass %d %d %d %d %d\n", r[3], r[4], r[5], r[6], r[7]);
+#else	
+	uint8_t mempass[88] = {0};
+	uint8_t *mp = mempass;
+	// obfuscate mempass location
+    memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
+	memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
+	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
+	memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
+	memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
+	memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
+	memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
+	memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
+	memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
+	memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
+	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[7], 8);
+    
+    commander_fill_report("tests_mempass", uint8_to_hex(mempass, sizeof(mempass)), SUCCESS);
+
+#endif
+}
+
+
 void tests_internal(void)
 {
+    tests_mempass();
+    tests_backup();
 	tests_sign_speed();	
 }

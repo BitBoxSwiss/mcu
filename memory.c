@@ -1,5 +1,7 @@
 /*
 
+ The MIT License (MIT)
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -47,7 +49,6 @@ static uint16_t MEM_delay_ = DEFAULT_delay_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
-static uint8_t MEM_aeskey_memseed_[2] = {0xFF};
 static uint8_t MEM_aeskey_2FA_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_stand_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_verify_[MEM_PAGE_LEN] = {0xFF};
@@ -57,48 +58,32 @@ static uint8_t MEM_master_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_master_chain_[MEM_PAGE_LEN] = {0xFF};
 static uint16_t MEM_mnemonic_[MEM_PAGE_LEN] = {0xFFFF};
 
-const uint8_t MEM_PAGE_ERASE[] = { [0 ... MEM_PAGE_LEN] = 0xFF }; // EEPROM
+const uint8_t MEM_PAGE_ERASE[] = { [0 ... MEM_PAGE_LEN] = 0xFF };
 const uint16_t MEM_PAGE_ERASE_2X[] = { [0 ... MEM_PAGE_LEN] = 0xFFFF };
 
 
-// One time setup on factory install
+// One-time setup on factory install
 void memory_setup(void)
 {
     if (memory_read_setup()) {
-
         memory_erase();
-        // ....
-        // TODO key matching ataes to mcu, etc.
-        // ....
-
-        
 #ifndef TESTING
-		// Lock Configuration Memory (only get one chance)
-		// Lock command:              OP   MODE  PARAMETER1  PARAMETER2
+		// Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
 		const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00}; 
-			
 		// Return packet [Count(1) || Return Code (1) || CRC (2)]
-		// Check that return code == 0x00 (success)
 		uint8_t ataes_ret[4] = {0}; 
 		aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
-		if (ataes_ret[1]) {
-			commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), ERROR);	
-			return;			
-		} else {
-			commander_fill_report("lock_config", uint8_to_hex(ataes_ret, 4), SUCCESS);
-		}			
 #endif
-		
         memory_write_setup(0x00);
     } else {
-		memory_mempass(memory_read_memseed());
+		memory_mempass();
 	}
 }
 
 
 void memory_erase(void)
 {
-    memory_mempass(NULL);
+    memory_mempass();
     commander_create_verifypass();
 	
     memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
@@ -209,28 +194,32 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
 }
 
 
-void memory_mempass(uint8_t *seed)
+void memory_mempass(void)
 {
-	uint8_t mempass[32] = {0};
-	
-#ifdef TESTING
-	(void)seed;
-#else	
+	uint8_t mempass[48] = {0};
+#ifndef TESTING
 	uint8_t *mp = mempass;
-	/*
-	if (!seed) {
-		// update
-		random_bytes(seed, 2, 0);
-		memory_write_memseed(seed);
-	}
-	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * seed[0], 16);
-	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * seed[1], 16);
-	*/
-	// TODO set mempass location
-	memcpy(mp, (uint32_t *)IFLASH0_ADDR + 16 * 1, 16);
-	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + 16 * 2, 16);
+    int r[8] = {0};
+    char c[3] = {0};
+    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
+    sscanf(__DATE__, "%c%c%c %d ", &c[0], &c[1], &c[2], &r[3]);
+    r[7] = __LINE__ % 1028;
+    r[4] = c[0];
+    r[5] = c[1];
+    r[6] = c[2];
+    memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
+	memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
+	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
+	memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
+	memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
+	memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
+	memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
+	memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
+	memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
+	memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
+	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[7], 8);
 #endif
-	memory_write_aeskey(uint8_to_hex(mempass, 32), 64, PASSWORD_MEMORY);
+	memory_write_aeskey(uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
 }
 
 
@@ -410,6 +399,8 @@ void memory_delay_iterate(const uint16_t d)
     return MEM_delay_;
 }
 
+
+/*
 void memory_write_memseed(const uint8_t *s)
 {
 	memory_eeprom(s, MEM_aeskey_memseed_, MEM_AESKEY_MEMSEED_ADDR, 2);
@@ -419,6 +410,7 @@ uint8_t *memory_read_memseed(void)
 	memory_eeprom(NULL, MEM_aeskey_memseed_, MEM_AESKEY_MEMSEED_ADDR, 2);
 	return MEM_aeskey_memseed_;
 }
+*/
 
 
 void memory_write_touch_timeout(const uint16_t t)

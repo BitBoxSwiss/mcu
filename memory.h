@@ -1,5 +1,7 @@
 /*
 
+ The MIT License (MIT)
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -72,7 +74,7 @@ typedef enum PASSWORD_ID {
 void memory_erase(void);
 void memory_setup(void);
 void memory_clear_variables(void);
-void memory_mempass(uint8_t *seed);
+void memory_mempass(void);
 
 int memory_write_aeskey(const char *password, int len, int id);
 uint8_t *memory_read_aeskey(int id);
@@ -98,5 +100,6 @@ void memory_write_erased(const uint8_t erase);
 void memory_write_setup(const uint8_t setup);
 void memory_write_unlocked(const uint8_t u);
 void memory_write_led(const uint8_t led);
+
 
 #endif  // _MEMORY_H_

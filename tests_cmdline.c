@@ -50,7 +50,7 @@ int main ( int argc, char *argv[] )
         usage(argv);
     } else {
         random_init(); 
-        memory_erase();
+        memory_setup();
         // A password is required before sending commands.
         // This initial password sets both the standard and 
         // multipass passwords to the same value. Refer to 

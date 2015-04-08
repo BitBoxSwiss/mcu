@@ -143,11 +143,9 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
     }
 
     if (salt == NULL || s_len == 0) {
-        wallet_mnemonic_to_seed(mnemonic, "", seed, 0); 
-    } else { 
-		char s[s_len];
-		memcpy(s, salt, s_len);
-        wallet_mnemonic_to_seed(mnemonic, s, seed, 0); 
+        wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0); 
+    } else {
+        wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
     } 
 
 	hdnode_from_seed(seed, sizeof(seed), &node);
@@ -369,9 +367,13 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t 
                              void (*progress_callback)(uint32_t current, uint32_t total))
 {
 	static uint8_t salt[8 + 256 + 4];
-	int saltlen = strlen(passphrase);
+	int saltlen = 0;
+	
 	memcpy(salt, "mnemonic", 8);
-	memcpy(salt + 8, passphrase, saltlen);
+	if (passphrase) {
+		saltlen = strlen(passphrase);
+		memcpy(salt + 8, passphrase, saltlen);
+	}
 	saltlen += 8;
 	pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlen(mnemo), salt, saltlen, BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
 }

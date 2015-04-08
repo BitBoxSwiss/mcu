@@ -44,6 +44,7 @@
 #else
 #include "systick.h"
 #include "mcu.h"
+#include "sd.h"
 
 extern volatile uint16_t systick_current_time_ms;
 #endif
@@ -52,7 +53,7 @@ extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 
 static char tests_report[COMMANDER_REPORT_SIZE] = {0};
 
-void tests_fill_report(const char *attr, const char *val)
+static void tests_fill_report(const char *attr, const char *val)
 {
     
     int vallen = strlen(val);
@@ -123,7 +124,7 @@ static int tests_sign_speed(void)
 
 static void tests_backup_erase(void)
 {
-    char *pw = "0000";
+    char pw[] = "0000";
     commander_force_reset();
     memory_write_aeskey(pw, strlen(pw), PASSWORD_STAND);
     sd_erase();
@@ -133,8 +134,8 @@ static void tests_backup_erase(void)
 static int tests_backup(void)
 {
     char *m, mnemo[256] = {0}, xpub0[112] = {'0'}, xpub1[112] = {'1'};
-    char *filename = "tests_backup.txt";
-    char *keypath = "m/44\'/0\'/";
+    char filename[] = "tests_backup.txt";
+    char keypath[] = "m/44\'/0\'/";
 	
     const char **salt, **cipher;
 	static const char *options[] = {
@@ -211,7 +212,7 @@ static int tests_backup(void)
 
 static int tests_reset(void)
 {
-    char *pw = "0000";
+    char pw[] = "0000";
 
     // Create new wallet
     commander_force_reset();
@@ -267,8 +268,8 @@ static int tests_random(void)
 
 static int tests_name(void)
 {
-    char *name0 = "name0";
-    char *name1 = "name1";
+    char name0[] = "name0";
+    char name1[] = "name1";
    
     if (memcmp(name0, (char *)memory_name(name0), strlen(name0))) {
         tests_fill_report("tests_name", "FAIL");
@@ -292,8 +293,8 @@ static int tests_name(void)
 
 static int tests_sd(void)
 {
-    char *filename = "tests_sd.txt";
-    char *sdtext0 = "sdtext 1234567890 !@#$%^&*() -_+= `~ abcdefghijklmnopqrstuvwxyz \r \t ABCDEFGHIJKLMNOPQRSTUVWXYZ \n ,./<>?;:'\"\\|[]{}";
+    char filename[] = "tests_sd.txt";
+    char sdtext0[] = "sdtext 1234567890 !@#$%^&*() -_+= `~ abcdefghijklmnopqrstuvwxyz \r \t ABCDEFGHIJKLMNOPQRSTUVWXYZ \n ,./<>?;:'\"\\|[]{}";
     char *sdtext1;
     
     sd_erase();
@@ -306,12 +307,12 @@ static int tests_sd(void)
     sdtext1 = sd_load(filename, sizeof(filename));
     
     if (memcmp(sdtext0, sdtext1, strlen(sdtext0))) {
-        tests_fill_report("tests_name", "FAIL - File read");
+        tests_fill_report("tests_sd", "FAIL - File read");
         return ERROR;
     }
   
     if (sd_list() == ERROR) {
-        tests_fill_report("tests_name", "FAIL - List files");
+        tests_fill_report("tests_sd", "FAIL - List files");
         return ERROR;
     }
   
@@ -322,7 +323,7 @@ static int tests_sd(void)
     sdtext1 = sd_load(filename, sizeof(filename));
    
     if (sdtext1 != NULL) {
-        tests_fill_report("tests_name", "FAIL - File not erased");
+        tests_fill_report("tests_sd", "FAIL - File not erased");
         return ERROR;
     }
 

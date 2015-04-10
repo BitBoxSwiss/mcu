@@ -1,5 +1,5 @@
 tests*
-!tests_internal.*
+!tests_mcu.h
 !*.c
 tests.c
 backup

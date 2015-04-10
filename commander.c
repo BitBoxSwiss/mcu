@@ -168,17 +168,24 @@ static void commander_fill_report_len(const char *attr, const char *val, int err
         strcat(json_report, " \"");
         strcat(json_report, attr);
         if (err == ERROR) { 
-            strcat(json_report, "\":{ \"error\":\""); 
+            strcat(json_report, "\":{ \"error\": "); 
         } else {
-            strcat(json_report, "\":\""); 
+            strcat(json_report, "\": "); 
         }
-        strncat(json_report, val, vallen); 
+       
+        if (val[0] == '{') {
+            strncat(json_report, val, vallen); 
+        } else {
+            strcat(json_report, "\"");
+            strncat(json_report, val, vallen); 
+            strcat(json_report, "\"");
+        }
         
         // Add closing '}'
 		if (err == ERROR) { 
-            strcat(json_report, "\" } }"); 
+            strcat(json_report, " } }"); 
         } else {
-            strcat(json_report, "\" }"); 
+            strcat(json_report, " }"); 
         }
     }
 }

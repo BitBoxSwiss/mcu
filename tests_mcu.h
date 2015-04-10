@@ -25,13 +25,14 @@
 */
 
 
-#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "uECC.h"
-#ifndef TESTING
+#ifdef TESTING
+#include <time.h>
+#else
 #include "systick.h"
 
 extern volatile uint16_t systick_current_time_ms;
@@ -494,14 +495,16 @@ static void tests_verifypass(void)
 
 static void tests_internal(void)
 {
-    tests_name();
+    /*
+	tests_name();
     tests_input();
     tests_device();
     tests_random();
     tests_password();
     tests_verifypass();
     tests_backup_seed_xpub();
-    tests_sign_speed();	
+    */
+	tests_sign_speed();	
 
     commander_clear_report();
     commander_fill_report("tests", tests_report, SUCCESS);

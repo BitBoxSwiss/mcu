@@ -561,7 +561,7 @@ static void process_led(const char *message)
 }
 
 
-#include "tests_mcu.c"
+#include "tests_mcu.h"
 
 
 static int commander_process_token(int cmd, char *message)

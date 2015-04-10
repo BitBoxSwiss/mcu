@@ -39,14 +39,6 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 #define uECC_CONCAT(a, b) uECC_CONCAT1(a, b)
 
 
-// Compress a public key.
-void uECC_compress(const uint8_t p_publicKey[uECC_BYTES * 2], 
-                   uint8_t p_compressed[uECC_BYTES + 1]);
-
-// Decompress a compressed public key.
-void uECC_decompress(const uint8_t p_compressed[uECC_BYTES + 1],
-                     uint8_t p_publicKey[uECC_BYTES * 2]);
-
 // Generate an ECDSA signature for a given hash value.
 // Returns 0 always.
 int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], 
@@ -94,5 +86,6 @@ int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint
 void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2 + 1]);
 void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2]);
 void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES + 1]);
+
 
 #endif /* _MICRO_ECC_H_ */

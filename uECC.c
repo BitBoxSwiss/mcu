@@ -264,7 +264,7 @@ static uECC_word_t vli_sub(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word
 }
 #endif
 
-//#if (!defined(asm_mult) || !defined(asm_square) || uECC_CURVE == uECC_secp256k1)
+#if (!defined(asm_mult) || !defined(asm_square) || uECC_CURVE == uECC_secp256k1)
 static void muladd(uECC_word_t a, uECC_word_t b, uECC_word_t *r0, uECC_word_t *r1, uECC_word_t *r2)
 {
     uECC_dword_t p = (uECC_dword_t)a * b;
@@ -275,7 +275,7 @@ static void muladd(uECC_word_t a, uECC_word_t b, uECC_word_t *r0, uECC_word_t *r
     *r0 = (uECC_word_t)r01;
 }
 #define muladd_exists 1
-//#endif
+#endif
 
 #if !defined(asm_mult)
 static void vli_mult(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_right)
@@ -816,7 +816,7 @@ static void vli_bytesToNative(uint32_t *p_native, const uint8_t *p_bytes)
     }
 }
 
-void uECC_compress(const uint8_t p_publicKey[uECC_BYTES*2], uint8_t p_compressed[uECC_BYTES+1])
+static void uECC_compress(const uint8_t p_publicKey[uECC_BYTES*2], uint8_t p_compressed[uECC_BYTES+1])
 {
     wordcount_t i;
     for(i=0; i<uECC_BYTES; ++i)
@@ -826,7 +826,7 @@ void uECC_compress(const uint8_t p_publicKey[uECC_BYTES*2], uint8_t p_compressed
     p_compressed[0] = 2 + (p_publicKey[uECC_BYTES * 2 - 1] & 0x01);
 }
 
-void uECC_decompress(const uint8_t p_compressed[uECC_BYTES+1], uint8_t p_publicKey[uECC_BYTES*2])
+static void uECC_decompress(const uint8_t p_compressed[uECC_BYTES+1], uint8_t p_publicKey[uECC_BYTES*2])
 {
     EccPoint l_point;
     vli_bytesToNative(l_point.x, p_compressed + 1);

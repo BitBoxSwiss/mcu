@@ -32,6 +32,10 @@
 #include "flags.h"
 
 
+static char sd_filename[64] = {0};
+static char sd_text[512] = {0};
+
+
 void delay_ms(int delay) 
 { 
     (void)delay; 
@@ -40,35 +44,41 @@ void delay_ms(int delay)
 
 uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
 {
-    (void)f;
-    (void)f_len;
-    (void)t;
-    (void)t_len;
-    commander_fill_report("backup", FLAG_ERR_NO_MCU, ERROR);
-    return ERROR;
+    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, SUCCESS);
+    memset(sd_filename, 0, sizeof(sd_filename));
+    memcpy(sd_filename, f, f_len);
+    memset(sd_text, 0, sizeof(sd_text));
+    memcpy(sd_text, t, t_len);
+    return SUCCESS;
 }
 
 
 char *sd_load(const char *f, int f_len)
 {
-    (void)f;
-    (void)f_len;
-	commander_fill_report("sd_load", FLAG_ERR_NO_MCU, ERROR);
+    commander_fill_report("sd_load", FLAG_ERR_NO_MCU, SUCCESS);
+	if (!strncmp(sd_filename, f, f_len)) {
+        return sd_text;
+    }
     return NULL;
 }
 
 
 uint8_t sd_list(void)
 {
-    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, ERROR);
-    return ERROR;
+    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, SUCCESS);
+    if (sd_filename[0]) {
+        commander_fill_report("backup", sd_filename, SUCCESS);
+    }
+    return SUCCESS;
 }
 
 
 uint8_t sd_erase(void)
 {
-    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, ERROR);
-    return ERROR;
+    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, SUCCESS);
+    memset(sd_filename, 0, sizeof(sd_filename));
+    memset(sd_text, 0, sizeof(sd_text));
+    return SUCCESS;
 }
 
 

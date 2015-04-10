@@ -40,7 +40,6 @@
 #include "jsmn.h"
 #include "aes.h"
 #include "led.h"
-#include "tests_internal.h"
 #ifndef TESTING
 #include "ataes132.h"
 #include "touch.h"
@@ -61,7 +60,88 @@ static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
 
 
-void commander_clear_report(void)
+// Must free() returned value (allocated inside base64() function)
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id)
+{
+    int  pads;
+    int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
+    unsigned char inpad[inpadlen];
+    unsigned char enc[inpadlen];
+    unsigned char iv[N_BLOCK];
+    unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
+    aes_context ctx[1]; 
+    
+    // Set cipher key
+    memset(ctx, 0, sizeof(ctx));  
+    aes_set_key(memory_read_aeskey(id), 32, ctx); 
+    
+    // PKCS7 padding
+    memcpy(inpad, in, inlen);
+    for(pads = 0; pads < N_BLOCK - inlen % N_BLOCK; pads++ ){
+        inpad[inlen + pads] = (N_BLOCK-inlen % N_BLOCK);
+    }
+    
+    // Make a random initialization vector 
+    random_bytes((uint8_t *)iv, N_BLOCK, 0);
+    memcpy(enc_cat, iv, N_BLOCK);
+    
+    // CBC encrypt multiple blocks
+    aes_cbc_encrypt( inpad, enc, inpadlen / N_BLOCK, iv, ctx );
+    memcpy(enc_cat + N_BLOCK, enc, inpadlen);
+
+    // base64 encoding      
+    int b64len;
+    char * b64;
+    b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
+    *out_b64len = b64len;
+    return b64;
+}
+
+
+// Must free() returned value
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
+{
+	if (!in || inlen == 0) {
+		return NULL;
+	}
+	
+    // unbase64
+    int ub64len;
+    unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
+    if (!ub64 || (ub64len % N_BLOCK)) {
+        decrypt_len = 0;
+        free(ub64);
+        return NULL;
+    }
+    
+    // Set cipher key
+    aes_context ctx[1]; 
+    memset(ctx, 0, sizeof(ctx));  
+    aes_set_key(memory_read_aeskey(id), 32, ctx); 
+    
+    unsigned char dec_pad[ub64len - N_BLOCK];
+    aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
+    memset(ub64, 0, ub64len);
+    free(ub64);
+  
+    // Strip PKCS7 padding
+    int padlen = dec_pad[ub64len - N_BLOCK - 1];
+    char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
+    if (!dec)
+    {
+        memset(dec_pad, 0, sizeof(dec_pad));
+        decrypt_len = 0;
+        return NULL;
+    }
+    memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
+    dec[ub64len - N_BLOCK - padlen] = '\0';
+    *decrypt_len = ub64len - N_BLOCK - padlen + 1;
+    memset(dec_pad, 0, sizeof(dec_pad));
+    return dec;    
+}
+
+
+static void commander_clear_report(void)
 {
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
 	json_report[0] = '\0';
@@ -69,13 +149,7 @@ void commander_clear_report(void)
 }
 
 
-void commander_fill_report(const char *attr, const char *val, int err)
-{
-    commander_fill_report_len(attr, val, err, strlen(val));
-}
-
-
-void commander_fill_report_len(const char *attr, const char *val, int err, int vallen)
+static void commander_fill_report_len(const char *attr, const char *val, int err, int vallen)
 {
     size_t len = strlen(json_report);
     if (len == 0) {
@@ -110,6 +184,12 @@ void commander_fill_report_len(const char *attr, const char *val, int err, int v
 }
 
 
+void commander_fill_report(const char *attr, const char *val, int err)
+{
+    commander_fill_report_len(attr, val, err, strlen(val));
+}
+
+
 void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
 {
     size_t len = strlen(json_report);
@@ -128,11 +208,11 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
         strcat(json_report, " \"sign\": {");
         
         strcat(json_report, "\"sig\":\"");
-        strncat(json_report, uint8_to_hex(sig, 64), 128);
+        strncat(json_report, utils_uint8_to_hex(sig, 64), 128);
         strcat(json_report, "\", ");
 
         strcat(json_report, "\"pubkey\":\"");
-        strncat(json_report, uint8_to_hex(pubkey, 33), 66);
+        strncat(json_report, utils_uint8_to_hex(pubkey, 33), 66);
         strcat(json_report, "\"");
         
         strcat(json_report, "} }");
@@ -148,7 +228,7 @@ void commander_force_reset(void)
 }
 
 
-static void device_reset(const char *r)
+static void process_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
@@ -166,8 +246,13 @@ static void device_reset(const char *r)
 }
 
 
+static void process_name(const char *message)
+{
+    commander_fill_report("name", (char *)memory_name(message), SUCCESS);
+}
 
-static void process_seed(char *message)
+
+static void process_seed(const char *message)
 { 
     int salt_len, source_len, decrypt_len, ret;
     char *seed_word[25] = {NULL}; 
@@ -225,17 +310,22 @@ static void process_seed(char *message)
 }
 
 
-static void process_backup(char *message)
+static void process_backup(const char *message)
 { 
     int encrypt_len, filename_len;
-    const char *encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
-    const char *filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
+    const char *encrypt, *filename;
+    char *text, *l;
 
     if (!memory_read_unlocked()) {
         commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
     }
-
+    
+    if (!message) {
+        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    }
+    
 	if (strcmp(message, ATTR_STR[ATTR_list_]) == 0) {
 		sd_list();
 		return;
@@ -246,17 +336,19 @@ static void process_backup(char *message)
 	    return;
     }
 	
+    filename = jsmn_get_value_string(message, CMD_STR[CMD_filename_], &filename_len);
 	if (!filename) {
         commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
         return;
     } 
     
-    char *text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
+    text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
     if (!text) {
         commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
         return;
     } 
     
+    encrypt = jsmn_get_value_string(message, CMD_STR[CMD_encrypt_], &encrypt_len);
     if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt	
         int enc_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlen(text), &enc_len, PASSWORD_STAND);
@@ -266,29 +358,44 @@ static void process_backup(char *message)
         } else if (sd_write(filename, filename_len, enc, enc_len) != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
             free(enc);
-        } else if (memcmp(enc, sd_load(filename, filename_len), enc_len)) {
-            commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+        } else {
+            l = sd_load(filename, filename_len);
+            if (l) { 
+                if (memcmp(enc, l, enc_len)) {
+                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+                }
+            }
             free(enc);
         }
 
     } else {
         if (sd_write(filename, filename_len, text, strlen(text)) != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
-        } else if (memcmp(text, sd_load(filename, filename_len), strlen(text))) {
-            commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+        } else {
+            l = sd_load(filename, filename_len);
+            if (l) {
+                if (memcmp(text, l, strlen(text))) {
+                   commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+                }
+            }
         }
     }	
 }
 
 
-static int process_sign(char *message)
+static int process_sign(const char *message)
 { 
     int data_len, keypath_len, type_len, to_hash = 0;
-    char *data, *keypath, *type;
+    const char *data, *keypath, *type;
        
-    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
-    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
-    keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
+    if (!message) {
+        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
+        return ERROR;
+    }
+    
+    type = jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+    keypath = jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
     
     if (!data || !keypath || !type) {
         commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
@@ -306,10 +413,16 @@ static int process_sign(char *message)
 }
 
 
-static void process_random(char *message)
+static void process_random(const char *message)
 { 
     int update_seed;
     uint8_t number[16];
+    
+    if (!message) {
+        commander_fill_report("random", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    }
+    
     if (strcmp(message, ATTR_STR[ATTR_true_]) == 0) {
         update_seed = 1;
     } else if (strcmp(message, ATTR_STR[ATTR_pseudo_]) == 0) {
@@ -324,7 +437,7 @@ static void process_random(char *message)
         return;
     }
     
-    commander_fill_report("random", uint8_to_hex(number, sizeof(number)), SUCCESS);
+    commander_fill_report("random", utils_uint8_to_hex(number, sizeof(number)), SUCCESS);
 }
 
 
@@ -338,31 +451,41 @@ static void process_verifypass(const char *message)
 {
     int ret;
     uint8_t number[16];
-    char text[64 + 1];
+    char *l, text[64 + 1];
     
     if (!memory_read_unlocked()) {
         commander_fill_report("verifypass", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
     } 
     
+    if (!message) {
+        commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    }
+    
     if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
         if (random_bytes(number, sizeof(number), 1)) {
             commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
             return;
         }
-        if (process_password(uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) != SUCCESS) {
+        if (process_password(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) != SUCCESS) {
             return;
         }
         commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
     
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
-        memcpy(text, uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
+        memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
 		if (ret != SUCCESS) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_WRITE, ERROR);
 	        return;
         }
-        if (memcmp(text, sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME)), strlen(text))) {
+        l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME));
+        if (!l) {
+            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+            return;
+        }
+        if (memcmp(text, l, strlen(text))) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
 	        return;
         }
@@ -377,21 +500,32 @@ static void process_verifypass(const char *message)
 static void process_xpub(const char *message)
 {
     char xpub[112] = {0};
-    wallet_report_xpub(message, strlen(message), xpub);            
-    if (xpub[0]) {
-        commander_fill_report("xpub", xpub, SUCCESS);
-    } else {
-        commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, ERROR);
+    if (message) {
+        if (strlen(message)) {
+            wallet_report_xpub(message, strlen(message), xpub);            
+            if (xpub[0]) {
+                commander_fill_report("xpub", xpub, SUCCESS);
+            } else {
+                commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, ERROR);
+            }
+            return;
+        }
     }
+    commander_fill_report("xpub", FLAG_ERR_INVALID_CMD, ERROR);
 }
 
 
 static void process_device(const char *message)
 {
+    if (!message) {
+        commander_fill_report("device", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    }
+    
     if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
         uint32_t serial[4];
         if (!flash_read_unique_id(serial, 16)) {
-            commander_fill_report(ATTR_STR[ATTR_serial_], uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
+            commander_fill_report(ATTR_STR[ATTR_serial_], utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
         } else {
             commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, ERROR);         
         }
@@ -413,11 +547,28 @@ static void process_device(const char *message)
 }
 
 
+static void process_led(const char *message)
+{
+    if (!message) {
+        commander_fill_report("led", FLAG_ERR_INVALID_CMD, ERROR);
+    } else if (strncmp(message, ATTR_STR[ATTR_toggle_], strlen(ATTR_STR[ATTR_toggle_])) != 0) {
+        commander_fill_report("led", FLAG_ERR_INVALID_CMD, ERROR);
+    } else {
+        led_toggle(); delay_ms(300);	
+        led_toggle();  
+        commander_fill_report("led", "toggled", SUCCESS);
+    }
+}
+
+
+#include "tests_mcu.c"
+
+
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
         case CMD_reset_:
-            device_reset(message);
+            process_reset(message);
             return RESET;
         
         case CMD_password_:
@@ -431,17 +582,11 @@ static int commander_process_token(int cmd, char *message)
             break;
         
         case CMD_led_:
-            if (strncmp(message, ATTR_STR[ATTR_toggle_], strlen(ATTR_STR[ATTR_toggle_])) == 0) {
-                led_toggle(); delay_ms(300);	
-                led_toggle();  
-                commander_fill_report(CMD_STR[cmd], "toggled", SUCCESS);
-            } else {
-                commander_fill_report(CMD_STR[cmd], FLAG_ERR_INVALID_CMD, ERROR);
-            }
+            process_led(message);
             break;
         
         case CMD_name_:
-            commander_fill_report(CMD_STR[cmd], (char *)memory_name(message), SUCCESS);
+            process_name(message);
             break;      
        
         case CMD_seed_:
@@ -455,10 +600,6 @@ static int commander_process_token(int cmd, char *message)
         case CMD_sign_:
             return process_sign(message);
 
-		case CMD_test_:
-			tests_internal();
-			break;
-			        
         case CMD_random_:
             process_random(message);
             break;
@@ -467,15 +608,19 @@ static int commander_process_token(int cmd, char *message)
             process_xpub(message);
             break;
 
+        case CMD_device_: 
+            process_device(message);
+            break;
+        
         case CMD_touchbutton_:
             touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000, 
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
             break;
 
-        case CMD_device_: 
-            process_device(message);
-            break;
-        
+		case CMD_test_:
+			tests_internal();
+			break;
+			        
         case CMD_none_:
             break;
     }
@@ -544,7 +689,7 @@ static int commander_check_init(const char *encrypted_command)
     if (strstr(encrypted_command, CMD_STR[CMD_reset_]) != NULL) {
         int r_len;
         const char *r = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_reset_], &r_len);
-        device_reset(r);
+        process_reset(r);
         return ERROR;
 	}
     
@@ -791,12 +936,13 @@ static void commander_parse(const char *encrypted_command)
     memory_clear_variables();
 }
 
+
 void commander_create_verifypass(void) {
 	process_verifypass("create");
 }
 
     
-// Single gateway function to the MCU code
+// Single gateway to the MCU code
 char *commander(const char *command)
 {
     if (commander_check_init(command) == SUCCESS) {
@@ -804,89 +950,6 @@ char *commander(const char *command)
     }
 	return json_report;
 }
-
-
-// Must free() returned value (allocated inside base64() function)
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id)
-{
-    int  pads;
-    int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
-    unsigned char inpad[inpadlen];
-    unsigned char enc[inpadlen];
-    unsigned char iv[N_BLOCK];
-    unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
-    aes_context ctx[1]; 
-    
-    // Set cipher key
-    memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(memory_read_aeskey(id), 32, ctx); 
-    
-    // PKCS7 padding
-    memcpy(inpad, in, inlen);
-    for(pads = 0; pads < N_BLOCK - inlen % N_BLOCK; pads++ ){
-        inpad[inlen + pads] = (N_BLOCK-inlen % N_BLOCK);
-    }
-    
-    // Make a random initialization vector 
-    random_bytes((uint8_t *)iv, N_BLOCK, 0);
-    memcpy(enc_cat, iv, N_BLOCK);
-    
-    // CBC encrypt multiple blocks
-    aes_cbc_encrypt( inpad, enc, inpadlen / N_BLOCK, iv, ctx );
-    memcpy(enc_cat + N_BLOCK, enc, inpadlen);
-
-    // base64 encoding      
-    int b64len;
-    char * b64;
-    b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
-    *out_b64len = b64len;
-    return b64;
-}
-
-
-// Must free() returned value
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id)
-{
-	if (!in || inlen == 0) {
-		return NULL;
-	}
-	
-    // unbase64
-    int ub64len;
-    unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
-    if (!ub64 || (ub64len % N_BLOCK)) {
-        decrypt_len = 0;
-        free(ub64);
-        return NULL;
-    }
-    
-    // Set cipher key
-    aes_context ctx[1]; 
-    memset(ctx, 0, sizeof(ctx));  
-    aes_set_key(memory_read_aeskey(id), 32, ctx); 
-    
-    unsigned char dec_pad[ub64len - N_BLOCK];
-    aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
-    memset(ub64, 0, ub64len);
-    free(ub64);
-  
-    // Strip PKCS7 padding
-    int padlen = dec_pad[ub64len - N_BLOCK - 1];
-    char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
-    if (!dec)
-    {
-        memset(dec_pad, 0, sizeof(dec_pad));
-        decrypt_len = 0;
-        return NULL;
-    }
-    memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
-    dec[ub64len - N_BLOCK - padlen] = '\0';
-    *decrypt_len = ub64len - N_BLOCK - padlen + 1;
-    memset(dec_pad, 0, sizeof(dec_pad));
-    return dec;    
-}
-
-
 
 
 

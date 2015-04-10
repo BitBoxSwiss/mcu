@@ -110,8 +110,8 @@
  size_t l_ = (L); \
  do { if (memcmp(r_,e_,l_)) { \
   printf("FAILED - %s:%d - %s()\n", __FILE__, __LINE__, __func__);\
-  printf("\tExpected:\t%s\n", uint8_to_hex(e_,l_));\
-  printf("\tReceived:\t%s\n", uint8_to_hex(r_,l_));\
+  printf("\tExpected:\t%s\n", utils_uint8_to_hex(e_,l_));\
+  printf("\tReceived:\t%s\n", utils_uint8_to_hex(r_,l_));\
   U_TESTS_FAIL++; }; \
  } while(0); } 
 

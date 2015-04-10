@@ -41,7 +41,7 @@
   /*    requiring touch     */  \
         CMD(sign)               \
         CMD(seed)               \
-        CMD(device)             \
+        CMD(test)               \
         CMD(password)           \
         CMD(touchbutton)        \
   /* placeholder don't move */  \
@@ -51,8 +51,8 @@
         CMD(led)                \
         CMD(xpub)               \
         CMD(name)               \
-        CMD(test)               \
         CMD(reset)              \
+        CMD(device)             \
         CMD(random)             \
         CMD(backup)             \
         CMD(verifypass)         \
@@ -100,9 +100,18 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define ATTR_NUM     ATTR_none_
 
 
-#define MEM_AESKEY_LEN_MIN			4
+enum REPORT_FLAGS { 
+    SUCCESS, ERROR, ERROR_MEM,
+    ECHO,
+    SAME, DIFFERENT,
+    TOUCHED, NOT_TOUCHED,
+    RESET
+};
 
-#define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(MEM_AESKEY_LEN_MIN) " characters."
+
+#define PASSWORD_LEN_MIN			4
+
+#define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters."
 #define FLAG_ERR_NO_PASSWORD        "Please set a password."
 #define FLAG_ERR_NO_INPUT           "No input received."
 #define FLAG_ERR_JSON_PARSE         "JSON parse error."
@@ -111,34 +120,25 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define FLAG_ERR_MULTIPLE_CMD       "Only one command allowed at a time."
 #define FLAG_ERR_RESET              "Too many failed access attempts. Device reset."
 #define FLAG_ERR_RESET_WARNING      "Too many access errors will cause the device to reset."
-#define FLAG_ERR_SIGN               "Could not sign."
-#define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
-#define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs."
 #define FLAG_ERR_DEVICE_LOCKED      "Device locked. Erase device to access this command."
 #define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
-#define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
-#define FLAG_ERR_SD_WRITE           "Could not write."
 #define FLAG_ERR_DECRYPT            "Could not decrypt."
-#define FLAG_ERR_ENCRYPT_MEM        "Could not allocate memory for encryption."
-#define FLAG_ERR_ATAES              "Chip communication error."
-#define FLAG_ERR_FLASH              "Could not read flash."
-#define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
-
+#define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
 //#define FLAG_ERR_MNEMO_EMPTY        "Empty mnemonic."
 //#define FLAG_ERR_MNEMO_NUM_WORDS    "Wrong number of mnemonic words."
 //#define FLAG_ERR_MNEMO_WORD         "Word not in BIP39 wordlist."
 //#define FLAG_ERR_MNEMO_CHECKSUM     "Invalid mnemonic checksum."
-#define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
 
+#define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
+#define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs."
 
-
-enum REPORT_FLAGS { 
-    SUCCESS, ERROR, ERROR_MEM,
-    ECHO,
-    SAME, DIFFERENT,
-    TOUCHED, NOT_TOUCHED,
-    RESET
-};
+#define FLAG_ERR_SIGN               "Could not sign."
+#define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
+#define FLAG_ERR_SD_WRITE           "Could not write."
+#define FLAG_ERR_ENCRYPT_MEM        "Could not allocate memory for encryption."
+#define FLAG_ERR_ATAES              "Chip communication error."
+#define FLAG_ERR_FLASH              "Could not read flash."
+#define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
 
 
 #endif

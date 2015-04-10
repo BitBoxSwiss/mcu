@@ -164,13 +164,13 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
     char *enc, *dec;
     char enc_w[MEM_PAGE_LEN * 4 + 1] = {0}, enc_r[MEM_PAGE_LEN * 4 + 1] = {0};
     if (read_b) {
-        enc = aes_cbc_b64_encrypt((unsigned char *)uint8_to_hex(read_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_r, enc, enc_len);
         free(enc); 
     }
 
     if (write_b) {
-        enc = aes_cbc_b64_encrypt((unsigned char *)uint8_to_hex(write_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_w, enc, enc_len);
         free(enc); 
         ret = ret * memory_eeprom((uint8_t *)enc_w,                    (uint8_t *)enc_r,                    addr,                    MEM_PAGE_LEN);
@@ -186,7 +186,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
 
     dec = aes_cbc_b64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len, PASSWORD_MEMORY);
     if (dec) {
-        memcpy(read_b, hex_to_uint8(dec), MEM_PAGE_LEN);
+        memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
     } else {
         ret = 0;
     }
@@ -220,7 +220,7 @@ void memory_mempass(void)
 	memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
 	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
 #endif
-	memory_write_aeskey(uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
+	memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
 }
 
 
@@ -274,8 +274,19 @@ int memory_write_aeskey(const char *password, int len, int id)
 	int ret = 0;
     uint8_t password_b[MEM_PAGE_LEN];
 	memset(password_b, 0, MEM_PAGE_LEN);
-    
-	if (len < MEM_AESKEY_LEN_MIN) {
+   
+
+	if (!password) {
+		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
+		return ERROR;
+	}
+
+	if (len < PASSWORD_LEN_MIN) {
+		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
+		return ERROR;
+	}
+
+	if (strlen(password) < PASSWORD_LEN_MIN) {
 		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
 		return ERROR;
 	}

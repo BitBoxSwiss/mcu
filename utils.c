@@ -25,12 +25,23 @@
 */
 
 
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 #include "utils.h"
+#include "commander.h"
+#include "flags.h"
+#include "jsmn.h"
+#include "sha2.h"
 
 
-uint8_t *hex_to_uint8(const char *str)
+extern const char *CMD_STR[];
+static char PIN_2FA[5] = {0};
+static char decrypted_report[COMMANDER_REPORT_SIZE];
+
+
+uint8_t *utils_hex_to_uint8(const char *str)
 {
 	if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
@@ -53,7 +64,7 @@ uint8_t *hex_to_uint8(const char *str)
 }
 
 
-char *uint8_to_hex(const uint8_t *bin, size_t l)
+char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
 {
 	if ((l * 2) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
@@ -71,7 +82,7 @@ char *uint8_to_hex(const uint8_t *bin, size_t l)
 }
 
 
-void reverse_hex(char *h, int len)
+void utils_reverse_hex(char *h, int len)
 {
     char copy[len];
     strncpy(copy, h, len);
@@ -83,7 +94,7 @@ void reverse_hex(char *h, int len)
 }
 
 
-void uint64_to_varint(char *vi, int *l, uint64_t i)
+void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
 {
     int len;
     char v[VARINT_LEN];  
@@ -107,7 +118,7 @@ void uint64_to_varint(char *vi, int *l, uint64_t i)
   
     // reverse order
     if (len > 2) {
-        reverse_hex(v, len); 
+        utils_reverse_hex(v, len); 
         strncat(vi, v, len);
     } else {
         strncpy(vi, v, len);
@@ -117,7 +128,7 @@ void uint64_to_varint(char *vi, int *l, uint64_t i)
 }
 
 
-int varint_to_uint64(const char *vi, uint64_t *i)
+int utils_varint_to_uint64(const char *vi, uint64_t *i)
 {
     char v[VARINT_LEN] = {0};
     int len; 
@@ -134,7 +145,7 @@ int varint_to_uint64(const char *vi, uint64_t *i)
         
     if (len > 2) {
         strncpy(v, vi + 2, len);
-        reverse_hex(v, len);
+        utils_reverse_hex(v, len);
     } else {
         strncpy(v, vi, len);
     }
@@ -144,103 +155,86 @@ int varint_to_uint64(const char *vi, uint64_t *i)
 }
 
 
-
-
-
-#ifdef TESTING
-#include <stdlib.h>
-#include "commander.h"
-#include "memory.h"
-#include "flags.h"
-#include "jsmn.h"
-#include "sha2.h"
-
-
-extern const char *CMD_STR[];
-static char PIN_2FA[5] = {0};
-
-uint8_t *utils_double_sha256(const uint8_t *msg, uint32_t msg_len)
+char *utils_read_decrypted_report(void)
 {
-	static uint8_t hash[32];
-    memset(hash, 0, 32);
-    sha256_Raw(msg, msg_len, hash);
-	sha256_Raw(hash, 32, hash);
-    return hash;
+    return decrypted_report;
 }
 
 
-void utils_print_report(const char *report)
+void utils_decrypt_report(const char *report)
 {
     int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i, len;
-    char cipher[COMMANDER_REPORT_SIZE], *dec, *pin, *tfa, *dec_tfa;
+    char *dec, *pin, *tfa, *dec_tfa;
     jsmntok_t json_token[MAX_TOKENS];
+    
+    memset(decrypted_report, 0, sizeof(decrypted_report));
     r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
      
     if (r < 0) {
-        printf("Failed to parse report:  %s\n", report);
+        strcpy(decrypted_report, "error: Failed to parse report.");
         return;
     }
     
     for (i = 0; i < r; i++) {
         len = json_token[i + 1].end - json_token[i + 1].start;
         if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
-            memcpy(cipher, report + json_token[i + 1].start, len);
-            cipher[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_STAND);
-            printf("ciphertext:\t%.*s\n\n", decrypt_len, dec);
+            memcpy(decrypted_report, report + json_token[i + 1].start, len);
+            decrypted_report[len] = '\0';
+            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report), &decrypt_len, PASSWORD_STAND);
             tfa = (char *)jsmn_get_value_string(dec, "2FA", &tfa_len);
             if (tfa) {
                 dec_tfa = aes_cbc_b64_decrypt((unsigned char *)tfa, tfa_len, &dec_tfa_len, PASSWORD_2FA);
-                printf("2FA:   \t%.*s\n\n", dec_tfa_len, dec_tfa);
+                sprintf(decrypted_report, "2FA: %.*s", dec_tfa_len, dec_tfa);
+                
                 free(dec_tfa);
-            }
+            } else {
+                sprintf(decrypted_report, "ciphertext: %.*s", decrypt_len, dec);
+            } 
             free(dec);
             return;
         } else if (jsmn_token_equals(report, &json_token[i], "echo") == 0) {
-            memcpy(cipher, report + json_token[i + 1].start, len);
-            cipher[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)cipher, strlen(cipher), &decrypt_len, PASSWORD_VERIFY);
-            printf("echo:      \t%.*s\n", decrypt_len, dec);
+            memcpy(decrypted_report, report + json_token[i + 1].start, len);
+            decrypted_report[len] = '\0';
+            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report), &decrypt_len, PASSWORD_VERIFY);
             pin = (char *)jsmn_get_value_string(dec, "pin", &pin_len);
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
-                //printf("pin: %s\n", PIN_2FA);
             } else {
                 memset(PIN_2FA, 0, sizeof(PIN_2FA));
             }
+            sprintf(decrypted_report, "echo: %.*s", decrypt_len, dec);
             free(dec);
             return;
-    
         }
     }
-    printf("report:    \t%s\n\n",report);
+    strcpy(decrypted_report, report);
+    return;
 }
 
 
-void utils_send_cmd(const char *command, PASSWORD_ID enc_id )
+void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
 {
     if (enc_id == PASSWORD_NONE) {
-        utils_print_report(commander(command));
+        utils_decrypt_report(commander(command));
     } else {
         int encrypt_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};
         memcpy(cmd, enc, encrypt_len);
         free(enc); 
-        utils_print_report(commander(cmd));
+        utils_decrypt_report(commander(cmd));
     }
 }
 
 
-// Send command twice in case of command being echoed (i.e. when touch button is required)
-void utils_send_cmd_x2(const char *command)
-{
-    int encrypt_len;
-    char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, PASSWORD_STAND);
-    char cmd[COMMANDER_REPORT_SIZE] = {0};
-    memcpy(cmd, enc, encrypt_len);
-    free(enc); 
-    utils_print_report(commander(cmd));
-    utils_print_report(commander(cmd));
+#ifdef TESTING
+
+void utils_send_print_cmd(const char *command, PASSWORD_ID enc_id)
+{ 
+    printf("\nutils send:   %s\n", command);
+    utils_send_cmd(command, enc_id);
+    printf("utils recv:   %s\n\n", decrypted_report);
 }
+
+
 #endif

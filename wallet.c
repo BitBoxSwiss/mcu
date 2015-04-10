@@ -233,9 +233,9 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     
     wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
     if (to_hash) {
-        ret = uECC_sign_double(node.private_key, hex_to_uint8(message), msg_len / 2, sig);
+        ret = uECC_sign_double(node.private_key, utils_hex_to_uint8(message), msg_len / 2, sig);
     } else {
-        memcpy(data, hex_to_uint8(message), 32);
+        memcpy(data, utils_hex_to_uint8(message), 32);
         ret = uECC_sign_digest(node.private_key, data, sig);
     }
         
@@ -390,13 +390,13 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
     
     // Inputs
     if (hex_len < idx + 16) {return ERROR;}
-    idx += varint_to_uint64(hex + idx, &n_cnt);     // skip inCount
+    idx += utils_varint_to_uint64(hex + idx, &n_cnt);     // skip inCount
     for (j = 0; j < n_cnt; j++) {
         strncat(input, hex + idx, 64);              // copy prevOutHash
         idx += 64;                                  // skip prevOutHash
         idx += 8;                                   // skip preOutIndex
         if (hex_len < idx + 16) {return ERROR;}
-        idx += varint_to_uint64(hex + idx, &n_len); // skip scriptSigLen
+        idx += utils_varint_to_uint64(hex + idx, &n_len); // skip scriptSigLen
         idx += n_len * 2;                           // skip scriptSig (chars = 2 * bytes) 
         idx += 8;                                   // skip sequence number
     }
@@ -404,11 +404,11 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
     // Outputs
     id_start = idx;
     if (hex_len < idx + 16) {return ERROR;}
-    idx += varint_to_uint64(hex + idx, &n_cnt);     // skip outCount
+    idx += utils_varint_to_uint64(hex + idx, &n_cnt);     // skip outCount
     for (j = 0; j < n_cnt; j++) {
         idx += 16;                                  // skip outValue
         if (hex_len < idx + 16) {return ERROR;}
-        idx += varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
+        idx += utils_varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
         idx += n_len * 2;                           // skip outScript (chars = 2 * bytes) 
     }
     len = idx - id_start;
@@ -457,17 +457,17 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
 
     // Outputs
     if (hex_len < idx + 16) {return NULL;}
-    idx += varint_to_uint64(hex + idx, &n_cnt); // count
+    idx += utils_varint_to_uint64(hex + idx, &n_cnt); // count
     strcat(output, "{\"verify_output\": [ ");
     for (j = 0; j < n_cnt; j++) {
         // outValue
         memset(outval, 0, sizeof(outval));
         strncpy(outval, hex + idx, 16);
-        reverse_hex(outval, 16);
+        utils_reverse_hex(outval, 16);
         sscanf(outval, "%llx", &outValue);
         idx += 16;                               
         if (hex_len < idx + 16) {return NULL;}
-        idx += varint_to_uint64(hex + idx, &n_len);
+        idx += utils_varint_to_uint64(hex + idx, &n_len);
        
         memset(outval, 0, sizeof(outval));
         memset(outaddr, 0, sizeof(outaddr));
@@ -480,7 +480,7 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
             uECC_get_public_key33(node.private_key, pub_key33);
             wallet_get_pubkeyhash(pub_key33, pubkeyhash);
             wallet_get_address(pub_key33, 0, address, 36);
-            if (strstr(outaddr, uint8_to_hex(pubkeyhash, 20))) {
+            if (strstr(outaddr, utils_uint8_to_hex(pubkeyhash, 20))) {
                 change_addr_present++;
                 continue;
             }
@@ -545,41 +545,3 @@ void wallet_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wif
 	base58_encode_check(data, 34, wif, wifsize);
 }
 
-/*
-int wallet_sig_to_der(const uint8_t *sig, uint8_t *der)
-{
-	int i;
-	uint8_t *p = der, *len, *len1, *len2;
-	*p = 0x30; p++;                        // sequence
-	*p = 0x00; len = p; p++;               // len(sequence)
-
-	*p = 0x02; p++;                        // integer
-	*p = 0x00; len1 = p; p++;              // len(integer)
-
-	// process R
-	i = 0;
-	while (sig[i] == 0 && i < 32) { i++; } // skip leading zeroes
-	if (sig[i] >= 0x80) { // put zero in output if MSB set
-		*p = 0x00; p++; *len1 = *len1 + 1;
-	}
-	while (i < 32) { // copy bytes to output
-		*p = sig[i]; p++; *len1 = *len1 + 1; i++;
-	}
-
-	*p = 0x02; p++;                        // integer
-	*p = 0x00; len2 = p; p++;              // len(integer)
-
-	// process S
-	i = 32;
-	while (sig[i] == 0 && i < 64) { i++; } // skip leading zeroes
-	if (sig[i] >= 0x80) { // put zero in output if MSB set
-		*p = 0x00; p++; *len2 = *len2 + 1;
-	}
-	while (i < 64) { // copy bytes to output
-		*p = sig[i]; p++; *len2 = *len2 + 1; i++;
-	}
-
-	*len = *len1 + *len2 + 4;
-	return *len + 2;
-}
-*/

@@ -55,9 +55,9 @@ int main ( int argc, char *argv[] )
         // This initial password sets both the standard and 
         // multipass passwords to the same value. Refer to 
         // the API documentation for more details.
-        utils_send_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE); 
-        utils_send_cmd("{\"verifypass\":\"create\"}", PASSWORD_STAND); // if not set, uses the standard password 
-        utils_send_cmd(argv[1], PASSWORD_STAND); 
+        utils_send_print_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE); 
+        utils_send_print_cmd("{\"verifypass\":\"create\"}", PASSWORD_STAND); // if not set, uses the standard password 
+        utils_send_print_cmd(argv[1], PASSWORD_STAND); 
     }
     return 0;
 }

@@ -349,11 +349,16 @@ jsmnerr_t jsmn_parse_init(const char *js, size_t len,
  * Check if the token is equal to the string s
  */
 int jsmn_token_equals(const char *js, const jsmntok_t *tok, const char *s) {
+    
+    if (!js || !s) {
+        return 1;
+    }
+    
 	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
 			strncmp(js + tok->start, s, tok->end - tok->start) == 0) {
-		return 0;
+		return 0; // token equal to string s
 	}
-	return -1;
+	return 1;
 }
 
 /**
@@ -364,6 +369,11 @@ const char *jsmn_get_value_string(const char *js, const char *name, int *len) {
 	jsmntok_t json_token[MAX_TOKENS];
 	
     *len = 0;
+
+    if (!js || !name) {
+        return NULL;
+    }
+    
     r = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
 	
     for (i = 0; i < r; i++) {
@@ -382,6 +392,11 @@ unsigned int jsmn_get_value_uint(const char *js, const char *name) {
     int r, i, vallen;
     unsigned int valu = 0;
     jsmntok_t json_token[MAX_TOKENS];
+    
+    if (!js || !name) {
+        return 0;
+    }
+    
     r = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
      
     for (i = 0; i < r; i++) {
@@ -406,6 +421,11 @@ const char *jsmn_get_item(const char *js, int id, int *len) {
 	jsmntok_t json_token[MAX_TOKENS];
 	
     *len = 0;
+    
+    if (!js) {
+        return NULL;
+    }
+    
     n = jsmn_parse_init(js, strlen(js), json_token, MAX_TOKENS);
 
     if (json_token[0].type != JSMN_ARRAY  ||  n == 0) {

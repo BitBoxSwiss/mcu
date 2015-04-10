@@ -495,7 +495,7 @@ static void tests_verifypass(void)
 
 static void tests_internal(void)
 {
-    /*
+    
 	tests_name();
     tests_input();
     tests_device();
@@ -503,8 +503,7 @@ static void tests_internal(void)
     tests_password();
     tests_verifypass();
     tests_backup_seed_xpub();
-    */
-	tests_sign_speed();	
+    tests_sign_speed();	
 
     commander_clear_report();
     commander_fill_report("tests", tests_report, SUCCESS);

@@ -50,6 +50,8 @@
 #endif
 
 
+extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
+
 const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
@@ -244,7 +246,7 @@ static void process_reset(const char *r)
             if (touch_button_press(0) == TOUCHED) {                   
 			    memory_erase();
                 commander_clear_report();
-                commander_fill_report(ATTR_STR[ATTR___ERASE___], "success", SUCCESS);
+                commander_fill_report("reset", "success", SUCCESS);
             }}}
             return; 
         }
@@ -837,6 +839,8 @@ static int commander_touch_button(int found_cmd, const char *message)
             return ERROR;
         }
         
+    } else if (found_cmd == CMD_seed_ && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
+        return TOUCHED;   
     } else if (found_cmd < CMD_require_touch_) {
         return(touch_button_press(0));
 

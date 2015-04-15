@@ -881,7 +881,6 @@ int main(void)
 	u_run_test(test_rfc6979);
 	u_run_test(test_address);
 	u_run_test(test_wif);
-	//u_run_test(test_wallet_der);
 	u_run_test(test_aes_cbc);
 	u_run_test(test_pbkdf2_hmac_sha256);
 	u_run_test(test_pbkdf2_hmac_sha512);

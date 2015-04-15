@@ -30,13 +30,16 @@
 
 #include "uECC.h"
 #include "random.h"
+#include "utils.h"
+    
 
 int main(int argc, char *argv[])
 {
 	uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000], hash[32], msg_len, *p;
-	uint32_t i, j;
+	uint32_t i, j, p_len;
 	SHA256_CTX sha256;
 	EC_GROUP *ecgroup;
+    EC_KEY *eckey;
 	int cnt = 0;
 
 	random_init();
@@ -59,14 +62,14 @@ int main(int argc, char *argv[])
         random_bytes(msg, msg_len, 0);
         
         // new ECDSA key
-		EC_KEY *eckey = EC_KEY_new();
+		eckey = EC_KEY_new();
 		EC_KEY_set_group(eckey, ecgroup);
 
 		// generate the key
 		EC_KEY_generate_key(eckey);
 		// copy key to buffer
 		p = buffer;
-		i2d_ECPrivateKey(eckey, &p);
+		p_len = i2d_ECPrivateKey(eckey, &p);
 
 		// size of the key is in buffer[8] and the key begins right after that
 		i = buffer[8];
@@ -125,6 +128,10 @@ int main(int argc, char *argv[])
 		if ((cnt % 100) == 0) printf("Passed ... %d\n", cnt);
             ++iterations;
 	}
-	EC_GROUP_free(ecgroup);
+    printf("message to sign:\n%s\n\n", utils_uint8_to_hex(msg, msg_len));
+	printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
+	//printf("eckey dump:\n%s\n\n", utils_uint8_to_hex(p, sizeof(buffer)));
+    
+    EC_GROUP_free(ecgroup);
 	return 0;
 }

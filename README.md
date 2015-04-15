@@ -8,5 +8,5 @@ Standardized libraries:
 
 Cryptographic: secp256k1, AES-256-CBC, SHA2, HMAC, PBKDF2, RIPEMD160.
 Encoding: Base-64, Base-58-check. 
-Bitcoin: BIP32, BIP39, BIP44
-Other: JSMN (minimal JSON)
+Bitcoin: BIP32, BIP39, BIP44.
+Other: JSMN (minimal JSON).

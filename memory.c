@@ -105,7 +105,6 @@ void memory_erase(void)
 
 void memory_clear_variables(void)
 {
-// TEST
 #ifndef TESTING
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).

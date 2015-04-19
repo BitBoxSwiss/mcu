@@ -58,7 +58,7 @@
 #define DEFAULT_delay_              0
 #define DEFAULT_led_                0
 #define DEFAULT_touch_timeout_      3000// msec
-#define DEFAULT_touch_thresh_       50
+#define DEFAULT_touch_thresh_       25
 
 
 typedef enum PASSWORD_ID { 

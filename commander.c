@@ -669,7 +669,7 @@ static char *commander_decrypt(const char *encrypted_command,
     }
     *n_tokens = n;
     
-    if (!(json_token[0].type == JSMN_OBJECT  &&  err == 0))
+    if (!(json_token[0].type == JSMN_OBJECT)  &&  err == 0)
     {
         err++;
         commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 

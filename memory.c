@@ -402,7 +402,7 @@ uint16_t memory_read_touch_thresh(void)
 }
 
 
-// Initialize or increment err counter
+// Initialize or increment non-volatile err counter
 uint16_t memory_access_err_count(const uint8_t access)
 {
     uint16_t err_count = 0xF0F0;

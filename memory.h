@@ -56,7 +56,7 @@
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_led_                0
-#define DEFAULT_access_err_         0
+#define DEFAULT_access_err_         INITIALIZE
 #define DEFAULT_touch_timeout_      3000// msec
 #define DEFAULT_touch_thresh_       25
 

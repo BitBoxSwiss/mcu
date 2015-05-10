@@ -637,41 +637,58 @@ static int commander_process_token(int cmd, char *message)
 }
 
 
+// add bait
+//
+
 static char *commander_decrypt(const char *encrypted_command,  
                               jsmntok_t json_token[MAX_TOKENS],
                               int *n_tokens)
 {
     // Process command
     char *command;
-    int command_len, n = 0;
-    
+    int command_len, n = 0, err = 0;
+    uint16_t err_count = 0, err_iter = 0;
+
     // Decrypt & parse command
     command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
                                       strlen(encrypted_command), 
                                       &command_len,
                                       PASSWORD_STAND);
     
+    err_count = memory_read_access_err_count(); // I2C memory reads additionally introduce 
+    err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
+    
     if (command == NULL) {
+        err++;
         commander_fill_report("input", FLAG_ERR_DECRYPT " "           
                                        FLAG_ERR_RESET_WARNING, ERROR);
-        memory_delay_iterate(1);
-		return NULL;
+        err_iter = memory_access_err_count(ITERATE);
     } else {
         memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
         n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
     }
     *n_tokens = n;
     
-    if (!(json_token[0].type == JSMN_OBJECT  &&  n > 0))
+    if (!(json_token[0].type == JSMN_OBJECT  &&  err == 0))
     {
+        err++;
         commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 
                                        FLAG_ERR_RESET_WARNING " "
                                        FLAG_ERR_JSON_BRACKET, ERROR);
-        memory_delay_iterate(1);
-        return NULL;
-    } else {
+        err_iter = memory_access_err_count(ITERATE);
+    } 
+    
+    if (err_iter - err_count == 0 && err == 0) {
         return command;
+    } 
+    
+    if (err_iter - err_count == err) {
+        return NULL;
     }
+    
+    // Corrupted data
+    commander_force_reset();
+    return NULL;
 }
 
 
@@ -683,14 +700,14 @@ static int commander_check_init(const char *encrypted_command)
     if (!encrypted_command) {
         commander_fill_report("input", FLAG_ERR_NO_INPUT " "          
                                        FLAG_ERR_RESET_WARNING, ERROR);
-        memory_delay_iterate(1);
+        memory_access_err_count(ITERATE);
         return ERROR;
     } 
     
     if (!strlen(encrypted_command)) {
         commander_fill_report("input", FLAG_ERR_NO_INPUT " "
                                        FLAG_ERR_RESET_WARNING, ERROR);
-        memory_delay_iterate(1);
+        memory_access_err_count(ITERATE);
         return ERROR;
     }
     
@@ -863,6 +880,7 @@ static void commander_parse(const char *encrypted_command)
     
     char *command = commander_decrypt(encrypted_command, json_token, &n_tokens);
     if (!command) {
+        free(command);
         return;
     }
     
@@ -890,7 +908,7 @@ static void commander_parse(const char *encrypted_command)
     } else if (found > 1) {
         commander_fill_report("input", FLAG_ERR_MULTIPLE_CMD, ERROR);
     } else {
-        memory_delay_iterate(0); // reset to 0
+        memory_access_err_count(INITIALIZE);
         msglen = json_token[found_j + 1].end-json_token[found_j + 1].start;
         char message[msglen + 1];
         memcpy(message, command + json_token[found_j + 1].start, msglen);
@@ -939,10 +957,10 @@ static void commander_parse(const char *encrypted_command)
     commander_clear_report();
     if (encoded_report) {
         commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
-        free(encoded_report);
     } else {
         commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
+    free(encoded_report);
 	
     memory_clear_variables();
 }

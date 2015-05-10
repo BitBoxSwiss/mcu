@@ -46,7 +46,7 @@ static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
 static uint8_t MEM_led_ = DEFAULT_led_;
-static uint16_t MEM_delay_ = DEFAULT_delay_;
+static uint16_t MEM_access_err_ = DEFAULT_access_err_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
@@ -98,7 +98,7 @@ void memory_erase(void)
     memory_write_unlocked(DEFAULT_unlocked_);
     memory_write_touch_timeout(DEFAULT_touch_timeout_);
     memory_write_touch_thresh(DEFAULT_touch_thresh_);
-    memory_delay_iterate(DEFAULT_delay_);
+    memory_access_err_count(DEFAULT_access_err_);
     memory_write_led(DEFAULT_led_);
 }
 
@@ -380,45 +380,6 @@ int memory_read_led(void)
 }
 
 
-// TEST
-// '0' resets, '1' increments delay counter
-void memory_delay_iterate(const uint16_t d)
-{
-    uint16_t delay;
-    if (d) {
-        memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
-        delay = MEM_delay_ + 1;
-	} else {
-        delay = 0;
-    }
-    
-    // Force reset after too many failed attempts
-    if (delay >= COMMANDER_MAX_ATTEMPTS) {
-        commander_force_reset();
-    } else {
-        memory_eeprom((uint8_t *)&delay, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
-    }
-}
-    uint16_t memory_read_delay(void)
-{
-    memory_eeprom(NULL, (uint8_t *)&MEM_delay_, MEM_DELAY_ADDR, 2);
-    return MEM_delay_;
-}
-
-
-/*
-void memory_write_memseed(const uint8_t *s)
-{
-	memory_eeprom(s, MEM_aeskey_memseed_, MEM_AESKEY_MEMSEED_ADDR, 2);
-}
-uint8_t *memory_read_memseed(void)
-{
-	memory_eeprom(NULL, MEM_aeskey_memseed_, MEM_AESKEY_MEMSEED_ADDR, 2);
-	return MEM_aeskey_memseed_;
-}
-*/
-
-
 void memory_write_touch_timeout(const uint16_t t)
 {
     memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
@@ -438,5 +399,33 @@ uint16_t memory_read_touch_thresh(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
     return MEM_touch_thresh_;
+}
+
+
+// Initialize or increment err counter
+uint16_t memory_access_err_count(const uint8_t access)
+{
+    uint16_t err_count = 0xF0F0;
+    if (access == ITERATE) {
+        memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
+        err_count = MEM_access_err_ + 1;
+	} else if (access == INITIALIZE){
+        err_count = 0;
+    } else {
+        err_count = COMMANDER_MAX_ATTEMPTS; // corrupted input
+    }
+    
+    // Force reset after too many failed attempts
+    if (err_count >= COMMANDER_MAX_ATTEMPTS) {
+        commander_force_reset();
+    } else {
+        memory_eeprom((uint8_t *)&err_count, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
+    }
+    return err_count;
+}
+uint16_t memory_read_access_err_count(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
+    return MEM_access_err_;
 }
 

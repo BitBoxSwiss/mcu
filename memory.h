@@ -40,7 +40,7 @@
 #define MEM_TOUCH_ENABLE_ADDR   	0x0026
 #define MEM_ERASED_ADDR 	    	0x0028
 #define MEM_SETUP_ADDR      		0x0030
-#define MEM_DELAY_ADDR      		0x0032
+#define MEM_ACCESS_ERR_ADDR    		0x0032
 #define MEM_UNLOCKED_ADDR      		0x0034
 #define MEM_AESKEY_MEMSEED_ADDR		0x0036
 #define MEM_NAME_ADDR   			0x0100// Zone 1
@@ -55,8 +55,8 @@
 #define DEFAULT_unlocked_           0xFF
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
-#define DEFAULT_delay_              0
 #define DEFAULT_led_                0
+#define DEFAULT_access_err_         0
 #define DEFAULT_touch_timeout_      3000// msec
 #define DEFAULT_touch_thresh_       25
 
@@ -82,7 +82,6 @@ uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint16_t *memory_mnemonic(const uint16_t *index);
 
-uint16_t memory_read_delay(void);
 uint8_t *memory_read_memseed(void);
 uint16_t memory_read_touch_timeout(void);
 uint16_t memory_read_touch_thresh(void);
@@ -91,7 +90,6 @@ uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
 int memory_read_led(void);
 
-void memory_delay_iterate(const uint16_t d);
 void memory_write_memseed(const uint8_t *s);
 void memory_write_touch_timeout(const uint16_t t);
 void memory_write_touch_thresh(const uint16_t t);
@@ -99,6 +97,9 @@ void memory_write_erased(const uint8_t erase);
 void memory_write_setup(const uint8_t setup);
 void memory_write_unlocked(const uint8_t u);
 void memory_write_led(const uint8_t led);
+
+uint16_t memory_access_err_count(const uint8_t access);
+uint16_t memory_read_access_err_count(void);
 
 
 #endif  // _MEMORY_H_

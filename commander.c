@@ -241,8 +241,8 @@ static void process_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
-            if (touch_button_press(0) == TOUCHED) { //delay_ms(1000);
+            if (touch_button_press(0) == TOUCHED) { delay_ms(300);
+            if (touch_button_press(0) == TOUCHED) { delay_ms(300);
             if (touch_button_press(0) == TOUCHED) {                   
 			    memory_erase();
                 commander_clear_report();
@@ -570,7 +570,7 @@ static void process_led(const char *message)
 }
 
 
-#include "tests_mcu.h"
+//#include "tests_mcu.h"
 
 
 static int commander_process_token(int cmd, char *message)
@@ -626,9 +626,9 @@ static int commander_process_token(int cmd, char *message)
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
             break;
 
-		case CMD_test_:
-			tests_internal();
-			break;
+		//case CMD_test_:
+			//tests_internal();
+			//break;
 			        
         case CMD_none_:
             break;

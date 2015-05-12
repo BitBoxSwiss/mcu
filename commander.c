@@ -461,7 +461,7 @@ static void process_verifypass(const char *message)
     int ret;
     uint8_t number[16];
     char *l, text[64 + 1];
-    
+   
     if (!memory_read_unlocked()) {
         commander_fill_report("verifypass", FLAG_ERR_DEVICE_LOCKED, ERROR);
         return;
@@ -499,7 +499,7 @@ static void process_verifypass(const char *message)
 	        return;
         }
         commander_fill_report(ATTR_STR[ATTR_export_], "success", SUCCESS);
-    
+
     } else {
         commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, ERROR);
     }
@@ -967,7 +967,7 @@ static void commander_parse(const char *encrypted_command)
 
 
 void commander_create_verifypass(void) {
-	process_verifypass("create");
+    process_verifypass(ATTR_STR[ATTR_create_]);
 }
 
     

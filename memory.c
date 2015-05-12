@@ -85,14 +85,10 @@ void memory_setup(void)
 void memory_erase(void)
 {
     memory_mempass();
-    commander_create_verifypass();
-	
     memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_VERIFY);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
-    
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased_);
     memory_write_unlocked(DEFAULT_unlocked_);
@@ -100,6 +96,7 @@ void memory_erase(void)
     memory_write_touch_thresh(DEFAULT_touch_thresh_);
     memory_access_err_count(DEFAULT_access_err_);
     memory_write_led(DEFAULT_led_);
+    commander_create_verifypass();
 }
 
 

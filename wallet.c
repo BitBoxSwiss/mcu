@@ -163,7 +163,7 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
 
 void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len, const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
-    unsigned long idx;
+    unsigned long idx = 0;
     char *pch;
     char kp[keypath_len + 1];
 

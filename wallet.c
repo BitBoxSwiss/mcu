@@ -380,9 +380,9 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase, uint8_t 
 
 
 // Returns 0 if inputs (i.e. prevOutHash's) and outputs are the same as previously used
-int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, char *v_output)
+int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, char *v_output, int *input_cnt)
 {
-    uint64_t j, n_cnt, n_len, id_start, idx = 0;
+    uint64_t j, in_cnt, out_cnt, n_len, id_start, idx = 0;
     int len, not_same_input, not_same_output;
     char input[COMMANDER_REPORT_SIZE] = {0};
 
@@ -390,8 +390,8 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
     
     // Inputs
     if (hex_len < idx + 16) {return ERROR;}
-    idx += utils_varint_to_uint64(hex + idx, &n_cnt);     // skip inCount
-    for (j = 0; j < n_cnt; j++) {
+    idx += utils_varint_to_uint64(hex + idx, &in_cnt);     // skip inCount
+    for (j = 0; j < in_cnt; j++) {
         strncat(input, hex + idx, 64);              // copy prevOutHash
         idx += 64;                                  // skip prevOutHash
         idx += 8;                                   // skip preOutIndex
@@ -400,12 +400,13 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
         idx += n_len * 2;                           // skip scriptSig (chars = 2 * bytes) 
         idx += 8;                                   // skip sequence number
     }
+    *input_cnt = in_cnt;
 
     // Outputs
     id_start = idx;
     if (hex_len < idx + 16) {return ERROR;}
-    idx += utils_varint_to_uint64(hex + idx, &n_cnt);     // skip outCount
-    for (j = 0; j < n_cnt; j++) {
+    idx += utils_varint_to_uint64(hex + idx, &out_cnt);     // skip outCount
+    for (j = 0; j < out_cnt; j++) {
         idx += 16;                                  // skip outValue
         if (hex_len < idx + 16) {return ERROR;}
         idx += utils_varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
@@ -425,6 +426,7 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input, 
             len < COMMANDER_REPORT_SIZE ? 
             len : COMMANDER_REPORT_SIZE);
    
+
     if (not_same_input || not_same_output) {
         return DIFFERENT;
     } else {
@@ -485,7 +487,9 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
                 continue;
             }
         }
-            
+           
+
+
         if (cnt > 0) {
             strcat(output, ", ");
         } else {

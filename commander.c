@@ -57,6 +57,8 @@ const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
 
 static int REPORT_BUF_OVERFLOW = 0;
+static int verify_keypath_cnt = 0;
+static char verify_keypath[COMMANDER_REPORT_SIZE] = {0};
 static char verify_output[COMMANDER_REPORT_SIZE] = {0};
 static char verify_input[COMMANDER_REPORT_SIZE] = {0};
 static char json_report[COMMANDER_REPORT_SIZE] = {0};
@@ -786,11 +788,13 @@ static void commander_echo(char *command)
 // Returns 0 if inputs and outputs are the same
 static int commander_verify_signing(const char *message)
 {
-    int data_len, type_len, change_keypath_len;
-    char *data, *type, *change_keypath, *out;
+    int data_len, type_len, keypath_len, change_keypath_len;
+    int ret, same_io, same_keypath, input_cnt;
+    char *data, *type, *keypath, *change_keypath, *out;
     
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+    keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
     change_keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_change_keypath_], &change_keypath_len);
 
     if (!data || !type) {
@@ -802,19 +806,36 @@ static int commander_verify_signing(const char *message)
     {
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
         // The function updates verify_input and verify_output.
-        if (wallet_check_input_output(data, data_len, verify_input, verify_output) == SAME){
-            return SAME;
+        same_io = wallet_check_input_output(data, data_len, verify_input, verify_output, &input_cnt);
+       
+        // Check if the same signing keypath
+        same_keypath = (!memcmp(keypath, verify_keypath, keypath_len) && 
+                        (keypath_len == (int)strlen(verify_keypath))) ? SAME : DIFFERENT;
+        memset(verify_keypath, 0, sizeof(verify_keypath));
+        memcpy(verify_keypath, keypath, keypath_len);
+        
+        // Deserialize and check if the change address is present if more than one output given.
+        out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
+        
+        if (!out) {
+            commander_fill_report("sign", FLAG_ERR_DESERIALIZE, ERROR);
+            ret = ERROR;  
+        } else if (same_io == SAME && same_keypath == SAME) {
+            verify_keypath_cnt++;
+            ret = SAME;
+        } else if (same_io == SAME && same_keypath == DIFFERENT) {
+            verify_keypath_cnt++;
+            ret = NEXT;
         } else {
-            // Also checks if the change address is present if more than one output given.
-            out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
-            if (out) {
-                commander_echo(out); 
-                return DIFFERENT;
-            } else {
-                commander_fill_report("sign", FLAG_ERR_DESERIALIZE, ERROR);
-                return ERROR;  
-            }
+            verify_keypath_cnt = 0;
+            commander_echo(out); 
+            ret = DIFFERENT;
         }
+        if (verify_keypath_cnt >= input_cnt) {
+            memset(verify_input, 0, COMMANDER_REPORT_SIZE);
+            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+        }
+        return(ret);
     } 
     else 
     {
@@ -841,13 +862,15 @@ static int commander_touch_button(int found_cmd, const char *message)
         c = commander_verify_signing(message);
         if (c == SAME) {
             t = touch_button_press(1);
-            if (t == NOT_TOUCHED) {
+            if (t != TOUCHED) {
                 // Clear previous signing information
                 // to force touch for next sign command.
                 memset(verify_input, 0, COMMANDER_REPORT_SIZE);
                 memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             }
             return(t);
+        } else if (c == NEXT) {
+            return TOUCHED; 
         } else if (c == DIFFERENT) {
             return ECHO; 
         } else {

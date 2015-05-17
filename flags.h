@@ -103,7 +103,7 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 enum REPORT_FLAGS { 
     SUCCESS, ERROR, ERROR_MEM,
     ECHO,
-    SAME, DIFFERENT,
+    SAME, DIFFERENT, NEXT,
     TOUCHED, NOT_TOUCHED,
     RESET,
     INITIALIZE, ITERATE
@@ -131,7 +131,7 @@ enum REPORT_FLAGS {
 //#define FLAG_ERR_MNEMO_CHECKSUM     "Invalid mnemonic checksum."
 
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
-#define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs."
+#define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
 
 #define FLAG_ERR_SIGN               "Could not sign."
 #define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."

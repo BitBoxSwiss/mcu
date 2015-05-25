@@ -117,7 +117,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
         free(ub64);
         return NULL;
     }
-    
+   
     // Set cipher key
     aes_context ctx[1]; 
     memset(ctx, 0, sizeof(ctx));  
@@ -572,9 +572,6 @@ static void process_led(const char *message)
 }
 
 
-//#include "tests_mcu.h"
-
-
 static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
@@ -628,10 +625,6 @@ static int commander_process_token(int cmd, char *message)
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
             break;
 
-		//case CMD_test_:
-			//tests_internal();
-			//break;
-			        
         case CMD_none_:
             break;
     }
@@ -639,16 +632,13 @@ static int commander_process_token(int cmd, char *message)
 }
 
 
-// add bait
-//
-
 static char *commander_decrypt(const char *encrypted_command,  
                               jsmntok_t json_token[MAX_TOKENS],
                               int *n_tokens)
 {
     // Process command
     char *command;
-    int command_len, n = 0, err = 0;
+    int command_len = 0, n = 0, err = 0;
     uint16_t err_count = 0, err_iter = 0;
 
     // Decrypt & parse command
@@ -659,6 +649,7 @@ static char *commander_decrypt(const char *encrypted_command,
     
     err_count = memory_read_access_err_count(); // I2C memory reads additionally introduce 
     err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
+    memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
     
     if (command == NULL) {
         err++;
@@ -666,12 +657,11 @@ static char *commander_decrypt(const char *encrypted_command,
                                        FLAG_ERR_RESET_WARNING, ERROR);
         err_iter = memory_access_err_count(ITERATE);
     } else {
-        memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
         n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
     }
     *n_tokens = n;
     
-    if (!(json_token[0].type == JSMN_OBJECT)  &&  err == 0)
+    if (json_token[0].type != JSMN_OBJECT && err == 0)
     {
         err++;
         commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 
@@ -890,22 +880,10 @@ static int commander_touch_button(int found_cmd, const char *message)
 }
 
 
-// Parse and process command
-static void commander_parse(const char *encrypted_command)
+static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int n_tokens)
 { 
-    //printf("\n\nCommand:\t%lu %s\n", strlen(encrypted_command), encrypted_command);		
-    
     char *encoded_report;
-    int n_tokens, j, t, cmd, ret, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
-	jsmntok_t json_token[MAX_TOKENS];
-
-    commander_clear_report();
-    
-    char *command = commander_decrypt(encrypted_command, json_token, &n_tokens);
-    if (!command) {
-        free(command);
-        return;
-    }
+    int j, t, cmd, ret, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
     
     // Extract commands
 	err = 0;
@@ -938,12 +916,10 @@ static void commander_parse(const char *encrypted_command)
         message[msglen] = '\0';
         t = commander_touch_button(found_cmd, message);
         if (t == ECHO) {
-            free(command);
             return;
         } else if (t == TOUCHED) {
             ret = commander_process_token(found_cmd, message);
             if (ret == RESET) {
-                free(command);
                 return;
             } else if (ret == ERROR) {
                 err++;
@@ -966,9 +942,6 @@ static void commander_parse(const char *encrypted_command)
 			}
 		}
     }
-    //memset(command, 0, strlen(command));
-    free(command);
-
 	
     // Encrypt report
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
@@ -984,9 +957,8 @@ static void commander_parse(const char *encrypted_command)
         commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
     free(encoded_report);
-	
-    memory_clear_variables();
 }
+
 
 
 void commander_create_verifypass(void) {
@@ -997,9 +969,20 @@ void commander_create_verifypass(void) {
 // Single gateway to the MCU code
 char *commander(const char *command)
 {
+    //printf("\n\nCommand:\t%lu %s\n", strlen(command), command);		
+    int n_tokens;
+	jsmntok_t json_token[MAX_TOKENS];
+
+    commander_clear_report();
+
     if (commander_check_init(command) == SUCCESS) {
-        commander_parse(command);
+        char *command_dec = commander_decrypt(command, json_token, &n_tokens);
+        if (command_dec) {
+            commander_parse(command_dec, json_token, n_tokens);
+        }
+        free(command_dec);
     }
+    memory_clear_variables();
 	return json_report;
 }
 

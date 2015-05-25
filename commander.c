@@ -243,8 +243,8 @@ static void process_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
-            if (touch_button_press(0) == TOUCHED) { delay_ms(300);
-            if (touch_button_press(0) == TOUCHED) { delay_ms(300);
+            if (touch_button_press(0) == TOUCHED) { delay_ms(100);
+            if (touch_button_press(0) == TOUCHED) { delay_ms(100);
             if (touch_button_press(0) == TOUCHED) {                   
 			    memory_erase();
                 commander_clear_report();

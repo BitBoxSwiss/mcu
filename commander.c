@@ -323,7 +323,7 @@ static void process_seed(const char *message)
 
 static void process_backup(const char *message)
 { 
-    int encrypt_len, filename_len;
+    int encrypt_len, filename_len, ret;
     const char *encrypt, *filename;
     char *text, *l;
 
@@ -366,9 +366,11 @@ static void process_backup(const char *message)
         if (!enc) {
             commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
             free(enc);
-        } else if (sd_write(filename, filename_len, enc, enc_len) != SUCCESS) {
+            return; 
+        }
+        ret = sd_write(filename, filename_len, enc, enc_len);
+        if (ret != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
-            free(enc);
         } else {
             l = sd_load(filename, filename_len);
             if (l) { 
@@ -376,11 +378,11 @@ static void process_backup(const char *message)
                     commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
                 }
             }
-            free(enc);
         }
-
+        free(enc);
     } else {
-        if (sd_write(filename, filename_len, text, strlen(text)) != SUCCESS) {
+        ret = sd_write(filename, filename_len, text, strlen(text));
+        if (ret != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
         } else {
             l = sd_load(filename, filename_len);

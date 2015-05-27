@@ -145,6 +145,10 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
 }
 
 
+//
+//  Reporting results  //
+//
+
 static void commander_clear_report(void)
 {
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
@@ -231,6 +235,10 @@ void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
 }
 
 
+//
+//  Command processing  //
+//
+
 void commander_force_reset(void)
 {
     memory_erase();
@@ -239,7 +247,7 @@ void commander_force_reset(void)
 }
 
 
-static void process_reset(const char *r)
+static void commander_process_reset(const char *r)
 {
     if (r) { 
         if (strncmp(r, ATTR_STR[ATTR___ERASE___], strlen(ATTR_STR[ATTR___ERASE___])) == 0) { 
@@ -257,13 +265,13 @@ static void process_reset(const char *r)
 }
 
 
-static void process_name(const char *message)
+static void commander_process_name(const char *message)
 {
     commander_fill_report("name", (char *)memory_name(message), SUCCESS);
 }
 
 
-static void process_seed(const char *message)
+static void commander_process_seed(const char *message)
 { 
     int salt_len, source_len, decrypt_len, ret;
     char *seed_word[25] = {NULL}; 
@@ -321,7 +329,7 @@ static void process_seed(const char *message)
 }
 
 
-static void process_backup(const char *message)
+static void commander_process_backup(const char *message)
 { 
     int encrypt_len, filename_len, ret;
     const char *encrypt, *filename;
@@ -396,7 +404,7 @@ static void process_backup(const char *message)
 }
 
 
-static int process_sign(const char *message)
+static int commander_process_sign(const char *message)
 { 
     int data_len, keypath_len, type_len, to_hash = 0;
     const char *data, *keypath, *type;
@@ -426,7 +434,7 @@ static int process_sign(const char *message)
 }
 
 
-static void process_random(const char *message)
+static void commander_process_random(const char *message)
 { 
     int update_seed;
     uint8_t number[16];
@@ -454,13 +462,13 @@ static void process_random(const char *message)
 }
 
 
-static int process_password(const char *message, int msg_len, PASSWORD_ID id)
+static int commander_process_password(const char *message, int msg_len, PASSWORD_ID id)
 {
     return(memory_write_aeskey(message, msg_len, id));
 }
 
 
-static void process_verifypass(const char *message)
+static void commander_process_verifypass(const char *message)
 {
     int ret;
     uint8_t number[16];
@@ -481,7 +489,7 @@ static void process_verifypass(const char *message)
             commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
             return;
         }
-        if (process_password(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) != SUCCESS) {
+        if (commander_process_password(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, PASSWORD_VERIFY) != SUCCESS) {
             return;
         }
         commander_fill_report(ATTR_STR[ATTR_create_], "success", SUCCESS);
@@ -510,7 +518,12 @@ static void process_verifypass(const char *message)
 }
 
 
-static void process_xpub(const char *message)
+void commander_create_verifypass(void) {
+    commander_process_verifypass(ATTR_STR[ATTR_create_]);
+}
+    
+
+static void commander_process_xpub(const char *message)
 {
     char xpub[112] = {0};
     if (message) {
@@ -528,7 +541,7 @@ static void process_xpub(const char *message)
 }
 
 
-static void process_device(const char *message)
+static void commander_process_device(const char *message)
 {
     if (!message) {
         commander_fill_report("device", FLAG_ERR_INVALID_CMD, ERROR);
@@ -560,7 +573,7 @@ static void process_device(const char *message)
 }
 
 
-static void process_led(const char *message)
+static void commander_process_led(const char *message)
 {
     if (!message) {
         commander_fill_report("led", FLAG_ERR_INVALID_CMD, ERROR);
@@ -578,48 +591,48 @@ static int commander_process_token(int cmd, char *message)
 {
     switch (cmd) {
         case CMD_reset_:
-            process_reset(message);
+            commander_process_reset(message);
             return RESET;
         
         case CMD_password_:
-		    if (process_password(message, strlen(message), PASSWORD_STAND) == SUCCESS) {
+		    if (commander_process_password(message, strlen(message), PASSWORD_STAND) == SUCCESS) {
                 commander_fill_report(CMD_STR[cmd], "success", SUCCESS);
             }
             break;
         
         case CMD_verifypass_:
-            process_verifypass(message);
+            commander_process_verifypass(message);
             break;
         
         case CMD_led_:
-            process_led(message);
+            commander_process_led(message);
             break;
         
         case CMD_name_:
-            process_name(message);
+            commander_process_name(message);
             break;      
        
         case CMD_seed_:
-            process_seed(message);
+            commander_process_seed(message);
             break;
         
         case CMD_backup_:
-            process_backup(message);
+            commander_process_backup(message);
             break;
                         
         case CMD_sign_:
-            return process_sign(message);
+            return commander_process_sign(message);
 
         case CMD_random_:
-            process_random(message);
+            commander_process_random(message);
             break;
       
         case CMD_xpub_: 
-            process_xpub(message);
+            commander_process_xpub(message);
             break;
 
         case CMD_device_: 
-            process_device(message);
+            commander_process_device(message);
             break;
         
         case CMD_touchbutton_:
@@ -634,110 +647,11 @@ static int commander_process_token(int cmd, char *message)
 }
 
 
-static char *commander_decrypt(const char *encrypted_command,  
-                              jsmntok_t json_token[MAX_TOKENS],
-                              int *n_tokens)
-{
-    // Process command
-    char *command;
-    int command_len = 0, n = 0, err = 0;
-    uint16_t err_count = 0, err_iter = 0;
+//
+//  Handle API input (pre-processing) //
+//
 
-    // Decrypt & parse command
-    command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
-                                      strlen(encrypted_command), 
-                                      &command_len,
-                                      PASSWORD_STAND);
-    
-    err_count = memory_read_access_err_count(); // I2C memory reads additionally introduce 
-    err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
-    memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
-    
-    if (command == NULL) {
-        err++;
-        commander_fill_report("input", FLAG_ERR_DECRYPT " "           
-                                       FLAG_ERR_RESET_WARNING, ERROR);
-        err_iter = memory_access_err_count(ITERATE);
-    } else {
-        n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
-    }
-    *n_tokens = n;
-    
-    if (json_token[0].type != JSMN_OBJECT && err == 0)
-    {
-        err++;
-        commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 
-                                       FLAG_ERR_RESET_WARNING " "
-                                       FLAG_ERR_JSON_BRACKET, ERROR);
-        err_iter = memory_access_err_count(ITERATE);
-    } 
-    
-    if (err_iter - err_count == 0 && err == 0) {
-        return command;
-    } 
-    
-    if (err_iter - err_count == err) {
-        return NULL;
-    }
-    
-    // Corrupted data
-    commander_force_reset();
-    return NULL;
-}
-
-
-// Check if OK to process command.
-static int commander_check_init(const char *encrypted_command)
-{
-	commander_clear_report();
-
-    if (!encrypted_command) {
-        commander_fill_report("input", FLAG_ERR_NO_INPUT " "          
-                                       FLAG_ERR_RESET_WARNING, ERROR);
-        memory_access_err_count(ITERATE);
-        return ERROR;
-    } 
-    
-    if (!strlen(encrypted_command)) {
-        commander_fill_report("input", FLAG_ERR_NO_INPUT " "
-                                       FLAG_ERR_RESET_WARNING, ERROR);
-        memory_access_err_count(ITERATE);
-        return ERROR;
-    }
-    
-    // In case of a forgotten password, allow reset from an unencrypted command.
-    if (strstr(encrypted_command, CMD_STR[CMD_reset_]) != NULL) {
-        int r_len;
-        const char *r = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_reset_], &r_len);
-        process_reset(r);
-        return ERROR;
-	}
-    
-    // Force setting a password for encryption before processing command.
-    if (memory_read_erased()) {		
-        if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
-            int pw_len;
-            const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
-            if (pw != NULL) {
-                if (process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS) { 
-                    memory_write_erased(0); 
-                    commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
-                }
-            } else {
-                commander_fill_report("input", FLAG_ERR_JSON_PARSE, ERROR);
-            }
-        } else {
-			commander_fill_report("input", FLAG_ERR_NO_PASSWORD, ERROR);
-		}
-        return ERROR;
-	}
-
-    return SUCCESS; 
-}
- 
-
-// Echo the signing information for user verification.
-static void commander_echo(char *command)
+static void commander_echo_2fa(char *command)
 {
     int encrypt_len;
     char *encoded_report;
@@ -751,23 +665,22 @@ static void commander_echo(char *command)
         random_bytes(pin_b, 2, 0);
         sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
-        // Append 2FA PIN to echoed command
+        // Append PIN to echoed command
         command[strlen(command) - 1] = ','; // replace closing '}' with continuing ','
         strcat(command, " \"pin\": \"");
         strcat(command, pin_c);
         strcat(command, "\" }");
         
         // Create 2FA AES key for encryption
-        process_password(pin_c, 4, PASSWORD_2FA); 
+        commander_process_password(pin_c, 4, PASSWORD_2FA); 
     }
 
-    // Encrypt the echo with verification password
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
                                             strlen(command), 
                                             &encrypt_len,
                                             PASSWORD_VERIFY); 
-    // Fill report to send
     commander_clear_report();
+    
     if (encoded_report) {
         commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
         free(encoded_report);
@@ -777,7 +690,6 @@ static void commander_echo(char *command)
 }
                         
 
-// Returns 0 if inputs and outputs are the same
 static int commander_verify_signing(const char *message)
 {
     int data_len, type_len, keypath_len, change_keypath_len;
@@ -820,7 +732,7 @@ static int commander_verify_signing(const char *message)
             ret = NEXT;
         } else {
             verify_keypath_cnt = 0;
-            commander_echo(out); 
+            commander_echo_2fa(out); 
             ret = DIFFERENT;
         }
         if (verify_keypath_cnt >= input_cnt) {
@@ -832,12 +744,12 @@ static int commander_verify_signing(const char *message)
     else 
     {
         // Check whole input command instead of inputs/outputs since data is hashed.
-        // The commander_echo function replaces ending '}' with ',' and adds PIN information to the end
+        // The commander_echo_2fa function replaces ending '}' with ',' and adds PIN information to the end
         // of verify_output. Therefore, compare verify_output over strlen of message minus 1 characters.
         if (memcmp(verify_output, message, strlen(message) - 1)) { 
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             memcpy(verify_output, message, strlen(message));
-            commander_echo(verify_output); 
+            commander_echo_2fa(verify_output); 
             return DIFFERENT;
         } else {
             return SAME;
@@ -885,7 +797,7 @@ static int commander_touch_button(int found_cmd, const char *message)
 static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int n_tokens)
 { 
     char *encoded_report;
-    int j, t, cmd, ret, err, found, found_cmd = 0xFF, found_j, msglen, encrypt_len;
+    int j, t, cmd, ret, err, found, found_cmd = 0xFF, found_tok, msglen, encrypt_len;
     
     // Extract commands
 	err = 0;
@@ -898,7 +810,7 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
             if (jsmn_token_equals(command, &json_token[j], CMD_STR[cmd]) == 0) 
             {                    
                 found++;
-                found_j = j;
+                found_tok = j;
                 found_cmd = cmd;
                 break;
             }
@@ -912,9 +824,9 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
         commander_fill_report("input", FLAG_ERR_MULTIPLE_CMD, ERROR);
     } else {
         memory_access_err_count(INITIALIZE);
-        msglen = json_token[found_j + 1].end-json_token[found_j + 1].start;
+        msglen = json_token[found_tok + 1].end-json_token[found_tok + 1].start;
         char message[msglen + 1];
-        memcpy(message, command + json_token[found_j + 1].start, msglen);
+        memcpy(message, command + json_token[found_tok + 1].start, msglen);
         message[msglen] = '\0';
         t = commander_touch_button(found_cmd, message);
         if (t == ECHO) {
@@ -945,14 +857,13 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
 		}
     }
 	
-    // Encrypt report
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlen(json_report),
                                          &encrypt_len, 
                                          PASSWORD_STAND); 
     
-    // Fill encrypted JSON report to send
     commander_clear_report();
+    
     if (encoded_report) {
         commander_fill_report_len("ciphertext", encoded_report, SUCCESS, encrypt_len);
     } else {
@@ -962,16 +873,108 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
 }
 
 
+static char *commander_decrypt(const char *encrypted_command,  
+                              jsmntok_t json_token[MAX_TOKENS],
+                              int *n_tokens)
+{
+    char *command;
+    int command_len = 0, n = 0, err = 0;
+    uint16_t err_count = 0, err_iter = 0;
 
-void commander_create_verifypass(void) {
-    process_verifypass(ATTR_STR[ATTR_create_]);
+    command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
+                                      strlen(encrypted_command), 
+                                      &command_len,
+                                      PASSWORD_STAND);
+    
+    err_count = memory_read_access_err_count(); // I2C memory reads additionally introduce 
+    err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
+    memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
+    
+    if (command == NULL) {
+        err++;
+        commander_fill_report("input", FLAG_ERR_DECRYPT " "           
+                                       FLAG_ERR_RESET_WARNING, ERROR);
+        err_iter = memory_access_err_count(ITERATE);
+    } else {
+        n = jsmn_parse_init(command, command_len, json_token, MAX_TOKENS);
+    }
+    *n_tokens = n;
+    
+    if (json_token[0].type != JSMN_OBJECT && err == 0)
+    {
+        err++;
+        commander_fill_report("input", FLAG_ERR_JSON_PARSE " " 
+                                       FLAG_ERR_RESET_WARNING " "
+                                       FLAG_ERR_JSON_BRACKET, ERROR);
+        err_iter = memory_access_err_count(ITERATE);
+    } 
+    
+    if (err_iter - err_count == 0 && err == 0) {
+        return command;
+    } 
+    
+    if (err_iter - err_count == err) {
+        return NULL;
+    }
+    
+    // Corrupted data
+    commander_force_reset();
+    return NULL;
 }
 
+
+static int commander_check_init(const char *encrypted_command)
+{
+    if (!encrypted_command) {
+        commander_fill_report("input", FLAG_ERR_NO_INPUT " "          
+                                       FLAG_ERR_RESET_WARNING, ERROR);
+        memory_access_err_count(ITERATE);
+        return ERROR;
+    } 
     
-// Single gateway to the MCU code
+    if (!strlen(encrypted_command)) {
+        commander_fill_report("input", FLAG_ERR_NO_INPUT " "
+                                       FLAG_ERR_RESET_WARNING, ERROR);
+        memory_access_err_count(ITERATE);
+        return ERROR;
+    }
+    
+    // In case of a forgotten password, allow reset from an unencrypted command.
+    if (strstr(encrypted_command, CMD_STR[CMD_reset_]) != NULL) {
+        int r_len;
+        const char *r = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_reset_], &r_len);
+        commander_process_reset(r);
+        return RESET;
+	}
+    
+    // Force setting a password for encryption before processing command.
+    if (!memory_read_erased()) {		
+        return SUCCESS; 
+    }
+    if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
+        int pw_len;
+        const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
+        if (pw != NULL) {
+            if (commander_process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS) { 
+                memory_write_erased(0); 
+                commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
+            }
+        } else {
+            commander_fill_report("input", FLAG_ERR_JSON_PARSE, ERROR);
+        }
+    } else {
+        commander_fill_report("input", FLAG_ERR_NO_PASSWORD, ERROR);
+    }
+    return ERROR;
+}
+ 
+
+//
+//  Gateway to the MCU code //
+//
+
 char *commander(const char *command)
 {
-    //printf("\n\nCommand:\t%lu %s\n", strlen(command), command);		
     int n_tokens;
 	jsmntok_t json_token[MAX_TOKENS];
 

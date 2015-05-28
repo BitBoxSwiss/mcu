@@ -52,6 +52,7 @@ static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
 static uint8_t MEM_aeskey_2FA_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_stand_[MEM_PAGE_LEN] = {0xFF};
+static uint8_t MEM_aeskey_crypt_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_verify_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_aeskey_memory_[MEM_PAGE_LEN] = {0xFF};
 static uint8_t MEM_name_[MEM_PAGE_LEN] = {'0'};
@@ -86,6 +87,7 @@ void memory_erase(void)
 {
     memory_mempass();
     memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
@@ -109,6 +111,7 @@ void memory_clear_variables(void)
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_2FA_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_crypt_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -265,7 +268,21 @@ uint16_t *memory_mnemonic(const uint16_t *idx)
 }
 
 
-int memory_write_aeskey(const char *password, int len, int id)
+int memory_aeskey_is_erased(PASSWORD_ID id)
+{
+    uint8_t mem_aeskey_erased[MEM_PAGE_LEN];
+	sha256_Raw((uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
+	sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
+
+    if (memcmp(memory_read_aeskey(id), mem_aeskey_erased, 32)) {
+        return NOT_ERASED;
+    } else {
+        return ERASED;
+    }
+}
+
+
+int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
 	int ret = 0;
     uint8_t password_b[MEM_PAGE_LEN];
@@ -290,7 +307,7 @@ int memory_write_aeskey(const char *password, int len, int id)
 	sha256_Raw((uint8_t *)password, len, password_b);
 	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
-    switch (id) {
+    switch ((int)id) {
         case PASSWORD_MEMORY:
             memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
             ret = 1;
@@ -301,6 +318,9 @@ int memory_write_aeskey(const char *password, int len, int id)
             break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
+            break;
+        case PASSWORD_CRYPT:
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
             break;
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
@@ -315,9 +335,9 @@ int memory_write_aeskey(const char *password, int len, int id)
     }
 }
 
-uint8_t *memory_read_aeskey(int id)
+uint8_t *memory_read_aeskey(PASSWORD_ID id)
 {
-    switch (id) {
+    switch ((int)id) {
         case PASSWORD_MEMORY:
             return MEM_aeskey_memory_;        
         case PASSWORD_2FA:
@@ -325,6 +345,9 @@ uint8_t *memory_read_aeskey(int id)
         case PASSWORD_STAND:
             memory_eeprom_crypt(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
             return MEM_aeskey_stand_;
+        case PASSWORD_CRYPT:
+            memory_eeprom_crypt(NULL, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
+            return MEM_aeskey_crypt_;
         case PASSWORD_VERIFY:
             memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             return MEM_aeskey_verify_;

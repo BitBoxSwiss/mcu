@@ -152,7 +152,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
 static void commander_clear_report(void)
 {
 	memset(json_report, 0, COMMANDER_REPORT_SIZE);
-	json_report[0] = '\0';
+	//json_report[0] = '\0';
 	REPORT_BUF_OVERFLOW = 0;	
 }
 
@@ -573,6 +573,57 @@ static void commander_process_device(const char *message)
 }
 
 
+static void commander_process_aes256cbc(const char *message)
+{ 
+    int type_len, data_len, crypt_len;
+    const char *type, *data;
+    char *crypt;
+       
+    if (!message) {
+        commander_fill_report("aes256cbc", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
+    }
+    
+    type = jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+    
+    if (!type || !data) {
+        commander_fill_report("aes256cbc", FLAG_ERR_INVALID_CMD, ERROR);
+        return;  
+    }
+   
+    if (strncmp(type, ATTR_STR[ATTR_password_], strlen(ATTR_STR[ATTR_password_])) == 0) {
+        if (commander_process_password(data, data_len, PASSWORD_CRYPT) == SUCCESS) {
+            commander_fill_report("aes256cbc", "success", SUCCESS);
+        }
+    } 
+    else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == ERASED) {
+        commander_fill_report("aes256cbc", FLAG_ERR_NO_PASSWORD, ERROR);
+    } 
+    else if (data_len > DATA_LEN_MAX) {
+        commander_fill_report("aes256cbc", FLAG_ERR_DATA_LEN, ERROR);
+    }
+    else if (strncmp(type, ATTR_STR[ATTR_encrypt_], strlen(ATTR_STR[ATTR_encrypt_])) == 0) {
+        crypt = aes_cbc_b64_encrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT); 
+        commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
+        free(crypt);
+
+    } 
+    else if (strncmp(type, ATTR_STR[ATTR_decrypt_], strlen(ATTR_STR[ATTR_decrypt_])) == 0) {
+        crypt = aes_cbc_b64_decrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT);
+        if (crypt) { 
+            commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
+        } else {
+            commander_fill_report("aes256cbc", FLAG_ERR_NO_INPUT, ERROR);
+        } 
+        free(crypt);
+    } 
+    else { 
+        commander_fill_report("aes256cbc", FLAG_ERR_INVALID_CMD, ERROR);
+    }
+}
+
+
 static void commander_process_led(const char *message)
 {
     if (!message) {
@@ -635,6 +686,10 @@ static int commander_process_token(int cmd, char *message)
             commander_process_device(message);
             break;
         
+        case CMD_aes256cbc_: 
+            commander_process_aes256cbc(message);
+            break;
+        
         case CMD_touchbutton_:
             touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000, 
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
@@ -683,10 +738,10 @@ static void commander_echo_2fa(char *command)
     
     if (encoded_report) {
         commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
-        free(encoded_report);
     } else {
         commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
+    free(encoded_report);
 }
                         
 
@@ -881,7 +936,7 @@ static char *commander_decrypt(const char *encrypted_command,
     int command_len = 0, n = 0, err = 0;
     uint16_t err_count = 0, err_iter = 0;
 
-    command = aes_cbc_b64_decrypt((unsigned char*)encrypted_command, 
+    command = aes_cbc_b64_decrypt((unsigned char *)encrypted_command, 
                                       strlen(encrypted_command), 
                                       &command_len,
                                       PASSWORD_STAND);

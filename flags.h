@@ -55,6 +55,7 @@
         CMD(device)             \
         CMD(random)             \
         CMD(backup)             \
+        CMD(aes256cbc)          \
         CMD(verifypass)         \
         CMD(ciphertext)         \
   /*    child commands      */  \
@@ -89,6 +90,9 @@
         ATTR(export)            \
         ATTR(serial)            \
         ATTR(version)           \
+        ATTR(decrypt)           \
+        ATTR(encrypt)           \
+        ATTR(password)          \
         ATTR(__ERASE__)         \
         ATTR(__FORCE__)         \
         ATTR(none)               /* keep last */
@@ -106,15 +110,18 @@ enum REPORT_FLAGS {
     SAME, DIFFERENT, NEXT,
     TOUCHED, NOT_TOUCHED,
     RESET,
-    INITIALIZE, ITERATE
+    INITIALIZE, ITERATE,
+    ERASED, NOT_ERASED
 };
 
 
 #define PASSWORD_LEN_MIN			4
+#define DATA_LEN_MAX	    		1024
 
 #define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters."
 #define FLAG_ERR_NO_PASSWORD        "Please set a password."
 #define FLAG_ERR_NO_INPUT           "No input received."
+#define FLAG_ERR_DATA_LEN           "Data must be less than " STRINGIFY(DATA_LEN_MAX)" characters."
 #define FLAG_ERR_JSON_PARSE         "JSON parse error."
 #define FLAG_ERR_JSON_BRACKET       "Is the command enclosed by curly brackets?"
 #define FLAG_ERR_INVALID_CMD        "Invalid command."

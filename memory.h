@@ -50,6 +50,7 @@
 #define MEM_MNEMONIC_BIP32_ADDR_1	0x0500// Zone 5
 #define MEM_AESKEY_STAND_ADDR		0x0600// Zone 6
 #define MEM_AESKEY_VERIFY_ADDR		0x0700// Zone 7
+#define MEM_AESKEY_CRYPT_ADDR	    0x0800// Zone 8
 
 // Default settings
 #define DEFAULT_unlocked_           0xFF
@@ -65,6 +66,7 @@ typedef enum PASSWORD_ID {
     PASSWORD_STAND, 
     PASSWORD_VERIFY, 
     PASSWORD_MEMORY, 
+    PASSWORD_CRYPT, 
     PASSWORD_2FA,    /* only kept in RAM */ 
     PASSWORD_NONE    /* keep last */
 } PASSWORD_ID;
@@ -75,8 +77,9 @@ void memory_setup(void);
 void memory_clear_variables(void);
 void memory_mempass(void);
 
-int memory_write_aeskey(const char *password, int len, int id);
-uint8_t *memory_read_aeskey(int id);
+int memory_aeskey_is_erased(PASSWORD_ID id);
+int memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
+uint8_t *memory_read_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);

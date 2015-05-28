@@ -52,7 +52,7 @@ static hid_device *HID_HANDLE;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 static char tests_report[COMMANDER_REPORT_SIZE] = {0};
 static const char tests_pwd[] = "0000";
-static int TEST_INTERNAL = 0;
+static int TEST_LIVE_DEVICE = 1;
 
 
 static int tests_hid_init(void)
@@ -74,6 +74,7 @@ static void tests_hid_read(void)
 		printf("ERROR: Unable to read report.\n");
     } else {
         utils_decrypt_report((char *)HID_REPORT);
+        //printf("received:  >>%s<<\n", utils_read_decrypted_report());
     }
 }
 
@@ -122,7 +123,8 @@ static void tests_fill_report(const char *attr, const char *val)
 
 static void tests_send_cmd(const char *command, PASSWORD_ID id)
 {
-    if (TEST_INTERNAL) {
+    //printf("\nsending:   %i  >>%s<<\n", id, command);
+    if (!TEST_LIVE_DEVICE) {
         utils_send_cmd(command, id);
     }
     else if (id == PASSWORD_NONE) {
@@ -156,7 +158,7 @@ static void tests_format_send_cmd(const char *cmd, const char* val, PASSWORD_ID 
 
 static void tests_reset(void)
 {
-    if (TEST_INTERNAL) {
+    if (!TEST_LIVE_DEVICE) {
         commander_force_reset();
     } else {
         tests_format_send_cmd("reset", "__ERASE__", PASSWORD_NONE);
@@ -176,6 +178,10 @@ static int tests_report_has(const char *str)
     char *err;
     char *report = utils_read_decrypted_report();
     if (report) {
+        if (TEST_LIVE_DEVICE) { 
+            //printf("report is:    %s\n", report);
+            //printf("report has:   %s\n\n", str);
+        }
         err = strstr(report, str);
         if (err) {
             return 1;
@@ -241,12 +247,6 @@ static void tests_backup_seed_xpub(void)
     const char **salt, **cipher, **run, **mnemo;
 	static const char *options[] = {
 	//  run     salt              encrypt       mnemonic
-		"y",    NULL,             NULL,         NULL,
-		"y",    NULL,             "no",         NULL,
-		"y",    NULL,             "yes",        NULL,
-		"y",    "Digital Bitbox", NULL,         NULL,
-		"y",    "Digital Bitbox", "no",         NULL,
-		"y",    "Digital Bitbox", "yes",        NULL,
 		"y",    "",               NULL,         NULL,
 		"y",    "",               "no",         NULL,
 		"y",    "",               "yes",        NULL,
@@ -257,6 +257,12 @@ static void tests_backup_seed_xpub(void)
 		"y",    NULL,             "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
 		"y",    "",               "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
 		"y",    "Digital Bitbox", "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+		"y",    NULL,             NULL,         NULL,
+		"y",    NULL,             "no",         NULL,
+		"y",    NULL,             "yes",        NULL,
+		"y",    "Digital Bitbox", NULL,         NULL,
+		"y",    "Digital Bitbox", "no",         NULL,
+		"y",    "Digital Bitbox", "yes",        NULL,
         NULL,   NULL,             NULL,         NULL,
 	};
     run = options;
@@ -466,7 +472,7 @@ static void tests_input(void)
     int i;
 
     tests_reset();
-    if (TEST_INTERNAL) {
+    if (!TEST_LIVE_DEVICE) {
         tests_send_cmd("", PASSWORD_NONE); if (!tests_report_has(FLAG_ERR_NO_INPUT))                       { goto err; }
         tests_send_cmd(NULL, PASSWORD_NONE); if (!tests_report_has(FLAG_ERR_NO_INPUT))                     { goto err; }
     }
@@ -577,17 +583,108 @@ static void tests_verifypass(void)
 }
 
 
+// test vectors generated from Python 2.7 code using aes, base64, and hashlib imports 
+static void tests_aes_cbc(void)
+{
+	const char **plainp, **cipherp;
+
+    char password[] = "{\"type\":\"password\", \"data\":\"passwordpassword\"}";
+    char encrypt[] = "{\"type\":\"encrypt\", \"data\":\"";
+    char decrypt[] = "{\"type\":\"decrypt\", \"data\":\"";
+    char enc[COMMANDER_REPORT_SIZE * 2], dec[COMMANDER_REPORT_SIZE * 2];
+
+	static const char *aes_vector[] = {
+		// plain                               cipher
+        "digital bitbox", "mheIJghfKiPxQpvqbbRCZnTkbMd+BdRf+1jDAjk9h2Y=",
+        "Satoshi Nakamoto", "28XHUwA+/5zHeSIxt1Ioaifl/BqWsTow1hrzJJ7p91EgYbw6MwzFMlLOWq22fUsw",
+        "All those moments will be lost in time, like tears in rain. Time to die...", "qjfyIWCoY8caehZFoZStmtDz6FaKYCaCrJXyiF6I2LwnLPVV9oGv9NtJ7aVXAICeP0Q2Agh0oPlbBLKfjkdtZGuwV/tya7KcIl1ieC/276JwRl2+XdkK3uBb2Yrljl4T",
+        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!", "biR4Ce1vnvrYAOQRwO+bW4aXiySH4plHVc9LlN8hJAb/q6Tw0x6aI+A7EeOF5a11EPTjJ454nREZ9S4nIBwlGDto2GrEq+TwQOpKb/YU1VxeGGlFLg8comVnVSPmNQ1WNX/E5bnNX8osgF69QFxOgaPzfLdKGr4isUBVO3BlOPV4oUmIUc7+DC5PwabWV4XrxLQzzw79KRxL3iPk4Tbk3CDxDBgE5Z7HlvZfTM5J9d7majdQTMtHYP7d1MJZblyTkB1R7DemQhf7xHllkSXwHattstz/d1NmgGQXHlISoPs=",	
+        0, 0,
+	};
+	
+    tests_reset();
+    tests_format_send_cmd("password", tests_pwd, PASSWORD_NONE);  if (tests_report_has("error")) { goto err; }
+    
+    memcpy(dec, decrypt, strlen(decrypt));
+    strcat(dec, "password not set error\"}");   
+    tests_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);      if (!tests_report_has(FLAG_ERR_NO_PASSWORD)) { goto err; }
+    tests_format_send_cmd("aes256cbc", password, PASSWORD_STAND); if ( tests_report_has("error")) { goto err; }
+    tests_format_send_cmd("aes256cbc", "type", PASSWORD_STAND);   if (!tests_report_has(FLAG_ERR_INVALID_CMD)) { goto err; }
+    tests_format_send_cmd("aes256cbc", "", PASSWORD_STAND);       if (!tests_report_has(FLAG_ERR_INVALID_CMD)) { goto err; }
+    
+    memcpy(dec, decrypt, strlen(decrypt));
+    memset(dec + strlen(decrypt), 'a', DATA_LEN_MAX + 1);   
+    strcat(dec, "\"}");
+    tests_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);      
+    if (!tests_report_has(FLAG_ERR_DATA_LEN)) { goto err; }
+    
+    tests_format_send_cmd("aes256cbc", "{\"type\":\"\", \"data\":\"\"}", PASSWORD_STAND);         
+    if (!tests_report_has(FLAG_ERR_INVALID_CMD)) { goto err; }
+    
+    tests_format_send_cmd("aes256cbc", "{\"type\":\"encrypt\", \"data\":\"\"}", PASSWORD_STAND);  
+    if (tests_report_has("error")) { goto err; }
+    
+    tests_format_send_cmd("aes256cbc", "{\"type\":\"decrypt\", \"data\":\"\"}", PASSWORD_STAND); 
+    if (!tests_report_has(FLAG_ERR_NO_INPUT)) { goto err; }
+
+
+    plainp = aes_vector;
+	cipherp = aes_vector + 1;
+	while (*plainp && *cipherp) {
+
+        // check decryption 
+        memset(dec, 0, sizeof(dec));
+        memcpy(dec, decrypt, strlen(decrypt));
+        memcpy(dec + strlen(decrypt), *cipherp, strlen(*cipherp));
+        strcat(dec, "\"}");   
+        
+        tests_format_send_cmd("aes256cbc", dec, PASSWORD_STAND); 
+        if (tests_report_has("error")) { goto err; }
+        if (memcmp(*plainp, tests_get_value(CMD_aes256cbc_), strlen(*plainp))) { goto err; }
+
+        // check encryption by encrypting then decrypting
+        memset(enc, 0, sizeof(enc));
+        memcpy(enc, encrypt, strlen(encrypt));
+        memcpy(enc + strlen(encrypt), *plainp, strlen(*plainp));
+        strcat(enc, "\"}");   
+        
+        tests_format_send_cmd("aes256cbc", enc, PASSWORD_STAND); 
+        if (tests_report_has("error")) { goto err; }
+        
+        const char *e = tests_get_value(CMD_aes256cbc_);
+
+        memset(dec, 0, sizeof(dec));
+        memcpy(dec, decrypt, strlen(decrypt));
+        memcpy(dec + strlen(decrypt), e, strlen(e));
+        
+        tests_format_send_cmd("aes256cbc", dec, PASSWORD_STAND); 
+        if (tests_report_has("error")) { goto err; }
+        if (memcmp(*plainp, tests_get_value(CMD_aes256cbc_), strlen(*plainp))) { goto err; }
+
+
+        plainp += 2; cipherp += 2;
+	}
+    
+    tests_fill_report("tests_aes_cbc", "OK");
+    return;
+    
+    err:
+        tests_fill_report("tests_aes_cbc", utils_read_decrypted_report());
+}
+
+
 static void tests_run(void)
 {
-   
 	tests_name();
     tests_password();
     tests_device();
     tests_random();
     tests_input();
-    tests_backup_seed_xpub();
+    tests_aes_cbc();
     tests_verifypass();
+    tests_backup_seed_xpub(); // seed from backup not working
     tests_sign_speed();	
+    return;
 }
 
 
@@ -595,7 +692,7 @@ int main(void)
 {
    
     // Test the C code API  
-    TEST_INTERNAL = 1;
+    TEST_LIVE_DEVICE = 0;
     random_init();
     memory_setup();
     memset(tests_report, 0, sizeof(tests_report));
@@ -603,9 +700,9 @@ int main(void)
     printf("Internal API Result:\n%s\n\n", tests_report);
     
     // Live test of the HID API
-    // The hidapi library must be installed:
+    // Requires the hidapi library to be installed:
     //     http://www.signal11.us/oss/hidapi/
-    TEST_INTERNAL = 0;
+    TEST_LIVE_DEVICE = 1;
     memset(tests_report, 0, sizeof(tests_report));
     memory_write_aeskey(tests_pwd, 4, PASSWORD_STAND);
     

@@ -133,7 +133,9 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
     char v[VARINT_LEN] = {0};
     int len; 
     
-    if (!strncmp(vi, "ff", 2)) {
+    if (!vi) {
+        len = 0;
+    } else if (!strncmp(vi, "ff", 2)) {
         len = 16;
     } else if (!strncmp(vi, "fe", 2)) {
         len = 8;
@@ -143,7 +145,9 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
         len = 2;
     }
         
-    if (len > 2) {
+    if (len == 0) {
+        // continue
+    } else if (len > 2) {
         strncpy(v, vi + 2, len);
         utils_reverse_hex(v, len);
     } else {

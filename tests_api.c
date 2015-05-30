@@ -788,13 +788,8 @@ static void tests_aes_cbc(void)
 
 static void tests_run(void)
 {
-
     tests_seed_xpub_backup();
-    return;
-    
     tests_sign();
-    return;
-    
     tests_name();
     tests_password();
     tests_device();
@@ -816,19 +811,19 @@ int main(void)
     printf("\nInternal API Result:\n");
     tests_run();
    
+    
     // Live test of the HID API
     // Requires the hidapi library to be installed:
     //     http://www.signal11.us/oss/hidapi/
     TEST_LIVE_DEVICE = 1;
     memory_write_aeskey(tests_pwd, 4, PASSWORD_STAND);
-    
     if (tests_hid_init() == ERROR) {
         printf("Not testing HID API. A device is not connected.\n\n");
         return 1;
     }
-    
     printf("\nHID API Result:\n");
     tests_run();
+
 
     return 0;
 }

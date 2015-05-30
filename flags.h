@@ -133,20 +133,20 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
 #define FLAG_ERR_DECRYPT            "Could not decrypt."
 #define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
-//#define FLAG_ERR_MNEMO_EMPTY        "Empty mnemonic."
-//#define FLAG_ERR_MNEMO_NUM_WORDS    "Wrong number of mnemonic words."
-//#define FLAG_ERR_MNEMO_WORD         "Word not in BIP39 wordlist."
-//#define FLAG_ERR_MNEMO_CHECKSUM     "Invalid mnemonic checksum."
-
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
 #define FLAG_ERR_SIGN               "Could not sign."
-#define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
-#define FLAG_ERR_SD_WRITE           "Could not write."
 #define FLAG_ERR_ENCRYPT_MEM        "Could not allocate memory for encryption."
 #define FLAG_ERR_ATAES              "Chip communication error."
 #define FLAG_ERR_FLASH              "Could not read flash."
 #define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
-
-
+#define FLAG_ERR_SD_CARD            "Please insert SD card."
+#define FLAG_ERR_SD_MOUNT           "Could not mount the SD card."
+#define FLAG_ERR_SD_OPEN            "Could not open the file."
+#define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
+#define FLAG_ERR_SD_WRITE           "Could not write the file."
+#define FLAG_ERR_SD_WRITE_LEN       "Text to write is too large."
+#define FLAG_ERR_SD_READ            "Could not read the file."
+#define FLAG_ERR_SD_ERASE           "Did not erase any files."
+ 
 #endif

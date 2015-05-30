@@ -73,6 +73,7 @@
         CMD(filename)           \
         CMD(decrypt)            \
         CMD(encrypt)            \
+        CMD(pin)                \
   /* placeholder don't move */  \
         CMD(none)                /* keep last */
 
@@ -139,7 +140,6 @@ enum REPORT_FLAGS {
 
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
-
 #define FLAG_ERR_SIGN               "Could not sign."
 #define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
 #define FLAG_ERR_SD_WRITE           "Could not write."

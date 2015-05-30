@@ -722,7 +722,9 @@ static void commander_echo_2fa(char *command)
 
         // Append PIN to echoed command
         command[strlen(command) - 1] = ','; // replace closing '}' with continuing ','
-        strcat(command, " \"pin\": \"");
+        strcat(command, " \"");
+        strcat(command, CMD_STR[CMD_pin_]);
+        strcat(command, "\": \"");
         strcat(command, pin_c);
         strcat(command, "\" }");
         

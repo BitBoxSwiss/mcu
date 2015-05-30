@@ -196,7 +196,7 @@ void utils_decrypt_report(const char *report)
             memcpy(decrypted_report, report + json_token[i + 1].start, len);
             decrypted_report[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report), &decrypt_len, PASSWORD_VERIFY);
-            pin = (char *)jsmn_get_value_string(dec, "pin", &pin_len);
+            pin = (char *)jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
             } else {

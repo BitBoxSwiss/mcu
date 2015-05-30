@@ -638,7 +638,7 @@ static void commander_process_led(const char *message)
 }
 
 
-static int commander_process_token(int cmd, char *message)
+static int commander_process(int cmd, char *message)
 {
     switch (cmd) {
         case CMD_reset_:
@@ -889,7 +889,7 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
         if (t == ECHO) {
             return;
         } else if (t == TOUCHED) {
-            ret = commander_process_token(found_cmd, message);
+            ret = commander_process(found_cmd, message);
             if (ret == RESET) {
                 return;
             } else if (ret == ERROR) {
@@ -1049,4 +1049,44 @@ char *commander(const char *command)
 }
 
 
+/*
+ *
 
+ USB HID
+ |
+ |
+commander()
+ |
+ \_commander_check_init()
+	 |--if reset command -> RESET -> RETURN
+	 |--if password not set -> RETURN
+	 |
+ \_commander_decrypt()
+	 |--if cannot decrypt or cannot parse JSON
+	 |	    |-> if too many access errors -> RESET
+	 |		|-> RETURN
+	 |
+	 |
+ \_commander_parse()
+	 |
+	 \_commander_touch_button()
+			|--if sign command
+			|		|
+			|		 \_commander_verify_signing()
+			| 				|--if new transaction -> echo 2FA info -> RETURN
+			| 				|--if no change address & >1 output -> RETURN
+			|
+			|--if require touch & not touched -> RETURN
+			|
+	 \_commander_process()  { do command }
+			|
+      _____/
+	 |
+     |--encrypt report
+  __/
+ |
+ |
+ USB HID
+
+*
+*/

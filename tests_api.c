@@ -274,10 +274,13 @@ static void tests_seed_xpub_backup(void)
         tests_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if ( tests_report_has("error")) { goto err; }
         memcpy(xpub0, tests_get_value(CMD_xpub_), sizeof(xpub0));
         if (!memcmp(xpub0, xpub1, 112)) { goto err; }
+        
         // backup
-        tests_format_send_cmd("verifypass", "export", PASSWORD_STAND); if ( tests_report_has("error")) { goto err; } 
-        tests_format_send_cmd("backup", "erase", PASSWORD_STAND);      if ( tests_report_has("error")) { goto err; }
+        tests_format_send_cmd("backup", "erase", PASSWORD_STAND);      
+        if ( tests_report_has("error") && 
+            !tests_report_has(FLAG_ERR_SD_NO_FILE)) { goto err; }
         tests_format_send_cmd("backup", back, PASSWORD_STAND);         if ( tests_report_has("error")) { goto err; }
+        
         // erase
         tests_reset();
         tests_format_send_cmd("password", tests_pwd, PASSWORD_NONE);   if ( tests_report_has("error")) { goto err; }
@@ -286,8 +289,10 @@ static void tests_seed_xpub_backup(void)
         tests_format_send_cmd("seed", seed_b, PASSWORD_STAND);         if ( tests_report_has("error")) { goto err; }
         tests_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if ( tests_report_has("error")) { goto err; }
         memcpy(xpub1, tests_get_value(CMD_xpub_), sizeof(xpub1));
+        
         // check xpubs
         if (memcmp(xpub0, xpub1, 112)) { goto err; }
+        
         // check backup list and erase
         tests_format_send_cmd("backup", "list", PASSWORD_STAND);       if (!tests_report_has(filename)) { goto err; }
         tests_format_send_cmd("backup", "erase", PASSWORD_STAND);      if ( tests_report_has(filename)) { goto err; }
@@ -316,6 +321,9 @@ static void tests_seed_xpub_backup(void)
     err:
         tests_fill_report("tests_seed_xpub_backup", "FAIL");
         tests_fill_report("tests_seed_xpub_backup", utils_read_decrypted_report());
+        //printf("\t%s\n", *salt); 
+        //printf("\t%s\n", *cipher); 
+        //printf("\t%s\n", *mnemo); 
 }
 
 
@@ -474,7 +482,7 @@ static void tests_password(void)
 }
 
 
-static void tests_verifypass(void)
+static void tests_echo_2FA(void)
 {
     char create[] = "create";
     char export[] = "export";
@@ -485,15 +493,19 @@ static void tests_verifypass(void)
 
     tests_reset();
     tests_format_send_cmd("password", tests_pwd, PASSWORD_NONE);  if ( tests_report_has("error")) { goto err; }
-    tests_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!tests_report_has("echo"))  { goto err; }
+    tests_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!(tests_report_has("echo") ||
+                                                                      tests_report_has(FLAG_ERR_BIP32_MISSING))) { goto err; }
     tests_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!tests_report_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
     tests_format_send_cmd("seed", seed, PASSWORD_STAND);          if ( tests_report_has("error")) { goto err; }
 
     // test verifypass
     tests_format_send_cmd("verifypass", create, PASSWORD_STAND);  if ( tests_report_has("error"))              { goto err; }
-    tests_format_send_cmd("backup", "erase", PASSWORD_STAND);     if ( tests_report_has("error"))              { goto err; }
+    tests_format_send_cmd("backup", "erase", PASSWORD_STAND);     if ( tests_report_has("error") && 
+                                                                      !tests_report_has(FLAG_ERR_SD_NO_FILE))  { goto err; }
     tests_format_send_cmd("backup", "list", PASSWORD_STAND);      if ( tests_report_has(VERIFYPASS_FILENAME))  { goto err; } 
     tests_format_send_cmd("verifypass", export, PASSWORD_STAND);  if ( tests_report_has("error"))              { goto err; } 
+    tests_format_send_cmd("verifypass", export, PASSWORD_STAND);  if (!tests_report_has(FLAG_ERR_SD_FILE_EXISTS) && 
+                                                                      !tests_report_has(FLAG_ERR_NO_MCU))      { goto err; } 
     tests_format_send_cmd("backup", "list", PASSWORD_STAND);      if (!tests_report_has(VERIFYPASS_FILENAME))  { goto err; } 
     
     // test echo
@@ -516,12 +528,12 @@ static void tests_verifypass(void)
     tests_format_send_cmd("verifypass", export, PASSWORD_STAND);  if (!tests_report_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
     tests_format_send_cmd("backup", "list", PASSWORD_STAND);      if (!tests_report_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
 
-    tests_fill_report("tests_verifypass", "OK");
+    tests_fill_report("tests_echo_2FA", "OK");
     return;
     
     err:
-        tests_fill_report("tests_verifypass", "FAIL");
-        tests_fill_report("tests_verifypass", utils_read_decrypted_report());
+        tests_fill_report("tests_echo_2FA", "FAIL");
+        tests_fill_report("tests_echo_2FA", utils_read_decrypted_report());
 }
 
     
@@ -745,6 +757,8 @@ static void tests_aes_cbc(void)
 
 static void tests_run(void)
 {
+    tests_seed_xpub_backup();
+    tests_echo_2FA();
     tests_aes_cbc();
     tests_sign();
     tests_name();
@@ -752,8 +766,7 @@ static void tests_run(void)
     tests_device();
     tests_random();
     tests_input();
-    tests_verifypass();
-    tests_seed_xpub_backup();
+    return;
 }
 
 
@@ -766,7 +779,7 @@ int main(void)
     memory_setup();
     printf("\n\nInternal API Result:\n");
     tests_run();
-   
+  
     
     // Live test of the HID API
     // Requires the hidapi library to be installed:

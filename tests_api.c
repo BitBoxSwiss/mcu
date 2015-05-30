@@ -166,8 +166,8 @@ static int tests_report_has(const char *str)
     char *err;
     char *report = utils_read_decrypted_report();
     if (report) {
-        //printf("report is:    %s\n", report);
-        //printf("report has:   %s\n\n", str);
+        //printf("report is:   >>%s\n", report);
+        //printf("report has:  >>%s\n\n", str);
         err = strstr(report, str);
         if (err) {
             return 1;
@@ -257,7 +257,6 @@ static void tests_seed_xpub_backup(void)
 	mnemo = options + 3;
 
 
-
     tests_reset();
     tests_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (tests_report_has("error")) { goto err; }
     
@@ -266,19 +265,9 @@ static void tests_seed_xpub_backup(void)
 
     tests_format_send_cmd("seed", "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND); 
     if (tests_report_has("error")) { goto err; }
-        
-
-
-
 
 
     while (*run) {
-  
-        printf("backup test  %s\n", *salt); 
-        printf("backup test  %s\n", *cipher); 
-        printf("backup test  %s\n\n\n", *mnemo); 
-
-
         memset(seed_c, 0, sizeof(seed_c));
         memset(seed_b, 0, sizeof(seed_b));
         memset(back, 0, sizeof(back));
@@ -460,7 +449,7 @@ static void tests_device(void)
   
     tests_format_send_cmd("device", "serial", PASSWORD_STAND);     if (tests_report_has("error")) { goto err; } 
     tests_format_send_cmd("device", "version", PASSWORD_STAND);    if (tests_report_has("error")) { goto err; } 
-                                                              if (!tests_report_has(DIGITAL_BITBOX_VERSION)) { goto err; }
+                                                                   if (!tests_report_has(DIGITAL_BITBOX_VERSION)) { goto err; }
 
     tests_fill_report("tests_device", "OK");
     return;
@@ -589,7 +578,7 @@ static void tests_sign(void)
     
     // signing before seeded
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has(FLAG_ERR_DESERIALIZE))          { goto err; }  
+    if (!tests_report_has(FLAG_ERR_DESERIALIZE)) { goto err; }  
 
     // seed
     tests_format_send_cmd("seed", "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}}", PASSWORD_STAND);
@@ -597,47 +586,50 @@ static void tests_sign(void)
 
     // wrong change keypath
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/\"} }", PASSWORD_STAND);
-    if (!tests_report_has(FLAG_ERR_DESERIALIZE))          { goto err; }  
+    if (!tests_report_has(FLAG_ERR_DESERIALIZE)) { goto err; }  
  
     // change output after echo (MITM attack)
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if (tests_report_has("error"))          { goto err; }  
+    if (!tests_report_has("echo")) { goto err; }  
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e7af4862e10c88acffffffff0298080000000000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if ( tests_report_has("sign"))          { goto err; }  
+    if (!tests_report_has("echo")) { goto err; }  
+    if ( tests_report_has("sign")) { goto err; }  
 
     // sign using one input
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if (!tests_report_has("verify_output")) { goto err; }
-    if (!tests_report_has("value"))         { goto err; }
-    if (!tests_report_has("2200"))          { goto err; }
-    if (!tests_report_has("script"))        { goto err; }
-    if (!tests_report_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+    if (!tests_report_has("echo")) { goto err; }  
+    if (!TEST_LIVE_DEVICE) {
+        if (!tests_report_has("verify_output")) { goto err; }
+        if (!tests_report_has("value"))         { goto err; }
+        if (!tests_report_has("2200"))          { goto err; }
+        if (!tests_report_has("script"))        { goto err; }
+        if (!tests_report_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+    }
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has("sign"))          { goto err; }  
+    if (!tests_report_has("sign")) { goto err; }  
     if (!tests_report_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
+    if (!tests_report_has("pubkey")) { goto err; }  
     if (!tests_report_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) { goto err; }  
 
     // sign using two inputs 
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if (!tests_report_has("verify_output")) { goto err; }
-    if (!tests_report_has("value"))         { goto err; }
-    if (!tests_report_has("200"))          { goto err; }
-    if (!tests_report_has("script"))        { goto err; }
-    if (!tests_report_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+    if (!tests_report_has("echo")) { goto err; }  
+    if (!TEST_LIVE_DEVICE) {
+        if (!tests_report_has("verify_output")) { goto err; }
+        if (!tests_report_has("value"))         { goto err; }
+        if (!tests_report_has("200"))           { goto err; }
+        if (!tests_report_has("script"))        { goto err; }
+        if (!tests_report_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+    }
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!tests_report_has("sign"))          { goto err; }  
+    if (!tests_report_has("sign")) { goto err; }  
     if (!tests_report_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
+    if (!tests_report_has("pubkey")) { goto err; }  
     if (!tests_report_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) { goto err; }  
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!tests_report_has("sign"))          { goto err; }  
+    if (!tests_report_has("sign")) { goto err; }  
     if (!tests_report_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
+    if (!tests_report_has("pubkey")) { goto err; }  
     if (!tests_report_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) { goto err; }  
 
 
@@ -647,42 +639,51 @@ static void tests_sign(void)
 
     // sign using one input
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    memory_write_aeskey(tests_get_value(CMD_pin_), 4, PASSWORD_2FA);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if (!tests_report_has("verify_output")) { goto err; }
-    if (!tests_report_has("value"))         { goto err; }
-    if (!tests_report_has("2200"))          { goto err; }
-    if (!tests_report_has("script"))        { goto err; }
-    if (!tests_report_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+    if (!tests_report_has("echo")) { goto err; }  
+    if (!TEST_LIVE_DEVICE) {
+        memory_write_aeskey(tests_get_value(CMD_pin_), 4, PASSWORD_2FA);
+        if (!tests_report_has("verify_output")) { goto err; }
+        if (!tests_report_has("value"))         { goto err; }
+        if (!tests_report_has("2200"))          { goto err; }
+        if (!tests_report_has("script"))        { goto err; }
+        if (!tests_report_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+    }
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!tests_report_has("2FA"))           { goto err; }
-    if (!tests_report_has("sign"))          { goto err; }  
-    if (!tests_report_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
-    if (!tests_report_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) { goto err; }  
-   
+    if (!tests_report_has("2FA")) { goto err; }
+    if (!TEST_LIVE_DEVICE) {
+        if (!tests_report_has("sign")) { goto err; }  
+        if (!tests_report_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) { goto err; }  
+        if (!tests_report_has("pubkey")) { goto err; }  
+        if (!tests_report_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) { goto err; }  
+    } 
 
     // sign using two inputs 
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    memory_write_aeskey(tests_get_value(CMD_pin_), 4, PASSWORD_2FA);
-    if (!tests_report_has("echo"))          { goto err; }  
-    if (!tests_report_has("verify_output")) { goto err; }
-    if (!tests_report_has("value"))         { goto err; }
-    if (!tests_report_has("200"))          { goto err; }
-    if (!tests_report_has("script"))        { goto err; }
-    if (!tests_report_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+    if (!tests_report_has("echo")) { goto err; }  
+    if (!TEST_LIVE_DEVICE) {
+        memory_write_aeskey(tests_get_value(CMD_pin_), 4, PASSWORD_2FA);
+        if (!tests_report_has("verify_output")) { goto err; }
+        if (!tests_report_has("value"))         { goto err; }
+        if (!tests_report_has("200"))           { goto err; }
+        if (!tests_report_has("script"))        { goto err; }
+        if (!tests_report_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+    }
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!tests_report_has("2FA"))           { goto err; }
-    if (!tests_report_has("sign"))          { goto err; }  
-    if (!tests_report_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
-    if (!tests_report_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) { goto err; }  
+    if (!tests_report_has("2FA")) { goto err; }
+    if (!TEST_LIVE_DEVICE) {
+        if (!tests_report_has("sign")) { goto err; }  
+        if (!tests_report_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) { goto err; }  
+        if (!tests_report_has("pubkey")) { goto err; }  
+        if (!tests_report_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) { goto err; }  
+    }
     tests_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!tests_report_has("2FA"))           { goto err; }
-    if (!tests_report_has("sign"))          { goto err; }  
-    if (!tests_report_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) { goto err; }  
-    if (!tests_report_has("pubkey"))        { goto err; }  
-    if (!tests_report_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) { goto err; }  
+    if (!tests_report_has("2FA")) { goto err; }
+    if (!TEST_LIVE_DEVICE) {
+        if (!tests_report_has("sign")) { goto err; }  
+        if (!tests_report_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) { goto err; }  
+        if (!tests_report_has("pubkey")) { goto err; }  
+        if (!tests_report_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) { goto err; }  
+    }
 
 
     tests_fill_report("tests_sign", "OK");
@@ -808,7 +809,7 @@ int main(void)
     TEST_LIVE_DEVICE = 0;
     random_init();
     memory_setup();
-    printf("\nInternal API Result:\n");
+    printf("\n\nInternal API Result:\n");
     tests_run();
    
     
@@ -818,10 +819,10 @@ int main(void)
     TEST_LIVE_DEVICE = 1;
     memory_write_aeskey(tests_pwd, 4, PASSWORD_STAND);
     if (tests_hid_init() == ERROR) {
-        printf("Not testing HID API. A device is not connected.\n\n");
+        printf("\n\nNot testing HID API. A device is not connected.\n\n");
         return 1;
     }
-    printf("\nHID API Result:\n");
+    printf("\n\nHID API Result:\n");
     tests_run();
 
 

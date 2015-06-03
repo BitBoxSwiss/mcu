@@ -1058,32 +1058,32 @@ char *commander(const char *command)
 commander()
  |
  \_commander_check_init()
-	 |--if reset command -> RESET -> RETURN
-	 |--if password not set -> RETURN
-	 |
+    |--if reset command -> RESET -> RETURN
+    |--if password not set -> RETURN
+    |
  \_commander_decrypt()
-	 |--if cannot decrypt or cannot parse JSON
-	 |	    |-> if too many access errors -> RESET
-	 |		|-> RETURN
-	 |
-	 |
+    |--if cannot decrypt or cannot parse JSON
+    |      |-> if too many access errors -> RESET
+    |      |-> RETURN
+    |
+    |
  \_commander_parse()
-	 |
-	 \_commander_touch_button()
-			|--if sign command
-			|		|
-			|		 \_commander_verify_signing()
-			| 				|--if new transaction -> echo 2FA info -> RETURN
-			| 				|--if no change address & >1 output -> RETURN
-			|
-			|--if require touch & not touched -> RETURN
-			|
-	 \_commander_process()  { do command }
-			|
+    |
+    \_commander_touch_button()
+            |--if sign command
+            |    |
+            |    \_commander_verify_signing()
+            |         |--if new transaction -> echo 2FA info -> RETURN
+            |         |--if no change address & >1 output -> RETURN
+            |
+            |--if require touch & not touched -> RETURN
+            |
+    \_commander_process()  { do command }
+            |
       _____/
-	 |
-     |--encrypt report
-  __/
+    |
+    |--encrypt report
+  _/
  |
  |
  USB HID

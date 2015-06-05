@@ -614,7 +614,7 @@ static void commander_process_aes256cbc(const char *message)
         if (crypt) { 
             commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
         } else {
-            commander_fill_report("aes256cbc", FLAG_ERR_NO_INPUT, ERROR);
+            commander_fill_report("aes256cbc", FLAG_ERR_DECRYPT, ERROR);
         } 
         free(crypt);
     } 

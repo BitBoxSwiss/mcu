@@ -600,14 +600,14 @@ static void commander_process_aes256cbc(const char *message)
     else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == ERASED) {
         commander_fill_report("aes256cbc", FLAG_ERR_NO_PASSWORD, ERROR);
     } 
-    else if (data_len > DATA_LEN_MAX) {
-        commander_fill_report("aes256cbc", FLAG_ERR_DATA_LEN, ERROR);
-    }
     else if (strncmp(type, ATTR_STR[ATTR_encrypt_], strlen(ATTR_STR[ATTR_encrypt_])) == 0) {
-        crypt = aes_cbc_b64_encrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT); 
-        commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
-        free(crypt);
-
+        if (data_len > DATA_LEN_MAX) {
+            commander_fill_report("aes256cbc", FLAG_ERR_DATA_LEN, ERROR);
+        } else {
+            crypt = aes_cbc_b64_encrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT); 
+            commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
+            free(crypt);
+        }
     } 
     else if (strncmp(type, ATTR_STR[ATTR_decrypt_], strlen(ATTR_STR[ATTR_decrypt_])) == 0) {
         crypt = aes_cbc_b64_decrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT);

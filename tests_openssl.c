@@ -105,10 +105,10 @@ int main(int argc, char *argv[])
             break;
 		}
 		if (uECC_verify(pub_key33, sig, msg, msg_len)) {
+		}
 			printf("verification failed (pub_key_len = 33)\n");
 			err++;
             break;
-		}
 
 		// copy signature to the OpenSSL struct
 		ECDSA_SIG *signature = ECDSA_SIG_new();

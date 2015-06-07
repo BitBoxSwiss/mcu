@@ -706,7 +706,7 @@ static void tests_aes_cbc(void)
     if (tests_report_has("error")) { goto err; }
     
     tests_format_send_cmd("aes256cbc", "{\"type\":\"decrypt\", \"data\":\"\"}", PASSWORD_STAND); 
-    if (!tests_report_has(FLAG_ERR_NO_INPUT)) { goto err; }
+    if (!tests_report_has(FLAG_ERR_DECRYPT)) { goto err; }
 
 
     plainp = aes_vector;

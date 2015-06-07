@@ -1,0 +1,22 @@
+language: c
+sudo: false
+os:
+    - osx
+    - linux
+    
+compiler:
+    - clang
+    - gcc
+
+matrix:
+    exclude:
+        - os: osx
+          compiler: gcc
+    fast_finish:
+        - true
+
+script: make
+
+after_success:
+    - ./tests_unit 
+    - ./tests_openssl 200

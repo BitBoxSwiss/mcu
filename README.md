@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
+
 MCU code for the Digital Bitbox hardware wallet.
 
 All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is desribed in the [API](https://digitalbitbox.com/api.html). The code will compile on a computer by typing `make` - see the `tests_cmdline.c` code for a simple example and the `tests_api.c` code to test the API.

@@ -44,7 +44,9 @@ void random_init(void)
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
 	(void) update_seed;
-    fread(buf, 1, len, f);
+    if (fread(buf, 1, len, f) != len) {
+      return 1; // error
+    }
     return 0;
 }
 

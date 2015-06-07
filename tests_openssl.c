@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	SHA256_CTX sha256;
 	EC_GROUP *ecgroup;
     EC_KEY *eckey;
-	int cnt = 0;
+	int cnt = 0, err = 0;
 
 	random_init();
 	ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
@@ -90,7 +90,8 @@ int main(int argc, char *argv[])
 		// use our ECDSA signer to sign the message with the key
 		if (uECC_sign(priv_key, msg, msg_len, sig)) {
 			printf("signing failed\n");
-			break;
+			err++;
+            break;
 		}
 
 		// generate public key from private key
@@ -100,11 +101,13 @@ int main(int argc, char *argv[])
 		// verify the message signature
 		if (uECC_verify(pub_key65, sig, msg, msg_len)) {
 			printf("verification failed (pub_key_len = 65)\n");
-			break;
+			err++;
+            break;
 		}
 		if (uECC_verify(pub_key33, sig, msg, msg_len)) {
 			printf("verification failed (pub_key_len = 33)\n");
-			break;
+			err++;
+            break;
 		}
 
 		// copy signature to the OpenSSL struct
@@ -120,7 +123,8 @@ int main(int argc, char *argv[])
 		// verify all went well, i.e. we can decrypt our signature with OpenSSL
 		if (ECDSA_do_verify(hash, 32, signature, eckey) != 1) {
 			printf("OpenSSL verification failed\n");
-			break;
+			err++;
+            break;
 		}
 		ECDSA_SIG_free(signature);
 		EC_KEY_free(eckey);
@@ -128,10 +132,13 @@ int main(int argc, char *argv[])
 		if ((cnt % 100) == 0) printf("Passed ... %d\n", cnt);
             ++iterations;
 	}
-    printf("message to sign:\n%s\n\n", utils_uint8_to_hex(msg, msg_len));
-	printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
-	//printf("eckey dump:\n%s\n\n", utils_uint8_to_hex(p, sizeof(buffer)));
     
+    if (err) { 
+        printf("message to sign:\n%s\n\n", utils_uint8_to_hex(msg, msg_len));
+	    printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
+	    //printf("eckey dump:\n%s\n\n", utils_uint8_to_hex(p, sizeof(buffer)));
+    }
+
     EC_GROUP_free(ecgroup);
-	return 0;
+	return err;
 }

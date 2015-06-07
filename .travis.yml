@@ -15,7 +15,10 @@ matrix:
     fast_finish:
         - true
 
+env: TRAVIS_BUILD=1
+
 script: 
     - make
     - ./tests_unit 
     - ./tests_openssl 200
+    - ./tests_api

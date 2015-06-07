@@ -10,15 +10,20 @@ CFLAGS += -Wno-deprecated-declarations
 CFLAGS += -D TESTING
 
 LIBOPENSSL = -lcrypto
+
+ifdef TRAVIS_BUILD
+CFLAGS += -D TRAVIS_BUILD
+else
 LIBHIDAPI = -lhidapi
+endif
+
 
 OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o uECC.o
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 
 
-all: tests_cmdline tests_unit tests_openssl 
-api: tests_api
+all: tests_cmdline tests_unit tests_openssl tests_api
 
 tests: tests.o $(OBJS) ; $(CC) tests.o $(OBJS) -o tests
 tests_api: tests_api.o $(OBJS) ; $(CC) tests_api.o $(OBJS) $(LIBHIDAPI) -o tests_api

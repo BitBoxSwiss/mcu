@@ -38,9 +38,6 @@
 #include "random.h"
 #include "commander.h"
 
-// http://www.signal11.us/oss/hidapi/
-#include "hidapi.h"
-
 
 #define HID_MAX_STR       255
 #define HID_REPORT_SIZE	  2048
@@ -53,6 +50,9 @@ static int TESTS_FAIL = 0;
 
 
 #ifndef TRAVIS_BUILD
+// http://www.signal11.us/oss/hidapi/
+#include "hidapi.h"
+
 static hid_device *HID_HANDLE;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 

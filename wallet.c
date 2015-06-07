@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "commander.h"
 #include "ripemd160.h"
@@ -466,14 +467,14 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
         memset(outval, 0, sizeof(outval));
         strncpy(outval, hex + idx, 16);
         utils_reverse_hex(outval, 16);
-        sscanf(outval, "%llx", &outValue);
+        sscanf(outval, "%" PRIu64, &outValue);
         idx += 16;                               
         if (hex_len < idx + 16) {return NULL;}
         idx += utils_varint_to_uint64(hex + idx, &n_len);
        
         memset(outval, 0, sizeof(outval));
         memset(outaddr, 0, sizeof(outaddr));
-        sprintf(outval, "{\"value\": %llu, ", outValue);
+        sprintf(outval, "{\"value\": %" PRIu64 ", ", outValue);
         sprintf(outaddr, "\"script\": \"%.*s\"}", (int)n_len * 2, hex + idx);
         idx += n_len * 2; // chars = 2 * bytes 
        

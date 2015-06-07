@@ -15,8 +15,7 @@ matrix:
     fast_finish:
         - true
 
-script: make
-
-after_success:
+script: 
+    - make
     - ./tests_unit 
     - ./tests_openssl 200

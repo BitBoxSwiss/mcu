@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "utils.h"
 #include "commander.h"
@@ -100,18 +101,18 @@ void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
     char v[VARINT_LEN];  
     
     if (i<0xfd) {
-        sprintf(v, "%02llx", i);
+        sprintf(v, "%02" PRIu64 , i);
         len = 2;
     } else if (i <= 0xffff) {
-        sprintf(v, "%04llx", i);
+        sprintf(v, "%04" PRIu64 , i);
         sprintf(vi, "fd");
         len = 4;
     } else if (i <= 0xffffffff) {
-        sprintf(v, "%08llx", i);
+        sprintf(v, "%08" PRIu64 , i);
         sprintf(vi, "fe");
         len = 8;
     } else {
-        sprintf(v, "%016llx", i);
+        sprintf(v, "%016" PRIu64 , i);
         sprintf(vi, "ff");
         len = 16;
     }
@@ -153,7 +154,7 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
     } else {
         strncpy(v, vi, len);
     }
-    sscanf(v, "%llx", i);
+    sscanf(v, "%" PRIu64 , i);
    
     return len;
 }

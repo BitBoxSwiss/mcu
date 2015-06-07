@@ -891,7 +891,7 @@ int main(void)
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
     }
 
-    return U_TESTS_FAIL;
+    return 1;// U_TESTS_FAIL;
 }
  
 

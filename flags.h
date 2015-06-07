@@ -117,7 +117,7 @@ enum REPORT_FLAGS {
 
 
 #define PASSWORD_LEN_MIN			4
-#define DATA_LEN_MAX	    		1024
+#define DATA_LEN_MAX	    		1024/*base64 increases size by ~4/3; AES encryption by max 32 char*/
 
 #define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters."
 #define FLAG_ERR_NO_PASSWORD        "Please set a password."

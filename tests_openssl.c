@@ -35,8 +35,8 @@
 
 int main(int argc, char *argv[])
 {
-	uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000], hash[32], msg_len, *p;
-	uint32_t i, j, p_len;
+	uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000], hash[32], msg_len = 0, *p;
+	uint32_t i, j, p_len = 0;
 	SHA256_CTX sha256;
 	EC_GROUP *ecgroup;
     EC_KEY *eckey;

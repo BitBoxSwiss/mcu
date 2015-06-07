@@ -693,10 +693,10 @@ static void tests_aes_cbc(void)
     tests_format_send_cmd("aes256cbc", "type", PASSWORD_STAND);   if (!tests_report_has(FLAG_ERR_INVALID_CMD)) { goto err; }
     tests_format_send_cmd("aes256cbc", "", PASSWORD_STAND);       if (!tests_report_has(FLAG_ERR_INVALID_CMD)) { goto err; }
     
-    memcpy(dec, decrypt, strlen(decrypt));
-    memset(dec + strlen(decrypt), 'a', DATA_LEN_MAX + 1);   
-    strcat(dec, "\"}");
-    tests_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);      
+    memcpy(enc, encrypt, strlen(encrypt));
+    memset(enc + strlen(encrypt), 'a', DATA_LEN_MAX + 1);   
+    strcat(enc, "\"}");
+    tests_format_send_cmd("aes256cbc", enc, PASSWORD_STAND);      
     if (!tests_report_has(FLAG_ERR_DATA_LEN)) { goto err; }
     
     tests_format_send_cmd("aes256cbc", "{\"type\":\"\", \"data\":\"\"}", PASSWORD_STAND);         
@@ -757,7 +757,6 @@ static void tests_aes_cbc(void)
 
 static void tests_run(void)
 {
-    tests_seed_xpub_backup();
     tests_echo_2FA();
     tests_aes_cbc();
     tests_sign();
@@ -766,6 +765,7 @@ static void tests_run(void)
     tests_device();
     tests_random();
     tests_input();
+    tests_seed_xpub_backup();
     return;
 }
 

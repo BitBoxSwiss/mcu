@@ -549,8 +549,8 @@ static void commander_process_device(const char *message)
     }
     
     if (strcmp(message, ATTR_STR[ATTR_serial_]) == 0) {
-        uint32_t serial[4];
-        if (!flash_read_unique_id(serial, 16)) {
+        uint32_t serial[4] = {0};
+        if (!flash_read_unique_id(serial, 4)) {
             commander_fill_report(ATTR_STR[ATTR_serial_], utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)), SUCCESS);         
         } else {
             commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, ERROR);         

@@ -107,7 +107,6 @@ void memory_clear_variables(void)
 #ifndef TESTING
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).
-    // Enable clearing if making a software wallet (variables should get loaded from an encrypted file).
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_2FA_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -122,8 +121,8 @@ void memory_clear_variables(void)
 
 static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t addr, const uint16_t len)
 {
-    // read current memory
 #ifndef TESTING
+    // read current memory
 	aes_eeprom(len, addr, read_b, NULL);
 #endif
     if (write_b){
@@ -198,6 +197,9 @@ void memory_mempass(void)
 {
 	uint8_t mempass[88] = {0};
 #ifndef TESTING
+	// Encrypt data saved to memory using an AES key obfuscated by the
+	// compilation time and date, which is used to 'randomly' read bytes  
+	// (i.e. the AES key) from the MCU code in flash memory.
 	uint8_t *mp = mempass;
     int r[8] = {0};
     char c[3] = {0};

@@ -109,7 +109,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, 
 		return NULL;
 	}
 	
-    // unbase64
+    // Unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
@@ -703,7 +703,7 @@ static int commander_process(int cmd, char *message)
 
 
 //
-//  Handle API input (pre-processing) //
+//  Handle API input (preprocessing) //
 //
 
 static void commander_echo_2fa(char *command)
@@ -769,13 +769,13 @@ static int commander_verify_signing(const char *message)
         // The function updates verify_input and verify_output.
         same_io = wallet_check_input_output(data, data_len, verify_input, verify_output, &input_cnt);
        
-        // Check if the same signing keypath
+        // Check if using the same signing keypath
         same_keypath = (!memcmp(keypath, verify_keypath, keypath_len) && 
                         (keypath_len == (int)strlen(verify_keypath))) ? SAME : DIFFERENT;
         memset(verify_keypath, 0, sizeof(verify_keypath));
         memcpy(verify_keypath, keypath, keypath_len);
         
-        // Deserialize and check if the change address is present if more than one output given.
+        // Deserialize and check if a change address is present (when more than one output is given).
         out = wallet_deserialize_output(verify_output, strlen(verify_output), change_keypath, change_keypath_len);
         
         if (!out) {
@@ -800,9 +800,10 @@ static int commander_verify_signing(const char *message)
     } 
     else 
     {
-        // Check whole input command instead of inputs/outputs since data is hashed.
-        // The commander_echo_2fa function replaces ending '}' with ',' and adds PIN information to the end
-        // of verify_output. Therefore, compare verify_output over strlen of message minus 1 characters.
+        // Because data is hashed, check the whole command instead of only transaction inputs/outputs.
+        // When 'locked', the commander_echo_2fa function replaces ending '}' with ',' and adds PIN 
+		// information to the end of verify_output. Therefore, compare verify_output over strlen of
+		// message minus 1 characters.
         if (memcmp(verify_output, message, strlen(message) - 1)) { 
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             memcpy(verify_output, message, strlen(message));
@@ -943,7 +944,7 @@ static char *commander_decrypt(const char *encrypted_command,
                                       &command_len,
                                       PASSWORD_STAND);
     
-    err_count = memory_read_access_err_count(); // I2C memory reads additionally introduce 
+    err_count = memory_read_access_err_count(); // Reads over TWI introduce additional 
     err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
     memset(json_token, 0, sizeof(jsmntok_t) * MAX_TOKENS);
     
@@ -1029,7 +1030,6 @@ static int commander_check_init(const char *encrypted_command)
 //
 //  Gateway to the MCU code //
 //
-
 char *commander(const char *command)
 {
     int n_tokens;
@@ -1052,17 +1052,17 @@ char *commander(const char *command)
 /*
  *
 
- USB HID
+ USB HID INPUT
  |
  |
 commander()
  |
  \_commander_check_init()
-    |--if reset command -> RESET -> RETURN
+    |--if 'reset' command -> RESET -> RETURN
     |--if password not set -> RETURN
     |
  \_commander_decrypt()
-    |--if cannot decrypt or cannot parse JSON
+    |--if cannot decrypt input (serves as a password check) or cannot parse JSON 
     |      |-> if too many access errors -> RESET
     |      |-> RETURN
     |
@@ -1082,11 +1082,11 @@ commander()
             |
       _____/
     |
-    |--encrypt report
+    |--encrypt output report
   _/
  |
  |
- USB HID
+ USB HID OUTPUT
 
 *
 */

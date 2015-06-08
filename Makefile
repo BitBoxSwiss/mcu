@@ -23,7 +23,8 @@ OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 
 
-all: tests_cmdline tests_unit tests_openssl tests_api
+all: tests_cmdline tests_unit tests_openssl 
+api: tests_api
 
 tests: tests.o $(OBJS) ; $(CC) tests.o $(OBJS) -o tests
 tests_api: tests_api.o $(OBJS) ; $(CC) tests_api.o $(OBJS) $(LIBHIDAPI) -o tests_api

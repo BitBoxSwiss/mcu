@@ -21,4 +21,5 @@ script:
     - make
     - ./tests_unit 
     - ./tests_openssl 200
+    - make api
     - ./tests_api

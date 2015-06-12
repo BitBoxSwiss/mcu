@@ -18,8 +18,8 @@ else
 LIBHIDAPI = -lhidapi
 endif
 
-
-OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o uECC.o
+CFLAGS += -Isrc
+OBJS =  src/wallet.o src/sha2.o src/random.o src/hmac.o src/bip32.o src/pbkdf2.o src/utils.o src/aes.o src/base64.o src/jsmn.o src/commander.o src/led.o src/memory.o src/base58.o src/ripemd160.o src/sham.o src/uECC.o
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 

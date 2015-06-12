@@ -525,9 +525,9 @@ void commander_create_verifypass(void) {
 
 static void commander_process_xpub(const char *message)
 {
-    char xpub[112] = {0};
     if (message) {
         if (strlen(message)) {
+            char xpub[112] = {0};
             wallet_report_xpub(message, strlen(message), xpub);            
             if (xpub[0]) {
                 commander_fill_report("xpub", xpub, SUCCESS);
@@ -750,8 +750,7 @@ static void commander_echo_2fa(char *command)
 static int commander_verify_signing(const char *message)
 {
     int data_len, type_len, keypath_len, change_keypath_len;
-    int ret, same_io, same_keypath, input_cnt;
-    char *data, *type, *keypath, *change_keypath, *out;
+    char *data, *type, *keypath, *change_keypath;
     
     type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
     data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
@@ -765,6 +764,8 @@ static int commander_verify_signing(const char *message)
   
     if (strncmp(type, ATTR_STR[ATTR_transaction_], strlen(ATTR_STR[ATTR_transaction_])) == 0) 
     {
+         int ret, same_io, same_keypath, input_cnt;
+         char *out;
         // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
         // The function updates verify_input and verify_output.
         same_io = wallet_check_input_output(data, data_len, verify_input, verify_output, &input_cnt);
@@ -817,12 +818,12 @@ static int commander_verify_signing(const char *message)
 
 
 static int commander_touch_button(int found_cmd, const char *message)
-{
-    int t, c;
-    
+{    
     if (found_cmd == CMD_sign_) {
+        int c;
         c = commander_verify_signing(message);
         if (c == SAME) {
+            int t;
             t = touch_button_press(1);
             if (t != TOUCHED) {
                 // Clear previous signing information

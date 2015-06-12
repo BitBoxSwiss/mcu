@@ -142,7 +142,6 @@ uint8_t sd_list(void)
 {
 	FILINFO fno;
 	DIR dir;
-	char *pc_fn;
 	const char *path = "0:";
 	#if _USE_LFN
 	char c_lfn[_MAX_LFN + 1];
@@ -175,7 +174,8 @@ uint8_t sd_list(void)
 	if (res == FR_OK)
 	{
 		for (;;)
-		{
+		{	
+                        char *pc_fn;
 			res = f_readdir(&dir, &fno);
 			if (res != FR_OK || fno.fname[0] == 0)
 			{
@@ -217,7 +217,6 @@ uint8_t sd_erase(void)
 	int erased = 0;
 	FILINFO fno;
 	DIR dir;
-	char *pc_fn;
 	const char *path = "0:";
 	#if _USE_LFN
 	char c_lfn[_MAX_LFN + 1];
@@ -247,6 +246,7 @@ uint8_t sd_erase(void)
 	{
 		for (;;)
 		{
+                        char *pc_fn;
 			res = f_readdir(&dir, &fno);
 			if (res != FR_OK || fno.fname[0] == 0)
 			{

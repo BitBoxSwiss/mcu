@@ -267,10 +267,10 @@ char *wallet_mnemonic_from_data(const uint8_t *data, int len)
 	int mlen = len * 3 / 4;
 	static char mnemo[24 * 10];
 
-	int i, j, idx;
+	int i, j;
 	char *p = mnemo;
 	for (i = 0; i < mlen; i++) {
-		idx = 0;
+		int idx = 0;
 		for (j = 0; j < 11; j++) {
 			idx <<= 1;
 			idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;

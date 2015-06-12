@@ -809,12 +809,11 @@ static void test_base58(void)
 	const char **str = base58_vector + 1;
 	uint8_t rawn[34];
 	char strn[53];
-	int r;
 	while (*raw && *str) {
 		int len = strlen(*raw) / 2;
 
 		memcpy(rawn, utils_hex_to_uint8(*raw), len);
-		r = base58_encode_check(rawn, len, strn, sizeof(strn));
+		int r = base58_encode_check(rawn, len, strn, sizeof(strn));
 		u_assert_int_eq(r, strlen(*str) + 1);
 		u_assert_str_eq(strn, *str);
 

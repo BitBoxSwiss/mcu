@@ -168,9 +168,9 @@ static const char *api_read_value(int cmd)
 
 static int api_result_has(const char *str)
 {
-    char *err;
     char *report = utils_read_decrypted_report();
     if (report) {
+        char *err;
         //printf("report is:   >>%s\n", report);
         //printf("report has:  >>%s\n\n", str);
         err = strstr(report, str);

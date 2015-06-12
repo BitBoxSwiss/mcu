@@ -159,8 +159,7 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
 static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const int32_t addr)
 {
     int enc_len, dec_len, ret = 1;
-    char *enc, *dec;
-    char enc_w[MEM_PAGE_LEN * 4 + 1] = {0}, enc_r[MEM_PAGE_LEN * 4 + 1] = {0};
+    char *enc, *dec, enc_r[MEM_PAGE_LEN * 4 + 1] = {0};
     if (read_b) {
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_r, enc, enc_len);
@@ -168,6 +167,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
     }
 
     if (write_b) {
+        char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_w, enc, enc_len);
         free(enc); 

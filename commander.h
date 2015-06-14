@@ -31,7 +31,6 @@
 
 #include <stdint.h>
 #include "memory.h"
-#include "jsmn.h"
 #ifndef TESTING
 #include "conf_usb.h"
 

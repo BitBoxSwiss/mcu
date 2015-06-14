@@ -1,6 +1,7 @@
 CC     = gcc
 CFLAGS = -g -Os # optimized compile
 CFLAGS += -W -Wall -Wextra -Wimplicit-function-declaration -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wformat -Wreturn-type -Wsign-compare -Wmultichar -Wformat-nonliteral -Winit-self -Wuninitialized -Wformat-security -Werror 
+CFLAGS += -std=c99
 
 
 #CFLAGS = -g -O0 # valgrind compile

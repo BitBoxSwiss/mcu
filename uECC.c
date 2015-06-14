@@ -72,7 +72,7 @@ typedef struct EccPoint
 
 static uECC_word_t curve_p[uECC_WORDS] = Curve_P;
 static uECC_word_t curve_b[uECC_WORDS] = Curve_B;
-static uECC_word_t curve_n[uECC_N_WORDS] = Curve_N;;
+static uECC_word_t curve_n[uECC_N_WORDS] = Curve_N;
 static EccPoint curve_G = Curve_G;
 
 static void vli_clear(uECC_word_t *p_vli);

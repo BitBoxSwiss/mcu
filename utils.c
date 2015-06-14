@@ -34,8 +34,6 @@
 #include "commander.h"
 #include "flags.h"
 #include "jsmn.h"
-#include "sha2.h"
-
 
 extern const char *CMD_STR[];
 static char PIN_2FA[5] = {0};

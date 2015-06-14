@@ -11,31 +11,31 @@
 
 
 #ifndef uECC_PLATFORM
-    #if defined(__AVR__)
-        #define uECC_PLATFORM uECC_avr
-    #elif defined(__thumb2__) || defined(_M_ARMT) /* I think MSVC only supports Thumb-2 targets */
-        #define uECC_PLATFORM uECC_arm_thumb2
-    #elif defined(__thumb__)
-        #define uECC_PLATFORM uECC_arm_thumb
-    #elif defined(__arm__) || defined(_M_ARM)
-        #define uECC_PLATFORM uECC_arm
-    #elif defined(__i386__) || defined(_M_IX86) || defined(_X86_) || defined(__I86__)
-        #define uECC_PLATFORM uECC_x86
-    #elif defined(__amd64__) || defined(_M_X64)
-        #define uECC_PLATFORM uECC_x86_64
-    #else
-        #define uECC_PLATFORM uECC_arch_other
-    #endif
+#if defined(__AVR__)
+#define uECC_PLATFORM uECC_avr
+#elif defined(__thumb2__) || defined(_M_ARMT) /* I think MSVC only supports Thumb-2 targets */
+#define uECC_PLATFORM uECC_arm_thumb2
+#elif defined(__thumb__)
+#define uECC_PLATFORM uECC_arm_thumb
+#elif defined(__arm__) || defined(_M_ARM)
+#define uECC_PLATFORM uECC_arm
+#elif defined(__i386__) || defined(_M_IX86) || defined(_X86_) || defined(__I86__)
+#define uECC_PLATFORM uECC_x86
+#elif defined(__amd64__) || defined(_M_X64)
+#define uECC_PLATFORM uECC_x86_64
+#else
+#define uECC_PLATFORM uECC_arch_other
+#endif
 #endif
 
 #if defined(__STDC_VERSION__)
-    #if __STDC_VERSION__ >= 199901L
-        #define RESTRICT restrict
-    #else
-        #define RESTRICT
-    #endif
+#if __STDC_VERSION__ >= 199901L
+#define RESTRICT restrict
 #else
-    #define RESTRICT
+#define RESTRICT
+#endif
+#else
+#define RESTRICT
 #endif
 
 
@@ -64,8 +64,7 @@ typedef int cmpresult_t;
 #define uECC_WORDS 8
 #define uECC_N_WORDS 8
 
-typedef struct EccPoint
-{
+typedef struct EccPoint {
     uECC_word_t x[uECC_WORDS];
     uECC_word_t y[uECC_WORDS];
 } EccPoint;
@@ -97,12 +96,12 @@ static void vli_modSquare_fast(uECC_word_t *p_result, uECC_word_t *p_left);
 
 
 #ifdef __GNUC__ /* Only support GCC inline asm for now */
-    #if (uECC_ASM && (uECC_PLATFORM == uECC_avr))
-        #include "asm_avr.inc"
-    #endif
-    #if (uECC_ASM && (uECC_PLATFORM == uECC_arm || uECC_PLATFORM == uECC_arm_thumb || uECC_PLATFORM == uECC_arm_thumb2))
-        #include "asm_arm.inc"
-    #endif
+#if (uECC_ASM && (uECC_PLATFORM == uECC_avr))
+#include "asm_avr.inc"
+#endif
+#if (uECC_ASM && (uECC_PLATFORM == uECC_arm || uECC_PLATFORM == uECC_arm_thumb || uECC_PLATFORM == uECC_arm_thumb2))
+#include "asm_arm.inc"
+#endif
 #endif
 
 
@@ -110,8 +109,7 @@ static void vli_modSquare_fast(uECC_word_t *p_result, uECC_word_t *p_left);
 static void vli_clear(uECC_word_t *p_vli)
 {
     wordcount_t i;
-    for(i = 0; i < uECC_WORDS; ++i)
-    {
+    for(i = 0; i < uECC_WORDS; ++i) {
         p_vli[i] = 0;
     }
 }
@@ -122,10 +120,8 @@ static void vli_clear(uECC_word_t *p_vli)
 static uECC_word_t vli_isZero(const uECC_word_t *p_vli)
 {
     wordcount_t i;
-    for(i = 0; i < uECC_WORDS; ++i)
-    {
-        if(p_vli[i])
-        {
+    for(i = 0; i < uECC_WORDS; ++i) {
+        if(p_vli[i]) {
             return 0;
         }
     }
@@ -148,8 +144,7 @@ static wordcount_t vli_numDigits(const uECC_word_t *p_vli, wordcount_t p_maxWord
     swordcount_t i;
     /* Search from the end until we find a non-zero digit.
        We do it in reverse because we expect that most digits will be nonzero. */
-    for(i = p_maxWords-1; i >= 0 && p_vli[i] == 0; --i)
-    {
+    for(i = p_maxWords-1; i >= 0 && p_vli[i] == 0; --i) {
     }
 
     return (i + 1);
@@ -160,19 +155,17 @@ static bitcount_t vli_numBits(const uECC_word_t *p_vli, wordcount_t p_maxWords)
 {
     uECC_word_t i;
     uECC_word_t l_digit;
-    
+
     wordcount_t l_numDigits = vli_numDigits(p_vli, p_maxWords);
-    if(l_numDigits == 0)
-    {
+    if(l_numDigits == 0) {
         return 0;
     }
 
     l_digit = p_vli[l_numDigits - 1];
-    for(i = 0; l_digit; ++i)
-    {
+    for(i = 0; l_digit; ++i) {
         l_digit >>= 1;
     }
-    
+
     return (((bitcount_t)(l_numDigits - 1) << uECC_WORD_BITS_SHIFT) + i);
 }
 #endif /* !asm_numBits */
@@ -182,8 +175,7 @@ static bitcount_t vli_numBits(const uECC_word_t *p_vli, wordcount_t p_maxWords)
 static void vli_set(uECC_word_t *p_dest, const uECC_word_t *p_src)
 {
     wordcount_t i;
-    for(i=0; i<uECC_WORDS; ++i)
-    {
+    for(i=0; i<uECC_WORDS; ++i) {
         p_dest[i] = p_src[i];
     }
 }
@@ -194,14 +186,10 @@ static void vli_set(uECC_word_t *p_dest, const uECC_word_t *p_src)
 static cmpresult_t vli_cmp(uECC_word_t *p_left, uECC_word_t *p_right)
 {
     swordcount_t i;
-    for(i = uECC_WORDS-1; i >= 0; --i)
-    {
-        if(p_left[i] > p_right[i])
-        {
+    for(i = uECC_WORDS-1; i >= 0; --i) {
+        if(p_left[i] > p_right[i]) {
             return 1;
-        }
-        else if(p_left[i] < p_right[i])
-        {
+        } else if(p_left[i] < p_right[i]) {
             return -1;
         }
     }
@@ -215,10 +203,9 @@ static void vli_rshift1(uECC_word_t *p_vli)
 {
     uECC_word_t *l_end = p_vli;
     uECC_word_t l_carry = 0;
-    
+
     p_vli += uECC_WORDS;
-    while(p_vli-- > l_end)
-    {
+    while(p_vli-- > l_end) {
         uECC_word_t l_temp = *p_vli;
         *p_vli = (l_temp >> 1) | l_carry;
         l_carry = l_temp << (uECC_WORD_BITS - 1);
@@ -232,11 +219,9 @@ static uECC_word_t vli_add(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word
 {
     uECC_word_t l_carry = 0;
     wordcount_t i;
-    for(i = 0; i < uECC_WORDS; ++i)
-    {
+    for(i = 0; i < uECC_WORDS; ++i) {
         uECC_word_t l_sum = p_left[i] + p_right[i] + l_carry;
-        if(l_sum != p_left[i])
-        {
+        if(l_sum != p_left[i]) {
             l_carry = (l_sum < p_left[i]);
         }
         p_result[i] = l_sum;
@@ -251,11 +236,9 @@ static uECC_word_t vli_sub(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word
 {
     uECC_word_t l_borrow = 0;
     wordcount_t i;
-    for(i = 0; i < uECC_WORDS; ++i)
-    {
+    for(i = 0; i < uECC_WORDS; ++i) {
         uECC_word_t l_diff = p_left[i] - p_right[i] - l_borrow;
-        if(l_diff != p_left[i])
-        {
+        if(l_diff != p_left[i]) {
             l_borrow = (l_diff > p_left[i]);
         }
         p_result[i] = l_diff;
@@ -283,14 +266,12 @@ static void vli_mult(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_
     uECC_word_t r0 = 0;
     uECC_word_t r1 = 0;
     uECC_word_t r2 = 0;
-    
+
     wordcount_t i, k;
-    
+
     /* Compute each digit of p_result in sequence, maintaining the carries. */
-    for(k = 0; k < uECC_WORDS; ++k)
-    {
-        for(i = 0; i <= k; ++i)
-        {
+    for(k = 0; k < uECC_WORDS; ++k) {
+        for(i = 0; i <= k; ++i) {
             muladd(p_left[i], p_right[k-i], &r0, &r1, &r2);
         }
         p_result[k] = r0;
@@ -298,10 +279,8 @@ static void vli_mult(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_
         r1 = r2;
         r2 = 0;
     }
-    for(k = uECC_WORDS; k < uECC_WORDS*2 - 1; ++k)
-    {
-        for(i = (k + 1) - uECC_WORDS; i<uECC_WORDS; ++i)
-        {
+    for(k = uECC_WORDS; k < uECC_WORDS*2 - 1; ++k) {
+        for(i = (k + 1) - uECC_WORDS; i<uECC_WORDS; ++i) {
             muladd(p_left[i], p_right[k-i], &r0, &r1, &r2);
         }
         p_result[k] = r0;
@@ -309,7 +288,7 @@ static void vli_mult(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_
         r1 = r2;
         r2 = 0;
     }
-    
+
     p_result[uECC_WORDS*2 - 1] = r0;
 }
 #endif
@@ -334,20 +313,15 @@ static void vli_square(uECC_word_t *p_result, uECC_word_t *p_left)
     uECC_word_t r0 = 0;
     uECC_word_t r1 = 0;
     uECC_word_t r2 = 0;
-    
+
     wordcount_t i, k;
-    
-    for(k = 0; k < uECC_WORDS*2 - 1; ++k)
-    {
+
+    for(k = 0; k < uECC_WORDS*2 - 1; ++k) {
         uECC_word_t l_min = (k < uECC_WORDS ? 0 : (k + 1) - uECC_WORDS);
-        for(i = l_min; i<=k && i<=k-i; ++i)
-        {
-            if(i < k-i)
-            {
+        for(i = l_min; i<=k && i<=k-i; ++i) {
+            if(i < k-i) {
                 mul2add(p_left[i], p_left[k-i], &r0, &r1, &r2);
-            }
-            else
-            {
+            } else {
                 muladd(p_left[i], p_left[k-i], &r0, &r1, &r2);
             }
         }
@@ -356,7 +330,7 @@ static void vli_square(uECC_word_t *p_result, uECC_word_t *p_left)
         r1 = r2;
         r2 = 0;
     }
-    
+
     p_result[uECC_WORDS*2 - 1] = r0;
 }
 #endif
@@ -364,7 +338,7 @@ static void vli_square(uECC_word_t *p_result, uECC_word_t *p_left)
 #else /* uECC_SQUARE_FUNC */
 
 #define vli_square(result, left, size) vli_mult((result), (left), (left), (size))
-    
+
 #endif /* uECC_SQUARE_FUNC */
 
 
@@ -374,8 +348,8 @@ static void vli_square(uECC_word_t *p_result, uECC_word_t *p_left)
 static void vli_modAdd(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_right, uECC_word_t *p_mod)
 {
     uECC_word_t l_carry = vli_add(p_result, p_left, p_right);
-    if(l_carry || vli_cmp(p_result, p_mod) >= 0)
-    { /* p_result > p_mod (p_result = p_mod + remainder), so subtract p_mod to get remainder. */
+    if(l_carry || vli_cmp(p_result, p_mod) >= 0) {
+        /* p_result > p_mod (p_result = p_mod + remainder), so subtract p_mod to get remainder. */
         vli_sub(p_result, p_result, p_mod);
     }
 }
@@ -387,16 +361,16 @@ static void vli_modAdd(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *
 static void vli_modSub(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_t *p_right, uECC_word_t *p_mod)
 {
     uECC_word_t l_borrow = vli_sub(p_result, p_left, p_right);
-    if(l_borrow)
-    { /* In this case, p_result == -diff == (max int) - diff.
-         Since -x % d == d - x, we can get the correct result from p_result + p_mod (with overflow). */
+    if(l_borrow) {
+        /* In this case, p_result == -diff == (max int) - diff.
+           Since -x % d == d - x, we can get the correct result from p_result + p_mod (with overflow). */
         vli_add(p_result, p_result, p_mod);
     }
 }
 #endif
 
 #if !defined(asm_modSub_fast)
-    #define vli_modSub_fast(result, left, right) vli_modSub((result), (left), (right), curve_p)
+#define vli_modSub_fast(result, left, right) vli_modSub((result), (left), (right), curve_p)
 #endif
 
 #if !defined(asm_mmod_fast)
@@ -406,31 +380,29 @@ static void omega_mult(uECC_word_t * RESTRICT p_result, uECC_word_t * RESTRICT p
 
 /* Computes p_result = p_product % curve_p
     see http://www.isys.uni-klu.ac.at/PDF/2001-0126-MT.pdf page 354
-    
+
     Note that this only works if log2(omega) < log2(p)/2 */
 static void vli_mmod_fast(uECC_word_t *RESTRICT p_result, uECC_word_t *RESTRICT p_product)
 {
     uECC_word_t l_tmp[2*uECC_WORDS];
     uECC_word_t l_carry;
-    
+
     vli_clear(l_tmp);
     vli_clear(l_tmp + uECC_WORDS);
-    
+
     omega_mult(l_tmp, p_product + uECC_WORDS); /* (Rq, q) = q * c */
-    
+
     l_carry = vli_add(p_result, p_product, l_tmp); /* (C, r) = r + q       */
     vli_clear(p_product);
     omega_mult(p_product, l_tmp + uECC_WORDS); /* Rq*c */
     l_carry += vli_add(p_result, p_result, p_product); /* (C1, r) = r + Rq*c */
-    
-    while(l_carry > 0)
-    {
+
+    while(l_carry > 0) {
         --l_carry;
         vli_sub(p_result, p_result, curve_p);
     }
-    
-    if(vli_cmp(p_result, curve_p) > 0)
-    {
+
+    if(vli_cmp(p_result, curve_p) > 0) {
         vli_sub(p_result, p_result, curve_p);
     }
 }
@@ -441,15 +413,14 @@ static void omega_mult(uint32_t * RESTRICT p_result, uint32_t * RESTRICT p_right
     /* Multiply by (2^9 + 2^8 + 2^7 + 2^6 + 2^4 + 1). */
     uint32_t l_carry = 0;
     wordcount_t k;
-    
-    for(k = 0; k < uECC_WORDS; ++k)
-    {
+
+    for(k = 0; k < uECC_WORDS; ++k) {
         uint64_t p = (uint64_t)0x3D1 * p_right[k] + l_carry;
         p_result[k] = (p & 0xffffffff);
         l_carry = p >> 32;
     }
     p_result[uECC_WORDS] = l_carry;
-    
+
     p_result[1 + uECC_WORDS] = vli_add(p_result + 1, p_result + 1, p_right); /* add the 2^32 multiple */
 }
 
@@ -477,7 +448,7 @@ static void vli_modSquare_fast(uECC_word_t *p_result, uECC_word_t *p_left)
 #else /* uECC_SQUARE_FUNC */
 
 #define vli_modSquare_fast(result, left) vli_modMult_fast((result), (left), (left))
-    
+
 #endif /* uECC_SQUARE_FUNC */
 
 
@@ -491,9 +462,8 @@ static void vli_modInv(uECC_word_t *p_result, uECC_word_t *p_input, uECC_word_t 
     uECC_word_t a[uECC_WORDS], b[uECC_WORDS], u[uECC_WORDS], v[uECC_WORDS];
     uECC_word_t l_carry;
     cmpresult_t l_cmpResult;
-    
-    if(vli_isZero(p_input))
-    {
+
+    if(vli_isZero(p_input)) {
         vli_clear(p_result);
         return;
     }
@@ -503,75 +473,57 @@ static void vli_modInv(uECC_word_t *p_result, uECC_word_t *p_input, uECC_word_t 
     vli_clear(u);
     u[0] = 1;
     vli_clear(v);
-    while((l_cmpResult = vli_cmp(a, b)) != 0)
-    {
+    while((l_cmpResult = vli_cmp(a, b)) != 0) {
         l_carry = 0;
-        if(EVEN(a))
-        {
+        if(EVEN(a)) {
             vli_rshift1(a);
-            if(!EVEN(u))
-            {
+            if(!EVEN(u)) {
                 l_carry = vli_add(u, u, p_mod);
             }
             vli_rshift1(u);
-            if(l_carry)
-            {
+            if(l_carry) {
                 u[uECC_WORDS-1] |= HIGH_BIT_SET;
             }
-        }
-        else if(EVEN(b))
-        {
+        } else if(EVEN(b)) {
             vli_rshift1(b);
-            if(!EVEN(v))
-            {
+            if(!EVEN(v)) {
                 l_carry = vli_add(v, v, p_mod);
             }
             vli_rshift1(v);
-            if(l_carry)
-            {
+            if(l_carry) {
                 v[uECC_WORDS-1] |= HIGH_BIT_SET;
             }
-        }
-        else if(l_cmpResult > 0)
-        {
+        } else if(l_cmpResult > 0) {
             vli_sub(a, a, b);
             vli_rshift1(a);
-            if(vli_cmp(u, v) < 0)
-            {
+            if(vli_cmp(u, v) < 0) {
                 vli_add(u, u, p_mod);
             }
             vli_sub(u, u, v);
-            if(!EVEN(u))
-            {
+            if(!EVEN(u)) {
                 l_carry = vli_add(u, u, p_mod);
             }
             vli_rshift1(u);
-            if(l_carry)
-            {
+            if(l_carry) {
                 u[uECC_WORDS-1] |= HIGH_BIT_SET;
             }
-        }
-        else
-        {
+        } else {
             vli_sub(b, b, a);
             vli_rshift1(b);
-            if(vli_cmp(v, u) < 0)
-            {
+            if(vli_cmp(v, u) < 0) {
                 vli_add(v, v, p_mod);
             }
             vli_sub(v, v, u);
-            if(!EVEN(v))
-            {
+            if(!EVEN(v)) {
                 l_carry = vli_add(v, v, p_mod);
             }
             vli_rshift1(v);
-            if(l_carry)
-            {
+            if(l_carry) {
                 v[uECC_WORDS-1] |= HIGH_BIT_SET;
             }
         }
     }
-    
+
     vli_set(p_result, u);
 }
 #endif /* !asm_modInv */
@@ -596,36 +548,32 @@ static void EccPoint_double_jacobian(uECC_word_t * RESTRICT X1, uECC_word_t * RE
     /* t1 = X, t2 = Y, t3 = Z */
     uECC_word_t t4[uECC_WORDS];
     uECC_word_t t5[uECC_WORDS];
-    
-    if(vli_isZero(Z1))
-    {
+
+    if(vli_isZero(Z1)) {
         return;
     }
-    
+
     vli_modSquare_fast(t5, Y1);   /* t5 = y1^2 */
     vli_modMult_fast(t4, X1, t5); /* t4 = x1*y1^2 = A */
     vli_modSquare_fast(X1, X1);   /* t1 = x1^2 */
     vli_modSquare_fast(t5, t5);   /* t5 = y1^4 */
     vli_modMult_fast(Z1, Y1, Z1); /* t3 = y1*z1 = z3 */
-    
+
     vli_modAdd(Y1, X1, X1, curve_p); /* t2 = 2*x1^2 */
     vli_modAdd(Y1, Y1, X1, curve_p); /* t2 = 3*x1^2 */
-    if(vli_testBit(Y1, 0))
-    {
+    if(vli_testBit(Y1, 0)) {
         uECC_word_t l_carry = vli_add(Y1, Y1, curve_p);
         vli_rshift1(Y1);
         Y1[uECC_WORDS-1] |= l_carry << (uECC_WORD_BITS - 1);
-    }
-    else
-    {
+    } else {
         vli_rshift1(Y1);
     }
     /* t2 = 3/2*(x1^2) = B */
-    
+
     vli_modSquare_fast(X1, Y1);   /* t1 = B^2 */
     vli_modSub(X1, X1, t4, curve_p); /* t1 = B^2 - A */
     vli_modSub(X1, X1, t4, curve_p); /* t1 = B^2 - 2A = x3 */
-    
+
     vli_modSub(t4, t4, X1, curve_p); /* t4 = A - x3 */
     vli_modMult_fast(Y1, Y1, t4);    /* t2 = B * (A - x3) */
     vli_modSub(Y1, Y1, t5, curve_p); /* t2 = B * (A - x3) - y1^4 = y3 */
@@ -644,24 +592,23 @@ static void apply_z(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_w
 
 /* P = (x1, y1) => 2P, (x2, y2) => P' */
 static void XYcZ_initial_double(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1,
-    uECC_word_t * RESTRICT X2, uECC_word_t * RESTRICT Y2, const uECC_word_t * RESTRICT p_initialZ)
+                                uECC_word_t * RESTRICT X2, uECC_word_t * RESTRICT Y2, const uECC_word_t * RESTRICT p_initialZ)
 {
     uECC_word_t z[uECC_WORDS];
-    
+
     vli_set(X2, X1);
     vli_set(Y2, Y1);
-    
+
     vli_clear(z);
     z[0] = 1;
-    if(p_initialZ)
-    {
+    if(p_initialZ) {
         vli_set(z, p_initialZ);
     }
 
     apply_z(X1, Y1, z);
-    
+
     EccPoint_double_jacobian(X1, Y1, z);
-    
+
     apply_z(X2, Y2, z);
 }
 
@@ -673,14 +620,14 @@ static void XYcZ_add(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_
 {
     /* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
     uECC_word_t t5[uECC_WORDS];
-    
+
     vli_modSub_fast(t5, X2, X1); /* t5 = x2 - x1 */
     vli_modSquare_fast(t5, t5);      /* t5 = (x2 - x1)^2 = A */
     vli_modMult_fast(X1, X1, t5);    /* t1 = x1*A = B */
     vli_modMult_fast(X2, X2, t5);    /* t3 = x2*A = C */
     vli_modSub_fast(Y2, Y2, Y1); /* t4 = y2 - y1 */
     vli_modSquare_fast(t5, Y2);      /* t5 = (y2 - y1)^2 = D */
-    
+
     vli_modSub_fast(t5, t5, X1); /* t5 = D - B */
     vli_modSub_fast(t5, t5, X2); /* t5 = D - B - C = x3 */
     vli_modSub_fast(X2, X2, X1); /* t3 = C - B */
@@ -688,7 +635,7 @@ static void XYcZ_add(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC_
     vli_modSub_fast(X2, X1, t5); /* t3 = B - x3 */
     vli_modMult_fast(Y2, Y2, X2);    /* t4 = (y2 - y1)*(B - x3) */
     vli_modSub_fast(Y2, Y2, Y1); /* t4 = y3 */
-    
+
     vli_set(X2, t5);
 }
 
@@ -702,7 +649,7 @@ static void XYcZ_addC(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC
     uECC_word_t t5[uECC_WORDS];
     uECC_word_t t6[uECC_WORDS];
     uECC_word_t t7[uECC_WORDS];
-    
+
     vli_modSub_fast(t5, X2, X1); /* t5 = x2 - x1 */
     vli_modSquare_fast(t5, t5);      /* t5 = (x2 - x1)^2 = A */
     vli_modMult_fast(X1, X1, t5);    /* t1 = x1*A = B */
@@ -715,38 +662,37 @@ static void XYcZ_addC(uECC_word_t * RESTRICT X1, uECC_word_t * RESTRICT Y1, uECC
     vli_modAdd(t6, X1, X2, curve_p); /* t6 = B + C */
     vli_modSquare_fast(X2, Y2);      /* t3 = (y2 - y1)^2 */
     vli_modSub_fast(X2, X2, t6); /* t3 = x3 */
-    
+
     vli_modSub_fast(t7, X1, X2); /* t7 = B - x3 */
     vli_modMult_fast(Y2, Y2, t7);    /* t4 = (y2 - y1)*(B - x3) */
     vli_modSub_fast(Y2, Y2, Y1); /* t4 = y3 */
-    
+
     vli_modSquare_fast(t7, t5);      /* t7 = (y2 + y1)^2 = F */
     vli_modSub_fast(t7, t7, t6); /* t7 = x3' */
     vli_modSub_fast(t6, t7, X1); /* t6 = x3' - B */
     vli_modMult_fast(t6, t6, t5);    /* t6 = (y2 + y1)*(x3' - B) */
     vli_modSub_fast(Y1, t6, Y1); /* t2 = y3' */
-    
+
     vli_set(X1, t7);
 }
 
 static void EccPoint_mult(EccPoint * RESTRICT p_result, EccPoint * RESTRICT p_point,
-    const uECC_word_t * RESTRICT p_scalar, const uECC_word_t * RESTRICT p_initialZ, bitcount_t p_numBits)
+                          const uECC_word_t * RESTRICT p_scalar, const uECC_word_t * RESTRICT p_initialZ, bitcount_t p_numBits)
 {
     /* R0 and R1 */
     uECC_word_t Rx[2][uECC_WORDS];
     uECC_word_t Ry[2][uECC_WORDS];
     uECC_word_t z[uECC_WORDS];
-    
+
     bitcount_t i;
     uECC_word_t nb;
-    
+
     vli_set(Rx[1], p_point->x);
     vli_set(Ry[1], p_point->y);
 
     XYcZ_initial_double(Rx[1], Ry[1], Rx[0], Ry[0], p_initialZ);
 
-    for(i = p_numBits - 2; i > 0; --i)
-    {
+    for(i = p_numBits - 2; i > 0; --i) {
         nb = !vli_testBit(p_scalar, i);
         XYcZ_addC(Rx[1-nb], Ry[1-nb], Rx[nb], Ry[nb]);
         XYcZ_add(Rx[nb], Ry[nb], Rx[1-nb], Ry[1-nb]);
@@ -754,7 +700,7 @@ static void EccPoint_mult(EccPoint * RESTRICT p_result, EccPoint * RESTRICT p_po
 
     nb = !vli_testBit(p_scalar, 0);
     XYcZ_addC(Rx[1-nb], Ry[1-nb], Rx[nb], Ry[nb]);
-    
+
     /* Find final 1/Z value. */
     vli_modSub_fast(z, Rx[1], Rx[0]); /* X1 - X0 */
     vli_modMult_fast(z, z, Ry[1-nb]);     /* Yb * (X1 - X0) */
@@ -765,9 +711,9 @@ static void EccPoint_mult(EccPoint * RESTRICT p_result, EccPoint * RESTRICT p_po
     /* End 1/Z calculation */
 
     XYcZ_add(Rx[nb], Ry[nb], Rx[1-nb], Ry[1-nb]);
-    
+
     apply_z(Rx[0], Ry[0], z);
-    
+
     vli_set(p_result->x, Rx[0]);
     vli_set(p_result->y, Ry[0]);
 }
@@ -778,15 +724,13 @@ static void mod_sqrt(uECC_word_t *a)
     bitcount_t i;
     uECC_word_t p1[uECC_WORDS] = {1};
     uECC_word_t l_result[uECC_WORDS] = {1};
-    
+
     /* Since curve_p == 3 (mod 4) for all supported curves, we can
        compute sqrt(a) = a^((curve_p + 1) / 4) (mod curve_p). */
     vli_add(p1, curve_p, p1); /* p1 = curve_p + 1 */
-    for(i = vli_numBits(p1, uECC_WORDS) - 1; i > 1; --i)
-    {
+    for(i = vli_numBits(p1, uECC_WORDS) - 1; i > 1; --i) {
         vli_modSquare_fast(l_result, l_result);
-        if(vli_testBit(p1, i))
-        {
+        if(vli_testBit(p1, i)) {
             vli_modMult_fast(l_result, l_result, a);
         }
     }
@@ -796,8 +740,7 @@ static void mod_sqrt(uECC_word_t *a)
 static void vli_nativeToBytes(uint8_t *p_bytes, const uint32_t *p_native)
 {
     unsigned i;
-    for(i=0; i<uECC_WORDS; ++i)
-    {
+    for(i=0; i<uECC_WORDS; ++i) {
         uint8_t *p_digit = p_bytes + 4 * (uECC_WORDS - 1 - i);
         p_digit[0] = p_native[i] >> 24;
         p_digit[1] = p_native[i] >> 16;
@@ -809,8 +752,7 @@ static void vli_nativeToBytes(uint8_t *p_bytes, const uint32_t *p_native)
 static void vli_bytesToNative(uint32_t *p_native, const uint8_t *p_bytes)
 {
     unsigned i;
-    for(i=0; i<uECC_WORDS; ++i)
-    {
+    for(i=0; i<uECC_WORDS; ++i) {
         const uint8_t *p_digit = p_bytes + 4 * (uECC_WORDS - 1 - i);
         p_native[i] = ((uint32_t)p_digit[0] << 24) | ((uint32_t)p_digit[1] << 16) | ((uint32_t)p_digit[2] << 8) | (uint32_t)p_digit[3];
     }
@@ -819,8 +761,7 @@ static void vli_bytesToNative(uint32_t *p_native, const uint8_t *p_bytes)
 static void uECC_compress(const uint8_t p_publicKey[uECC_BYTES*2], uint8_t p_compressed[uECC_BYTES+1])
 {
     wordcount_t i;
-    for(i=0; i<uECC_BYTES; ++i)
-    {
+    for(i=0; i<uECC_BYTES; ++i) {
         p_compressed[i+1] = p_publicKey[i];
     }
     p_compressed[0] = 2 + (p_publicKey[uECC_BYTES * 2 - 1] & 0x01);
@@ -830,18 +771,17 @@ static void uECC_decompress(const uint8_t p_compressed[uECC_BYTES+1], uint8_t p_
 {
     EccPoint l_point;
     vli_bytesToNative(l_point.x, p_compressed + 1);
-    
+
     vli_modSquare_fast(l_point.y, l_point.x); /* r = x^2 */
     vli_modMult_fast(l_point.y, l_point.y, l_point.x); /* r = x^3 */
     vli_modAdd(l_point.y, l_point.y, curve_b, curve_p); /* r = x^3 + b */
-    
+
     mod_sqrt(l_point.y);
-    
-    if((l_point.y[0] & 0x01) != (p_compressed[0] & 0x01))
-    {
+
+    if((l_point.y[0] & 0x01) != (p_compressed[0] & 0x01)) {
         vli_sub(l_point.y, curve_p, l_point.y);
     }
-    
+
     vli_nativeToBytes(p_publicKey, l_point.x);
     vli_nativeToBytes(p_publicKey + uECC_BYTES, l_point.y);
 }
@@ -862,11 +802,9 @@ static uECC_word_t vli2_sub(uECC_word_t *p_result, uECC_word_t *p_left, uECC_wor
 {
     uECC_word_t l_borrow = 0;
     wordcount_t i;
-    for(i=0; i<uECC_WORDS*2; ++i)
-    {
+    for(i=0; i<uECC_WORDS*2; ++i) {
         uECC_word_t l_diff = p_left[i] - p_right[i] - l_borrow;
-        if(l_diff != p_left[i])
-        {
+        if(l_diff != p_left[i]) {
             l_borrow = (l_diff > p_left[i]);
         }
         p_result[i] = l_diff;
@@ -881,15 +819,14 @@ static void vli_modMult_n(uECC_word_t *p_result, uECC_word_t *p_left, uECC_word_
     uECC_word_t l_modMultiple[2 * uECC_WORDS];
     uECC_word_t l_tmp[2 * uECC_WORDS];
     uECC_word_t *v[2] = {l_tmp, l_product};
-    
+
     vli_mult(l_product, p_left, p_right);
     vli_set(l_modMultiple + uECC_WORDS, curve_n); /* works if curve_n has its highest bit set */
     vli_clear(l_modMultiple);
-    
+
     bitcount_t i;
     uECC_word_t l_index = 1;
-    for(i=0; i<=uECC_BYTES * 8; ++i)
-    {
+    for(i=0; i<=uECC_BYTES * 8; ++i) {
         uECC_word_t l_borrow = vli2_sub(v[1-l_index], v[l_index], l_modMultiple);
         l_index = !(l_index ^ l_borrow); /* Swap the index if there was no borrow */
         vli2_rshift1(l_modMultiple);
@@ -910,7 +847,7 @@ int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t msg_len,
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
         return 1;
-	sha256_Raw(msg, msg_len, p_hash);
+    sha256_Raw(msg, msg_len, p_hash);
     return uECC_sign_digest(p_privateKey, p_hash, p_signature);
 }
 
@@ -921,8 +858,8 @@ int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t m
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
         return 1;
-	sha256_Raw(msg, msg_len, p_hash);
-	sha256_Raw(p_hash, uECC_BYTES, p_hash);
+    sha256_Raw(msg, msg_len, p_hash);
+    sha256_Raw(p_hash, uECC_BYTES, p_hash);
     return uECC_sign_digest(p_privateKey, p_hash, p_signature);
 }
 
@@ -935,51 +872,47 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
     uECC_word_t s[uECC_N_WORDS];
     uECC_word_t *k2[2] = {l_tmp, s};
     EccPoint p;
-    uint8_t k_b[32]; 
-    
-    do
-    {
-    repeat:
+    uint8_t k_b[32];
+
+    do {
+repeat:
         // Deterministic K
         generate_k_rfc6979_test(k_b, p_privateKey, p_hash);
         vli_bytesToNative(k, k_b);
-        
-        if(vli_isZero(k))
-        {
+
+        if(vli_isZero(k)) {
             goto repeat;
         }
-        
-        if(vli_cmp(curve_n, k) != 1)
-        {
+
+        if(vli_cmp(curve_n, k) != 1) {
             goto repeat;
         }
-        
+
         /* make sure that we don't leak timing information about k. See http://eprint.iacr.org/2011/232.pdf */
         uECC_word_t l_carry = vli_add(l_tmp, k, curve_n);
         vli_add(s, l_tmp, curve_n);
-    
+
         /* p = k * G */
         EccPoint_mult(&p, &curve_G, k2[!l_carry], 0, (uECC_BYTES * 8) + 1);
-    
+
         /* r = x1 (mod n) */
-        if(vli_cmp(curve_n, p.x) != 1)
-        {
+        if(vli_cmp(curve_n, p.x) != 1) {
             vli_sub(p.x, p.x, curve_n);
         }
     } while(vli_isZero(p.x));
-    
-    
+
+
     /* Prevent side channel analysis of vli_modInv() to determine
        bits of k / the private key by premultiplying by a random number */
     random_init();
     random_bytes((uint8_t *)l_tmp, sizeof(l_tmp) / 2, 0); // call random once to improve speed
-                                               // multiplies by a 16 instead of 32 byte number
+    // multiplies by a 16 instead of 32 byte number
     vli_modMult_n(k, k, l_tmp); /* k' = rand * k */
     vli_modInv_n(k, k, curve_n); /* k = 1 / k' */
     vli_modMult_n(k, k, l_tmp); /* k = 1 / k */
-    
+
     vli_nativeToBytes(p_signature, p.x); /* store r */
-    
+
     l_tmp[uECC_N_WORDS - 1] = 0;
     vli_bytesToNative(l_tmp, p_privateKey); /* tmp = d */
     s[uECC_N_WORDS - 1] = 0;
@@ -990,7 +923,7 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
     vli_modAdd_n(s, l_tmp, s, curve_n); /* s = e + r*d */
     vli_modMult_n(s, s, k); /* s = (e + r*d) / k */
     vli_nativeToBytes(p_signature + uECC_BYTES, s);
-    
+
     return 0;
 }
 
@@ -998,52 +931,52 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], const uint8_t p_has
 static int uECC_read_pubkey(const uint8_t *publicKey, uint8_t *p_publicKey)
 {
     if (publicKey[0] == 0x04) {
-		memcpy(p_publicKey, publicKey + 1, uECC_BYTES * 2);
+        memcpy(p_publicKey, publicKey + 1, uECC_BYTES * 2);
         return 1;
-	}
-	if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
+    }
+    if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
         uECC_decompress(publicKey, p_publicKey);
-		return 1;
-	}
-	// error
-	return 0;
+        return 1;
+    }
+    // error
+    return 0;
 }
 
 /* Performs sha256 hash on msg before verification */
-int uECC_verify(const uint8_t *publicKey, const uint8_t *p_signature, 
-                 const uint8_t *msg, uint32_t msg_len)
+int uECC_verify(const uint8_t *publicKey, const uint8_t *p_signature,
+                const uint8_t *msg, uint32_t msg_len)
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
         return 1;
-	sha256_Raw(msg, msg_len, p_hash);
-	return uECC_verify_digest(publicKey, p_hash, p_signature);
+    sha256_Raw(msg, msg_len, p_hash);
+    return uECC_verify_digest(publicKey, p_hash, p_signature);
 }
 
 /* Performs a double sha256 hash on msg before verification */
-int uECC_verify_double(const uint8_t *publicKey, const uint8_t *p_signature, 
-                        const uint8_t *msg, uint32_t msg_len)
+int uECC_verify_double(const uint8_t *publicKey, const uint8_t *p_signature,
+                       const uint8_t *msg, uint32_t msg_len)
 {
     uint8_t p_hash[uECC_BYTES];
     if(uECC_BYTES != SHA256_DIGEST_LENGTH)
         return 1;
-	sha256_Raw(msg, msg_len, p_hash);
-	sha256_Raw(p_hash, uECC_BYTES, p_hash);
+    sha256_Raw(msg, msg_len, p_hash);
+    sha256_Raw(p_hash, uECC_BYTES, p_hash);
     return uECC_verify_digest(publicKey, p_hash, p_signature);
 }
 
 /* Verify an ECDSA signature.
    Returns 1 if the signature is valid, 0 if it is invalid. */
-int uECC_verify_digest(const uint8_t *publicKey, 
-                       const uint8_t p_hash[uECC_BYTES], 
+int uECC_verify_digest(const uint8_t *publicKey,
+                       const uint8_t p_hash[uECC_BYTES],
                        const uint8_t p_signature[uECC_BYTES*2])
 {
     uint8_t p_publicKey[uECC_BYTES * 2];
-	
+
     if (!uECC_read_pubkey(publicKey, p_publicKey)) {
-		return 1;
-	}
-    
+        return 1;
+    }
+
     uECC_word_t u1[uECC_N_WORDS], u2[uECC_N_WORDS];
     uECC_word_t z[uECC_N_WORDS];
     EccPoint l_public, l_sum;
@@ -1052,18 +985,18 @@ int uECC_verify_digest(const uint8_t *publicKey,
     uECC_word_t tx[uECC_WORDS];
     uECC_word_t ty[uECC_WORDS];
     uECC_word_t tz[uECC_WORDS];
-    
+
     uECC_word_t r[uECC_N_WORDS], s[uECC_N_WORDS];
     r[uECC_N_WORDS - 1] = 0;
     s[uECC_N_WORDS - 1] = 0;
-    
+
     vli_bytesToNative(l_public.x, p_publicKey);
     vli_bytesToNative(l_public.y, p_publicKey + uECC_BYTES);
     vli_bytesToNative(r, p_signature);
     vli_bytesToNative(s, p_signature + uECC_BYTES);
-    
-    if(vli_isZero(r) || vli_isZero(s))
-    { /* r, s must not be 0. */
+
+    if(vli_isZero(r) || vli_isZero(s)) {
+        /* r, s must not be 0. */
         return 1;
     }
 
@@ -1073,7 +1006,7 @@ int uECC_verify_digest(const uint8_t *publicKey,
     vli_bytesToNative(u1, p_hash);
     vli_modMult_n(u1, u1, z); /* u1 = e/s */
     vli_modMult_n(u2, r, z); /* u2 = r/s */
-    
+
     /* Calculate l_sum = G + Q. */
     vli_set(l_sum.x, l_public.x);
     vli_set(l_sum.y, l_public.y);
@@ -1083,11 +1016,11 @@ int uECC_verify_digest(const uint8_t *publicKey,
     XYcZ_add(tx, ty, l_sum.x, l_sum.y);
     vli_modInv(z, z, curve_p); /* Z = 1/Z */
     apply_z(l_sum.x, l_sum.y, z);
-    
+
     /* Use Shamir's trick to calculate u1*G + u2*Q */
     EccPoint *l_points[4] = {0, &curve_G, &l_public, &l_sum};
     bitcount_t l_numBits = smax(vli_numBits(u1, uECC_N_WORDS), vli_numBits(u2, uECC_N_WORDS));
-    
+
     EccPoint *l_point = l_points[(!!vli_testBit(u1, l_numBits - 1)) | ((!!vli_testBit(u2, l_numBits - 1)) << 1)];
     vli_set(rx, l_point->x);
     vli_set(ry, l_point->y);
@@ -1095,14 +1028,12 @@ int uECC_verify_digest(const uint8_t *publicKey,
     z[0] = 1;
 
     bitcount_t i;
-    for(i = l_numBits - 2; i >= 0; --i)
-    {
+    for(i = l_numBits - 2; i >= 0; --i) {
         EccPoint_double_jacobian(rx, ry, z);
-        
+
         uECC_word_t l_index = (!!vli_testBit(u1, i)) | ((!!vli_testBit(u2, i)) << 1);
         l_point = l_points[l_index];
-        if(l_point)
-        {
+        if(l_point) {
             vli_set(tx, l_point->x);
             vli_set(ty, l_point->y);
             apply_z(tx, ty, z);
@@ -1114,10 +1045,9 @@ int uECC_verify_digest(const uint8_t *publicKey,
 
     vli_modInv(z, z, curve_p); /* Z = 1/Z */
     apply_z(rx, ry, z);
-    
+
     /* v = x1 (mod n) */
-    if(vli_cmp(curve_n, rx) != 1)
-    {
+    if(vli_cmp(curve_n, rx) != 1) {
         vli_sub(rx, rx, curve_n);
     }
 
@@ -1132,7 +1062,7 @@ void uECC_generate_private_key(uint8_t *p_privateChild, const uint8_t *p_private
     uECC_word_t l_privateChild[uECC_WORDS];
     uECC_word_t l_privateMaster[uECC_WORDS];
     uECC_word_t l_z[uECC_WORDS];
-    
+
     vli_bytesToNative(l_privateMaster, p_privateMaster);
     vli_bytesToNative(l_z, z);
 
@@ -1152,7 +1082,7 @@ int uECC_isValid(uint8_t *p_key)
 }
 
 /* Get the public key from the private key */
-void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], 
+void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES],
                            uint8_t p_publicKey[uECC_BYTES + 1])
 {
     uint8_t p_publicKey_long[uECC_BYTES * 2];
@@ -1165,21 +1095,21 @@ void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES],
                            uint8_t p_publicKey[uECC_BYTES * 2 + 1])
 {
     uint8_t *p = p_publicKey;
-	p[0] = 0x04;
+    p[0] = 0x04;
     uECC_get_public_key64(p_privateKey, p + 1);
 }
 
 /* Get the public key from the private key */
-void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], 
+void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES],
                            uint8_t p_publicKey[uECC_BYTES * 2])
 {
     EccPoint l_public;
     uECC_word_t l_private[uECC_WORDS];
-    
+
     vli_bytesToNative(l_private, p_privateKey);
-    
+
     EccPoint_mult(&l_public, &curve_G, l_private, 0, vli_numBits(l_private, uECC_WORDS));
-    
+
     vli_nativeToBytes(p_publicKey, l_public.x);
     vli_nativeToBytes(p_publicKey + uECC_BYTES, l_public.y);
 }
@@ -1188,14 +1118,13 @@ void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES],
    http://tools.ietf.org/html/rfc6979 */
 int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint8_t *hash)
 {
-	int i;
-	uint8_t v[32], k[32], bx[2 * 32], buf[32 + 1 + sizeof(bx)], z1[32];
+    int i;
+    uint8_t v[32], k[32], bx[2 * 32], buf[32 + 1 + sizeof(bx)], z1[32];
     uECC_word_t l_z1[uECC_WORDS];
     uECC_word_t l_secret[uECC_WORDS];
-    
+
     vli_bytesToNative(l_z1, hash);
-    while( vli_cmp(curve_p, l_z1) != 1)
-    {
+    while( vli_cmp(curve_p, l_z1) != 1) {
         vli_sub(l_z1, l_z1, curve_p);
     }
     vli_nativeToBytes(z1, l_z1);
@@ -1203,36 +1132,36 @@ int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint
     memcpy(bx, priv_key, 32);
     memcpy(bx + 32, z1, 32);
 
-	memset(v, 1, sizeof(v));
-	memset(k, 0, sizeof(k));
+    memset(v, 1, sizeof(v));
+    memset(k, 0, sizeof(k));
 
-	memcpy(buf, v, sizeof(v));
-	buf[sizeof(v)] = 0x00;
-	memcpy(buf + sizeof(v) + 1, bx, 64);
-	hmac_sha256(k, sizeof(k), buf, sizeof(buf), k);
-	hmac_sha256(k, sizeof(k), v, sizeof(v), v);
+    memcpy(buf, v, sizeof(v));
+    buf[sizeof(v)] = 0x00;
+    memcpy(buf + sizeof(v) + 1, bx, 64);
+    hmac_sha256(k, sizeof(k), buf, sizeof(buf), k);
+    hmac_sha256(k, sizeof(k), v, sizeof(v), v);
 
-	memcpy(buf, v, sizeof(v));
-	buf[sizeof(v)] = 0x01;
-	memcpy(buf + sizeof(v) + 1, bx, 64);
-	hmac_sha256(k, sizeof(k), buf, sizeof(buf), k);
-	hmac_sha256(k, sizeof(k), v, sizeof(k), v);
+    memcpy(buf, v, sizeof(v));
+    buf[sizeof(v)] = 0x01;
+    memcpy(buf + sizeof(v) + 1, bx, 64);
+    hmac_sha256(k, sizeof(k), buf, sizeof(buf), k);
+    hmac_sha256(k, sizeof(k), v, sizeof(k), v);
 
     memset(bx,0,sizeof(bx));
 
-	for (i = 0; i < 10000; i++) {
-		hmac_sha256(k, sizeof(k), v, sizeof(v), secret);
+    for (i = 0; i < 10000; i++) {
+        hmac_sha256(k, sizeof(k), v, sizeof(v), secret);
         vli_bytesToNative(l_secret, secret);
         if( !vli_isZero(l_secret) && vli_cmp(curve_n, l_secret) == 1) {
             return 0; // good number -> no error
-		}
-		
+        }
+
         memcpy(buf, v, sizeof(v));
-		buf[sizeof(v)] = 0x00;
-		hmac_sha256(k, sizeof(k), buf, sizeof(v) + 1, k);
-		hmac_sha256(k, sizeof(k), v, sizeof(v), v);
-	}
-	// we generated 10000 numbers, none of them is good -> fail
-	return 1;
+        buf[sizeof(v)] = 0x00;
+        hmac_sha256(k, sizeof(k), buf, sizeof(v) + 1, k);
+        hmac_sha256(k, sizeof(k), v, sizeof(v), v);
+    }
+    // we generated 10000 numbers, none of them is good -> fail
+    return 1;
 }
 

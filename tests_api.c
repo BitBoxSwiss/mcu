@@ -1,7 +1,7 @@
 /*
 
  The MIT License (MIT)
- 
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -58,7 +58,7 @@ static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 
 static int api_hid_init(void)
 {
-	HID_HANDLE = hid_open(0x03eb, 0x2402, NULL);
+    HID_HANDLE = hid_open(0x03eb, 0x2402, NULL);
     if (!HID_HANDLE) {
         return ERROR;
     }
@@ -68,11 +68,11 @@ static int api_hid_init(void)
 
 static void api_hid_read(void)
 {
-   	int res;
+    int res;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     res = hid_read(HID_HANDLE, HID_REPORT, HID_REPORT_SIZE);
-	if (res < 0) {
-		printf("ERROR: Unable to read report.\n");
+    if (res < 0) {
+        printf("ERROR: Unable to read report.\n");
     } else {
         utils_decrypt_report((char *)HID_REPORT);
         //printf("received:  >>%s<<\n", utils_read_decrypted_report());
@@ -82,9 +82,9 @@ static void api_hid_read(void)
 
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
-   	int res;
-	memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    memcpy(HID_REPORT, cmd, cmdlen );	
+    int res;
+    memset(HID_REPORT, 0, HID_REPORT_SIZE);
+    memcpy(HID_REPORT, cmd, cmdlen );
     res = hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, HID_REPORT_SIZE);
 }
 
@@ -122,8 +122,7 @@ static void api_send_cmd(const char *command, PASSWORD_ID id)
     else if (id == PASSWORD_NONE) {
         api_hid_send(command);
         api_hid_read();
-    } 
-    else {
+    } else {
         api_hid_send_encrypt(command);
         api_hid_read();
     }
@@ -190,61 +189,71 @@ static void tests_seed_xpub_backup(void)
 
     char seed_c[512], seed_b[512], back[512];
     const char **salt, **cipher, **run, **mnemo;
-	static const char *options[] = {
-	//  run     salt              encrypt       mnemonic
-		"y",    "",               NULL,         NULL,
-		"y",    "",               "no",         NULL,
-		"y",    "",               "yes",        NULL,
-		"y",    NULL,             NULL,         NULL,
-		"y",    NULL,             "no",         NULL,
-		"y",    NULL,             "yes",        NULL,
-		"y",    "Digital Bitbox", NULL,         NULL,
-		"y",    "Digital Bitbox", "no",         NULL,
-		"y",    "Digital Bitbox", "yes",        NULL,
-		"y",    NULL,             NULL,         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    NULL,             "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    "",               "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    "Digital Bitbox", "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    NULL,             "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    "",               "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-		"y",    "Digital Bitbox", "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+    static const char *options[] = {
+        //  run     salt              encrypt       mnemonic
+        "y",    "",               NULL,         NULL,
+        "y",    "",               "no",         NULL,
+        "y",    "",               "yes",        NULL,
+        "y",    NULL,             NULL,         NULL,
+        "y",    NULL,             "no",         NULL,
+        "y",    NULL,             "yes",        NULL,
+        "y",    "Digital Bitbox", NULL,         NULL,
+        "y",    "Digital Bitbox", "no",         NULL,
+        "y",    "Digital Bitbox", "yes",        NULL,
+        "y",    NULL,             NULL,         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    NULL,             "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    "",               "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    "Digital Bitbox", "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    NULL,             "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    "",               "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
+        "y",    "Digital Bitbox", "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
         NULL,   NULL,             NULL,         NULL,
-	};
+    };
     run = options;
     salt = options + 1;
-	cipher = options + 2;
-	mnemo = options + 3;
+    cipher = options + 2;
+    mnemo = options + 3;
 
 
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error")) { goto err; }
-    
-    api_format_send_cmd("seed", "{\"source\": \"ilent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND); 
-    if (!api_result_has(FLAG_ERR_MNEMO_CHECK)) { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
 
-    api_format_send_cmd("seed", "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND); 
-    if (api_result_has("error")) { goto err; }
+    api_format_send_cmd("seed", "{\"source\": \"ilent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_MNEMO_CHECK)) {
+        goto err;
+    }
+
+    api_format_send_cmd("seed", "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
 
 
     while (*run) {
         memset(seed_c, 0, sizeof(seed_c));
         memset(seed_b, 0, sizeof(seed_b));
         memset(back, 0, sizeof(back));
-        
+
         strcpy(seed_c, "{\"source\":\"");
-        if(*mnemo) { strcat(seed_c, *mnemo);
-        } else {     strcat(seed_c, "create");
-        }            strcat(seed_c, "\"");
-        
+        if(*mnemo) {
+            strcat(seed_c, *mnemo);
+        } else {
+            strcat(seed_c, "create");
+        }
+        strcat(seed_c, "\"");
+
         strcpy(seed_b, "{\"source\":\"");
         strcat(seed_b, filename);
         strcat(seed_b, "\"");
-        
+
         strcpy(back, "{\"backup\":{\"filename\":\"");
         strcat(back, filename);
         strcat(back, "\"");
-        
-        
+
+
         if(*cipher) {
             strcat(seed_b, ",\"decrypt\":\"");
             strcat(seed_b, *cipher);
@@ -256,68 +265,131 @@ static void tests_seed_xpub_backup(void)
         if(*salt) {
             strcat(seed_c, ",\"salt\":\"");
             strcat(seed_c, *salt);
-            strcat(seed_c, "\""); 
+            strcat(seed_c, "\"");
             strcat(seed_b, ",\"salt\":\"");
             strcat(seed_b, *salt);
             strcat(seed_b, "\"");
         }
-        
+
         strcat(seed_c, "}");
         strcat(seed_b, "}");
         strcat(back, "}}");
 
-        
+
         // erase
         api_reset_device();
-        api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error")) { goto err; }
+        api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+        if (api_result_has("error")) {
+            goto err;
+        }
         memset(xpub0, 0, sizeof(xpub0));
         memset(xpub1, 0, sizeof(xpub1));
-        
+
         // create
-        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
-        api_format_send_cmd("seed", seed_c, PASSWORD_STAND);         if ( api_result_has("error")) { goto err; }
-        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if ( api_result_has("error")) { goto err; }
+        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);
+        if (!api_result_has(FLAG_ERR_BIP32_MISSING)) {
+            goto err;
+        }
+        api_format_send_cmd("seed", seed_c, PASSWORD_STAND);
+        if ( api_result_has("error")) {
+            goto err;
+        }
+        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);
+        if ( api_result_has("error")) {
+            goto err;
+        }
         memcpy(xpub0, api_read_value(CMD_xpub_), sizeof(xpub0));
-        if (!memcmp(xpub0, xpub1, 112)) { goto err; }
-        
+        if (!memcmp(xpub0, xpub1, 112)) {
+            goto err;
+        }
+
         // backup
-        api_format_send_cmd("backup", "erase", PASSWORD_STAND);      
-        if ( api_result_has("error") && 
-            !api_result_has(FLAG_ERR_SD_NO_FILE)) { goto err; }
-        api_format_send_cmd("backup", back, PASSWORD_STAND);         if ( api_result_has("error")) { goto err; }
-        
+        api_format_send_cmd("backup", "erase", PASSWORD_STAND);
+        if ( api_result_has("error") &&
+                !api_result_has(FLAG_ERR_SD_NO_FILE)) {
+            goto err;
+        }
+        api_format_send_cmd("backup", back, PASSWORD_STAND);
+        if ( api_result_has("error")) {
+            goto err;
+        }
+
         // erase
         api_reset_device();
-        api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);   if ( api_result_has("error")) { goto err; }
-        
-        // load backup default
-        api_format_send_cmd("seed", seed_b, PASSWORD_STAND);         if ( api_result_has("error")) { goto err; }
-        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if ( api_result_has("error")) { goto err; }
-        memcpy(xpub1, api_read_value(CMD_xpub_), sizeof(xpub1));
-        
-        // check xpubs
-        if (memcmp(xpub0, xpub1, 112)) { goto err; }
-        
-        // check backup list and erase
-        api_format_send_cmd("backup", "list", PASSWORD_STAND);       if (!api_result_has(filename)) { goto err; }
-        api_format_send_cmd("backup", "erase", PASSWORD_STAND);      if ( api_result_has(filename)) { goto err; }
+        api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+        if ( api_result_has("error")) {
+            goto err;
+        }
 
-        
+        // load backup default
+        api_format_send_cmd("seed", seed_b, PASSWORD_STAND);
+        if ( api_result_has("error")) {
+            goto err;
+        }
+        api_format_send_cmd("xpub", keypath, PASSWORD_STAND);
+        if ( api_result_has("error")) {
+            goto err;
+        }
+        memcpy(xpub1, api_read_value(CMD_xpub_), sizeof(xpub1));
+
+        // check xpubs
+        if (memcmp(xpub0, xpub1, 112)) {
+            goto err;
+        }
+
+        // check backup list and erase
+        api_format_send_cmd("backup", "list", PASSWORD_STAND);
+        if (!api_result_has(filename)) {
+            goto err;
+        }
+        api_format_send_cmd("backup", "erase", PASSWORD_STAND);
+        if ( api_result_has(filename)) {
+            goto err;
+        }
+
+
         run += 4;
         salt += 4;
         cipher += 4;
         mnemo += 4;
-    } 
-   
-    api_format_send_cmd("led", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }  
-    api_format_send_cmd("xpub", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
-    api_format_send_cmd("seed", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
-    api_format_send_cmd("sign", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
-    api_format_send_cmd("reset", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("backup", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("random", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("device", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("verifypass", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
+    }
+
+    api_format_send_cmd("led", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("xpub", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("seed", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("sign", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("reset", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("backup", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("random", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("device", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
 
 
     api_print_result("tests_seed_xpub_backup", "OK");
@@ -327,9 +399,9 @@ err:
     TESTS_FAIL++;
     api_print_result("tests_seed_xpub_backup", "FAIL");
     api_print_result("tests_seed_xpub_backup", utils_read_decrypted_report());
-    //printf("\t%s\n", *salt); 
-    //printf("\t%s\n", *cipher); 
-    //printf("\t%s\n", *mnemo); 
+    //printf("\t%s\n", *salt);
+    //printf("\t%s\n", *cipher);
+    //printf("\t%s\n", *mnemo);
 }
 
 
@@ -339,26 +411,45 @@ static void tests_random(void)
     char number1[32] = {0};
 
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error")) { goto err; }
-    
-    api_format_send_cmd("random", "pseudo", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    memcpy(number0, api_read_value(CMD_random_), sizeof(number0)); 
-    
-    api_format_send_cmd("random","pseudo", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    memcpy(number1, api_read_value(CMD_random_), sizeof(number1)); 
-    if (!memcmp(number0, number1, 32)) { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
 
-    api_format_send_cmd("random", "true", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    memcpy(number0, api_read_value(CMD_random_), sizeof(number0)); 
-    
-    api_format_send_cmd("random", "true", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    memcpy(number1, api_read_value(CMD_random_), sizeof(number1)); 
-    if (!memcmp(number0, number1, 32)) { goto err; }
-    
-    
+    api_format_send_cmd("random", "pseudo", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    memcpy(number0, api_read_value(CMD_random_), sizeof(number0));
+
+    api_format_send_cmd("random","pseudo", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    memcpy(number1, api_read_value(CMD_random_), sizeof(number1));
+    if (!memcmp(number0, number1, 32)) {
+        goto err;
+    }
+
+    api_format_send_cmd("random", "true", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    memcpy(number0, api_read_value(CMD_random_), sizeof(number0));
+
+    api_format_send_cmd("random", "true", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    memcpy(number1, api_read_value(CMD_random_), sizeof(number1));
+    if (!memcmp(number0, number1, 32)) {
+        goto err;
+    }
+
+
     api_print_result("tests_random", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_random", "FAIL");
@@ -371,30 +462,44 @@ static void tests_name(void)
     char name0[] = "name0";
     char name1[] = "name1";
     char name[5];
-  
+
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); 
-    if (api_result_has("error")) { goto err; }
-    
-    api_format_send_cmd("name", name0, PASSWORD_STAND);  
-    if (api_result_has("error")) { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
+
+    api_format_send_cmd("name", name0, PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
     memcpy(name, api_read_value(CMD_name_), sizeof(name));
-    if (memcmp(name0, name, sizeof(name))) { goto err; }
-    
-    api_format_send_cmd("name", name1, PASSWORD_STAND);   
-    if (api_result_has("error")) { goto err; }
+    if (memcmp(name0, name, sizeof(name))) {
+        goto err;
+    }
+
+    api_format_send_cmd("name", name1, PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
     memcpy(name, api_read_value(CMD_name_), sizeof(name));
-    if (memcmp(name1, name, sizeof(name))) { goto err; }
-    
-    api_format_send_cmd("name", "", PASSWORD_STAND); 
-    if (api_result_has("error")) { goto err; }
+    if (memcmp(name1, name, sizeof(name))) {
+        goto err;
+    }
+
+    api_format_send_cmd("name", "", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
     memcpy(name, api_read_value(CMD_name_), sizeof(name));
-    if (memcmp(name1, name, sizeof(name))) { goto err; }
+    if (memcmp(name1, name, sizeof(name))) {
+        goto err;
+    }
 
 
     api_print_result("tests_name", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_name", "FAIL");
@@ -402,28 +507,60 @@ err:
 }
 
 
-static void tests_device(void) 
+static void tests_device(void)
 {
     char s[] = "{\"source\":\"create\"}";
 
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);   if (api_result_has("error")) { goto err; }
-    api_format_send_cmd("seed", s, PASSWORD_STAND);              if (api_result_has("error")) { goto err; }
-    api_format_send_cmd("verifypass", "create", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND); if (api_result_has("error")) { goto err; }
-    
-    api_format_send_cmd("device", "lock", PASSWORD_STAND);       if (api_result_has("error")) { goto err; } 
-    api_format_send_cmd("seed", s, PASSWORD_STAND);              if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; }
-    api_format_send_cmd("verifypass", "create", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; }
-    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; }
-  
-    api_format_send_cmd("device", "serial", PASSWORD_STAND);     if (api_result_has("error")) { goto err; } 
-    api_format_send_cmd("device", "version", PASSWORD_STAND);    if (api_result_has("error")) { goto err; } 
-                                                                   if (!api_result_has(DIGITAL_BITBOX_VERSION)) { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("seed", s, PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", "create", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+
+    api_format_send_cmd("device", "lock", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("seed", s, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", "create", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
+    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
+
+    api_format_send_cmd("device", "serial", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("device", "version", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    if (!api_result_has(DIGITAL_BITBOX_VERSION)) {
+        goto err;
+    }
 
     api_print_result("tests_device", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_device", "FAIL");
@@ -437,55 +574,128 @@ static void tests_input(void)
 
     api_reset_device();
     if (!TEST_LIVE_DEVICE) {
-        api_send_cmd("", PASSWORD_NONE); if (!api_result_has(FLAG_ERR_NO_INPUT))                       { goto err; }
-        api_send_cmd(NULL, PASSWORD_NONE); if (!api_result_has(FLAG_ERR_NO_INPUT))                     { goto err; }
+        api_send_cmd("", PASSWORD_NONE);
+        if (!api_result_has(FLAG_ERR_NO_INPUT))                       {
+            goto err;
+        }
+        api_send_cmd(NULL, PASSWORD_NONE);
+        if (!api_result_has(FLAG_ERR_NO_INPUT))                     {
+            goto err;
+        }
     }
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error"))                 { goto err; }
-    
-    api_send_cmd("{\"name\": \"name\"}",      PASSWORD_NONE);    if (!api_result_has(FLAG_ERR_DECRYPT))     { goto err; }
-    api_send_cmd("{\"name\": \"name\"}",      PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
-    api_send_cmd("\"name\": \"name\"}",       PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_JSON_PARSE))  { goto err; }
-    api_send_cmd("{name\": \"name\"}",        PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
-    api_send_cmd("{\"name: \"name\"}",        PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_send_cmd("{\"name\": \"name}",        PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
-    api_send_cmd("{\"name\": \"name\"",       PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_send_cmd("{\"name\": \"name\", }",    PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
-    api_send_cmd("{\"name\": \"name\", \"name\"}", PASSWORD_STAND);           if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) { goto err; }
-    api_send_cmd("{\"name\": \"name\", \"name\": }", PASSWORD_STAND);         if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) { goto err; }
-    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) { goto err; }
-    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
-    
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error"))                 {
+        goto err;
+    }
+
+    api_send_cmd("{\"name\": \"name\"}",      PASSWORD_NONE);
+    if (!api_result_has(FLAG_ERR_DECRYPT))     {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\"}",      PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_send_cmd("\"name\": \"name\"}",       PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_JSON_PARSE))  {
+        goto err;
+    }
+    api_send_cmd("{name\": \"name\"}",        PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_send_cmd("{\"name: \"name\"}",        PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name}",        PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\"",       PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\", }",    PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\", \"name\"}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\", \"name\": }", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) {
+        goto err;
+    }
+    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_MULTIPLE_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("name", "avoidreset", PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {
-        api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE); 
-        if (!api_result_has(FLAG_ERR_DECRYPT))   { goto err; }
-        if (!api_result_has(FLAG_ERR_RESET_WARNING))   { goto err; }
+        api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
+        if (!api_result_has(FLAG_ERR_DECRYPT))   {
+            goto err;
+        }
+        if (!api_result_has(FLAG_ERR_RESET_WARNING))   {
+            goto err;
+        }
     }
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE); if (!api_result_has(FLAG_ERR_RESET))   { goto err; }
-    
+    api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
+    if (!api_result_has(FLAG_ERR_RESET))   {
+        goto err;
+    }
+
     api_print_result("tests_input", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
-        api_print_result("tests_input", "FAIL");
-        api_print_result("tests_input", utils_read_decrypted_report());
+    api_print_result("tests_input", "FAIL");
+    api_print_result("tests_input", utils_read_decrypted_report());
 }
 
 
 static void tests_password(void)
 {
     api_reset_device();
-    api_format_send_cmd("name", "", PASSWORD_NONE);            if (!api_result_has(FLAG_ERR_NO_PASSWORD))  { goto err; }
-    api_format_send_cmd("password", "123", PASSWORD_NONE);     if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) { goto err; }
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if ( api_result_has("error"))                { goto err; }
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (!api_result_has(FLAG_ERR_DECRYPT))      { goto err; }
-    api_format_send_cmd("password", "123", PASSWORD_STAND);    if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) { goto err; }
-    
+    api_format_send_cmd("name", "", PASSWORD_NONE);
+    if (!api_result_has(FLAG_ERR_NO_PASSWORD))  {
+        goto err;
+    }
+    api_format_send_cmd("password", "123", PASSWORD_NONE);
+    if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) {
+        goto err;
+    }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if ( api_result_has("error"))                {
+        goto err;
+    }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (!api_result_has(FLAG_ERR_DECRYPT))      {
+        goto err;
+    }
+    api_format_send_cmd("password", "123", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) {
+        goto err;
+    }
+
     api_print_result("tests_password", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_password", "FAIL");
@@ -503,182 +713,374 @@ static void tests_echo_2FA(void)
     char hash_sign3[] = "{\"type\":\"hash\", \"keypath\":\"m/\", \"data\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}";
 
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);  if ( api_result_has("error")) { goto err; }
-    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!(api_result_has("echo") ||
-                                                                      api_result_has(FLAG_ERR_BIP32_MISSING))) { goto err; }
-    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
-    api_format_send_cmd("seed", seed, PASSWORD_STAND);          if ( api_result_has("error")) { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if ( api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);
+    if (!(api_result_has("echo") ||
+            api_result_has(FLAG_ERR_BIP32_MISSING))) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_BIP32_MISSING)) {
+        goto err;
+    }
+    api_format_send_cmd("seed", seed, PASSWORD_STAND);
+    if ( api_result_has("error")) {
+        goto err;
+    }
 
     // test verifypass
-    api_format_send_cmd("verifypass", create, PASSWORD_STAND);  if ( api_result_has("error"))              { goto err; }
-    api_format_send_cmd("backup", "erase", PASSWORD_STAND);     if ( api_result_has("error") && 
-                                                                      !api_result_has(FLAG_ERR_SD_NO_FILE))  { goto err; }
-    api_format_send_cmd("backup", "list", PASSWORD_STAND);      if ( api_result_has(VERIFYPASS_FILENAME))  { goto err; } 
-    api_format_send_cmd("verifypass", export, PASSWORD_STAND);  if ( api_result_has("error"))              { goto err; } 
-    api_format_send_cmd("verifypass", export, PASSWORD_STAND);  if (!api_result_has(FLAG_ERR_SD_FILE_EXISTS) && 
-                                                                      !api_result_has(FLAG_ERR_NO_MCU))      { goto err; } 
-    api_format_send_cmd("backup", "list", PASSWORD_STAND);      if (!api_result_has(VERIFYPASS_FILENAME))  { goto err; } 
-    
+    api_format_send_cmd("verifypass", create, PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_format_send_cmd("backup", "erase", PASSWORD_STAND);
+    if ( api_result_has("error") &&
+            !api_result_has(FLAG_ERR_SD_NO_FILE))  {
+        goto err;
+    }
+    api_format_send_cmd("backup", "list", PASSWORD_STAND);
+    if ( api_result_has(VERIFYPASS_FILENAME))  {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", export, PASSWORD_STAND);
+    if ( api_result_has("error"))              {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", export, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_SD_FILE_EXISTS) &&
+            !api_result_has(FLAG_ERR_NO_MCU))      {
+        goto err;
+    }
+    api_format_send_cmd("backup", "list", PASSWORD_STAND);
+    if (!api_result_has(VERIFYPASS_FILENAME))  {
+        goto err;
+    }
+
     // test echo
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if (!api_result_has("echo")) { goto err; }
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if ( api_result_has("echo")) { goto err; } 
-    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!api_result_has("echo")) { goto err; } 
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if (!api_result_has("echo")) { goto err; } 
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if ( api_result_has("2FA"))  { goto err; } 
-    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);    if (!api_result_has("echo")) { goto err; } 
-   
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if ( api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if ( api_result_has("2FA"))  {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+
     // test hash length
-    api_format_send_cmd("sign", hash_sign3, PASSWORD_STAND);    if (!api_result_has("echo")) { goto err; } 
-    api_format_send_cmd("sign", hash_sign3, PASSWORD_STAND);    if (!api_result_has(FLAG_ERR_SIGN_LEN)) { goto err; } 
+    api_format_send_cmd("sign", hash_sign3, PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign3, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_SIGN_LEN)) {
+        goto err;
+    }
 
     // test locked
-    api_format_send_cmd("device", "lock", PASSWORD_STAND);      if ( api_result_has("error")) { goto err; }
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if (!api_result_has("echo"))  { goto err; } 
-    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);     if (!api_result_has("2FA"))   { goto err; } 
-    api_format_send_cmd("seed", seed, PASSWORD_STAND);          if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
-    api_format_send_cmd("verifypass", export, PASSWORD_STAND);  if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
-    api_format_send_cmd("backup", "list", PASSWORD_STAND);      if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
+    api_format_send_cmd("device", "lock", PASSWORD_STAND);
+    if ( api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if (!api_result_has("echo"))  {
+        goto err;
+    }
+    api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
+    if (!api_result_has("2FA"))   {
+        goto err;
+    }
+    api_format_send_cmd("seed", seed, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
+    api_format_send_cmd("verifypass", export, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
+    api_format_send_cmd("backup", "list", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) {
+        goto err;
+    }
 
     api_print_result("tests_echo_2FA", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_echo_2FA", "FAIL");
     api_print_result("tests_echo_2FA", utils_read_decrypted_report());
 }
 
-    
+
 static void tests_sign(void)
 {
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error")) { goto err; }
-    
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
+
     // signing before seeded
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_DESERIALIZE)) { goto err; }  
+    if (!api_result_has(FLAG_ERR_DESERIALIZE)) {
+        goto err;
+    }
 
     // seed
     api_format_send_cmd("seed", "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}}", PASSWORD_STAND);
-    if (api_result_has("error")) { goto err; }
+    if (api_result_has("error")) {
+        goto err;
+    }
 
     // wrong change keypath
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/\"} }", PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_DESERIALIZE)) { goto err; }  
- 
+    if (!api_result_has(FLAG_ERR_DESERIALIZE)) {
+        goto err;
+    }
+
     // change output after echo (MITM attack)
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e7af4862e10c88acffffffff0298080000000000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
-    if ( api_result_has("sign")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    if ( api_result_has("sign")) {
+        goto err;
+    }
 
     // sign using one input
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("verify_output")) { goto err; }
-        if (!api_result_has("value"))         { goto err; }
-        if (!api_result_has("2200"))          { goto err; }
-        if (!api_result_has("script"))        { goto err; }
-        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+        if (!api_result_has("verify_output")) {
+            goto err;
+        }
+        if (!api_result_has("value"))         {
+            goto err;
+        }
+        if (!api_result_has("2200"))          {
+            goto err;
+        }
+        if (!api_result_has("script"))        {
+            goto err;
+        }
+        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
+            goto err;
+        }
     }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("sign")) { goto err; }  
-    if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) { goto err; }  
-    if (!api_result_has("pubkey")) { goto err; }  
-    if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) { goto err; }  
+    if (!api_result_has("sign")) {
+        goto err;
+    }
+    if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+        goto err;
+    }
+    if (!api_result_has("pubkey")) {
+        goto err;
+    }
+    if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) {
+        goto err;
+    }
 
-    // sign using two inputs 
+    // sign using two inputs
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("verify_output")) { goto err; }
-        if (!api_result_has("value"))         { goto err; }
-        if (!api_result_has("200"))           { goto err; }
-        if (!api_result_has("script"))        { goto err; }
-        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+        if (!api_result_has("verify_output")) {
+            goto err;
+        }
+        if (!api_result_has("value"))         {
+            goto err;
+        }
+        if (!api_result_has("200"))           {
+            goto err;
+        }
+        if (!api_result_has("script"))        {
+            goto err;
+        }
+        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
+            goto err;
+        }
     }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("sign")) { goto err; }  
-    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) { goto err; }  
-    if (!api_result_has("pubkey")) { goto err; }  
-    if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) { goto err; }  
+    if (!api_result_has("sign")) {
+        goto err;
+    }
+    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+        goto err;
+    }
+    if (!api_result_has("pubkey")) {
+        goto err;
+    }
+    if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
+        goto err;
+    }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("sign")) { goto err; }  
-    if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) { goto err; }  
-    if (!api_result_has("pubkey")) { goto err; }  
-    if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) { goto err; }  
+    if (!api_result_has("sign")) {
+        goto err;
+    }
+    if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+        goto err;
+    }
+    if (!api_result_has("pubkey")) {
+        goto err;
+    }
+    if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) {
+        goto err;
+    }
 
 
     // lock to get 2FA PINs
-    api_format_send_cmd("device", "lock", PASSWORD_STAND); if ( api_result_has("error")) { goto err; }
+    api_format_send_cmd("device", "lock", PASSWORD_STAND);
+    if ( api_result_has("error")) {
+        goto err;
+    }
 
 
     // sign using one input
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
         memory_write_aeskey(api_read_value(CMD_pin_), 4, PASSWORD_2FA);
-        if (!api_result_has("verify_output")) { goto err; }
-        if (!api_result_has("value"))         { goto err; }
-        if (!api_result_has("2200"))          { goto err; }
-        if (!api_result_has("script"))        { goto err; }
-        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) { goto err; }
+        if (!api_result_has("verify_output")) {
+            goto err;
+        }
+        if (!api_result_has("value"))         {
+            goto err;
+        }
+        if (!api_result_has("2200"))          {
+            goto err;
+        }
+        if (!api_result_has("script"))        {
+            goto err;
+        }
+        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
+            goto err;
+        }
     }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
-    if (!api_result_has("2FA")) { goto err; }
+    if (!api_result_has("2FA")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("sign")) { goto err; }  
-        if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) { goto err; }  
-        if (!api_result_has("pubkey")) { goto err; }  
-        if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) { goto err; }  
-    } 
+        if (!api_result_has("sign")) {
+            goto err;
+        }
+        if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+            goto err;
+        }
+        if (!api_result_has("pubkey")) {
+            goto err;
+        }
+        if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) {
+            goto err;
+        }
+    }
 
-    // sign using two inputs 
+    // sign using two inputs
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("echo")) { goto err; }  
+    if (!api_result_has("echo")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
         memory_write_aeskey(api_read_value(CMD_pin_), 4, PASSWORD_2FA);
-        if (!api_result_has("verify_output")) { goto err; }
-        if (!api_result_has("value"))         { goto err; }
-        if (!api_result_has("200"))           { goto err; }
-        if (!api_result_has("script"))        { goto err; }
-        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) { goto err; }
+        if (!api_result_has("verify_output")) {
+            goto err;
+        }
+        if (!api_result_has("value"))         {
+            goto err;
+        }
+        if (!api_result_has("200"))           {
+            goto err;
+        }
+        if (!api_result_has("script"))        {
+            goto err;
+        }
+        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
+            goto err;
+        }
     }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("2FA")) { goto err; }
+    if (!api_result_has("2FA")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("sign")) { goto err; }  
-        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) { goto err; }  
-        if (!api_result_has("pubkey")) { goto err; }  
-        if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) { goto err; }  
+        if (!api_result_has("sign")) {
+            goto err;
+        }
+        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+            goto err;
+        }
+        if (!api_result_has("pubkey")) {
+            goto err;
+        }
+        if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
+            goto err;
+        }
     }
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"} }", PASSWORD_STAND);
-    if (!api_result_has("2FA")) { goto err; }
+    if (!api_result_has("2FA")) {
+        goto err;
+    }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("sign")) { goto err; }  
-        if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) { goto err; }  
-        if (!api_result_has("pubkey")) { goto err; }  
-        if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) { goto err; }  
+        if (!api_result_has("sign")) {
+            goto err;
+        }
+        if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+            goto err;
+        }
+        if (!api_result_has("pubkey")) {
+            goto err;
+        }
+        if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) {
+            goto err;
+        }
     }
 
 
     api_print_result("tests_sign", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_sign", "FAIL");
     api_print_result("tests_sign", utils_read_decrypted_report());
 }
-    
-    
 
-// test vectors generated from Python 2.7 code using aes, base64, and hashlib imports 
+
+
+// test vectors generated from Python 2.7 code using aes, base64, and hashlib imports
 static void tests_aes_cbc(void)
 {
-	const char **plainp, **cipherp;
+    const char **plainp, **cipherp;
 
     char encrypt[] = "{\"type\":\"encrypt\", \"data\":\"";
     char decrypt[] = "{\"type\":\"decrypt\", \"data\":\"";
@@ -688,85 +1090,127 @@ static void tests_aes_cbc(void)
     memset(enc, 0, sizeof(enc));
     memset(dec, 0, sizeof(dec));
 
-	static const char *aes_vector[] = {
-		// plain                cipher (for 'passwordpassword')
+    static const char *aes_vector[] = {
+        // plain                cipher (for 'passwordpassword')
         "digital bitbox", "mheIJghfKiPxQpvqbbRCZnTkbMd+BdRf+1jDAjk9h2Y=",
         "Satoshi Nakamoto", "28XHUwA+/5zHeSIxt1Ioaifl/BqWsTow1hrzJJ7p91EgYbw6MwzFMlLOWq22fUsw",
         "All those moments will be lost in time, like tears in rain. Time to die...", "qjfyIWCoY8caehZFoZStmtDz6FaKYCaCrJXyiF6I2LwnLPVV9oGv9NtJ7aVXAICeP0Q2Agh0oPlbBLKfjkdtZGuwV/tya7KcIl1ieC/276JwRl2+XdkK3uBb2Yrljl4T",
-        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!", "biR4Ce1vnvrYAOQRwO+bW4aXiySH4plHVc9LlN8hJAb/q6Tw0x6aI+A7EeOF5a11EPTjJ454nREZ9S4nIBwlGDto2GrEq+TwQOpKb/YU1VxeGGlFLg8comVnVSPmNQ1WNX/E5bnNX8osgF69QFxOgaPzfLdKGr4isUBVO3BlOPV4oUmIUc7+DC5PwabWV4XrxLQzzw79KRxL3iPk4Tbk3CDxDBgE5Z7HlvZfTM5J9d7majdQTMtHYP7d1MJZblyTkB1R7DemQhf7xHllkSXwHattstz/d1NmgGQXHlISoPs=",	
+        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!", "biR4Ce1vnvrYAOQRwO+bW4aXiySH4plHVc9LlN8hJAb/q6Tw0x6aI+A7EeOF5a11EPTjJ454nREZ9S4nIBwlGDto2GrEq+TwQOpKb/YU1VxeGGlFLg8comVnVSPmNQ1WNX/E5bnNX8osgF69QFxOgaPzfLdKGr4isUBVO3BlOPV4oUmIUc7+DC5PwabWV4XrxLQzzw79KRxL3iPk4Tbk3CDxDBgE5Z7HlvZfTM5J9d7majdQTMtHYP7d1MJZblyTkB1R7DemQhf7xHllkSXwHattstz/d1NmgGQXHlISoPs=",
         0, 0,
-	};
-	
+    };
+
     api_reset_device();
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);  if (api_result_has("error")) { goto err; }
-    
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
+    if (api_result_has("error")) {
+        goto err;
+    }
+
     memcpy(dec, decrypt, strlen(decrypt));
-    strcat(dec, "password not set error\"}");   
-    api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);      if (!api_result_has(FLAG_ERR_NO_PASSWORD)) { goto err; }
-    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);     if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
+    strcat(dec, "password not set error\"}");
+    api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_NO_PASSWORD)) {
+        goto err;
+    }
+    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_BIP32_MISSING)) {
+        goto err;
+    }
     api_format_send_cmd("seed", "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND);
-    if (api_result_has("error")) { goto err; }
-    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);     if ( api_result_has("error")) { goto err; }
-    api_format_send_cmd("aes256cbc", password, PASSWORD_STAND); if ( api_result_has("error")) { goto err; }
-    api_format_send_cmd("aes256cbc", "type", PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    api_format_send_cmd("aes256cbc", "", PASSWORD_STAND);       if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
+    if (api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);
+    if ( api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("aes256cbc", password, PASSWORD_STAND);
+    if ( api_result_has("error")) {
+        goto err;
+    }
+    api_format_send_cmd("aes256cbc", "type", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("aes256cbc", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
 
 
     memcpy(enc, encrypt, strlen(encrypt));
-    memset(enc + strlen(encrypt), 'a', DATA_LEN_MAX + 1);   
+    memset(enc + strlen(encrypt), 'a', DATA_LEN_MAX + 1);
     strcat(enc, "\"}");
-    api_format_send_cmd("aes256cbc", enc, PASSWORD_STAND);      
-    if (!api_result_has(FLAG_ERR_DATA_LEN)) { goto err; }
-    
-    api_format_send_cmd("aes256cbc", "{\"type\":\"\", \"data\":\"\"}", PASSWORD_STAND);         
-    if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    
-    api_format_send_cmd("aes256cbc", "{\"type\":\"encrypt\", \"data\":\"\"}", PASSWORD_STAND);  
-    if (api_result_has("error")) { goto err; }
-    
-    api_format_send_cmd("aes256cbc", "{\"type\":\"decrypt\", \"data\":\"\"}", PASSWORD_STAND); 
-    if (!api_result_has(FLAG_ERR_DECRYPT)) { goto err; }
+    api_format_send_cmd("aes256cbc", enc, PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DATA_LEN)) {
+        goto err;
+    }
+
+    api_format_send_cmd("aes256cbc", "{\"type\":\"\", \"data\":\"\"}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+
+    api_format_send_cmd("aes256cbc", "{\"type\":\"encrypt\", \"data\":\"\"}", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+
+    api_format_send_cmd("aes256cbc", "{\"type\":\"decrypt\", \"data\":\"\"}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_DECRYPT)) {
+        goto err;
+    }
 
     plainp = aes_vector;
-	cipherp = aes_vector + 1;
-	while (*plainp && *cipherp) {
+    cipherp = aes_vector + 1;
+    while (*plainp && *cipherp) {
 
-        // check decryption 
+        // check decryption
         memset(dec, 0, sizeof(dec));
         memcpy(dec, decrypt, strlen(decrypt));
         memcpy(dec + strlen(decrypt), *cipherp, strlen(*cipherp));
-        strcat(dec, "\"}");   
-        
-        api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND); 
-        if (api_result_has("error")) { goto err; }
-        if (memcmp(*plainp, api_read_value(CMD_aes256cbc_), strlen(*plainp))) { goto err; }
+        strcat(dec, "\"}");
+
+        api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);
+        if (api_result_has("error")) {
+            goto err;
+        }
+        if (memcmp(*plainp, api_read_value(CMD_aes256cbc_), strlen(*plainp))) {
+            goto err;
+        }
 
         // check encryption by encrypting then decrypting
         memset(enc, 0, sizeof(enc));
         memcpy(enc, encrypt, strlen(encrypt));
         memcpy(enc + strlen(encrypt), *plainp, strlen(*plainp));
-        strcat(enc, "\"}");   
-        
-        api_format_send_cmd("aes256cbc", enc, PASSWORD_STAND); 
-        if (api_result_has("error")) { goto err; }
-        
+        strcat(enc, "\"}");
+
+        api_format_send_cmd("aes256cbc", enc, PASSWORD_STAND);
+        if (api_result_has("error")) {
+            goto err;
+        }
+
         const char *e = api_read_value(CMD_aes256cbc_);
 
         memset(dec, 0, sizeof(dec));
         memcpy(dec, decrypt, strlen(decrypt));
         memcpy(dec + strlen(decrypt), e, strlen(e));
-        
-        api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND); 
-        if (api_result_has("error")) { goto err; }
-        if (memcmp(*plainp, api_read_value(CMD_aes256cbc_), strlen(*plainp))) { goto err; }
+
+        api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);
+        if (api_result_has("error")) {
+            goto err;
+        }
+        if (memcmp(*plainp, api_read_value(CMD_aes256cbc_), strlen(*plainp))) {
+            goto err;
+        }
 
 
-        plainp += 2; cipherp += 2;
-	}
-    
+        plainp += 2;
+        cipherp += 2;
+    }
+
     api_print_result("tests_aes_cbc", "OK");
     return;
-    
+
 err:
     TESTS_FAIL++;
     api_print_result("tests_aes_cbc", "FAIL");
@@ -791,14 +1235,14 @@ static void tests_run(void)
 
 int main(void)
 {
-    // Test the C code API  
+    // Test the C code API
     TEST_LIVE_DEVICE = 0;
     random_init();
     memory_setup();
     printf("\n\nInternal API Result:\n");
     tests_run();
-  
-    
+
+
 #ifndef TRAVIS_BUILD
     // Live test of the HID API
     // Requires the hidapi library to be installed:
@@ -812,6 +1256,6 @@ int main(void)
         tests_run();
     }
 #endif
-    
+
     return TESTS_FAIL;
 }

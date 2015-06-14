@@ -1,7 +1,7 @@
 /*
 
  The MIT License (MIT)
- 
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -106,7 +106,7 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define ATTR_NUM     ATTR_none_
 
 
-enum REPORT_FLAGS { 
+enum REPORT_FLAGS {
     SUCCESS, ERROR, ERROR_MEM,
     ECHO,
     SAME, DIFFERENT, NEXT,

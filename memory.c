@@ -70,16 +70,16 @@ void memory_setup(void)
     if (memory_read_setup()) {
         memory_erase();
 #ifndef TESTING
-		// Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
-		const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00}; 
-		// Return packet [Count(1) || Return Code (1) || CRC (2)]
-		uint8_t ataes_ret[4] = {0}; 
-		aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
+        // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
+        const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
+        // Return packet [Count(1) || Return Code (1) || CRC (2)]
+        uint8_t ataes_ret[4] = {0};
+        aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
 #endif
         memory_write_setup(0x00);
     } else {
-		memory_mempass();
-	}
+        memory_mempass();
+    }
 }
 
 
@@ -123,35 +123,35 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
 {
 #ifndef TESTING
     // read current memory
-	aes_eeprom(len, addr, read_b, NULL);
+    aes_eeprom(len, addr, read_b, NULL);
 #endif
-    if (write_b){
+    if (write_b) {
 #ifndef TESTING
         // skip writing if memory does not change
         if (read_b) {
-            if (!memcmp(read_b, write_b, len)){
-                return 1; 
+            if (!memcmp(read_b, write_b, len)) {
+                return 1;
             }
         }
         aes_eeprom(len, addr, read_b, write_b);
         if (read_b) {
-            if (!memcmp(write_b, read_b, len)){
+            if (!memcmp(write_b, read_b, len)) {
                 return 1;
-            } else { 
-                // error 
+            } else {
+                // error
                 if (len>2) {
                     memcpy(read_b, MEM_PAGE_ERASE, len);
                 }
                 return 0;
             }
         }
-#else        
+#else
         memcpy(read_b, write_b, len);
-        (void) addr; 
-        return 1; 
+        (void) addr;
+        return 1;
 #endif
-	} 
-    return 1; 
+    }
+    return 1;
 }
 
 
@@ -163,14 +163,14 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
     if (read_b) {
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_r, enc, enc_len);
-        free(enc); 
+        free(enc);
     }
 
     if (write_b) {
         char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN), MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
         memcpy(enc_w, enc, enc_len);
-        free(enc); 
+        free(enc);
         ret = ret * memory_eeprom((uint8_t *)enc_w,                    (uint8_t *)enc_r,                    addr,                    MEM_PAGE_LEN);
         ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN,     (uint8_t *)enc_r + MEM_PAGE_LEN,     addr + MEM_PAGE_LEN,     MEM_PAGE_LEN);
         ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 2, (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
@@ -188,19 +188,19 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b, const in
     } else {
         ret = 0;
     }
-    free(dec);							
+    free(dec);
     return ret; // 1 on success
 }
 
 
 void memory_mempass(void)
 {
-	uint8_t mempass[88] = {0};
+    uint8_t mempass[88] = {0};
 #ifndef TESTING
-	// Encrypt data saved to memory using an AES key obfuscated by the
-	// compilation time and date, which is used to 'randomly' read bytes  
-	// (i.e. the AES key) from the MCU code in flash memory.
-	uint8_t *mp = mempass;
+    // Encrypt data saved to memory using an AES key obfuscated by the
+    // compilation time and date, which is used to 'randomly' read bytes
+    // (i.e. the AES key) from the MCU code in flash memory.
+    uint8_t *mp = mempass;
     int r[8] = {0};
     char c[3] = {0};
     sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
@@ -210,18 +210,18 @@ void memory_mempass(void)
     r[5] = c[1];
     r[6] = c[2];
     memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
-	memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
-	memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
-	memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
-	memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
-	memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
-	memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
-	memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
-	memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
-	memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
-	memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
+    memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
+    memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
+    memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
+    memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
+    memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
+    memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
+    memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
+    memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
+    memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
+    memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
 #endif
-	memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
+    memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2, PASSWORD_MEMORY);
 }
 
 
@@ -231,7 +231,7 @@ uint8_t *memory_name(const char *name)
     if (strlen(name)) {
         memcpy(name_b, name, (strlen(name)>MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlen(name));
         memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
-    } else {   
+    } else {
         memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
     }
     return MEM_name_;
@@ -255,16 +255,16 @@ uint8_t *memory_chaincode(const uint8_t *chain)
 uint16_t *memory_mnemonic(const uint16_t *idx)
 {
     if (idx) {
-        memory_eeprom_crypt((uint8_t *)idx, (uint8_t *)MEM_mnemonic_, 
-							MEM_MNEMONIC_BIP32_ADDR_0);
-        memory_eeprom_crypt((uint8_t *)idx + MEM_PAGE_LEN, 
-							(uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
-							MEM_MNEMONIC_BIP32_ADDR_1);
+        memory_eeprom_crypt((uint8_t *)idx, (uint8_t *)MEM_mnemonic_,
+                            MEM_MNEMONIC_BIP32_ADDR_0);
+        memory_eeprom_crypt((uint8_t *)idx + MEM_PAGE_LEN,
+                            (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
+                            MEM_MNEMONIC_BIP32_ADDR_1);
     } else {
-        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_, 
-							MEM_MNEMONIC_BIP32_ADDR_0);
-        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN, 
-							MEM_MNEMONIC_BIP32_ADDR_1);
+        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_,
+                            MEM_MNEMONIC_BIP32_ADDR_0);
+        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
+                            MEM_MNEMONIC_BIP32_ADDR_1);
     }
     return MEM_mnemonic_;
 }
@@ -273,8 +273,8 @@ uint16_t *memory_mnemonic(const uint16_t *idx)
 int memory_aeskey_is_erased(PASSWORD_ID id)
 {
     uint8_t mem_aeskey_erased[MEM_PAGE_LEN];
-	sha256_Raw((uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
-	sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
+    sha256_Raw((uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
+    sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
 
     if (memcmp(memory_read_aeskey(id), mem_aeskey_erased, 32)) {
         return NOT_ERASED;
@@ -286,52 +286,52 @@ int memory_aeskey_is_erased(PASSWORD_ID id)
 
 int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
-	int ret = 0;
+    int ret = 0;
     uint8_t password_b[MEM_PAGE_LEN];
-	memset(password_b, 0, MEM_PAGE_LEN);
-   
+    memset(password_b, 0, MEM_PAGE_LEN);
 
-	if (!password) {
-		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-		return ERROR;
-	}
 
-	if (len < PASSWORD_LEN_MIN) {
-		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-		return ERROR;
-	}
+    if (!password) {
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
+        return ERROR;
+    }
 
-	if (strlen(password) < PASSWORD_LEN_MIN) {
-		commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-		return ERROR;
-	}
-    
-	sha256_Raw((uint8_t *)password, len, password_b);
-	sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
+    if (len < PASSWORD_LEN_MIN) {
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
+        return ERROR;
+    }
+
+    if (strlen(password) < PASSWORD_LEN_MIN) {
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
+        return ERROR;
+    }
+
+    sha256_Raw((uint8_t *)password, len, password_b);
+    sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
     switch ((int)id) {
-        case PASSWORD_MEMORY:
-            memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
-            ret = 1;
-            break;        
-        case PASSWORD_2FA:
-            memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
-            ret = 1;
-            break;
-        case PASSWORD_STAND:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
-            break;
-        case PASSWORD_CRYPT:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
-            break;
-        case PASSWORD_VERIFY:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
-            break;
+    case PASSWORD_MEMORY:
+        memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
+        ret = 1;
+        break;
+    case PASSWORD_2FA:
+        memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
+        ret = 1;
+        break;
+    case PASSWORD_STAND:
+        ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
+        break;
+    case PASSWORD_CRYPT:
+        ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
+        break;
+    case PASSWORD_VERIFY:
+        ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
+        break;
     }
 
     if (ret) {
         return SUCCESS;
-    } else { 
+    } else {
         commander_fill_report("password", FLAG_ERR_ATAES, ERROR);
         return ERROR;
     }
@@ -340,19 +340,19 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 uint8_t *memory_read_aeskey(PASSWORD_ID id)
 {
     switch ((int)id) {
-        case PASSWORD_MEMORY:
-            return MEM_aeskey_memory_;        
-        case PASSWORD_2FA:
-            return MEM_aeskey_2FA_;
-        case PASSWORD_STAND:
-            memory_eeprom_crypt(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
-            return MEM_aeskey_stand_;
-        case PASSWORD_CRYPT:
-            memory_eeprom_crypt(NULL, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
-            return MEM_aeskey_crypt_;
-        case PASSWORD_VERIFY:
-            memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
-            return MEM_aeskey_verify_;
+    case PASSWORD_MEMORY:
+        return MEM_aeskey_memory_;
+    case PASSWORD_2FA:
+        return MEM_aeskey_2FA_;
+    case PASSWORD_STAND:
+        memory_eeprom_crypt(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
+        return MEM_aeskey_stand_;
+    case PASSWORD_CRYPT:
+        memory_eeprom_crypt(NULL, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
+        return MEM_aeskey_crypt_;
+    case PASSWORD_VERIFY:
+        memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
+        return MEM_aeskey_verify_;
     }
     return 0;
 }
@@ -387,7 +387,7 @@ void memory_write_erased(const uint8_t erased)
 uint8_t memory_read_erased(void)
 {
     memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
-    return MEM_erased_;     
+    return MEM_erased_;
 }
 
 
@@ -398,7 +398,7 @@ void memory_write_led(const uint8_t led)
 int memory_read_led(void)
 {
     memory_eeprom(NULL, &MEM_led_, MEM_LED_ADDR, 1);
-    return MEM_led_;       
+    return MEM_led_;
 }
 
 
@@ -431,12 +431,12 @@ uint16_t memory_access_err_count(const uint8_t access)
     if (access == ITERATE) {
         memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
         err_count = MEM_access_err_ + 1;
-	} else if (access == INITIALIZE){
+    } else if (access == INITIALIZE) {
         err_count = 0;
     } else {
         err_count = COMMANDER_MAX_ATTEMPTS; // corrupted input
     }
-    
+
     // Force reset after too many failed attempts
     if (err_count >= COMMANDER_MAX_ATTEMPTS) {
         commander_force_reset();

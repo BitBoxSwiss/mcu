@@ -70,8 +70,8 @@ typedef uint_8t return_type;
 
 typedef uint_8t length_type;
 
-typedef struct
-{   uint_8t ksch[(N_MAX_ROUNDS + 1) * N_BLOCK];
+typedef struct {
+    uint_8t ksch[(N_MAX_ROUNDS + 1) * N_BLOCK];
     uint_8t rnd;
 } aes_context;
 
@@ -97,10 +97,10 @@ return_type aes_encrypt( const unsigned char in[N_BLOCK],
                          const aes_context ctx[1] );
 
 return_type aes_cbc_encrypt( const unsigned char *in,
-                         unsigned char *out,
-                         int n_block,
-                         unsigned char iv[N_BLOCK],
-                         const aes_context ctx[1] );
+                             unsigned char *out,
+                             int n_block,
+                             unsigned char iv[N_BLOCK],
+                             const aes_context ctx[1] );
 #endif
 
 #if defined( AES_DEC_PREKEYED )
@@ -110,10 +110,10 @@ return_type aes_decrypt( const unsigned char in[N_BLOCK],
                          const aes_context ctx[1] );
 
 return_type aes_cbc_decrypt( const unsigned char *in,
-                         unsigned char *out,
-                         int n_block,
-                         unsigned char iv[N_BLOCK],
-                         const aes_context ctx[1] );
+                             unsigned char *out,
+                             int n_block,
+                             unsigned char iv[N_BLOCK],
+                             const aes_context ctx[1] );
 #endif
 
 /*  The following calls are for 'on the fly' keying.  In this case the

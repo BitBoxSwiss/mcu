@@ -1,5 +1,5 @@
 /*
- 
+
  The MIT License (MIT)
 
  Copyright (c) 2015 Douglas J. Bakkum
@@ -43,9 +43,9 @@ void random_init(void)
 }
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
-	(void) update_seed;
+    (void) update_seed;
     if (fread(buf, 1, len, f) != len) {
-      return 1; // error
+        return 1; // error
     }
     return 0;
 }
@@ -60,17 +60,17 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
     uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
-    
+
     uint32_t cnt = 0;
     while (len > cnt) {
-        if (update_seed) {  
+        if (update_seed) {
             aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
         } else {
             aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ataes_ret[0]) {
-            memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16); 
+            memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16);
         } else {
             return 1; // error
         }
@@ -82,7 +82,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 #endif
 
 
-/* 
+/*
    Adapted from:
    http://benpfaff.org/writings/clc/shuffle.html
 */
@@ -94,10 +94,10 @@ void random_shuffle(int *array, size_t n)
     if (n > 1) {
         size_t i;
         for (i = 0; i < n - 1; i++) {
-          size_t j = i + (r[i % r_len] + (r[i % r_len + 1] << 8)) / (65536 / (n - i) + 1);
-          int t = array[j];
-          array[j] = array[i];
-          array[i] = t;
+            size_t j = i + (r[i % r_len] + (r[i % r_len + 1] << 8)) / (65536 / (n - i) + 1);
+            int t = array[j];
+            array[j] = array[i];
+            array[i] = t;
         }
     }
 }

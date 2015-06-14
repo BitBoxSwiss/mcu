@@ -94,6 +94,7 @@
         ATTR(decrypt)           \
         ATTR(encrypt)           \
         ATTR(password)          \
+        ATTR(xpub)              \
         ATTR(__ERASE__)         \
         ATTR(__FORCE__)         \
         ATTR(none)               /* keep last */

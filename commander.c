@@ -597,6 +597,17 @@ static void commander_process_aes256cbc(const char *message)
             commander_fill_report("aes256cbc", "success", SUCCESS);
         }
     } 
+    else if (strncmp(type, ATTR_STR[ATTR_xpub_], strlen(ATTR_STR[ATTR_xpub_])) == 0) {
+        char xpub[112] = {0};
+        wallet_report_xpub(data, data_len, xpub);            
+        if (xpub[0]) {
+            if (commander_process_password(xpub, 112, PASSWORD_CRYPT) == SUCCESS) {
+                commander_fill_report("aes256cbc", "success", SUCCESS);
+            }
+        } else {
+            commander_fill_report("aes256cbc", FLAG_ERR_BIP32_MISSING, ERROR);
+        }
+    }     
     else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == ERASED) {
         commander_fill_report("aes256cbc", FLAG_ERR_NO_PASSWORD, ERROR);
     } 

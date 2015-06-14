@@ -680,15 +680,16 @@ static void tests_aes_cbc(void)
 {
 	const char **plainp, **cipherp;
 
-    char password[] = "{\"type\":\"password\", \"data\":\"passwordpassword\"}";
     char encrypt[] = "{\"type\":\"encrypt\", \"data\":\"";
     char decrypt[] = "{\"type\":\"decrypt\", \"data\":\"";
+    char password[] = "{\"type\":\"password\", \"data\":\"passwordpassword\"}";
+    char xpub[] = "{\"type\":\"xpub\", \"data\":\"m/0'\"}";
     char enc[COMMANDER_REPORT_SIZE * 2], dec[COMMANDER_REPORT_SIZE * 2];
     memset(enc, 0, sizeof(enc));
     memset(dec, 0, sizeof(dec));
 
 	static const char *aes_vector[] = {
-		// plain                               cipher
+		// plain                cipher (for 'passwordpassword')
         "digital bitbox", "mheIJghfKiPxQpvqbbRCZnTkbMd+BdRf+1jDAjk9h2Y=",
         "Satoshi Nakamoto", "28XHUwA+/5zHeSIxt1Ioaifl/BqWsTow1hrzJJ7p91EgYbw6MwzFMlLOWq22fUsw",
         "All those moments will be lost in time, like tears in rain. Time to die...", "qjfyIWCoY8caehZFoZStmtDz6FaKYCaCrJXyiF6I2LwnLPVV9oGv9NtJ7aVXAICeP0Q2Agh0oPlbBLKfjkdtZGuwV/tya7KcIl1ieC/276JwRl2+XdkK3uBb2Yrljl4T",
@@ -702,10 +703,15 @@ static void tests_aes_cbc(void)
     memcpy(dec, decrypt, strlen(decrypt));
     strcat(dec, "password not set error\"}");   
     api_format_send_cmd("aes256cbc", dec, PASSWORD_STAND);      if (!api_result_has(FLAG_ERR_NO_PASSWORD)) { goto err; }
+    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);     if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
+    api_format_send_cmd("seed", "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}", PASSWORD_STAND);
+    if (api_result_has("error")) { goto err; }
+    api_format_send_cmd("aes256cbc", xpub, PASSWORD_STAND);     if ( api_result_has("error")) { goto err; }
     api_format_send_cmd("aes256cbc", password, PASSWORD_STAND); if ( api_result_has("error")) { goto err; }
     api_format_send_cmd("aes256cbc", "type", PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
     api_format_send_cmd("aes256cbc", "", PASSWORD_STAND);       if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }
-    
+
+
     memcpy(enc, encrypt, strlen(encrypt));
     memset(enc + strlen(encrypt), 'a', DATA_LEN_MAX + 1);   
     strcat(enc, "\"}");
@@ -720,7 +726,6 @@ static void tests_aes_cbc(void)
     
     api_format_send_cmd("aes256cbc", "{\"type\":\"decrypt\", \"data\":\"\"}", PASSWORD_STAND); 
     if (!api_result_has(FLAG_ERR_DECRYPT)) { goto err; }
-
 
     plainp = aes_vector;
 	cipherp = aes_vector + 1;

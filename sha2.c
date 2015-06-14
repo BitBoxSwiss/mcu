@@ -580,12 +580,11 @@ void sha256_Final(sha2_byte digest[], SHA256_CTX* context) {
 
 char *sha256_End(SHA256_CTX* context, char buffer[]) {
 	sha2_byte	digest[SHA256_DIGEST_LENGTH], *d = digest;
-	int		i;
 
 	if (buffer != (char*)0) {
 		sha256_Final(digest, context);
 
-		for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+		for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
 			*buffer++ = sha2_hex_digits[(*d & 0xf0) >> 4];
 			*buffer++ = sha2_hex_digits[*d & 0x0f];
 			d++;
@@ -909,12 +908,11 @@ void sha512_Final(sha2_byte digest[], SHA512_CTX* context) {
 
 char *sha512_End(SHA512_CTX* context, char buffer[]) {
 	sha2_byte	digest[SHA512_DIGEST_LENGTH], *d = digest;
-	int		i;
 
 	if (buffer != (char*)0) {
 		sha512_Final(digest, context);
 
-		for (i = 0; i < SHA512_DIGEST_LENGTH; i++) {
+		for (int i = 0; i < SHA512_DIGEST_LENGTH; i++) {
 			*buffer++ = sha2_hex_digits[(*d & 0xf0) >> 4];
 			*buffer++ = sha2_hex_digits[*d & 0x0f];
 			d++;

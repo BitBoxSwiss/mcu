@@ -166,7 +166,7 @@ char *utils_read_decrypted_report(void)
 
 void utils_decrypt_report(const char *report)
 {
-    int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i, len;
+    int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i;
     char *dec, *pin, *tfa, *dec_tfa;
     jsmntok_t json_token[MAX_TOKENS];
     
@@ -179,7 +179,7 @@ void utils_decrypt_report(const char *report)
     }
     
     for (i = 0; i < r; i++) {
-        len = json_token[i + 1].end - json_token[i + 1].start;
+        int len = json_token[i + 1].end - json_token[i + 1].start;
         if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
             memcpy(decrypted_report, report + json_token[i + 1].start, len);
             decrypted_report[len] = '\0';

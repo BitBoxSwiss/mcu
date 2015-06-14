@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
 	uint32_t i, j, p_len = 0;
 	SHA256_CTX sha256;
 	EC_GROUP *ecgroup;
-    EC_KEY *eckey;
 	int cnt = 0, err = 0;
 
 	random_init();
@@ -62,7 +61,7 @@ int main(int argc, char *argv[])
         random_bytes(msg, msg_len, 0);
         
         // new ECDSA key
-		eckey = EC_KEY_new();
+		EC_KEY * eckey = EC_KEY_new();
 		EC_KEY_set_group(eckey, ecgroup);
 
 		// generate the key

@@ -124,6 +124,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_NO_PASSWORD        "Please set a password."
 #define FLAG_ERR_NO_INPUT           "No input received."
 #define FLAG_ERR_DATA_LEN           "Data must be less than " STRINGIFY(DATA_LEN_MAX)" characters."
+#define FLAG_ERR_REPORT_BUFFER      "{\"output\":{\"error\":\"Output report buffer overflow.\"}}"
 #define FLAG_ERR_JSON_PARSE         "JSON parse error."
 #define FLAG_ERR_JSON_BRACKET       "Is the command enclosed by curly brackets?"
 #define FLAG_ERR_INVALID_CMD        "Invalid command."

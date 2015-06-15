@@ -51,6 +51,7 @@ void commander_create_verifypass(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey);
 void commander_force_reset(void);
+int commander_test_static_functions(void);
 char *commander(const char *command);
 
 

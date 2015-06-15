@@ -157,7 +157,7 @@ static void commander_clear_report(void)
 }
 
 
-static void commander_fill_report_len(const char *attr, const char *val, int err, int vallen)
+static void commander_fill_report_len(const char *attr, const char *val, int err, size_t vallen)
 {
     size_t len = strlen(json_report);
     if (len == 0) {
@@ -166,10 +166,10 @@ static void commander_fill_report_len(const char *attr, const char *val, int err
         json_report[len - 1] = ','; // replace closing '}' with continuing ','
     }
 
-    if (len > (COMMANDER_REPORT_SIZE - (21 + strlen(attr) + strlen(val))) || len > (COMMANDER_REPORT_SIZE - 128)) {
-        // TEST the overflow error condition
+    if (COMMANDER_REPORT_SIZE < (vallen + strlen(attr) + len + 
+                                (22 < strlen(FLAG_ERR_REPORT_BUFFER) ? strlen(FLAG_ERR_REPORT_BUFFER) : 22))) {
         if (!REPORT_BUF_OVERFLOW) {
-            strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
+            strcat(json_report, FLAG_ERR_REPORT_BUFFER);     
             REPORT_BUF_OVERFLOW = 1;
         }
     } else {
@@ -207,31 +207,13 @@ void commander_fill_report(const char *attr, const char *val, int err)
 
 void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
 {
-    size_t len = strlen(json_report);
-    if (len == 0) {
-        strncat(json_report, "{", 1);
-    } else {    
-        json_report[len - 1] = ','; // replace closing '}' with continuing ','
-    }
-    
-    if (len > (COMMANDER_REPORT_SIZE - (40 + 64 + 33))) {
-        if (!REPORT_BUF_OVERFLOW) {
-            strcat(json_report, "{ \"output\":{ \"error\":\"Buffer overflow.\"} }");
-            REPORT_BUF_OVERFLOW = 1;
-        }
-    } else {
-        strcat(json_report, " \"sign\": {");
-        
-        strcat(json_report, "\"sig\":\"");
-        strncat(json_report, utils_uint8_to_hex(sig, 64), 128);
-        strcat(json_report, "\", ");
-
-        strcat(json_report, "\"pubkey\":\"");
-        strncat(json_report, utils_uint8_to_hex(pubkey, 33), 66);
-        strcat(json_report, "\"");
-        
-        strcat(json_report, "} }");
-    }
+    char report[128 + 66 + 24] = {0};
+    strcat(report, "{\"sig\":\"");
+    strncat(report, utils_uint8_to_hex(sig, 64), 128);
+    strcat(report, "\", \"pubkey\":\"");
+    strncat(report, utils_uint8_to_hex(pubkey, 33), 66);
+    strcat(report, "\"}");
+    commander_fill_report("sign", report, SUCCESS);
 }
 
 
@@ -701,6 +683,7 @@ static int commander_process(int cmd, char *message)
             commander_process_aes256cbc(message);
             break;
         
+        /*
         case CMD_touchbutton_:
             touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000, 
                                     jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
@@ -708,8 +691,56 @@ static int commander_process(int cmd, char *message)
 
         case CMD_none_:
             break;
+        */
     }
     return SUCCESS;
+}
+
+
+//
+//  Unit testing
+//
+
+int commander_test_static_functions(void)
+{
+    // test null input
+    commander_clear_report(); commander_process_led(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_xpub(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_seed(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_sign(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_backup(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_random(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_device(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_aes256cbc(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_verifypass(NULL); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    
+    commander_clear_report(); commander_process_led(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_xpub(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_seed(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_sign(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_backup(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_random(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_device(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_aes256cbc(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    commander_clear_report(); commander_process_verifypass(""); if (!strstr(json_report, FLAG_ERR_INVALID_CMD)) {goto err;}
+    
+    // test json_report overflows
+    char val[] = { [0 ... COMMANDER_REPORT_SIZE] = '1' }; 
+    commander_clear_report(); 
+    commander_fill_report_len("testing", val, SUCCESS, COMMANDER_REPORT_SIZE / 2);
+    commander_fill_report_len("testing", val, SUCCESS, COMMANDER_REPORT_SIZE / 2);
+    if (!strstr(json_report, FLAG_ERR_REPORT_BUFFER)) {goto err;}
+    
+    uint8_t sig[64] = {0};
+	uint8_t pubkey[33] = {0};
+    commander_clear_report(); 
+    commander_fill_report_len("testing", val, SUCCESS, COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlen(FLAG_ERR_REPORT_BUFFER));
+    commander_fill_report_signature(sig, pubkey);
+    if (!strstr(json_report, FLAG_ERR_REPORT_BUFFER)) {goto err;}
+    
+    return 0;
+err:
+    return 1;
 }
 
 
@@ -1024,13 +1055,13 @@ static int commander_check_init(const char *encrypted_command)
     if (strstr(encrypted_command, CMD_STR[CMD_password_]) != NULL) {
         int pw_len;
         const char *pw = jsmn_get_value_string(encrypted_command, CMD_STR[CMD_password_], &pw_len);
-        if (pw != NULL) {
+        if (pw != NULL && pw_len > 0) {
             if (commander_process_password(pw, pw_len, PASSWORD_STAND) == SUCCESS) { 
                 memory_write_erased(0); 
                 commander_fill_report(CMD_STR[CMD_password_], "success", SUCCESS);
             }
         } else {
-            commander_fill_report("input", FLAG_ERR_JSON_PARSE, ERROR);
+            commander_fill_report("input", FLAG_ERR_INVALID_CMD, ERROR);
         }
     } else {
         commander_fill_report("input", FLAG_ERR_NO_PASSWORD, ERROR);

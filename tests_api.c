@@ -39,14 +39,15 @@
 #include "commander.h"
 
 
-#define HID_MAX_STR       255
-#define HID_REPORT_SIZE	  2048
+#define HID_REPORT_SIZE	  COMMANDER_REPORT_SIZE
 
 extern const char *CMD_STR[];
 
 static const char tests_pwd[] = "0000";
+static char command_sent[COMMANDER_REPORT_SIZE] = {0};
 static int TEST_LIVE_DEVICE = 0;
 static int TESTS_FAIL = 0;
+
 
 
 #ifndef TRAVIS_BUILD
@@ -105,16 +106,26 @@ static void api_hid_send_encrypt(const char *cmd)
 #endif
 
 
-static void api_print_result(const char *attr, const char *val)
+static void api_print_result(const char *attr, int result)
 {
-    printf("%s:\t%s\n", attr, val);
+    if (result == SUCCESS) {
+        printf("%s:\tOK\n", attr);
+    } else {
+        printf("%s:\tFAIL\n", attr);
+        printf("\t\tCommand:  %s\n", command_sent);
+        printf("\t\tResponse: %s\n", utils_read_decrypted_report());
+        TESTS_FAIL++;
+    }
     return;
 }
 
 
 static void api_send_cmd(const char *command, PASSWORD_ID id)
 {
-    //printf("\nsending:   %i  >>%s<<\n", id, command);
+    memset(command_sent, 0, sizeof(command_sent));
+    if (command) {
+        memcpy(command_sent, command, strlen(command));
+    }
     if (!TEST_LIVE_DEVICE) {
         utils_send_cmd(command, id);
     }
@@ -272,6 +283,7 @@ static void tests_seed_xpub_backup(void)
         api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error")) { goto err; }
         memset(xpub0, 0, sizeof(xpub0));
         memset(xpub1, 0, sizeof(xpub1));
+        api_format_send_cmd("backup", back, PASSWORD_STAND);         if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
         
         // create
         api_format_send_cmd("xpub", keypath, PASSWORD_STAND);        if (!api_result_has(FLAG_ERR_BIP32_MISSING)) { goto err; }
@@ -309,6 +321,7 @@ static void tests_seed_xpub_backup(void)
         mnemo += 4;
     } 
    
+    api_format_send_cmd("led", "toggle", PASSWORD_STAND); if (api_result_has("error")) { goto err; }  
     api_format_send_cmd("led", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }  
     api_format_send_cmd("xpub", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
     api_format_send_cmd("seed", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
@@ -320,16 +333,11 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd("verifypass", "", PASSWORD_STAND); if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; } 
 
 
-    api_print_result("tests_seed_xpub_backup", "OK");
+    api_print_result("tests_seed_xpub_backup", SUCCESS);
     return;
 
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_seed_xpub_backup", "FAIL");
-    api_print_result("tests_seed_xpub_backup", utils_read_decrypted_report());
-    //printf("\t%s\n", *salt); 
-    //printf("\t%s\n", *cipher); 
-    //printf("\t%s\n", *mnemo); 
+    api_print_result("tests_seed_xpub_backup", ERROR);
 }
 
 
@@ -356,13 +364,11 @@ static void tests_random(void)
     if (!memcmp(number0, number1, 32)) { goto err; }
     
     
-    api_print_result("tests_random", "OK");
+    api_print_result("tests_random", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_random", "FAIL");
-    api_print_result("tests_random", utils_read_decrypted_report());
+    api_print_result("tests_random", ERROR);
 }
 
 
@@ -392,13 +398,11 @@ static void tests_name(void)
     if (memcmp(name1, name, sizeof(name))) { goto err; }
 
 
-    api_print_result("tests_name", "OK");
+    api_print_result("tests_name", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_name", "FAIL");
-    api_print_result("tests_name", utils_read_decrypted_report());
+    api_print_result("tests_name", ERROR);
 }
 
 
@@ -419,15 +423,18 @@ static void tests_device(void)
   
     api_format_send_cmd("device", "serial", PASSWORD_STAND);     if (api_result_has("error")) { goto err; } 
     api_format_send_cmd("device", "version", PASSWORD_STAND);    if (api_result_has("error")) { goto err; } 
-                                                                   if (!api_result_has(DIGITAL_BITBOX_VERSION)) { goto err; }
+                                                                 if (!api_result_has(DIGITAL_BITBOX_VERSION)) { goto err; }
 
-    api_print_result("tests_device", "OK");
+    api_format_send_cmd("reset", "__ERASE__", PASSWORD_STAND);   if (api_result_has("error")) { goto err; } 
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);   if (api_result_has("error")) { goto err; }
+    api_format_send_cmd("reset", "__ERASE__", PASSWORD_NONE);    if (api_result_has("error")) { goto err; } 
+   
+    
+    api_print_result("tests_device", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_device", "FAIL");
-    api_print_result("tests_device", utils_read_decrypted_report());
+    api_print_result("tests_device", ERROR);
 }
 
 
@@ -440,8 +447,10 @@ static void tests_input(void)
         api_send_cmd("", PASSWORD_NONE); if (!api_result_has(FLAG_ERR_NO_INPUT))                       { goto err; }
         api_send_cmd(NULL, PASSWORD_NONE); if (!api_result_has(FLAG_ERR_NO_INPUT))                     { goto err; }
     }
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (api_result_has("error"))                 { goto err; }
-    
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);   if ( api_result_has("error"))              { goto err; }
+    api_send_cmd("{\"name\": \"name\"}",       PASSWORD_STAND);  if ( api_result_has("error"))              { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_STAND);  if ( api_result_has("error"))              { goto err; }
+    api_send_cmd("{\"name\": \"name\"}",       PASSWORD_STAND);  if ( api_result_has("error"))              { goto err; }
     api_send_cmd("{\"name\": \"name\"}",      PASSWORD_NONE);    if (!api_result_has(FLAG_ERR_DECRYPT))     { goto err; }
     api_send_cmd("{\"name\": \"name\"}",      PASSWORD_STAND);   if ( api_result_has("error"))              { goto err; }
     api_send_cmd("\"name\": \"name\"}",       PASSWORD_STAND);   if (!api_result_has(FLAG_ERR_JSON_PARSE))  { goto err; }
@@ -464,13 +473,11 @@ static void tests_input(void)
     }
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE); if (!api_result_has(FLAG_ERR_RESET))   { goto err; }
     
-    api_print_result("tests_input", "OK");
+    api_print_result("tests_input", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-        api_print_result("tests_input", "FAIL");
-        api_print_result("tests_input", utils_read_decrypted_report());
+    api_print_result("tests_input", ERROR);
 }
 
 
@@ -479,17 +486,16 @@ static void tests_password(void)
     api_reset_device();
     api_format_send_cmd("name", "", PASSWORD_NONE);            if (!api_result_has(FLAG_ERR_NO_PASSWORD))  { goto err; }
     api_format_send_cmd("password", "123", PASSWORD_NONE);     if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) { goto err; }
-    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if ( api_result_has("error"))                { goto err; }
+    api_format_send_cmd("password", "", PASSWORD_NONE);        if (!api_result_has(FLAG_ERR_INVALID_CMD))  { goto err; }
+    api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if ( api_result_has("error"))               { goto err; }
     api_format_send_cmd("password", tests_pwd, PASSWORD_NONE); if (!api_result_has(FLAG_ERR_DECRYPT))      { goto err; }
     api_format_send_cmd("password", "123", PASSWORD_STAND);    if (!api_result_has(FLAG_ERR_PASSWORD_LEN)) { goto err; }
     
-    api_print_result("tests_password", "OK");
+    api_print_result("tests_password", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_password", "FAIL");
-    api_print_result("tests_password", utils_read_decrypted_report());
+    api_print_result("tests_password", ERROR);
 }
 
 
@@ -539,13 +545,11 @@ static void tests_echo_2FA(void)
     api_format_send_cmd("verifypass", export, PASSWORD_STAND);  if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
     api_format_send_cmd("backup", "list", PASSWORD_STAND);      if (!api_result_has(FLAG_ERR_DEVICE_LOCKED)) { goto err; } 
 
-    api_print_result("tests_echo_2FA", "OK");
+    api_print_result("tests_echo_2FA", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_echo_2FA", "FAIL");
-    api_print_result("tests_echo_2FA", utils_read_decrypted_report());
+    api_print_result("tests_echo_2FA", ERROR);
 }
 
     
@@ -561,6 +565,18 @@ static void tests_sign(void)
     // seed
     api_format_send_cmd("seed", "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}}", PASSWORD_STAND);
     if (api_result_has("error")) { goto err; }
+
+    // missing parameters 
+    api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
+    if (!api_result_has("echo")) { goto err; }  
+    api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }  
+
+    // wrong type 
+    api_format_send_cmd("sign", "{\"type\":\"invalid\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
+    if (!api_result_has("echo")) { goto err; }  
+    api_format_send_cmd("sign", "{\"type\":\"invalid\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"} }", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) { goto err; }  
 
     // wrong change keypath
     api_format_send_cmd("sign", "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/\"} }", PASSWORD_STAND);
@@ -664,13 +680,11 @@ static void tests_sign(void)
     }
 
 
-    api_print_result("tests_sign", "OK");
+    api_print_result("tests_sign", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_sign", "FAIL");
-    api_print_result("tests_sign", utils_read_decrypted_report());
+    api_print_result("tests_sign", ERROR);
 }
     
     
@@ -764,13 +778,11 @@ static void tests_aes_cbc(void)
         plainp += 2; cipherp += 2;
 	}
     
-    api_print_result("tests_aes_cbc", "OK");
+    api_print_result("tests_aes_cbc", SUCCESS);
     return;
     
 err:
-    TESTS_FAIL++;
-    api_print_result("tests_aes_cbc", "FAIL");
-    api_print_result("tests_aes_cbc", utils_read_decrypted_report());
+    api_print_result("tests_aes_cbc", ERROR);
 }
 
 
@@ -812,6 +824,7 @@ int main(void)
         tests_run();
     }
 #endif
-    
+   
+
     return TESTS_FAIL;
 }

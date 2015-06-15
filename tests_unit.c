@@ -868,9 +868,14 @@ static void test_base64(void)
 }
 
 
+static void test_commander_static_functions(void)
+{
+    u_assert_int_eq(commander_test_static_functions(), 0);
+}
+
+
 int main(void)
 {
-    
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);
     u_run_test(test_bip32_vector_1);
@@ -885,6 +890,8 @@ int main(void)
 	u_run_test(test_pbkdf2_hmac_sha512);
 	u_run_test(test_mnemonic);
 	u_run_test(test_mnemonic_check);
+	u_run_test(test_commander_static_functions);
+
     
     if (!U_TESTS_FAIL) {   
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

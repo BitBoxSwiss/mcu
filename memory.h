@@ -34,8 +34,7 @@
 #define MEM_PAGE_LEN                32
 
 // User Zones: 0x0000 to 0x0FFF
-#define MEM_LED_ADDR			    0x0020// Zone 0
-#define MEM_TOUCH_TIMEOUT_ADDR	   	0x0022
+#define MEM_TOUCH_TIMEOUT_ADDR	   	0x0022// Zone 0
 #define MEM_TOUCH_THRESH_ADDR	    0x0024
 #define MEM_TOUCH_ENABLE_ADDR   	0x0026
 #define MEM_ERASED_ADDR 	    	0x0028
@@ -56,7 +55,6 @@
 #define DEFAULT_unlocked_           0xFF
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
-#define DEFAULT_led_                0
 #define DEFAULT_access_err_         INITIALIZE
 #define DEFAULT_touch_timeout_      3000// msec
 #define DEFAULT_touch_thresh_       25
@@ -91,7 +89,6 @@ uint16_t memory_read_touch_thresh(void);
 uint8_t memory_read_erased(void);
 uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
-int memory_read_led(void);
 
 void memory_write_memseed(const uint8_t *s);
 void memory_write_touch_timeout(const uint16_t t);
@@ -99,7 +96,6 @@ void memory_write_touch_thresh(const uint16_t t);
 void memory_write_erased(const uint8_t erase);
 void memory_write_setup(const uint8_t setup);
 void memory_write_unlocked(const uint8_t u);
-void memory_write_led(const uint8_t led);
 
 uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);

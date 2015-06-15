@@ -45,7 +45,6 @@
 static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
-static uint8_t MEM_led_ = DEFAULT_led_;
 static uint16_t MEM_access_err_ = DEFAULT_access_err_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
@@ -97,7 +96,6 @@ void memory_erase(void)
     memory_write_touch_timeout(DEFAULT_touch_timeout_);
     memory_write_touch_thresh(DEFAULT_touch_thresh_);
     memory_access_err_count(DEFAULT_access_err_);
-    memory_write_led(DEFAULT_led_);
     commander_create_verifypass();
 }
 
@@ -388,17 +386,6 @@ uint8_t memory_read_erased(void)
 {
     memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
     return MEM_erased_;     
-}
-
-
-void memory_write_led(const uint8_t led)
-{
-    memory_eeprom(&led, &MEM_led_, MEM_LED_ADDR, 1);
-}
-int memory_read_led(void)
-{
-    memory_eeprom(NULL, &MEM_led_, MEM_LED_ADDR, 1);
-    return MEM_led_;       
 }
 
 

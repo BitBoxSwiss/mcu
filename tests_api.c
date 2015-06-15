@@ -251,7 +251,7 @@ static void tests_seed_xpub_backup(void)
         strcat(seed_b, filename);
         strcat(seed_b, "\"");
         
-        strcpy(back, "{\"backup\":{\"filename\":\"");
+        strcpy(back, "{\"filename\":\"");
         strcat(back, filename);
         strcat(back, "\"");
         
@@ -275,7 +275,7 @@ static void tests_seed_xpub_backup(void)
         
         strcat(seed_c, "}");
         strcat(seed_b, "}");
-        strcat(back, "}}");
+        strcat(back, "}");
 
         
         // erase

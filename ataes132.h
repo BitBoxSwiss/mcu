@@ -30,21 +30,25 @@
 
 #include <stdint.h>
 
-#define AES_DEVICE_ADDR		0x50u
-#define AES_MEM_ADDR_LEN	2
-#define AES_MEM_ADDR_IO		0xFE00
-#define AES_MEM_ADDR_STATUS	0xFFF0
-#define AES_MEM_ADDR_RESET	0xFFE0
-#define AES_TWI				TWI0
-#define AES_TWI_ID			ID_TWI0
-#define AES_TWI_SPEED		10000
+#define AES_DEVICE_ADDR     0x50u
+#define AES_MEM_ADDR_LEN    2
+#define AES_MEM_ADDR_IO     0xFE00
+#define AES_MEM_ADDR_STATUS 0xFFF0
+#define AES_MEM_ADDR_RESET  0xFFE0
+#define AES_TWI             TWI0
+#define AES_TWI_ID          ID_TWI0
+#define AES_TWI_SPEED       10000
 
 void aes_init(void);
-uint8_t aes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length, uint8_t const *p_wr_buffer);
-uint32_t aes_eeprom_read(uint32_t u32_start_address, uint16_t u16_length, uint8_t *p_rd_buffer);
+uint8_t aes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length,
+                         uint8_t const *p_wr_buffer);
+uint32_t aes_eeprom_read(uint32_t u32_start_address, uint16_t u16_length,
+                         uint8_t *p_rd_buffer);
 void aes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *crc);
-void aes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block, uint16_t response_len);
-void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t * userdata_read, const uint8_t * userdata_write);
+void aes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block,
+                 uint16_t response_len);
+void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
+                const uint8_t *userdata_write);
 
 
 #endif

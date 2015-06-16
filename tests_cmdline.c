@@ -35,7 +35,7 @@
 #include "commander.h"
 
 
-void usage(char * argv[])
+void usage(char *argv[])
 {
     printf("\nExample code to run the Digital Bitbox MCU code.\n");
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
@@ -49,12 +49,12 @@ int main ( int argc, char *argv[] )
     if (argc != 2) {
         usage(argv);
     } else {
-        random_init(); 
+        random_init();
         memory_setup();
         // A password is required before sending commands.
         // Refer to the API documentation for more details.
-        utils_send_print_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE); 
-        utils_send_print_cmd(argv[1], PASSWORD_STAND); 
+        utils_send_print_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE);
+        utils_send_print_cmd(argv[1], PASSWORD_STAND);
     }
     return 0;
 }

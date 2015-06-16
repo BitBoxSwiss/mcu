@@ -1,5 +1,5 @@
 /*
- 
+
  The MIT License (MIT)
 
  Copyright (c) 2015 Douglas J. Bakkum
@@ -42,8 +42,16 @@
 #define IOPORT_PIN_LEVEL_LOW    1
 #define IOPORT_PIN_LEVEL_HIGH   0
 
-void ioport_set_pin_level(int led, int level) { (void)led; (void)level; }
-int ioport_get_pin_level(int led) { (void)led; return 0; }
+void ioport_set_pin_level(int led, int level)
+{
+    (void)led;
+    (void)level;
+}
+int ioport_get_pin_level(int led)
+{
+    (void)led;
+    return 0;
+}
 
 #endif
 

@@ -42,42 +42,54 @@ static char decrypted_report[COMMANDER_REPORT_SIZE];
 
 uint8_t *utils_hex_to_uint8(const char *str)
 {
-	if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
+    if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
-    static uint8_t buf[TO_UINT8_HEX_BUF_LEN]; 
-	memset(buf, 0, sizeof(buf));
+    static uint8_t buf[TO_UINT8_HEX_BUF_LEN];
+    memset(buf, 0, sizeof(buf));
     uint8_t c;
-	size_t i;
-	for (i = 0; i < strlen(str) / 2; i++) {
-		c = 0;
-		if (str[i * 2] >= '0' && str[i * 2] <= '9') c += (str[i * 2] - '0') << 4;
-		if (str[i * 2] >= 'a' && str[i * 2] <= 'f') c += (10 + str[i  *2] - 'a') << 4;
-        if (str[i * 2] >= 'A' && str[i * 2] <= 'F') c += (10 + str[i * 2] - 'A') << 4;
-        if (str[i * 2 + 1] >= '0' && str[i * 2 + 1] <= '9') c += (str[i * 2 + 1] - '0');
-		if (str[i * 2 + 1] >= 'a' && str[i * 2 + 1] <= 'f') c += (10 + str[i * 2 + 1] - 'a');
-		if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') c += (10 + str[i * 2 + 1] - 'A'); 
+    size_t i;
+    for (i = 0; i < strlen(str) / 2; i++) {
+        c = 0;
+        if (str[i * 2] >= '0' && str[i * 2] <= '9') {
+            c += (str[i * 2] - '0') << 4;
+        }
+        if (str[i * 2] >= 'a' && str[i * 2] <= 'f') {
+            c += (10 + str[i  * 2] - 'a') << 4;
+        }
+        if (str[i * 2] >= 'A' && str[i * 2] <= 'F') {
+            c += (10 + str[i * 2] - 'A') << 4;
+        }
+        if (str[i * 2 + 1] >= '0' && str[i * 2 + 1] <= '9') {
+            c += (str[i * 2 + 1] - '0');
+        }
+        if (str[i * 2 + 1] >= 'a' && str[i * 2 + 1] <= 'f') {
+            c += (10 + str[i * 2 + 1] - 'a');
+        }
+        if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') {
+            c += (10 + str[i * 2 + 1] - 'A');
+        }
         buf[i] = c;
-	}
-	return buf;
+    }
+    return buf;
 }
 
 
 char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
 {
-	if ((l * 2) > TO_UINT8_HEX_BUF_LEN) {
+    if ((l * 2) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
     static char digits[] = "0123456789abcdef";
-	static char buf[TO_UINT8_HEX_BUF_LEN]; 
-	memset(buf, 0, sizeof(buf));
-	size_t i;
-	for (i = 0; i < l; i++) {
-		buf[i * 2] = digits[(bin[i] >> 4) & 0xF];
-		buf[i * 2 + 1] = digits[bin[i] & 0xF];
-	}
-	buf[l * 2] = 0;
-	return buf;
+    static char buf[TO_UINT8_HEX_BUF_LEN];
+    memset(buf, 0, sizeof(buf));
+    size_t i;
+    for (i = 0; i < l; i++) {
+        buf[i * 2] = digits[(bin[i] >> 4) & 0xF];
+        buf[i * 2 + 1] = digits[bin[i] & 0xF];
+    }
+    buf[l * 2] = 0;
+    return buf;
 }
 
 
@@ -86,19 +98,19 @@ void utils_reverse_hex(char *h, int len)
     char copy[len];
     strncpy(copy, h, len);
     int i;
-    for (i = 0; i<len; i += 2) {
+    for (i = 0; i < len; i += 2) {
         h[i] = copy[len - i - 2];
         h[i + 1] = copy[len - i - 1];
-    }   
+    }
 }
 
 
 void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
 {
     int len;
-    char v[VARINT_LEN];  
-    
-    if (i<0xfd) {
+    char v[VARINT_LEN];
+
+    if (i < 0xfd) {
         sprintf(v, "%02" PRIx64 , i);
         len = 2;
     } else if (i <= 0xffff) {
@@ -114,10 +126,10 @@ void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
         sprintf(vi, "ff");
         len = 16;
     }
-  
+
     // reverse order
     if (len > 2) {
-        utils_reverse_hex(v, len); 
+        utils_reverse_hex(v, len);
         strncat(vi, v, len);
     } else {
         strncpy(vi, v, len);
@@ -130,8 +142,8 @@ void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
 int utils_varint_to_uint64(const char *vi, uint64_t *i)
 {
     char v[VARINT_LEN] = {0};
-    int len; 
-    
+    int len;
+
     if (!vi) {
         len = 0;
     } else if (!strncmp(vi, "ff", 2)) {
@@ -143,7 +155,7 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
     } else {
         len = 2;
     }
-        
+
     if (len == 0) {
         // continue
     } else if (len > 2) {
@@ -153,7 +165,7 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
         strncpy(v, vi, len);
     }
     sscanf(v, "%" PRIx64 , i);
-   
+
     return len;
 }
 
@@ -169,36 +181,38 @@ void utils_decrypt_report(const char *report)
     int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i;
     char *dec, *pin, *tfa, *dec_tfa;
     jsmntok_t json_token[MAX_TOKENS];
-    
+
     memset(decrypted_report, 0, sizeof(decrypted_report));
     r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
-     
+
     if (r < 0) {
         strcpy(decrypted_report, "error: Failed to parse report.");
         return;
     }
-    
+
     for (i = 0; i < r; i++) {
         int len = json_token[i + 1].end - json_token[i + 1].start;
         if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
             memcpy(decrypted_report, report + json_token[i + 1].start, len);
             decrypted_report[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report), &decrypt_len, PASSWORD_STAND);
+            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
+                                      &decrypt_len, PASSWORD_STAND);
             tfa = (char *)jsmn_get_value_string(dec, "2FA", &tfa_len);
             if (tfa) {
                 dec_tfa = aes_cbc_b64_decrypt((unsigned char *)tfa, tfa_len, &dec_tfa_len, PASSWORD_2FA);
                 sprintf(decrypted_report, "2FA: %.*s", dec_tfa_len, dec_tfa);
-                
+
                 free(dec_tfa);
             } else {
                 sprintf(decrypted_report, "ciphertext: %.*s", decrypt_len, dec);
-            } 
+            }
             free(dec);
             return;
         } else if (jsmn_token_equals(report, &json_token[i], "echo") == 0) {
             memcpy(decrypted_report, report + json_token[i + 1].start, len);
             decrypted_report[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report), &decrypt_len, PASSWORD_VERIFY);
+            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
+                                      &decrypt_len, PASSWORD_VERIFY);
             pin = (char *)jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
@@ -221,10 +235,12 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
         utils_decrypt_report(commander(command));
     } else {
         int encrypt_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len, enc_id);
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len,
+                                        enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};
-        memcpy(cmd, enc, encrypt_len < COMMANDER_REPORT_SIZE ? encrypt_len : COMMANDER_REPORT_SIZE);
-        free(enc); 
+        memcpy(cmd, enc, encrypt_len < COMMANDER_REPORT_SIZE ? encrypt_len :
+               COMMANDER_REPORT_SIZE);
+        free(enc);
         utils_decrypt_report(commander(cmd));
     }
 }
@@ -233,7 +249,7 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
 #ifdef TESTING
 
 void utils_send_print_cmd(const char *command, PASSWORD_ID enc_id)
-{ 
+{
     printf("\nutils send:   %s\n", command);
     utils_send_cmd(command, enc_id);
     printf("utils recv:   %s\n\n", decrypted_report);

@@ -1,7 +1,7 @@
 /*
 
  The MIT License (MIT)
- 
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -41,11 +41,13 @@
 #endif
 #define DIGITAL_BITBOX_VERSION  "1.0"
 #define VERIFYPASS_FILENAME     "verification.txt"
-#define COMMANDER_MAX_ATTEMPTS	5// max attempts before device reset
+#define COMMANDER_MAX_ATTEMPTS  5// max attempts before device reset
 
 
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len, PASSWORD_ID id);
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len, PASSWORD_ID id);
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
+                          PASSWORD_ID id);
+char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
+                          PASSWORD_ID id);
 
 void commander_create_verifypass(void);
 void commander_fill_report(const char *attr, const char *val, int err);

@@ -26,7 +26,7 @@
 /*
 
 //
-// Macros for light weight unit testing based on 
+// Macros for light weight unit testing based on
 // minunit.h from http://www.jera.com/techinfo/jtns/jtn002.html
 //
 // Example code:
@@ -50,7 +50,7 @@
     u_assert_int_eq(i, 8);
     return;
  }
-  
+
  static void test_mem(void) {
      char * str = "hello";
      u_assert_mem_eq(str, "hello", 5);
@@ -65,7 +65,7 @@
      u_run_test(test_str);
      u_run_test(test_mem);
      u_run_test(test_int);
-     if (!U_TESTS_FAIL) {   
+     if (!U_TESTS_FAIL) {
         printf("\nALL TESTS PASSED\n\n");
      }
      return U_TESTS_FAIL;
@@ -92,7 +92,7 @@
   printf("\tExpected:\t%d\n", e_);\
   printf("\tReceived:\t%d\n", r_);\
   U_TESTS_FAIL++; }; \
- } while(0); } 
+ } while(0); }
 
 #define u_assert_str_eq(R,E) {\
  const char * r_ = (R); \
@@ -102,7 +102,7 @@
   printf("\tExpected:\t%s\n", e_);\
   printf("\tReceived:\t%s\n", r_);\
   U_TESTS_FAIL++; }; \
- } while(0); } 
+ } while(0); }
 
 #define u_assert_mem_eq(R,E,L) {\
  const void * r_ = (R); \
@@ -113,7 +113,7 @@
   printf("\tExpected:\t%s\n", utils_uint8_to_hex(e_,l_));\
   printf("\tReceived:\t%s\n", utils_uint8_to_hex(r_,l_));\
   U_TESTS_FAIL++; }; \
- } while(0); } 
+ } while(0); }
 
 extern int U_TESTS_RUN;
 extern int U_TESTS_FAIL;

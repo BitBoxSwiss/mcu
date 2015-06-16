@@ -1,7 +1,7 @@
 /*
 
  The MIT License (MIT)
- 
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -106,7 +106,7 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define ATTR_NUM     ATTR_none_
 
 
-enum REPORT_FLAGS { 
+enum REPORT_FLAGS {
     SUCCESS, ERROR, ERROR_MEM,
     ECHO,
     SAME, DIFFERENT, NEXT,
@@ -117,8 +117,8 @@ enum REPORT_FLAGS {
 };
 
 
-#define PASSWORD_LEN_MIN			4
-#define DATA_LEN_MAX	    		1024/*base64 increases size by ~4/3; AES encryption by max 32 char*/
+#define PASSWORD_LEN_MIN            4
+#define DATA_LEN_MAX                1024/*base64 increases size by ~4/3; AES encryption by max 32 char*/
 
 #define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters."
 #define FLAG_ERR_NO_PASSWORD        "Please set a password."

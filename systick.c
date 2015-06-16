@@ -1,7 +1,7 @@
 /*
 
  The MIT License (MIT)
- 
+
  Copyright (c) 2015 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
@@ -30,22 +30,22 @@
 #include "systick.h"
 #include "mcu.h"
 
-volatile uint16_t systick_current_time_ms	= 0u;
-volatile uint8_t systick_time_updated		= 0u;
-uint16_t systick_measurement_period_msec	= 25u;
+volatile uint16_t systick_current_time_ms   = 0u;
+volatile uint8_t systick_time_updated       = 0u;
+uint16_t systick_measurement_period_msec    = 25u;
 
 
 void systick_update_time(void)
 {
-	systick_time_updated = 1u;
-	systick_current_time_ms += systick_measurement_period_msec;
+    systick_time_updated = 1u;
+    systick_current_time_ms += systick_measurement_period_msec;
 }
 
 
 // Configure timer ISR to fire regularly
 void systick_init(void)
 {
-	SysTick_Config((sysclk_get_cpu_hz() / 1000) * systick_measurement_period_msec);
+    SysTick_Config((sysclk_get_cpu_hz() / 1000) * systick_measurement_period_msec);
 }
 
 

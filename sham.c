@@ -36,9 +36,9 @@ static char sd_filename[64] = {0};
 static char sd_text[512] = {0};
 
 
-void delay_ms(int delay) 
-{ 
-    (void)delay; 
+void delay_ms(int delay)
+{
+    (void)delay;
 }
 
 
@@ -56,7 +56,7 @@ uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
 char *sd_load(const char *f, int f_len)
 {
     commander_fill_report("sd_load", FLAG_ERR_NO_MCU, SUCCESS);
-	if (!strncmp(sd_filename, f, f_len)) {
+    if (!strncmp(sd_filename, f, f_len)) {
         return sd_text;
     }
     return NULL;

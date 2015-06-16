@@ -41,38 +41,38 @@ uECC_asm_fast  - Use GCC inline assembly optimized for maximum speed. */
 
 // Generate an ECDSA signature for a given hash value.
 // Returns 0 always.
-int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES], 
+int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES],
                      const uint8_t p_hash[uECC_BYTES],
                      uint8_t p_signature[uECC_BYTES * 2]);
 
 // Performs sha256 hash on msg before signing.
 // Returns 0 if the signature generated successfully, 1 if an error occurred.
-int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg, 
+int uECC_sign(const uint8_t *p_privateKey, const uint8_t *msg,
               uint32_t msg_len, uint8_t *p_signature);
 
 // Performs double sha256 hash on msg before signing.
 // Returns 0 if the signature generated successfully, 1 if an error occurred.
-int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, 
+int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg,
                      uint32_t msg_len, uint8_t *p_signature);
 
 // Verify an ECDSA signature.
 // Returns 0 if the signature is valid, 1 if it is invalid.
-int uECC_verify_digest(const uint8_t p_publicKey[uECC_BYTES * 2], 
-                       const uint8_t p_hash[uECC_BYTES], 
+int uECC_verify_digest(const uint8_t p_publicKey[uECC_BYTES * 2],
+                       const uint8_t p_hash[uECC_BYTES],
                        const uint8_t p_signature[uECC_BYTES * 2]);
 
 // Performs sha256 hash on msg before verification
-int uECC_verify(const uint8_t *p_publicKey, const uint8_t *p_signature, 
+int uECC_verify(const uint8_t *p_publicKey, const uint8_t *p_signature,
                 const uint8_t *msg, uint32_t msg_len);
 
 // Performs double sha256 hash on msg before verification
-int uECC_verify_double(const uint8_t *p_publicKey, const uint8_t *p_signature, 
+int uECC_verify_double(const uint8_t *p_publicKey, const uint8_t *p_signature,
                        const uint8_t *msg, uint32_t msg_len);
 
 // Get a child private key
 // child = (master + z) % order
-void uECC_generate_private_key(uint8_t *p_privateChild, 
-                               const uint8_t *p_privateMaster, 
+void uECC_generate_private_key(uint8_t *p_privateChild,
+                               const uint8_t *p_privateMaster,
                                const uint8_t *z);
 
 // Check if the private key is not equal to 0 and less than the order
@@ -80,12 +80,16 @@ void uECC_generate_private_key(uint8_t *p_privateChild,
 int uECC_isValid(uint8_t *p_key);
 
 // Deterministic signatures following RFC6979
-int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint8_t *hash);
+int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key,
+                            const uint8_t *hash);
 
 // Get the public key from the private key
-void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2 + 1]);
-void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES * 2]);
-void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES], uint8_t p_publicKey[uECC_BYTES + 1]);
+void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES],
+                           uint8_t p_publicKey[uECC_BYTES * 2 + 1]);
+void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES],
+                           uint8_t p_publicKey[uECC_BYTES * 2]);
+void uECC_get_public_key33(const uint8_t p_privateKey[uECC_BYTES],
+                           uint8_t p_publicKey[uECC_BYTES + 1]);
 
 
 #endif /* _MICRO_ECC_H_ */

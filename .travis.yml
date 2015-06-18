@@ -23,7 +23,7 @@ before_install:
 
 before_script:
     - cd $TRAVIS_BUILD_DIR
-    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --dry-run -Q | grep "Formatted" ; then exit 1 ; fi
+    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --dry-run -Q | grep "Formatted" ; then exit 1 ; fi
 
 script: 
     - make

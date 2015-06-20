@@ -83,10 +83,9 @@ static void api_hid_read(void)
 
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
-    int res;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     memcpy(HID_REPORT, cmd, cmdlen );
-    res = hid_write(HID_HANDLE, (unsigned char *)HID_REPORT, HID_REPORT_SIZE);
+    hid_write(HID_HANDLE, (unsigned char *)HID_REPORT, HID_REPORT_SIZE);
 }
 
 

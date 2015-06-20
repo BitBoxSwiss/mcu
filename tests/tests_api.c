@@ -50,7 +50,7 @@ static int TESTS_FAIL = 0;
 
 
 
-#ifndef TRAVIS_BUILD
+#ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/
 #include "hidapi.h"
 
@@ -130,7 +130,7 @@ static void api_send_cmd(const char *command, PASSWORD_ID id)
     if (!TEST_LIVE_DEVICE) {
         utils_send_cmd(command, id);
     }
-#ifndef TRAVIS_BUILD
+#ifndef CONTINUOUS_INTEGRATION
     else if (id == PASSWORD_NONE) {
         api_hid_send(command);
         api_hid_read();
@@ -1338,7 +1338,7 @@ int main(void)
     tests_run();
 
 
-#ifndef TRAVIS_BUILD
+#ifndef CONTINUOUS_INTEGRATION
     // Live test of the HID API
     // Requires the hidapi library to be installed:
     //     http://www.signal11.us/oss/hidapi/

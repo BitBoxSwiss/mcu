@@ -12,8 +12,8 @@ CFLAGS += -D TESTING
 
 LIBOPENSSL = -lcrypto
 
-ifdef TRAVIS_BUILD
-CFLAGS += -D TRAVIS_BUILD
+ifdef CONTINUOUS_INTEGRATION
+CFLAGS += -D CONTINUOUS_INTEGRATION
 else
 LIBHIDAPI = -lhidapi
 endif
@@ -34,4 +34,4 @@ tests_cmdline: tests/tests_cmdline.o $(OBJS) ; $(CC) tests/tests_cmdline.o $(OBJ
 tests_openssl: tests/tests_openssl.o $(OBJS) ; $(CC) tests/tests_openssl.o $(OBJS) $(LIBOPENSSL) -o tests/tests_openssl
 
 
-clean: ; rm -f *.o tests/tests tests/tests_cmdline tests/tests_unit tests/tests_openssl tests/tests_api
+clean: ; rm -f src/*.o tests/tests tests/tests_cmdline tests/tests_unit tests/tests_openssl tests/tests_api

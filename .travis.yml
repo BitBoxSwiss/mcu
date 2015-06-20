@@ -19,7 +19,7 @@ env: TRAVIS_BUILD=1
 
 script: 
     - make
-    - ./tests_unit 
-    - ./tests_openssl 200
+    - ./tests/tests_unit 
+    - ./tests/tests_openssl 200
     - make api
-    - ./tests_api
+    - ./tests/tests_api

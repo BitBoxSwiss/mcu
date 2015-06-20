@@ -1,4 +1,5 @@
 tests*
+!/tests
 !tests_mcu.h
 !*.c
 tests.c

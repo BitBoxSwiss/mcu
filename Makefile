@@ -18,8 +18,8 @@ else
 LIBHIDAPI = -lhidapi
 endif
 
-
-OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o jsmn.o commander.o led.o memory.o base58.o ripemd160.o sham.o uECC.o
+CFLAGS += -Isrc
+OBJS =  src/wallet.o src/sha2.o src/random.o src/hmac.o src/bip32.o src/pbkdf2.o src/utils.o src/aes.o src/base64.o src/jsmn.o src/commander.o src/led.o src/memory.o src/base58.o src/ripemd160.o src/sham.o src/uECC.o
 
 %.o: %.c ;  $(CC) $(CFLAGS) -c -o $@ $<
 
@@ -27,11 +27,11 @@ OBJS =  wallet.o sha2.o random.o hmac.o bip32.o pbkdf2.o utils.o aes.o base64.o 
 all: tests_cmdline tests_unit tests_openssl 
 api: tests_api
 
-tests: tests.o $(OBJS) ; $(CC) tests.o $(OBJS) -o tests
-tests_api: tests_api.o $(OBJS) ; $(CC) tests_api.o $(OBJS) $(LIBHIDAPI) -o tests_api
-tests_unit: tests_unit.o $(OBJS) ; $(CC) tests_unit.o $(OBJS) -o tests_unit
-tests_cmdline: tests_cmdline.o $(OBJS) ; $(CC) tests_cmdline.o $(OBJS) -o tests_cmdline
-tests_openssl: tests_openssl.o $(OBJS) ; $(CC) tests_openssl.o $(OBJS) $(LIBOPENSSL) -o tests_openssl
+tests: tests/tests.o $(OBJS) ; $(CC) tests/tests.o $(OBJS) -o tests/tests
+tests_api: tests/tests_api.o $(OBJS) ; $(CC) tests/tests_api.o $(OBJS) $(LIBHIDAPI) -o tests/tests_api
+tests_unit: tests/tests_unit.o $(OBJS) ; $(CC) tests/tests_unit.o $(OBJS) -o tests/tests_unit
+tests_cmdline: tests/tests_cmdline.o $(OBJS) ; $(CC) tests/tests_cmdline.o $(OBJS) -o tests/tests_cmdline
+tests_openssl: tests/tests_openssl.o $(OBJS) ; $(CC) tests/tests_openssl.o $(OBJS) $(LIBOPENSSL) -o tests/tests_openssl
 
 
-clean: ; rm -f *.o tests tests_cmdline tests_unit tests_openssl tests_api
+clean: ; rm -f *.o tests/tests tests/tests_cmdline tests/tests_unit tests/tests_openssl tests/tests_api

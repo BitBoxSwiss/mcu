@@ -16,8 +16,6 @@ matrix:
         - true
 
 script: 
-    - make
-    - ./tests/tests_unit 
-    - ./tests/tests_openssl 200
-    - make api
-    - ./tests/tests_api
+    - mkdir build && cd build
+    - cmake .. -DCONTINUOUS_INTEGRATION=1 && make
+    - make test

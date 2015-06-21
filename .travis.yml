@@ -26,8 +26,6 @@ before_script:
     - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --dry-run -Q | grep "Formatted" ; then exit 1 ; fi
 
 script: 
-    - make
-    - ./tests/tests_unit 
-    - ./tests/tests_openssl 200
-    - make api
-    - ./tests/tests_api
+    - mkdir build && cd build
+    - cmake .. -DCONTINUOUS_INTEGRATION=1 && make
+    - make test

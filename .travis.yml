@@ -15,6 +15,16 @@ matrix:
     fast_finish:
         - true
 
+before_install: 
+    - wget http://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/astyle_2.05.1_linux.tar.gz
+    - tar xfv astyle_2.05.1_linux.tar.gz
+    - cd astyle/build/gcc && make
+    - export PATH=$PATH:$PWD/bin/
+
+before_script:
+    - cd $TRAVIS_BUILD_DIR
+    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --dry-run -Q | grep "Formatted" ; then exit 1 ; fi
+
 script: 
     - make
     - ./tests/tests_unit 

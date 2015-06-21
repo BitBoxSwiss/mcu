@@ -13,3 +13,10 @@ Cryptographic: secp256k1, AES-256-CBC, SHA2, HMAC, PBKDF2, RIPEMD160.
 Encoding: Base-64, Base-58-check. 
 Bitcoin: BIP32, BIP39, BIP44.
 Other: JSMN (minimal JSON).
+
+### Contributing
+
+Please do *NOT* use an editor that automatically reformats.
+
+Use the coding style set by astyle (http://astyle.sourceforge.net/) with the following parameteres:
+> astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive

@@ -24,10 +24,10 @@
 
 */
 
-
 #include <stdint.h>
 #include <string.h>
 
+#include "sham.h"
 #include "commander.h"
 #include "flags.h"
 

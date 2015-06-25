@@ -52,7 +52,7 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -Werror -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wbad-function-cast -Winline -Wnested-externs -Wfloat-equal")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -Werror -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wbad-function-cast -Winline -Wnested-externs -Wfloat-equal -Wmissing-declarations")
 
 if(APPLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")

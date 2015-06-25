@@ -35,6 +35,9 @@
 #include "commander.h"
 
 
+void usage(char *argv[]);
+
+
 void usage(char *argv[])
 {
     printf("\nExample code to run the Digital Bitbox MCU code.\n");

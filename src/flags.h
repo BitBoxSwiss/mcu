@@ -151,5 +151,6 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_SD_READ            "Could not read the file."
 #define FLAG_ERR_SD_NO_FILE         "No files to erase in base directory."
 #define FLAG_ERR_SD_FILE_EXISTS     "File exists."
+#define FLAG_ERR_PASSWORD_ID        "Invalid password ID."
 
 #endif

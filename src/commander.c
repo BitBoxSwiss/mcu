@@ -692,15 +692,18 @@ static int commander_process(int cmd, char *message)
             commander_process_aes256cbc(message);
             break;
 
-            /*
-            case CMD_touchbutton_:
-                touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000,
-                                        jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
-                break;
+        /*
+        case CMD_touchbutton_:
+            touch_button_parameters(jsmn_get_value_uint(message, CMD_STR[CMD_timeout_]) * 1000,
+                                    jsmn_get_value_uint(message, CMD_STR[CMD_threshold_]));
+            break;
 
-            case CMD_none_:
-                break;
-            */
+        case CMD_none_:
+            break;
+        */
+        default:
+            commander_fill_report("input", FLAG_ERR_INVALID_CMD, ERROR);
+            return ERROR;
     }
     return SUCCESS;
 }

@@ -339,6 +339,9 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             break;
+        default:
+            commander_fill_report("password", FLAG_ERR_PASSWORD_ID, ERROR);
+            return ERROR;
     }
 
     if (ret) {
@@ -365,8 +368,9 @@ uint8_t *memory_read_aeskey(PASSWORD_ID id)
         case PASSWORD_VERIFY:
             memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             return MEM_aeskey_verify_;
+        default:
+            return 0;
     }
-    return 0;
 }
 
 

@@ -49,18 +49,18 @@ static uint16_t MEM_access_err_ = DEFAULT_access_err_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
-static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_aeskey_crypt_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_aeskey_verify_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN] = '0'};
-static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-static uint16_t MEM_mnemonic_[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
+__extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_crypt_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_verify_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN] = '0'};
+__extension__ static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ static uint16_t MEM_mnemonic_[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
 
-const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
+__extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
+__extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
 
 
 // One-time setup on factory install

@@ -812,7 +812,7 @@ int commander_test_static_functions(void)
     }
 
     // test json_report overflows
-    char val[] = { [0 ... COMMANDER_REPORT_SIZE] = '1' };
+    __extension__ char val[] = { [0 ... COMMANDER_REPORT_SIZE] = '1' };
     commander_clear_report();
     commander_fill_report_len("testing", val, SUCCESS, COMMANDER_REPORT_SIZE / 2);
     commander_fill_report_len("testing", val, SUCCESS, COMMANDER_REPORT_SIZE / 2);

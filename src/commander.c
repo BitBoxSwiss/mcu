@@ -113,7 +113,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
 
     // Unbase64
     int ub64len;
-    unsigned char *ub64 = unbase64((char *)in, inlen, &ub64len);
+    unsigned char *ub64 = unbase64((const char *)in, inlen, &ub64len);
     if (!ub64 || (ub64len % N_BLOCK)) {
         decrypt_len = 0;
         free(ub64);
@@ -553,7 +553,8 @@ static void commander_process_device(const char *message)
     }
 
     if (strcmp(message, ATTR_STR[ATTR_version_]) == 0) {
-        commander_fill_report(ATTR_STR[ATTR_version_], (char *)DIGITAL_BITBOX_VERSION, SUCCESS);
+        commander_fill_report(ATTR_STR[ATTR_version_], (const char *)DIGITAL_BITBOX_VERSION,
+                              SUCCESS);
         return;
     }
 
@@ -606,12 +607,14 @@ static void commander_process_aes256cbc(const char *message)
         if (data_len > DATA_LEN_MAX) {
             commander_fill_report("aes256cbc", FLAG_ERR_DATA_LEN, ERROR);
         } else {
-            crypt = aes_cbc_b64_encrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT);
+            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, data_len, &crypt_len,
+                                        PASSWORD_CRYPT);
             commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
             free(crypt);
         }
     } else if (strncmp(type, ATTR_STR[ATTR_decrypt_], strlen(ATTR_STR[ATTR_decrypt_])) == 0) {
-        crypt = aes_cbc_b64_decrypt((unsigned char *)data, data_len, &crypt_len, PASSWORD_CRYPT);
+        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, data_len, &crypt_len,
+                                    PASSWORD_CRYPT);
         if (crypt) {
             commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
         } else {
@@ -881,13 +884,15 @@ static void commander_echo_2fa(char *command)
 static int commander_verify_signing(const char *message)
 {
     int data_len, type_len, keypath_len, change_keypath_len;
-    char *data, *type, *keypath, *change_keypath;
+    const char *data, *type, *keypath, *change_keypath;
 
-    type = (char *)jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
-    data = (char *)jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
-    keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_keypath_], &keypath_len);
-    change_keypath = (char *)jsmn_get_value_string(message, CMD_STR[CMD_change_keypath_],
-                     &change_keypath_len);
+    type = jsmn_get_value_string(message, CMD_STR[CMD_type_], &type_len);
+    data = jsmn_get_value_string(message, CMD_STR[CMD_data_], &data_len);
+    keypath = jsmn_get_value_string(message, CMD_STR[CMD_keypath_],
+                                    &keypath_len);
+    change_keypath = jsmn_get_value_string(message,
+                                           CMD_STR[CMD_change_keypath_],
+                                           &change_keypath_len);
 
     if (!data || !type) {
         commander_fill_report("sign", FLAG_ERR_INVALID_CMD, ERROR);
@@ -1071,7 +1076,7 @@ static char *commander_decrypt(const char *encrypted_command,
     int command_len = 0, n = 0, err = 0;
     uint16_t err_count = 0, err_iter = 0;
 
-    command = aes_cbc_b64_decrypt((unsigned char *)encrypted_command,
+    command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                   strlen(encrypted_command),
                                   &command_len,
                                   PASSWORD_STAND);

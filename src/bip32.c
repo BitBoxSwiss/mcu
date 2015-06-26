@@ -60,7 +60,7 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
     out->depth = 0;
     out->fingerprint = 0x00000000;
     out->child_num = 0;
-    hmac_sha512((uint8_t *)"Bitcoin seed", 12, seed, seed_len, I);
+    hmac_sha512((const uint8_t *)"Bitcoin seed", 12, seed, seed_len, I);
     memcpy(out->private_key, I, 32);
 
     if (!uECC_isValid(out->private_key)) {

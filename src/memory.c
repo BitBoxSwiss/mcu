@@ -85,8 +85,8 @@ void memory_setup(void)
 void memory_erase(void)
 {
     memory_mempass();
-    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_write_aeskey((char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
+    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
@@ -267,9 +267,9 @@ uint8_t *memory_chaincode(const uint8_t *chain)
 uint16_t *memory_mnemonic(const uint16_t *idx)
 {
     if (idx) {
-        memory_eeprom_crypt((uint8_t *)idx, (uint8_t *)MEM_mnemonic_,
+        memory_eeprom_crypt((const uint8_t *)idx, (uint8_t *)MEM_mnemonic_,
                             MEM_MNEMONIC_BIP32_ADDR_0);
-        memory_eeprom_crypt((uint8_t *)idx + MEM_PAGE_LEN,
+        memory_eeprom_crypt((const uint8_t *)idx + MEM_PAGE_LEN,
                             (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
                             MEM_MNEMONIC_BIP32_ADDR_1);
     } else {
@@ -285,7 +285,7 @@ uint16_t *memory_mnemonic(const uint16_t *idx)
 int memory_aeskey_is_erased(PASSWORD_ID id)
 {
     uint8_t mem_aeskey_erased[MEM_PAGE_LEN];
-    sha256_Raw((uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
+    sha256_Raw((const uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
     sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
 
     if (memcmp(memory_read_aeskey(id), mem_aeskey_erased, 32)) {
@@ -318,7 +318,7 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         return ERROR;
     }
 
-    sha256_Raw((uint8_t *)password, len, password_b);
+    sha256_Raw((const uint8_t *)password, len, password_b);
     sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
     switch ((int)id) {
@@ -409,7 +409,8 @@ uint8_t memory_read_erased(void)
 
 void memory_write_touch_timeout(const uint16_t t)
 {
-    memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
+    memory_eeprom((const uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR,
+                  2);
 }
 uint16_t memory_read_touch_timeout(void)
 {
@@ -420,7 +421,8 @@ uint16_t memory_read_touch_timeout(void)
 
 void memory_write_touch_thresh(const uint16_t t)
 {
-    memory_eeprom((uint8_t *)&t, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
+    memory_eeprom((const uint8_t *)&t, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR,
+                  2);
 }
 uint16_t memory_read_touch_thresh(void)
 {

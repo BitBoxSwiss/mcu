@@ -1,7 +1,5 @@
 include_directories(../src)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-cast-qual")
-
 #-----------------------------------------------------------------------------
 # Build tests_unit
 add_executable(tests_unit tests_unit.c)

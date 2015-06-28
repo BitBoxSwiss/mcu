@@ -57,7 +57,7 @@
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_access_err_         INITIALIZE
 #define DEFAULT_touch_timeout_      3000// msec
-#define DEFAULT_touch_thresh_       25
+#define DEFAULT_touch_thresh_       15//v0_4   25//v0_3x
 
 
 typedef enum PASSWORD_ID {

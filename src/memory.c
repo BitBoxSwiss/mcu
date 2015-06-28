@@ -46,7 +46,7 @@ static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
 static uint16_t MEM_access_err_ = DEFAULT_access_err_;
-static uint16_t MEM_touch_thresh_ = DEFAULT_touch_timeout_;
+static uint16_t MEM_touch_thresh_ = DEFAULT_touch_thresh_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
 __extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};

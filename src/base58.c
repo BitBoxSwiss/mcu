@@ -41,7 +41,7 @@ static const int8_t b58digits_map[] = {
 static int b58tobin(void *bin, size_t *binszp, const char *b58)
 {
     size_t binsz = *binszp;
-    const unsigned char *b58u = (void *)b58;
+    const unsigned char *b58u = (const void *)b58;
     unsigned char *binu = bin;
     size_t outisz = (binsz + 3) / 4;
     uint32_t outi[outisz];

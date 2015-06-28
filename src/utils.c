@@ -179,7 +179,8 @@ char *utils_read_decrypted_report(void)
 void utils_decrypt_report(const char *report)
 {
     int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i;
-    char *dec, *pin, *tfa, *dec_tfa;
+    char *dec, *dec_tfa;
+    const char *pin, *tfa;
     jsmntok_t json_token[MAX_TOKENS];
 
     memset(decrypted_report, 0, sizeof(decrypted_report));
@@ -197,9 +198,10 @@ void utils_decrypt_report(const char *report)
             decrypted_report[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
                                       &decrypt_len, PASSWORD_STAND);
-            tfa = (char *)jsmn_get_value_string(dec, "2FA", &tfa_len);
+            tfa = jsmn_get_value_string(dec, "2FA", &tfa_len);
             if (tfa) {
-                dec_tfa = aes_cbc_b64_decrypt((unsigned char *)tfa, tfa_len, &dec_tfa_len, PASSWORD_2FA);
+                dec_tfa = aes_cbc_b64_decrypt((const unsigned char *)tfa, tfa_len, &dec_tfa_len,
+                                              PASSWORD_2FA);
                 sprintf(decrypted_report, "2FA: %.*s", dec_tfa_len, dec_tfa);
 
                 free(dec_tfa);
@@ -213,7 +215,7 @@ void utils_decrypt_report(const char *report)
             decrypted_report[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
                                       &decrypt_len, PASSWORD_VERIFY);
-            pin = (char *)jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
+            pin = jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
             } else {
@@ -235,7 +237,8 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
         utils_decrypt_report(commander(command));
     } else {
         int encrypt_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)command, strlen(command), &encrypt_len,
+        char *enc = aes_cbc_b64_encrypt((const unsigned char *)command, strlen(command),
+                                        &encrypt_len,
                                         enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};
         memcpy(cmd, enc, encrypt_len < COMMANDER_REPORT_SIZE ? encrypt_len :

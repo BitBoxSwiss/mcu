@@ -1,6 +1,5 @@
 include_directories(../src)
 
-
 #-----------------------------------------------------------------------------
 # Build tests_unit
 add_executable(tests_unit tests_unit.c)

@@ -357,10 +357,10 @@ static void copy_block_nn( void *d, const void *s, uint_8t nn )
 static void xor_block( void *d, const void *s )
 {
 #if defined( HAVE_UINT_32T )
-    ((uint_32t *)d)[ 0] ^= ((uint_32t *)s)[ 0];
-    ((uint_32t *)d)[ 1] ^= ((uint_32t *)s)[ 1];
-    ((uint_32t *)d)[ 2] ^= ((uint_32t *)s)[ 2];
-    ((uint_32t *)d)[ 3] ^= ((uint_32t *)s)[ 3];
+    ((uint_32t *)d)[ 0] ^= ((const uint_32t *)s)[ 0];
+    ((uint_32t *)d)[ 1] ^= ((const uint_32t *)s)[ 1];
+    ((uint_32t *)d)[ 2] ^= ((const uint_32t *)s)[ 2];
+    ((uint_32t *)d)[ 3] ^= ((const uint_32t *)s)[ 3];
 #else
     ((uint_8t *)d)[ 0] ^= ((uint_8t *)s)[ 0];
     ((uint_8t *)d)[ 1] ^= ((uint_8t *)s)[ 1];
@@ -384,10 +384,10 @@ static void xor_block( void *d, const void *s )
 static void copy_and_key( void *d, const void *s, const void *k )
 {
 #if defined( HAVE_UINT_32T )
-    ((uint_32t *)d)[ 0] = ((uint_32t *)s)[ 0] ^ ((uint_32t *)k)[ 0];
-    ((uint_32t *)d)[ 1] = ((uint_32t *)s)[ 1] ^ ((uint_32t *)k)[ 1];
-    ((uint_32t *)d)[ 2] = ((uint_32t *)s)[ 2] ^ ((uint_32t *)k)[ 2];
-    ((uint_32t *)d)[ 3] = ((uint_32t *)s)[ 3] ^ ((uint_32t *)k)[ 3];
+    ((uint_32t *)d)[ 0] = ((const uint_32t *)s)[ 0] ^ ((const uint_32t *)k)[ 0];
+    ((uint_32t *)d)[ 1] = ((const uint_32t *)s)[ 1] ^ ((const uint_32t *)k)[ 1];
+    ((uint_32t *)d)[ 2] = ((const uint_32t *)s)[ 2] ^ ((const uint_32t *)k)[ 2];
+    ((uint_32t *)d)[ 3] = ((const uint_32t *)s)[ 3] ^ ((const uint_32t *)k)[ 3];
 #elif 1
     ((uint_8t *)d)[ 0] = ((uint_8t *)s)[ 0] ^ ((uint_8t *)k)[ 0];
     ((uint_8t *)d)[ 1] = ((uint_8t *)s)[ 1] ^ ((uint_8t *)k)[ 1];

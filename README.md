@@ -34,3 +34,13 @@ Please do *NOT* use an editor that automatically reformats.
 
 Use the coding style set by astyle (http://astyle.sourceforge.net/) with the following parameteres:
 > astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive
+
+
+#### astyle Git hook
+
+For convenience please enable the git hooks which will trigger astyle each time you commit.
+To do so type in the repo directory:
+
+    cd .git/hooks
+    ln -s ../../contrib/git/pre-commit
+

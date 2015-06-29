@@ -76,6 +76,8 @@
 #ifndef _UTEST_H_
 #define _UTEST_H_
 
+#include <stdio.h>
+#include <string.h>
 
 #define u_run_test(TEST) do {\
  int f_ = U_TESTS_FAIL; \

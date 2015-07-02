@@ -13,6 +13,9 @@ set(VERSION_MINOR  0)
 set(VERSION_BUGFIX 0)
 set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUGFIX}")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
+
+
 #-----------------------------------------------------------------------------
 # Options for building
 
@@ -156,6 +159,26 @@ endif()
 
 if(BUILD_TESTS)
   add_definitions(-DTESTING)
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Coveralls
+
+if(COVERALLS)
+  set(CMAKE_BUILD_TYPE Debug)
+  include(Coveralls)
+  coveralls_turn_on_coverage()
+
+  #set(COVERAGE_SRCS awesome.c code.c files.c)
+  FILE(GLOB COVERAGE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/*c"
+      )
+
+  coveralls_setup(
+      "${COVERAGE_SRCS}"
+      ON
+      )
 endif()
 
 

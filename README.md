@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
+[![Coverage Status](https://coveralls.io/repos/digitalbitbox/mcu/badge.svg?branch=coveralls)](https://coveralls.io/r/digitalbitbox/mcu?branch=coveralls)
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
 
 

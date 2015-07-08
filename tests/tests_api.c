@@ -98,7 +98,7 @@ static void api_hid_send(const char *cmd)
 static void api_hid_send_encrypt(const char *cmd)
 {
     int enc_len;
-    char *enc = aes_cbc_b64_encrypt((unsigned char *)cmd, strlen(cmd), &enc_len,
+    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlen(cmd), &enc_len,
                                     PASSWORD_STAND);
     api_hid_send_len(enc, enc_len);
     free(enc);

@@ -69,15 +69,18 @@ static int api_hid_init(void)
 
 static void api_hid_read(void)
 {
-    int res;
+    int res, cnt = 0;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    res = hid_read(HID_HANDLE, HID_REPORT, HID_REPORT_SIZE);
-    if (res < 0) {
-        printf("ERROR: Unable to read report.\n");
-    } else {
-        utils_decrypt_report((char *)HID_REPORT);
-        //printf("received:  >>%s<<\n", utils_read_decrypted_report());
+    while (cnt < HID_REPORT_SIZE) {
+        res = hid_read(HID_HANDLE, HID_REPORT + cnt, HID_REPORT_SIZE);
+        if (res < 0) {
+            printf("ERROR: Unable to read report.\n");
+            return;
+        }
+        cnt += res;
     }
+    utils_decrypt_report((char *)HID_REPORT);
+    //printf("received:  >>%s<<\n", utils_read_decrypted_report());
 }
 
 

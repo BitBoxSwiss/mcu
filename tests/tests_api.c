@@ -52,7 +52,7 @@ static int TESTS_FAIL = 0;
 
 #ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/
-#include "hidapi.h"
+#include <hidapi.h>
 
 static hid_device *HID_HANDLE;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};

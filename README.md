@@ -20,6 +20,16 @@ ECDSA signatures are performed using a simplified version of the [micro ECC libr
 
 
 ## Build Instructions
+Dependencies:
+
+- https://github.com/signal11/hidapi
+
+OSX:
+
+    brew install hidapi
+
+--------------
+
 Basic build steps:
 
     mkdir build

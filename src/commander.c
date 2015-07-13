@@ -1107,6 +1107,7 @@ static char *commander_decrypt(const char *encrypted_command,
         return command;
     }
 
+    free(command);
     if (err_iter - err_count == err) {
         return NULL;
     }

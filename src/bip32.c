@@ -28,6 +28,7 @@
 #include "ripemd160.h"
 #include "base58.h"
 #include "bip32.h"
+#include "flags.h"
 #include "uECC.h"
 #include "sha2.h"
 #include "hmac.h"
@@ -65,13 +66,13 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
 
     if (!uECC_isValid(out->private_key)) {
         memset(I, 0, sizeof(I));
-        return 0;
+        return ERROR;
     }
 
     memcpy(out->chain_code, I + 32, 32);
     hdnode_fill_public_key(out);
     memset(I, 0, sizeof(I));
-    return 1;
+    return SUCCESS;
 }
 
 
@@ -106,7 +107,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
     if (!uECC_isValid(z)) {
         memset(data, 0, sizeof(data));
         memset(I, 0, sizeof(I));
-        return 0;
+        return ERROR;
     }
 
 
@@ -115,7 +116,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
     if (!uECC_isValid(inout->private_key)) {
         memset(data, 0, sizeof(data));
         memset(I, 0, sizeof(I));
-        return 0;
+        return ERROR;
     }
 
     inout->depth++;
@@ -125,7 +126,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
     memset(data, 0, sizeof(data));
     memset(I, 0, sizeof(I));
-    return 1;
+    return SUCCESS;
 }
 
 
@@ -172,23 +173,23 @@ int hdnode_deserialize(const char *str, HDNode *node)
     uint8_t node_data[78];
     memset(node, 0, sizeof(HDNode));
     if (!base58_decode_check(str, node_data, sizeof(node_data))) {
-        return -1;
+        return ERROR;
     }
     uint32_t version = read_be(node_data);
     if (version == 0x0488B21E) { // public node
         memcpy(node->public_key, node_data + 45, 33);
     } else if (version == 0x0488ADE4) { // private node
         if (node_data[45]) { // invalid data
-            return -2;
+            return ERROR;
         }
         memcpy(node->private_key, node_data + 46, 32);
         hdnode_fill_public_key(node);
     } else {
-        return -3; // invalid version
+        return ERROR; // invalid version
     }
     node->depth = node_data[4];
     node->fingerprint = read_be(node_data + 5);
     node->child_num = read_be(node_data + 9);
     memcpy(node->chain_code, node_data + 13, 32);
-    return 0;
+    return SUCCESS;
 }

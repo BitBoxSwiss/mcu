@@ -38,6 +38,15 @@
 extern const char *CMD_STR[];
 static char PIN_2FA[5] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];
+static uint8_t buffer_hex_to_uint8[TO_UINT8_HEX_BUF_LEN];
+static char buffer_uint8_to_hex[TO_UINT8_HEX_BUF_LEN];
+
+
+void utils_clear_buffers(void)
+{
+    memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
+    memset(buffer_uint8_to_hex, 0, TO_UINT8_HEX_BUF_LEN);
+}
 
 
 uint8_t *utils_hex_to_uint8(const char *str)
@@ -45,8 +54,7 @@ uint8_t *utils_hex_to_uint8(const char *str)
     if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
-    static uint8_t buf[TO_UINT8_HEX_BUF_LEN];
-    memset(buf, 0, sizeof(buf));
+    memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
     uint8_t c;
     size_t i;
     for (i = 0; i < strlen(str) / 2; i++) {
@@ -69,27 +77,26 @@ uint8_t *utils_hex_to_uint8(const char *str)
         if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') {
             c += (10 + str[i * 2 + 1] - 'A');
         }
-        buf[i] = c;
+        buffer_hex_to_uint8[i] = c;
     }
-    return buf;
+    return buffer_hex_to_uint8;
 }
 
 
 char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
 {
-    if ((l * 2) > TO_UINT8_HEX_BUF_LEN) {
+    if (l > (TO_UINT8_HEX_BUF_LEN / 2 - 1)) {
         return NULL;
     }
     static char digits[] = "0123456789abcdef";
-    static char buf[TO_UINT8_HEX_BUF_LEN];
-    memset(buf, 0, sizeof(buf));
+    memset(buffer_uint8_to_hex, 0, TO_UINT8_HEX_BUF_LEN);
     size_t i;
     for (i = 0; i < l; i++) {
-        buf[i * 2] = digits[(bin[i] >> 4) & 0xF];
-        buf[i * 2 + 1] = digits[bin[i] & 0xF];
+        buffer_uint8_to_hex[i * 2] = digits[(bin[i] >> 4) & 0xF];
+        buffer_uint8_to_hex[i * 2 + 1] = digits[bin[i] & 0xF];
     }
-    buf[l * 2] = 0;
-    return buf;
+    buffer_uint8_to_hex[l * 2] = 0;
+    return buffer_uint8_to_hex;
 }
 
 
@@ -198,12 +205,19 @@ void utils_decrypt_report(const char *report)
             decrypted_report[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
                                       &decrypt_len, PASSWORD_STAND);
+            if (!dec) {
+                strcpy(decrypted_report, "error: Failed to decrypt.");
+                return;
+            }
             tfa = jsmn_get_value_string(dec, "2FA", &tfa_len);
             if (tfa) {
                 dec_tfa = aes_cbc_b64_decrypt((const unsigned char *)tfa, tfa_len, &dec_tfa_len,
                                               PASSWORD_2FA);
+                if (!dec_tfa) {
+                    strcpy(decrypted_report, "error: Failed to decrypt 2FA.");
+                    return;
+                }
                 sprintf(decrypted_report, "2FA: %.*s", dec_tfa_len, dec_tfa);
-
                 free(dec_tfa);
             } else {
                 sprintf(decrypted_report, "ciphertext: %.*s", decrypt_len, dec);
@@ -215,6 +229,10 @@ void utils_decrypt_report(const char *report)
             decrypted_report[len] = '\0';
             dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
                                       &decrypt_len, PASSWORD_VERIFY);
+            if (!dec) {
+                strcpy(decrypted_report, "error: Failed to decrypt echo.");
+                return;
+            }
             pin = jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);

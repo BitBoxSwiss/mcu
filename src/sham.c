@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "sham.h"
 #include "commander.h"
@@ -35,29 +36,30 @@
 static char sd_filename[64] = {0};
 static char sd_text[512] = {0};
 
-
 void delay_ms(int delay)
 {
     (void)delay;
 }
 
 
-uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
+uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
 {
-    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, SUCCESS);
     memset(sd_filename, 0, sizeof(sd_filename));
-    memcpy(sd_filename, f, f_len);
     memset(sd_text, 0, sizeof(sd_text));
-    memcpy(sd_text, t, t_len);
+    snprintf(sd_filename, sizeof(sd_filename), "%.*s", f_len, f);
+    snprintf(sd_text, sizeof(sd_text), "%.*s", t_len, t);
+    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, SUCCESS);
     return SUCCESS;
 }
 
 
-char *sd_load(const char *f, int f_len)
+char *sd_load(const char *f, uint16_t f_len)
 {
+    static char text[512];
+    memcpy(text, sd_text, 512);
     commander_fill_report("sd_load", FLAG_ERR_NO_MCU, SUCCESS);
     if (!strncmp(sd_filename, f, f_len)) {
-        return sd_text;
+        return text;
     }
     return NULL;
 }

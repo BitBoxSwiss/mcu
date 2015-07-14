@@ -87,7 +87,10 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     }
 
     // Make a random initialization vector
-    random_bytes((uint8_t *)iv, N_BLOCK, 0);
+    if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == ERROR) {
+        commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
+        return NULL;
+    }
     memcpy(enc_cat, iv, N_BLOCK);
 
     // CBC encrypt multiple blocks
@@ -99,6 +102,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     char *b64;
     b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
     *out_b64len = b64len;
+    memset(inpad, 0, inpadlen);
     return b64;
 }
 
@@ -107,6 +111,8 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
                           PASSWORD_ID id)
 {
+    *decrypt_len = 0;
+
     if (!in || inlen == 0) {
         return NULL;
     }
@@ -114,8 +120,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     // Unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((const char *)in, inlen, &ub64len);
-    if (!ub64 || (ub64len % N_BLOCK)) {
-        decrypt_len = 0;
+    if (!ub64 || (ub64len % N_BLOCK) || ub64len < N_BLOCK) {
         free(ub64);
         return NULL;
     }
@@ -132,10 +137,13 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
 
     // Strip PKCS7 padding
     int padlen = dec_pad[ub64len - N_BLOCK - 1];
+    if (ub64len - N_BLOCK - padlen <= 0) {
+        memset(dec_pad, 0, sizeof(dec_pad));
+        return NULL;
+    }
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec) {
         memset(dec_pad, 0, sizeof(dec_pad));
-        decrypt_len = 0;
         return NULL;
     }
     memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
@@ -262,11 +270,10 @@ static void commander_process_name(const char *message)
 static void commander_process_seed(const char *message)
 {
     int salt_len, source_len, decrypt_len, ret;
-    char *seed_word[25] = {NULL};
+    char *seed_word[MAX_SEED_WORDS] = {NULL};
     const char *salt = jsmn_get_value_string(message, CMD_STR[CMD_salt_], &salt_len);
     const char *source = jsmn_get_value_string(message, CMD_STR[CMD_source_], &source_len);
     const char *decrypt = jsmn_get_value_string(message, CMD_STR[CMD_decrypt_], &decrypt_len);
-
 
     if (!memory_read_unlocked()) {
         commander_fill_report("seed", FLAG_ERR_DEVICE_LOCKED, ERROR);
@@ -278,7 +285,16 @@ static void commander_process_seed(const char *message)
         return;
     }
 
-    char src[source_len + 1];
+    if (salt_len > SALT_LEN_MAX) {
+        commander_fill_report("seed", FLAG_ERR_SALT_LEN, ERROR);
+        return;
+    }
+
+    char *src = malloc(source_len + 1);
+    if (!src) {
+        commander_fill_report("seed", FLAG_ERR_SEED_MEM, ERROR);
+        return;
+    }
     memcpy(src, source, source_len);
     src[source_len] = '\0';
 
@@ -299,10 +315,15 @@ static void commander_process_seed(const char *message)
         }
         if (mnemo) {
             ret = wallet_master_from_mnemonic(mnemo, strlen(mnemo), salt, salt_len);
+            memset(mnemo, 0, strlen(mnemo));
         } else {
+            memset(src, 0, source_len);
+            free(src);
             ret = ERROR;
         }
     }
+    memset(src, 0, source_len);
+    free(src);
 
     if (ret == ERROR) {
         commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, ERROR);
@@ -375,6 +396,7 @@ static void commander_process_backup(const char *message)
                 if (memcmp(enc, l, enc_len)) {
                     commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
                 }
+                memset(l, 0, strlen(l));
             }
         }
         free(enc);
@@ -388,6 +410,7 @@ static void commander_process_backup(const char *message)
                 if (memcmp(text, l, strlen(text))) {
                     commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
                 }
+                memset(l, 0, strlen(l));
             }
         }
     }
@@ -444,7 +467,7 @@ static void commander_process_random(const char *message)
         return;
     }
 
-    if (random_bytes(number, sizeof(number), update_seed)) {
+    if (random_bytes(number, sizeof(number), update_seed) == ERROR) {
         commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
         return;
     }
@@ -476,7 +499,7 @@ static void commander_process_verifypass(const char *message)
     }
 
     if (strcmp(message, ATTR_STR[ATTR_create_]) == 0) {
-        if (random_bytes(number, sizeof(number), 1)) {
+        if (random_bytes(number, sizeof(number), 1) == ERROR) {
             commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
             return;
         }
@@ -488,22 +511,26 @@ static void commander_process_verifypass(const char *message)
 
     } else if (strcmp(message, ATTR_STR[ATTR_export_]) == 0) {
         memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
+        utils_clear_buffers();
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
         if (ret != SUCCESS) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_WRITE, ERROR);
+            memset(text, 0, sizeof(text));
             return;
         }
         l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME));
         if (!l) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+            memset(text, 0, sizeof(text));
             return;
         }
         if (memcmp(text, l, strlen(text))) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-            return;
+        } else {
+            commander_fill_report(ATTR_STR[ATTR_export_], "success", SUCCESS);
         }
-        commander_fill_report(ATTR_STR[ATTR_export_], "success", SUCCESS);
-
+        memset(l, 0, strlen(l));
+        memset(text, 0, sizeof(text));
     } else {
         commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, ERROR);
     }
@@ -609,7 +636,11 @@ static void commander_process_aes256cbc(const char *message)
         } else {
             crypt = aes_cbc_b64_encrypt((const unsigned char *)data, data_len, &crypt_len,
                                         PASSWORD_CRYPT);
-            commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
+            if (crypt) {
+                commander_fill_report_len("aes256cbc", crypt, SUCCESS, crypt_len);
+            } else {
+                commander_fill_report("aes256cbc", FLAG_ERR_ENCRYPT_MEM, ERROR);
+            }
             free(crypt);
         }
     } else if (strncmp(type, ATTR_STR[ATTR_decrypt_], strlen(ATTR_STR[ATTR_decrypt_])) == 0) {
@@ -851,7 +882,10 @@ static void commander_echo_2fa(char *command)
         // Create one-time PIN
         uint8_t pin_b[2];
         char pin_c[5];
-        random_bytes(pin_b, 2, 0);
+        if (random_bytes(pin_b, 2, 0) == ERROR) {
+            commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
+            return;
+        }
         sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
         // Append PIN to echoed command
@@ -871,11 +905,10 @@ static void commander_echo_2fa(char *command)
                                          &encrypt_len,
                                          PASSWORD_VERIFY);
     commander_clear_report();
-
     if (encoded_report) {
         commander_fill_report_len("echo", encoded_report, SUCCESS, encrypt_len);
     } else {
-        commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, ERROR);
+        commander_fill_report("echo", FLAG_ERR_ENCRYPT_MEM, ERROR);
     }
     free(encoded_report);
 }
@@ -1048,6 +1081,8 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
             if (encoded_report) {
                 commander_fill_report_len("2FA", encoded_report, SUCCESS, encrypt_len);
                 free(encoded_report);
+            } else {
+                commander_fill_report("2FA", FLAG_ERR_ENCRYPT_MEM, ERROR);
             }
         }
     }
@@ -1056,7 +1091,6 @@ static void commander_parse(char *command, jsmntok_t json_token[MAX_TOKENS], int
                                          strlen(json_report),
                                          &encrypt_len,
                                          PASSWORD_STAND);
-
     commander_clear_report();
 
     if (encoded_report) {
@@ -1107,6 +1141,7 @@ static char *commander_decrypt(const char *encrypted_command,
         return command;
     }
 
+    free(command);
     if (err_iter - err_count == err) {
         return NULL;
     }

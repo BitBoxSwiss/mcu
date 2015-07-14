@@ -40,7 +40,7 @@ uint32_t sd_num_files = 0;
 FATFS fs;
 
 
-uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
+uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
 {
     char file[256] = {0};
     memcpy(file, "0:", 2);
@@ -49,49 +49,60 @@ uint8_t sd_write(const char *f, int f_len, const char *t, int t_len)
     char text[256] = {0};
     if (t_len > 256) {
         commander_fill_report("sd_write", FLAG_ERR_SD_WRITE_LEN, ERROR);
-        return ERROR;
+        goto err;
     }
 
-    memcpy(text, t, t_len);
     sd_mmc_init();
     sd_listing_pos = 0;
 
     if (CTRL_FAIL == sd_mmc_test_unit_ready(0)) {
         commander_fill_report("sd_write", FLAG_ERR_SD_CARD, ERROR);
-    } else {
-        FRESULT res;
-        FIL file_object;
-
-        memset(&fs, 0, sizeof(FATFS));
-        res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
-        if (FR_INVALID_DRIVE == res) {
-            commander_fill_report("sd_write", FLAG_ERR_SD_MOUNT, ERROR);
-            return ERROR;
-        }
-
-        file[0] = LUN_ID_SD_MMC_0_MEM + '0';
-        res = f_open(&file_object, (char const *)file, FA_CREATE_NEW | FA_WRITE);
-        if (res != FR_OK) {
-            commander_fill_report("sd_write", FLAG_ERR_SD_FILE_EXISTS, ERROR);
-            return ERROR;
-        }
-
-        if (0 == f_puts(text, &file_object)) {
-            f_close(&file_object);
-            commander_fill_report("sd_write", FLAG_ERR_SD_WRITE, ERROR);
-            return ERROR;
-        }
-
-        f_close(&file_object);
-        commander_fill_report("sd_write", "success", SUCCESS);
-
-        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        goto err;
     }
+
+    FRESULT res;
+    FIL file_object;
+
+    memset(&fs, 0, sizeof(FATFS));
+    res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
+    if (FR_INVALID_DRIVE == res) {
+        commander_fill_report("sd_write", FLAG_ERR_SD_MOUNT, ERROR);
+        goto err;
+    }
+
+    file[0] = LUN_ID_SD_MMC_0_MEM + '0';
+    res = f_open(&file_object, (char const *)file, FA_CREATE_NEW | FA_WRITE);
+    if (res != FR_OK) {
+        commander_fill_report("sd_write", FLAG_ERR_SD_FILE_EXISTS, ERROR);
+        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        goto err;
+    }
+
+    memcpy(text, t, t_len);
+    if (0 == f_puts(text, &file_object)) {
+        commander_fill_report("sd_write", FLAG_ERR_SD_WRITE, ERROR);
+        f_close(&file_object);
+        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        memset(text, 0, sizeof(text));
+        goto err;
+    }
+
+    commander_fill_report("sd_write", "success", SUCCESS);
+
+    f_close(&file_object);
+    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+    memset(text, 0, sizeof(text));
+    memset(file, 0, sizeof(file));
     return SUCCESS;
+
+err:
+    memset(text, 0, sizeof(text));
+    memset(file, 0, sizeof(file));
+    return ERROR;
 }
 
 
-char *sd_load(const char *f, int f_len)
+char *sd_load(const char *f, uint16_t f_len)
 {
     char file[256] = {0};
     memcpy(file, "0:", 2);
@@ -105,7 +116,7 @@ char *sd_load(const char *f, int f_len)
 
     if (CTRL_FAIL == sd_mmc_test_unit_ready(0)) {
         commander_fill_report("sd_load", FLAG_ERR_SD_CARD, ERROR);
-        return NULL;
+        goto err;
     }
 
     FRESULT res;
@@ -114,27 +125,34 @@ char *sd_load(const char *f, int f_len)
     res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
     if (FR_INVALID_DRIVE == res) {
         commander_fill_report("sd_load", FLAG_ERR_SD_MOUNT, ERROR);
-        return NULL;
+        goto err;
     }
 
     file[0] = LUN_ID_SD_MMC_0_MEM + '0';
     res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_READ);
     if (res != FR_OK) {
         commander_fill_report("sd_load", FLAG_ERR_SD_OPEN, ERROR);
-        return NULL;
+        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        goto err;
     }
 
     if (0 == f_gets(text, sizeof(text), &file_object)) {
-        f_close(&file_object);
         commander_fill_report("sd_load", FLAG_ERR_SD_READ, ERROR);
-        return NULL;
+        f_close(&file_object);
+        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        goto err;
     }
 
-    f_close(&file_object);
     commander_fill_report("sd_load", "success", SUCCESS);
 
+    f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+    memset(file, 0, sizeof(file));
     return text;
+
+err:
+    memset(file, 0, sizeof(file));
+    return NULL;
 }
 
 
@@ -150,6 +168,7 @@ uint8_t sd_list(void)
 #endif
 
     char files[1028] = {0};
+    size_t f_len = 0;
     uint32_t pos = 1;
 
 
@@ -158,7 +177,7 @@ uint8_t sd_list(void)
 
     if (CTRL_FAIL == sd_mmc_test_unit_ready(0)) {
         commander_fill_report("sd_list", FLAG_ERR_SD_CARD, ERROR);
-        return ERROR;
+        goto err;
     }
 
     FRESULT res;
@@ -166,7 +185,7 @@ uint8_t sd_list(void)
     res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
     if (FR_INVALID_DRIVE == res) {
         commander_fill_report("sd_list", FLAG_ERR_SD_MOUNT, ERROR);
-        return ERROR;
+        goto err;
     }
 
     // Open the directory
@@ -188,8 +207,14 @@ uint8_t sd_list(void)
                 continue;
             }
 
+            f_len += strlen(pc_fn) + 2;
+            if (f_len >= sizeof(files)) {
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                commander_fill_report("sd_list", FLAG_ERR_NUM_FILES, ERROR);
+                goto err;
+            }
+
             if (pos >= sd_listing_pos) {
-                strcat(files, "/");
                 strcat(files, pc_fn);
                 strcat(files, ", ");
             }
@@ -198,11 +223,16 @@ uint8_t sd_list(void)
         }
     }
 
-    // Unmount
-    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-
     commander_fill_report("sd_list", files, SUCCESS);
+
+    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+    memset(files, 0, sizeof(files));
     return SUCCESS;
+
+err:
+    memset(files, 0, sizeof(files));
+    return NULL;
+
 }
 
 

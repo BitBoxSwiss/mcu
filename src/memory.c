@@ -163,6 +163,9 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     if (read_b) {
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN),
                                   MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        if (!enc) {
+            goto err;
+        }
         memcpy(enc_r, enc, enc_len);
         free(enc);
     }
@@ -171,21 +174,28 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN),
                                   MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+        if (!enc) {
+            goto err;
+        }
         memcpy(enc_w, enc, enc_len);
         free(enc);
-        ret = ret * memory_eeprom((uint8_t *)enc_w,                    (uint8_t *)enc_r,
-                                  addr,                    MEM_PAGE_LEN);
+        ret = ret * memory_eeprom((uint8_t *)enc_w,
+                                  (uint8_t *)enc_r,
+                                  addr, MEM_PAGE_LEN);
         ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN,
-                                  (uint8_t *)enc_r + MEM_PAGE_LEN,     addr + MEM_PAGE_LEN,     MEM_PAGE_LEN);
+                                  (uint8_t *)enc_r + MEM_PAGE_LEN,
+                                  addr + MEM_PAGE_LEN, MEM_PAGE_LEN);
         ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 2,
-                                  (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
+                                  (uint8_t *)enc_r + MEM_PAGE_LEN * 2,
+                                  addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
         ret = ret * memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 3,
-                                  (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3, MEM_PAGE_LEN);
+                                  (uint8_t *)enc_r + MEM_PAGE_LEN * 3,
+                                  addr + MEM_PAGE_LEN * 3, MEM_PAGE_LEN);
     } else {
-        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r,                    addr,
-                                  MEM_PAGE_LEN);
-        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN,     addr + MEM_PAGE_LEN,
-                                  MEM_PAGE_LEN);
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r,
+                                  addr, MEM_PAGE_LEN);
+        ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN,
+                                  addr + MEM_PAGE_LEN, MEM_PAGE_LEN);
         ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 2,
                                   addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN);
         ret = ret * memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 3,
@@ -194,13 +204,18 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
 
     dec = aes_cbc_b64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len,
                               PASSWORD_MEMORY);
-    if (dec) {
-        memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
-    } else {
-        ret = 0;
+    if (!dec) {
+        goto err;
     }
+    memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
+    memset(dec, 0, dec_len);
     free(dec);
+
+    utils_clear_buffers();
     return ret; // 1 on success
+err:
+    utils_clear_buffers();
+    return 0;
 }
 
 
@@ -234,6 +249,8 @@ void memory_mempass(void)
 #endif
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
                         PASSWORD_MEMORY);
+    memset(mempass, 0, sizeof(mempass));
+    utils_clear_buffers();
 }
 
 
@@ -340,10 +357,12 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             break;
         default:
+            memset(password_b, 0, MEM_PAGE_LEN);
             commander_fill_report("password", FLAG_ERR_PASSWORD_ID, ERROR);
             return ERROR;
     }
 
+    memset(password_b, 0, MEM_PAGE_LEN);
     if (ret) {
         return SUCCESS;
     } else {

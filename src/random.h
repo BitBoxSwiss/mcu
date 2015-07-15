@@ -33,6 +33,5 @@
 
 void random_init(void);
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed);
-void random_shuffle(int *array, size_t n);
 
 #endif

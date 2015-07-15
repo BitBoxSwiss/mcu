@@ -25,10 +25,11 @@
 */
 
 
-
 #include <string.h>
 #include <stdio.h>
 #include "random.h"
+#include "flags.h"
+
 
 #ifdef TESTING
 
@@ -45,9 +46,9 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     (void) update_seed;
     if (fread(buf, 1, len, f) != len) {
-        return 1; // error
+        return ERROR;
     }
-    return 0;
+    return SUCCESS;
 }
 
 #else
@@ -72,11 +73,11 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         if (ataes_ret[0]) {
             memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16);
         } else {
-            return 1; // error
+            return ERROR;
         }
         cnt += 16;
     }
-    return 0;
+    return SUCCESS;
 }
 
 #endif
@@ -86,6 +87,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
    Adapted from:
    http://benpfaff.org/writings/clc/shuffle.html
 */
+/*
 void random_shuffle(int *array, size_t n)
 {
     int r_len = 15;
@@ -101,3 +103,4 @@ void random_shuffle(int *array, size_t n)
         }
     }
 }
+*/

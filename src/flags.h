@@ -138,7 +138,9 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
 #define FLAG_ERR_SIGN               "Could not sign."
-#define FLAG_ERR_ENCRYPT_MEM        "Could not allocate memory for encryption."
+#define FLAG_ERR_SALT_LEN           "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters."
+#define FLAG_ERR_SEED_MEM           "Could not allocate memory for seed."
+#define FLAG_ERR_ENCRYPT_MEM        "Could not encrypt."
 #define FLAG_ERR_ATAES              "Chip communication error."
 #define FLAG_ERR_FLASH              "Could not read flash."
 #define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
@@ -151,6 +153,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_SD_READ            "Could not read the file."
 #define FLAG_ERR_SD_NO_FILE         "No files to erase in base directory."
 #define FLAG_ERR_SD_FILE_EXISTS     "File exists."
+#define FLAG_ERR_NUM_FILES          "Too many files to read. The list is truncated."
 #define FLAG_ERR_PASSWORD_ID        "Invalid password ID."
 
 #endif

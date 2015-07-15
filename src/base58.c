@@ -121,6 +121,7 @@ static int b58tobin(void *bin, size_t *binszp, const char *b58)
     }
     *binszp += zerocount;
 
+    memset(outi, 0, sizeof(outi));
     return true;
 }
 
@@ -178,6 +179,7 @@ static int b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
 
     if (*b58sz <= zcount + size - j) {
         *b58sz = zcount + size - j + 1;
+        memset(buf, 0, size);
         return false;
     }
 
@@ -190,11 +192,13 @@ static int b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
     b58[i] = '\0';
     *b58sz = i + 1;
 
+    memset(buf, 0, size);
     return true;
 }
 
 int base58_encode_check(const uint8_t *data, int datalen, char *str, int strsize)
 {
+    int ret;
     if (datalen > 128) {
         return 0;
     }
@@ -205,27 +209,33 @@ int base58_encode_check(const uint8_t *data, int datalen, char *str, int strsize
     sha256_Raw(hash, 32, hash);
     size_t res = strsize;
     if (b58enc(str, &res, buf, datalen + 4) != true) {
-        return 0;
+        ret = 0;
+    } else {
+        ret = res;
     }
-    return res;
+    memset(buf, 0, sizeof(buf));
+    return ret;
 }
 
 int base58_decode_check(const char *str, uint8_t *data, int datalen)
 {
+    int ret;
+
     if (datalen > 128) {
         return 0;
     }
     uint8_t d[datalen + 4];
     size_t res = datalen + 4;
     if (b58tobin(d, &res, str) != true) {
-        return 0;
+        ret = 0;
+    } else if (res != (size_t)datalen + 4) {
+        ret = 0;
+    } else if (b58check(d, res, str) < 0) {
+        ret = 0;
+    } else {
+        memcpy(data, d, datalen);
+        ret = datalen;
     }
-    if (res != (size_t)datalen + 4) {
-        return 0;
-    }
-    if (b58check(d, res, str) < 0) {
-        return 0;
-    }
-    memcpy(data, d, datalen);
-    return datalen;
+    memset(d, 0, sizeof(d));
+    return ret;
 }

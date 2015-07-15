@@ -33,6 +33,7 @@
 
 #include "base64.h"
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 static const char *b64 =
@@ -86,8 +87,6 @@ char *base64( const void *binaryData, int len, int *flen )
     *flen = 4 * (len + pad) / 3 ;
     res = malloc( *flen + 1 ) ; // and one for the null
     if ( !res ) {
-        //printf( "ERROR: base64 could not allocate enough memory." ) ;
-        //printf( "I must stop because I could not get enough" ) ;
         return 0;
     }
 
@@ -127,22 +126,32 @@ unsigned char *unbase64( const char *ascii, int len, int *flen )
 
     if ( len < 2 ) { // 2 accesses below would be OOB.
         // catch empty string, return NULL as result.
-        //printf( "ERROR: You passed an invalid base64 string (too short). You get NULL back." ) ;
         *flen = 0;
-        return 0 ;
+        return 0;
     }
-    if ( safeAsciiPtr[ len - 1 ] == '=' ) {
-        ++pad ;
-    }
-    if ( safeAsciiPtr[ len - 2 ] == '=' ) {
-        ++pad ;
+
+    for ( int i = 0; i < len; i++ ) {
+        if (safeAsciiPtr[i] == '=') {
+            ++pad;
+            if (pad > 2) {
+                // invalid padding
+                *flen = 0;
+                return 0;
+            }
+        } else if (strchr(b64, safeAsciiPtr[i]) == NULL) {
+            // invalid character
+            *flen = 0;
+            return 0;
+        } else if (pad) {
+            // contains data beyond pad symbol
+            *flen = 0;
+            return 0;
+        }
     }
 
     *flen = 3 * len / 4 - pad ;
     bin = malloc( *flen ) ;
     if ( !bin ) {
-        //printf( "ERROR: unbase64 could not allocate enough memory." ) ;
-        //printf( "I must stop because I could not get enough" ) ;
         return 0;
     }
 

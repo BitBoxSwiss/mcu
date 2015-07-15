@@ -28,8 +28,8 @@
 #ifndef _SD_H_
 #define _SD_H_
 
-uint8_t sd_write(const char *f, int f_len, const char *text, int t_len);
-char *sd_load(const char *f, int f_len);
+uint8_t sd_write(const char *f, uint16_t f_len, const char *text, uint16_t t_len);
+char *sd_load(const char *f, uint16_t f_len);
 uint8_t sd_list(void);
 uint8_t sd_erase(void);
 

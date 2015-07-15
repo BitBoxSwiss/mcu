@@ -1,3 +1,7 @@
+#define BIP39_NUM_WORDS        2049// number of words + 1 for NULL ending
+#define BIP39_MAX_WORD_LEN     8
+
+
 const char *wordlist[] = {
     "abandon",
     "ability",

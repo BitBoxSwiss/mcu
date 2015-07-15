@@ -35,6 +35,8 @@
 
 
 #define BIP39_PBKDF2_ROUNDS 2048
+#define MAX_SEED_WORDS      25// 24 mnemonic words + 1 for NULL ending
+#define SALT_LEN_MAX        256// 24 mnemonic words + 1 for NULL ending
 
 
 /* BIP32 */

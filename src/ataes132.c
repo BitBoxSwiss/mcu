@@ -267,7 +267,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
             } else if (cnt++ > timeout) {
                 sprintf(message, "EEPROM write error [status]:  %u  %i", aes_status, ret);
                 commander_fill_report("eeprom", message, ERROR);
-                break;
+                return;
             }
             delay_ms(delay);
         }
@@ -287,7 +287,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
             } else if (cnt++ > timeout) {
                 sprintf(message, "EEPROM read error [status]:  %u  %i", aes_status, ret);
                 commander_fill_report("eeprom", message, ERROR);
-                break;
+                return;
             }
             delay_ms(delay);
         }

@@ -31,9 +31,9 @@
 #include <inttypes.h>
 
 #include "utils.h"
-#include "commander.h"
 #include "flags.h"
-#include "jsmn.h"
+#include "commander.h"
+#include "yajl/api/yajl_tree.h"
 
 extern const char *CMD_STR[];
 static char PIN_2FA[5] = {0};
@@ -51,13 +51,13 @@ void utils_clear_buffers(void)
 
 uint8_t *utils_hex_to_uint8(const char *str)
 {
-    if (strlen(str) > TO_UINT8_HEX_BUF_LEN) {
+    if (strlens(str) > TO_UINT8_HEX_BUF_LEN) {
         return NULL;
     }
     memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
     uint8_t c;
     size_t i;
-    for (i = 0; i < strlen(str) / 2; i++) {
+    for (i = 0; i < strlens(str) / 2; i++) {
         c = 0;
         if (str[i * 2] >= '0' && str[i * 2] <= '9') {
             c += (str[i * 2] - '0') << 4;
@@ -185,61 +185,78 @@ char *utils_read_decrypted_report(void)
 
 void utils_decrypt_report(const char *report)
 {
-    int decrypt_len, pin_len, tfa_len, dec_tfa_len, r, i;
+    int decrypt_len, dec_tfa_len;
     char *dec, *dec_tfa;
     const char *pin, *tfa;
-    jsmntok_t json_token[MAX_TOKENS];
 
     memset(decrypted_report, 0, sizeof(decrypted_report));
-    r = jsmn_parse_init(report, strlen(report), json_token, MAX_TOKENS);
 
-    if (r < 0) {
-        strcpy(decrypted_report, "error: Failed to parse report.");
+    yajl_val json_node = yajl_tree_parse(report, NULL, 0);
+
+    if (!json_node) {
+        strcpy(decrypted_report, "/* error: Failed to parse report. */");
         return;
     }
 
+    size_t i, r = json_node->u.object.len;
     for (i = 0; i < r; i++) {
-        int len = json_token[i + 1].end - json_token[i + 1].start;
-        if (jsmn_token_equals(report, &json_token[i], CMD_STR[CMD_ciphertext_]) == 0) {
-            memcpy(decrypted_report, report + json_token[i + 1].start, len);
-            decrypted_report[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
+        const char *ciphertext_path[] = { CMD_STR[CMD_ciphertext_], (const char *) 0 };
+        const char *echo_path[] = { "echo", (const char *) 0 };
+        const char *ciphertext_value = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
+                                       yajl_t_string));
+        const char *echo_value = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path,
+                                 yajl_t_string));
+        if (ciphertext_value) {
+            dec = aes_cbc_b64_decrypt((unsigned char *)ciphertext_value, strlens(ciphertext_value),
                                       &decrypt_len, PASSWORD_STAND);
             if (!dec) {
-                strcpy(decrypted_report, "error: Failed to decrypt.");
+                strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 return;
             }
-            tfa = jsmn_get_value_string(dec, "2FA", &tfa_len);
+
+            char tfa_report[decrypt_len + 1];
+            memcpy(tfa_report, dec, decrypt_len);
+            tfa_report[decrypt_len] = '\0';
+            yajl_val tfa_node = yajl_tree_parse(tfa_report, NULL, 0);
+
+
+            const char *tfa_path[] = { "2FA", (const char *) 0 };
+            tfa = YAJL_GET_STRING(yajl_tree_get(tfa_node, tfa_path, yajl_t_string));
             if (tfa) {
-                dec_tfa = aes_cbc_b64_decrypt((const unsigned char *)tfa, tfa_len, &dec_tfa_len,
+                dec_tfa = aes_cbc_b64_decrypt((const unsigned char *)tfa, strlens(tfa), &dec_tfa_len,
                                               PASSWORD_2FA);
                 if (!dec_tfa) {
-                    strcpy(decrypted_report, "error: Failed to decrypt 2FA.");
+                    strcpy(decrypted_report, "/* error: Failed to decrypt 2FA. */");
                     return;
                 }
-                sprintf(decrypted_report, "2FA: %.*s", dec_tfa_len, dec_tfa);
+                sprintf(decrypted_report, "/* 2FA */ %.*s", dec_tfa_len, dec_tfa);
                 free(dec_tfa);
             } else {
-                sprintf(decrypted_report, "ciphertext: %.*s", decrypt_len, dec);
+                sprintf(decrypted_report, "/* ciphertext */ %.*s", decrypt_len, dec);
             }
             free(dec);
             return;
-        } else if (jsmn_token_equals(report, &json_token[i], "echo") == 0) {
-            memcpy(decrypted_report, report + json_token[i + 1].start, len);
-            decrypted_report[len] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlen(decrypted_report),
-                                      &decrypt_len, PASSWORD_VERIFY);
+        } else if (echo_value) {
+            dec = aes_cbc_b64_decrypt((unsigned char *)echo_value, strlens(echo_value), &decrypt_len,
+                                      PASSWORD_VERIFY);
             if (!dec) {
-                strcpy(decrypted_report, "error: Failed to decrypt echo.");
+                strcpy(decrypted_report, "/* error: Failed to decrypt echo. */");
                 return;
             }
-            pin = jsmn_get_value_string(dec, CMD_STR[CMD_pin_], &pin_len);
+
+            char pin_report[decrypt_len + 1];
+            memcpy(pin_report, dec, decrypt_len);
+            pin_report[decrypt_len] = '\0';
+            yajl_val pin_node = yajl_tree_parse(pin_report, NULL, 0);
+
+            const char *pin_path[] = { CMD_STR[CMD_pin_], (const char *) 0 };
+            pin = YAJL_GET_STRING(yajl_tree_get(pin_node, pin_path, yajl_t_string));
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
             } else {
                 memset(PIN_2FA, 0, sizeof(PIN_2FA));
             }
-            sprintf(decrypted_report, "echo: %.*s", decrypt_len, dec);
+            sprintf(decrypted_report, "/* echo */ %.*s", decrypt_len, dec);
             free(dec);
             return;
         }
@@ -255,7 +272,7 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
         utils_decrypt_report(commander(command));
     } else {
         int encrypt_len;
-        char *enc = aes_cbc_b64_encrypt((const unsigned char *)command, strlen(command),
+        char *enc = aes_cbc_b64_encrypt((const unsigned char *)command, strlens(command),
                                         &encrypt_len,
                                         enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};

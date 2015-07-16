@@ -36,6 +36,7 @@
 #define TO_UINT8_HEX_BUF_LEN 2048
 #define VARINT_LEN 20
 
+#define strlens(s) (s == NULL ? 0 : strlen(s))
 
 void utils_clear_buffers(void);
 uint8_t *utils_hex_to_uint8(const char *str);

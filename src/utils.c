@@ -207,7 +207,9 @@ void utils_decrypt_report(const char *report)
         const char *echo_value = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path,
                                  yajl_t_string));
         if (ciphertext_value) {
-            dec = aes_cbc_b64_decrypt((unsigned char *)ciphertext_value, strlens(ciphertext_value),
+            memcpy(decrypted_report, ciphertext_value, strlens(ciphertext_value));
+            decrypted_report[strlens(ciphertext_value)] = '\0';
+            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlens(decrypted_report),
                                       &decrypt_len, PASSWORD_STAND);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");

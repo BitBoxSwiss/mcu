@@ -231,7 +231,7 @@ uint8_t sd_list(void)
 
 err:
     memset(files, 0, sizeof(files));
-    return NULL;
+    return 0;
 
 }
 
@@ -239,7 +239,7 @@ err:
 
 uint8_t sd_erase(void)
 {
-    int erased = 0;
+    int failed = 0;
     FILINFO fno;
     DIR dir;
     const char *path = "0:";
@@ -284,21 +284,38 @@ uint8_t sd_erase(void)
                 continue;
             }
 
-            if (f_unlink(pc_fn) == FR_OK) {
-                erased++;
-            }
+			char file[256] = {0};
+			memcpy(file, "0:", 2);
+			memcpy(file + 2, pc_fn, (strlen(pc_fn) < 256 - 2) ? strlen(pc_fn) : 256 - 2);
 
+			FIL file_object;
+			file[0] = LUN_ID_SD_MMC_0_MEM + '0';
+			res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_WRITE);
+			if (res != FR_OK) {
+				commander_fill_report("sd_erase", FLAG_ERR_SD_OPEN, ERROR);
+				failed = 1;
+				break;
+			}
+
+			DWORD f_ps, fsize = file_object.fsize;
+			for (f_ps = 0; f_ps < fsize; f_ps++) {
+				f_putc(0xAC, &file_object); // overwrite data
+			}
+
+            if (f_unlink(pc_fn) != FR_OK) {
+                failed++;
+            }
         }
     }
 
     // Unmount
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
 
-    if (erased) {
+    if (failed) {
+	    commander_fill_report("sd_erase", FLAG_ERR_SD_NO_FILE, ERROR);
+	    return ERROR;
+    } else {
         commander_fill_report("sd_erase", "success", SUCCESS);
         return SUCCESS;
-    } else {
-        commander_fill_report("sd_erase", FLAG_ERR_SD_NO_FILE, ERROR);
-        return ERROR;
     }
 }

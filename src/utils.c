@@ -202,14 +202,11 @@ void utils_decrypt_report(const char *report)
     for (i = 0; i < r; i++) {
         const char *ciphertext_path[] = { CMD_STR[CMD_ciphertext_], (const char *) 0 };
         const char *echo_path[] = { "echo", (const char *) 0 };
-        const char *ciphertext_value = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
-                                       yajl_t_string));
-        const char *echo_value = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path,
+        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
                                  yajl_t_string));
-        if (ciphertext_value) {
-            memcpy(decrypted_report, ciphertext_value, strlens(ciphertext_value));
-            decrypted_report[strlens(ciphertext_value)] = '\0';
-            dec = aes_cbc_b64_decrypt((unsigned char *)decrypted_report, strlens(decrypted_report),
+        const char *echo = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path, yajl_t_string));
+        if (ciphertext) {
+            dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
                                       &decrypt_len, PASSWORD_STAND);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
@@ -238,8 +235,8 @@ void utils_decrypt_report(const char *report)
             }
             free(dec);
             return;
-        } else if (echo_value) {
-            dec = aes_cbc_b64_decrypt((unsigned char *)echo_value, strlens(echo_value), &decrypt_len,
+        } else if (echo) {
+            dec = aes_cbc_b64_decrypt((const unsigned char *)echo, strlens(echo), &decrypt_len,
                                       PASSWORD_VERIFY);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt echo. */");

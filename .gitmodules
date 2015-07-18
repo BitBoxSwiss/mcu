@@ -1,0 +1,3 @@
+[submodule "src/yajl"]
+	path = src/yajl
+	url = https://github.com/digitalbitbox/yajl.git

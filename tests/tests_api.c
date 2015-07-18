@@ -38,7 +38,7 @@
 #include "commander.h"
 
 //#include "jsmn.h"
-#include "yajl/api/yajl_tree.h"
+#include "yajl/src/api/yajl_tree.h"
 
 
 #define HID_REPORT_SIZE   COMMANDER_REPORT_SIZE

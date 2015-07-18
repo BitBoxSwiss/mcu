@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "yajl/api/yajl_tree.h"
+#include "yajl/src/api/yajl_tree.h"
 #include "commander.h"
 #include "random.h"
 #include "memory.h"

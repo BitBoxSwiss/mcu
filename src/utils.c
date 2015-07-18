@@ -33,7 +33,7 @@
 #include "utils.h"
 #include "flags.h"
 #include "commander.h"
-#include "yajl/api/yajl_tree.h"
+#include "yajl/src/api/yajl_tree.h"
 
 extern const char *CMD_STR[];
 static char PIN_2FA[5] = {0};

@@ -26,15 +26,15 @@ set(C-HW-SOURCES
 
 
 set(YAJL-SOURCES
-    yajl/yajl.c
-    yajl/yajl_lex.c
-    yajl/yajl_parser.c
-    yajl/yajl_buf.c
-    yajl/yajl_encode.c
-    yajl/yajl_gen.c
-    yajl/yajl_alloc.c
-    yajl/yajl_tree.c
-    yajl/yajl_version.c
+    yajl/src/yajl.c
+    yajl/src/yajl_lex.c
+    yajl/src/yajl_parser.c
+    yajl/src/yajl_buf.c
+    yajl/src/yajl_encode.c
+    yajl/src/yajl_gen.c
+    yajl/src/yajl_alloc.c
+    yajl/src/yajl_tree.c
+    yajl/src/yajl_version.c
 )
 
 include_directories(SYSTEM)

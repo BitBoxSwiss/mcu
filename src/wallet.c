@@ -77,10 +77,11 @@ int wallet_split_seed(char **seed_words, const char *message)
     memset(msg, 0, sizeof(msg));
     snprintf(msg, sizeof(msg), "%s", message);
     seed_words[i] = strtok(msg, " ,");
-    for (i = 0; seed_words[i] != NULL; seed_words[++i] = strtok(NULL, " ,")) {
-        if (i >= MAX_SEED_WORDS) {
+    for (i = 0; seed_words[i] != NULL; i++) {
+        if (i + 1 >= MAX_SEED_WORDS) {
             break;
         }
+        seed_words[i + 1] = strtok(NULL, " ,");
     }
     return i;
 }
@@ -129,7 +130,12 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
         strncat(mnemonic, wordlist[idx[i] - 1], BIP39_MAX_WORD_LEN);
         strncat(mnemonic, " ", 1);
     }
-    mnemonic[strlen(mnemonic) - 1] = '\0';
+
+    if (i == 0 || strlens(mnemonic) < 1) {
+        return NULL;
+    }
+
+    mnemonic[strlens(mnemonic) - 1] = '\0';
     return mnemonic;
 }
 
@@ -147,7 +153,7 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
             goto exit;
         }
         mnemo = wallet_mnemonic_from_data(rand_data_32, 32);
-        memcpy(mnemonic, mnemo, strlen(mnemo));
+        memcpy(mnemonic, mnemo, strlens(mnemo));
     } else {
         if ((size_t)m_len > sizeof(mnemonic)) {
             ret = ERROR;
@@ -189,14 +195,14 @@ exit:
 }
 
 
-void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
-                         const uint8_t *privkeymaster, const uint8_t *chaincode)
+int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
+                        const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
     unsigned long idx = 0;
     char *pch, *kp = malloc(keypath_len + 1);
 
     if (!kp) {
-        return;
+        return ERROR_MEM;
     }
 
     memcpy(kp, keypath, keypath_len);
@@ -212,17 +218,26 @@ void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
     pch = strtok(kp, " /,m\\");
     while (pch != NULL) {
         sscanf(pch, "%lu", &idx);
-        if (pch[strlen(pch) - 1] == '\'' ||
-                pch[strlen(pch) - 1] == 'p'  ||
-                pch[strlen(pch) - 1] == 'h'  ||
-                pch[strlen(pch) - 1] == 'H') {
-            hdnode_private_ckd_prime(node, idx);
+        if (pch[strlens(pch) - 1] == '\'' ||
+                pch[strlens(pch) - 1] == 'p'  ||
+                pch[strlens(pch) - 1] == 'h'  ||
+                pch[strlens(pch) - 1] == 'H') {
+            if (hdnode_private_ckd_prime(node, idx) != SUCCESS) {
+                goto err;
+            }
         } else {
-            hdnode_private_ckd(node, idx);
+            if (hdnode_private_ckd(node, idx) != SUCCESS) {
+                goto err;
+            }
         }
         pch = strtok(NULL, " /,m\\");
     }
     free(kp);
+    return SUCCESS;
+
+err:
+    free(kp);
+    return ERROR;
 }
 
 
@@ -234,8 +249,10 @@ void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub)
 
     if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
             memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
-        hdnode_serialize_public(&node, xpub, 112);
+        if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
+                                chain_code) == SUCCESS) {
+            hdnode_serialize_public(&node, xpub, 112);
+        }
     }
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
@@ -250,33 +267,34 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     uint8_t *priv_key_master = memory_master(NULL);
     uint8_t *chain_code = memory_chaincode(NULL);
     uint8_t pub_key[33];
-    int ret = 0;
+    HDNode node;
 
     if (!to_hash && msg_len != (32 * 2)) {
         commander_fill_report("sign", FLAG_ERR_SIGN_LEN, ERROR);
-        return ERROR;
+        goto err;
     }
 
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
             !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         commander_fill_report("sign", FLAG_ERR_BIP32_MISSING, ERROR);
-        return ERROR;
+        goto err;
     }
 
-    HDNode node;
+    if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
+                            chain_code) != SUCCESS) {
+        commander_fill_report("sign", FLAG_ERR_KEY_GEN, ERROR);
+        goto err;
+    }
 
-    wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
+    int ret = 0;
     if (to_hash) {
         ret = uECC_sign_double(node.private_key, utils_hex_to_uint8(message), msg_len / 2, sig);
     } else {
         memcpy(data, utils_hex_to_uint8(message), 32);
         ret = uECC_sign_digest(node.private_key, data, sig);
     }
-
     if (ret) {
         commander_fill_report("sign", FLAG_ERR_SIGN, ERROR);
-        memset(&node, 0, sizeof(HDNode));
-        clear_static_variables();
         return ERROR;
     }
 
@@ -285,6 +303,11 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
     return SUCCESS;
+
+err:
+    memset(&node, 0, sizeof(HDNode));
+    clear_static_variables();
+    return ERROR;
 }
 
 
@@ -312,7 +335,7 @@ char *wallet_mnemonic_from_data(const uint8_t *data, int len)
             idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;
         }
         strcpy(p, wordlist[idx]);
-        p += strlen(wordlist[idx]);
+        p += strlens(wordlist[idx]);
         *p = (i < mlen - 1) ? ' ' : 0;
         p++;
     }
@@ -325,7 +348,7 @@ int wallet_mnemonic_check(const char *mnemo)
 {
     uint32_t i, j, k, ki, bi, n;
     int chksum = 0;
-    char *sham[25] = {NULL};
+    char *sham[MAX_SEED_WORDS] = {NULL};
     char current_word[10];
     uint8_t bits[32 + 1];
 
@@ -411,12 +434,12 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
     memset(salt, 0, sizeof(salt));
     memcpy(salt, "mnemonic", 8);
     if (passphrase) {
-        saltlen = strlen(passphrase);
+        saltlen = strlens(passphrase);
         //memcpy(salt + 8, passphrase, saltlen);
         snprintf((char *)salt + 8, SALT_LEN_MAX, "%s", passphrase);
     }
     saltlen += 8;
-    pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlen(mnemo), salt, saltlen,
+    pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlens(mnemo), salt, saltlen,
                        BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
 }
 
@@ -534,7 +557,10 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
         idx += n_len * 2; // chars = 2 * bytes
 
         if (keypath && keypath_len > 0) {
-            wallet_generate_key(&node, keypath, keypath_len, priv_key_master, chain_code);
+            if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
+                                    chain_code) != SUCCESS) {
+                return NULL;
+            }
             uECC_get_public_key33(node.private_key, pub_key33);
             wallet_get_pubkeyhash(pub_key33, pubkeyhash);
             wallet_get_address(pub_key33, 0, address, 36);

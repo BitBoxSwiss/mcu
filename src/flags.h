@@ -137,6 +137,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
+#define FLAG_ERR_KEY_GEN            "Could not generate key."
 #define FLAG_ERR_SIGN               "Could not sign."
 #define FLAG_ERR_SALT_LEN           "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters."
 #define FLAG_ERR_SEED_MEM           "Could not allocate memory for seed."

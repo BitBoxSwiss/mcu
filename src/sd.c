@@ -231,7 +231,7 @@ uint8_t sd_list(void)
 
 err:
     memset(files, 0, sizeof(files));
-    return NULL;
+    return ERROR;
 
 }
 
@@ -239,7 +239,7 @@ err:
 
 uint8_t sd_erase(void)
 {
-    int erased = 0;
+    int failed = 0;
     FILINFO fno;
     DIR dir;
     const char *path = "0:";

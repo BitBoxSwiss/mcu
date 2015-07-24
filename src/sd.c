@@ -284,8 +284,26 @@ uint8_t sd_erase(void)
                 continue;
             }
 
-            if (f_unlink(pc_fn) == FR_OK) {
-                erased++;
+            char file[256] = {0};
+            memcpy(file, "0:", 2);
+            memcpy(file + 2, pc_fn, (strlen(pc_fn) < 256 - 2) ? strlen(pc_fn) : 256 - 2);
+
+            FIL file_object;
+            file[0] = LUN_ID_SD_MMC_0_MEM + '0';
+            res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_WRITE);
+            if (res != FR_OK) {
+                commander_fill_report("sd_erase", FLAG_ERR_SD_OPEN, ERROR);
+                failed = 1;
+                break;
+            }
+
+            DWORD f_ps, fsize = file_object.fsize;
+            for (f_ps = 0; f_ps < fsize; f_ps++) {
+                f_putc(0xAC, &file_object); // overwrite data
+            }
+
+            if (f_unlink(pc_fn) != FR_OK) {
+                failed++;
             }
 
         }
@@ -294,11 +312,11 @@ uint8_t sd_erase(void)
     // Unmount
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
 
-    if (erased) {
-        commander_fill_report("sd_erase", "success", SUCCESS);
-        return SUCCESS;
-    } else {
+    if (failed) {
         commander_fill_report("sd_erase", FLAG_ERR_SD_NO_FILE, ERROR);
         return ERROR;
+    } else {
+        commander_fill_report("sd_erase", "success", SUCCESS);
+        return SUCCESS;
     }
 }

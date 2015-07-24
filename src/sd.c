@@ -231,7 +231,7 @@ uint8_t sd_list(void)
 
 err:
     memset(files, 0, sizeof(files));
-    return 0;
+    return ERROR;
 
 }
 

@@ -54,6 +54,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 #else
 
 #include "ataes132.h"
+#include "memory.h"
 
 void random_init(void) { };
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
@@ -77,6 +78,13 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         }
         cnt += 16;
     }
+
+    // add ataes independent entropy
+    uint8_t *entropy = memory_read_aeskey(PASSWORD_MEMORY);
+    for (uint32_t i = 0; i < len; i++) {
+        buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
+    }
+
     return SUCCESS;
 }
 

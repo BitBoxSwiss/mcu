@@ -89,6 +89,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     // Make a random initialization vector
     if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == ERROR) {
         commander_fill_report("random", FLAG_ERR_ATAES, ERROR);
+        memset(inpad, 0, inpadlen);
         return NULL;
     }
     memcpy(enc_cat, iv, N_BLOCK);

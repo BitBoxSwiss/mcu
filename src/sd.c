@@ -302,6 +302,10 @@ uint8_t sd_erase(void)
                 f_putc(0xAC, &file_object); // overwrite data
             }
 
+            if (f_close(&file_object) != FR_OK) {
+                failed++;
+            }
+
             if (f_unlink(pc_fn) != FR_OK) {
                 failed++;
             }

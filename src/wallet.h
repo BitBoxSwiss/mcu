@@ -48,8 +48,8 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
 int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len,
                 int to_hash);
 void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub);
-void wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
-                         const uint8_t *privkeymaster, const uint8_t *chaincode);
+int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
+                        const uint8_t *privkeymaster, const uint8_t *chaincode);
 char *wallet_mnemonic_from_data(const uint8_t *data, int len);
 int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,

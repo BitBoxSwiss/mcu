@@ -305,7 +305,6 @@ uint8_t sd_erase(void)
             if (f_unlink(pc_fn) != FR_OK) {
                 failed++;
             }
-
         }
     }
 

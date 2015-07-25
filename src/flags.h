@@ -153,7 +153,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_SD_WRITE           "Could not write the file."
 #define FLAG_ERR_SD_WRITE_LEN       "Text to write is too large."
 #define FLAG_ERR_SD_READ            "Could not read the file."
-#define FLAG_ERR_SD_NO_FILE         "No files to erase in base directory."
+#define FLAG_ERR_SD_ERASE           "May not have erased all files (or no file present)."
 #define FLAG_ERR_SD_FILE_EXISTS     "File exists."
 #define FLAG_ERR_NUM_FILES          "Too many files to read. The list is truncated."
 #define FLAG_ERR_PASSWORD_ID        "Invalid password ID."

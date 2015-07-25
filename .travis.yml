@@ -16,8 +16,7 @@ matrix:
         - true
 
 before_install: 
-    - wget http://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/astyle_2.05.1_linux.tar.gz
-    - tar xfv astyle_2.05.1_linux.tar.gz
+    - tar xfv contrib/astyle_2.05.1_linux.tar.gz
     - cd astyle/build/gcc && make
     - export PATH=$PATH:$PWD/bin/
 

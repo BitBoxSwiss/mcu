@@ -49,18 +49,18 @@ static uint16_t MEM_access_err_ = DEFAULT_access_err_;
 static uint16_t MEM_touch_thresh_ = DEFAULT_touch_thresh_;
 static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
-__extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_crypt_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_verify_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN] = '0'};
-__extension__ static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ static uint16_t MEM_mnemonic_[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
+__extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_crypt_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_verify_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
+__extension__ static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint16_t MEM_mnemonic_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
 
-__extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN] = 0xFF};
-__extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN] = 0xFFFF};
+__extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
 
 
 // One-time setup on factory install
@@ -106,7 +106,6 @@ void memory_clear_variables(void)
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).
     memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_2FA_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_crypt_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -351,11 +350,11 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     switch ((int)id) {
         case PASSWORD_MEMORY:
             memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
-            ret = 1;
+            ret = SUCCESS;
             break;
         case PASSWORD_2FA:
             memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
-            ret = 1;
+            ret = SUCCESS;
             break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);

@@ -451,6 +451,7 @@ static void commander_process_seed(yajl_val json_node)
         return;
     }
 
+    commander_clear_report();
     commander_fill_report("seed", "success", SUCCESS);
 }
 

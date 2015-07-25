@@ -82,14 +82,20 @@ void memory_setup(void)
 }
 
 
+void memory_erase_seed(void)
+{
+    memory_mnemonic(MEM_PAGE_ERASE_2X);
+    memory_chaincode(MEM_PAGE_ERASE);
+    memory_master(MEM_PAGE_ERASE);
+}
+
+
 void memory_erase(void)
 {
     memory_mempass();
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
-    memory_mnemonic(MEM_PAGE_ERASE_2X);
-    memory_chaincode(MEM_PAGE_ERASE);
-    memory_master(MEM_PAGE_ERASE);
+    memory_erase_seed();
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased_);
     memory_write_unlocked(DEFAULT_unlocked_);

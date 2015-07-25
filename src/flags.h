@@ -140,6 +140,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_KEY_GEN            "Could not generate key."
 #define FLAG_ERR_SIGN               "Could not sign."
 #define FLAG_ERR_SALT_LEN           "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters."
+#define FLAG_ERR_SEED_SD            "Seed creation requires an SD card for automatic encrypted backup of the seed."
 #define FLAG_ERR_SEED_MEM           "Could not allocate memory for seed."
 #define FLAG_ERR_ENCRYPT_MEM        "Could not encrypt."
 #define FLAG_ERR_ATAES              "Chip communication error."

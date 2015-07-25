@@ -274,6 +274,98 @@ static void commander_process_name(yajl_val json_node)
 }
 
 
+static int commander_process_backup_create(const char *filename, const char *encrypt)
+{
+    char *text, *l;
+    int ret;
+
+    if (!filename) {
+        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
+        return ERROR;
+    }
+
+    text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
+    if (!text) {
+        commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
+        return ERROR;
+    }
+
+    if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt
+        int enc_len;
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlens(text), &enc_len,
+                                        PASSWORD_STAND);
+        if (!enc) {
+            commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
+            free(enc);
+            return ERROR;
+        }
+        ret = sd_write(filename, strlens(filename), enc, enc_len);
+        if (ret != SUCCESS) {
+            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
+        } else {
+            l = sd_load(filename, strlens(filename));
+            if (l) {
+                if (memcmp(enc, l, enc_len)) {
+                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+                    ret = ERROR;
+                }
+                memset(l, 0, strlens(l));
+            }
+        }
+        free(enc);
+        return ret;
+    } else {
+        ret = sd_write(filename, strlens(filename), text, strlens(text));
+        if (ret != SUCCESS) {
+            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
+        } else {
+            l = sd_load(filename, strlens(filename));
+            if (l) {
+                if (memcmp(text, l, strlens(text))) {
+                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
+                    ret = ERROR;
+                }
+                memset(l, 0, strlens(l));
+            }
+        }
+        return ret;
+    }
+}
+
+
+static void commander_process_backup(yajl_val json_node)
+{
+    const char *encrypt, *filename, *value;
+
+    if (!memory_read_unlocked()) {
+        commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, ERROR);
+        return;
+    }
+
+    const char *value_path[] = { CMD_STR[CMD_backup_], NULL };
+    value = YAJL_GET_STRING(yajl_tree_get(json_node, value_path, yajl_t_string));
+
+    if (value) {
+        if (strcmp(value, ATTR_STR[ATTR_list_]) == 0) {
+            sd_list();
+            return;
+        }
+
+        if (strcmp(value, ATTR_STR[ATTR_erase_]) == 0) {
+            sd_erase();
+            return;
+        }
+    }
+
+    const char *filename_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_filename_], NULL };
+    const char *encrypt_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_encrypt_], NULL };
+    filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path, yajl_t_string));
+    encrypt = YAJL_GET_STRING(yajl_tree_get(json_node, encrypt_path, yajl_t_string));
+
+    commander_process_backup_create(filename, encrypt);
+}
+
+
 static void commander_process_seed(yajl_val json_node)
 {
     int ret;
@@ -313,7 +405,19 @@ static void commander_process_seed(yajl_val json_node)
     src[strlens(source)] = '\0';
 
     if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
+
+        if (sd_list() != SUCCESS) {
+            commander_fill_report("seed", FLAG_ERR_SEED_SD, ERROR);
+            return;
+        }
         ret = wallet_master_from_mnemonic(NULL, 0, salt, strlens(salt));
+        if (ret == SUCCESS) {
+            if (commander_process_backup_create(AUTOBACKUP_FILENAME, AUTOBACKUP_ENCRYPT) != SUCCESS) {
+                memory_erase_seed();
+                ret = ERROR;
+            }
+        }
+
     } else if (wallet_split_seed(seed_word, src) > 1) {
         ret = wallet_master_from_mnemonic(src, strlens(source), salt, strlens(salt));
     } else {
@@ -348,86 +452,6 @@ static void commander_process_seed(yajl_val json_node)
     }
 
     commander_fill_report("seed", "success", SUCCESS);
-}
-
-
-static void commander_process_backup(yajl_val json_node)
-{
-    int ret;
-    const char *encrypt, *filename, *value;
-    char *text, *l;
-
-    if (!memory_read_unlocked()) {
-        commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, ERROR);
-        return;
-    }
-
-    const char *value_path[] = { CMD_STR[CMD_backup_], NULL };
-    value = YAJL_GET_STRING(yajl_tree_get(json_node, value_path, yajl_t_string));
-
-    if (value) {
-        if (strcmp(value, ATTR_STR[ATTR_list_]) == 0) {
-            sd_list();
-            return;
-        }
-
-        if (strcmp(value, ATTR_STR[ATTR_erase_]) == 0) {
-            sd_erase();
-            return;
-        }
-    }
-
-    const char *filename_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_filename_], NULL };
-    filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path, yajl_t_string));
-    if (!filename) {
-        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, ERROR);
-        return;
-    }
-
-    text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
-    if (!text) {
-        commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, ERROR);
-        return;
-    }
-
-    const char *encrypt_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_encrypt_], NULL };
-    encrypt = YAJL_GET_STRING(yajl_tree_get(json_node, encrypt_path, yajl_t_string));
-    if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt
-        int enc_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlens(text), &enc_len,
-                                        PASSWORD_STAND);
-        if (!enc) {
-            commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, ERROR);
-            free(enc);
-            return;
-        }
-        ret = sd_write(filename, strlens(filename), enc, enc_len);
-        if (ret != SUCCESS) {
-            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
-        } else {
-            l = sd_load(filename, strlens(filename));
-            if (l) {
-                if (memcmp(enc, l, enc_len)) {
-                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-                }
-                memset(l, 0, strlens(l));
-            }
-        }
-        free(enc);
-    } else {
-        ret = sd_write(filename, strlens(filename), text, strlens(text));
-        if (ret != SUCCESS) {
-            commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
-        } else {
-            l = sd_load(filename, strlens(filename));
-            if (l) {
-                if (memcmp(text, l, strlens(text))) {
-                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, ERROR);
-                }
-                memset(l, 0, strlens(l));
-            }
-        }
-    }
 }
 
 

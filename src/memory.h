@@ -71,6 +71,7 @@ typedef enum PASSWORD_ID {
 
 
 void memory_erase(void);
+void memory_erase_seed(void);
 void memory_setup(void);
 void memory_clear_variables(void);
 void memory_mempass(void);

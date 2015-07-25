@@ -407,14 +407,28 @@ static void commander_process_seed(yajl_val json_node)
     if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
 
         if (sd_list() != SUCCESS) {
+            commander_clear_report();
             commander_fill_report("seed", FLAG_ERR_SEED_SD, ERROR);
             return;
         }
+
+        char file[strlens(AUTOBACKUP_FILENAME) + 8];
+        int count = 1;
+        do {
+            if (count > AUTOBACKUP_NUM) {
+                commander_clear_report();
+                commander_fill_report("seed", FLAG_ERR_SEED_SD_NUM, ERROR);
+                return;
+            }
+            memset(file, 0, sizeof(file));
+            snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
+        } while (sd_load(file, strlens(file)));
+
         ret = wallet_master_from_mnemonic(NULL, 0, salt, strlens(salt));
         if (ret == SUCCESS) {
-            if (commander_process_backup_create(AUTOBACKUP_FILENAME, AUTOBACKUP_ENCRYPT) != SUCCESS) {
+            if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != SUCCESS) {
                 memory_erase_seed();
-                ret = ERROR;
+                return;
             }
         }
 

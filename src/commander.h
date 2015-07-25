@@ -43,8 +43,9 @@
 #define VERIFYPASS_FILENAME     "verification.txt"
 #define COMMANDER_MAX_ATTEMPTS  5// max attempts before device reset
 
-#define AUTOBACKUP_FILENAME     "autobackup.aes"
+#define AUTOBACKUP_FILENAME     "autobackup_"
 #define AUTOBACKUP_ENCRYPT      "yes"
+#define AUTOBACKUP_NUM          10
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
                           PASSWORD_ID id);

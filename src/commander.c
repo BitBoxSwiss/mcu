@@ -591,6 +591,7 @@ static void commander_process_xpub(yajl_val json_node)
 
     if (!value || !strlens(value)) {
         commander_fill_report("xpub", FLAG_ERR_INVALID_CMD, ERROR);
+        return;
     }
 
     wallet_report_xpub(value, strlens(value), xpub);

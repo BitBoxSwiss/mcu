@@ -151,6 +151,7 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_SD_CARD            "Please insert SD card."
 #define FLAG_ERR_SD_MOUNT           "Could not mount the SD card."
 #define FLAG_ERR_SD_OPEN            "Could not open the file."
+#define FLAG_ERR_SD_OPEN_DIR        "Could not open the directory."
 #define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
 #define FLAG_ERR_SD_WRITE           "Could not write the file."
 #define FLAG_ERR_SD_WRITE_LEN       "Text to write is too large."

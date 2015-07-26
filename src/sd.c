@@ -212,7 +212,10 @@ uint8_t sd_list(void)
 #else
             pc_fn = fno.fname;
 #endif
-            if (*pc_fn == '.') {
+            if (*pc_fn == '.' && *(pc_fn + 1) == '\0') {
+                continue;
+            }
+            if (*pc_fn == '.' && *(pc_fn + 1) == '.' && *(pc_fn + 2) == '\0') {
                 continue;
             }
 
@@ -279,7 +282,10 @@ static uint8_t delete_files(char *path)
 #else
             pc_fn = fno.fname;
 #endif
-            if (*pc_fn == '.') {
+            if (*pc_fn == '.' && *(pc_fn + 1) == '\0') {
+                continue;
+            }
+            if (*pc_fn == '.' && *(pc_fn + 1) == '.' && *(pc_fn + 2) == '\0') {
                 continue;
             }
 

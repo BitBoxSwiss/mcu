@@ -340,7 +340,7 @@ static void tests_seed_xpub_backup(void)
         // backup
         api_format_send_cmd("backup", "erase", PASSWORD_STAND);
         if ( api_result_has("error") &&
-                !api_result_has(FLAG_ERR_SD_NO_FILE)) {
+                !api_result_has(FLAG_ERR_SD_ERASE)) {
             goto err;
         }
         api_format_send_cmd("backup", back, PASSWORD_STAND);
@@ -793,7 +793,7 @@ static void tests_echo_2FA(void)
     }
     api_format_send_cmd("backup", "erase", PASSWORD_STAND);
     if ( api_result_has("error") &&
-            !api_result_has(FLAG_ERR_SD_NO_FILE))  {
+            !api_result_has(FLAG_ERR_SD_ERASE))  {
         goto err;
     }
     api_format_send_cmd("backup", "list", PASSWORD_STAND);

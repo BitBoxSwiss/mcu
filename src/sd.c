@@ -44,10 +44,10 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
 {
     char file[256] = {0};
     memcpy(file, "0:", 2);
-    memcpy(file + 2, f, (f_len < 256 - 2) ? f_len : 256 - 2);
+    memcpy(file + 2, f, (f_len < sizeof(file) - 2) ? f_len : sizeof(file) - 2);
 
-    char text[256] = {0};
-    if (t_len > 256) {
+    char text[512] = {0};
+    if (t_len > sizeof(text) - 1) {
         commander_fill_report("sd_write", FLAG_ERR_SD_WRITE_LEN, ERROR);
         goto err;
     }
@@ -78,7 +78,7 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
         goto err;
     }
 
-    memcpy(text, t, t_len);
+    memcpy(text, t, (t_len < sizeof(text) - 1) ? t_len : sizeof(text) - 1);
     if (0 == f_puts(text, &file_object)) {
         commander_fill_report("sd_write", FLAG_ERR_SD_WRITE, ERROR);
         f_close(&file_object);
@@ -106,9 +106,9 @@ char *sd_load(const char *f, uint16_t f_len)
 {
     char file[256] = {0};
     memcpy(file, "0:", 2);
-    memcpy(file + 2, f, (f_len < 256 - 2) ? f_len : 256 - 2);
+    memcpy(file + 2, f, (f_len < sizeof(file) - 2) ? f_len : sizeof(file) - 2);
 
-    static char text[256];
+    static char text[512];
     memset(text, 0, sizeof(text));
 
     sd_mmc_init();
@@ -272,7 +272,7 @@ static uint8_t delete_files(char *path)
                 continue;
             }
 
-            char f_object[256];
+            char f_object[1024];
             snprintf(f_object, sizeof(f_object), "%s/%s", path, pc_fn);
 
             if (fno.fattrib & AM_DIR) { // is a directory

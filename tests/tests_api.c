@@ -805,7 +805,7 @@ static void tests_echo_2FA(void)
         goto err;
     }
     api_format_send_cmd("verifypass", export, PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_SD_FILE_EXISTS) &&
+    if (!api_result_has(FLAG_ERR_SD_OPEN) &&
             !api_result_has(FLAG_ERR_NO_MCU))      {
         goto err;
     }

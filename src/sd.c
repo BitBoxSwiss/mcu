@@ -42,7 +42,8 @@ static char ROOTDIR[] = "0:/DigitalBitboxFiles";
 FATFS fs;
 
 
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
+uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
+                 uint8_t replace)
 {
     char file[256];
     memset(file, 0, sizeof(file));
@@ -77,9 +78,10 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
 
     f_mkdir(ROOTDIR);
 
-    res = f_open(&file_object, (char const *)file, FA_CREATE_NEW | FA_WRITE);
+    res = f_open(&file_object, (char const *)file,
+                 (replace == REPLACE ? FA_OPEN_EXISTING : FA_CREATE_NEW) | FA_WRITE);
     if (res != FR_OK) {
-        commander_fill_report("sd_write", FLAG_ERR_SD_FILE_EXISTS, ERROR);
+        commander_fill_report("sd_write", FLAG_ERR_SD_OPEN, ERROR);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
         goto err;
     }

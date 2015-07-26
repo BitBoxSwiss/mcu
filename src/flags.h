@@ -114,7 +114,7 @@ enum REPORT_FLAGS {
     RESET,
     INITIALIZE, ITERATE,
     ERASED, NOT_ERASED,
-    EMPTY
+    REPLACE, NO_REPLACE
 };
 
 
@@ -150,14 +150,13 @@ enum REPORT_FLAGS {
 #define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
 #define FLAG_ERR_SD_CARD            "Please insert SD card."
 #define FLAG_ERR_SD_MOUNT           "Could not mount the SD card."
-#define FLAG_ERR_SD_OPEN            "Could not open the file."
+#define FLAG_ERR_SD_OPEN            "Could not open a file to write - it may already exist."
 #define FLAG_ERR_SD_OPEN_DIR        "Could not open the directory."
 #define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
 #define FLAG_ERR_SD_WRITE           "Could not write the file."
 #define FLAG_ERR_SD_WRITE_LEN       "Text to write is too large."
 #define FLAG_ERR_SD_READ            "Could not read the file."
 #define FLAG_ERR_SD_ERASE           "May not have erased all files (or no file present)."
-#define FLAG_ERR_SD_FILE_EXISTS     "File exists."
 #define FLAG_ERR_NUM_FILES          "Too many files to read. The list is truncated."
 #define FLAG_ERR_PASSWORD_ID        "Invalid password ID."
 

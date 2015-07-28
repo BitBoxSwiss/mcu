@@ -583,7 +583,8 @@ static void tests_device(void)
     if (api_result_has("error")) {
         goto err;
     }
-    if (!api_result_has(DIGITAL_BITBOX_VERSION)) {
+    //if (!api_result_has(DIGITAL_BITBOX_VERSION)) {
+    if (!api_result_has("version\":")) {
         goto err;
     }
 
@@ -804,11 +805,7 @@ static void tests_echo_2FA(void)
     if ( api_result_has("error"))              {
         goto err;
     }
-    api_format_send_cmd("verifypass", export, PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_SD_OPEN) &&
-            !api_result_has(FLAG_ERR_NO_MCU))      {
-        goto err;
-    }
+
     api_format_send_cmd("backup", "list", PASSWORD_STAND);
     if (!api_result_has(VERIFYPASS_FILENAME))  {
         goto err;

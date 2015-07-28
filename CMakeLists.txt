@@ -3,7 +3,7 @@ project(mcu)
 
 find_package(Git)
 if(GIT_FOUND)
-  execute_process(COMMAND git "rev-parse" "HEAD" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git "rev-parse" "--short" "HEAD" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
   set(GIT_COMMIT_HASH "Git not found.")
 endif()
@@ -11,18 +11,15 @@ endif()
 set(VERSION_MAJOR  1)
 set(VERSION_MINOR  0)
 set(VERSION_BUGFIX 0)
-set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUGFIX}")
+set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUGFIX} (${GIT_COMMIT_HASH})")
 
 #-----------------------------------------------------------------------------
 # Options for building
 
-option(BUILD_VERBOSE       "Verbose build output." ON)
 option(BUILD_TESTS         "Build the unit tests." ON)
 #option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 
-if(BUILD_VERBOSE)
-  set(CMAKE_VERBOSE_MAKEFILE true)
-endif()
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 
 #-----------------------------------------------------------------------------
@@ -35,7 +32,7 @@ message(STATUS "CMake version:          ${CMAKE_VERSION}")
 message(STATUS "System:                 ${CMAKE_SYSTEM}")
 message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
 
-message(STATUS "Verbose:                ${BUILD_VERBOSE}")
+message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Testing:                ${BUILD_TESTS}")
 #message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}")
 
@@ -158,6 +155,8 @@ endif()
 if(BUILD_TESTS)
   add_definitions(-DTESTING)
 endif()
+
+add_definitions(-DGIT_VERSION="${VERSION_STRING}")
 
 
 #-----------------------------------------------------------------------------

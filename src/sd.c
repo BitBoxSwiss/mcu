@@ -37,17 +37,23 @@ uint32_t sd_fs_found = 0;
 uint32_t sd_listing_pos = 0;
 uint32_t sd_num_files = 0;
 
+static char ROOTDIR[] = "0:/DigitalBitboxFiles";
+
 FATFS fs;
 
 
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
+uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
+                 uint8_t replace)
 {
-    char file[256] = {0};
-    memcpy(file, "0:", 2);
-    memcpy(file + 2, f, (f_len < 256 - 2) ? f_len : 256 - 2);
+    char file[256];
+    memset(file, 0, sizeof(file));
+    memcpy(file, ROOTDIR, strlen(ROOTDIR));
+    strncat(file, "/", 1);
+    strncat(file, f, (f_len < sizeof(file) - strlen(file)) ? f_len : sizeof(file) - strlen(
+                file));
 
-    char text[256] = {0};
-    if (t_len > 256) {
+    char text[512] = {0};
+    if (t_len > sizeof(text) - 1) {
         commander_fill_report("sd_write", FLAG_ERR_SD_WRITE_LEN, ERROR);
         goto err;
     }
@@ -70,15 +76,17 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
         goto err;
     }
 
-    file[0] = LUN_ID_SD_MMC_0_MEM + '0';
-    res = f_open(&file_object, (char const *)file, FA_CREATE_NEW | FA_WRITE);
+    f_mkdir(ROOTDIR);
+
+    res = f_open(&file_object, (char const *)file,
+                 (replace == REPLACE ? FA_OPEN_EXISTING : FA_CREATE_NEW) | FA_WRITE);
     if (res != FR_OK) {
-        commander_fill_report("sd_write", FLAG_ERR_SD_FILE_EXISTS, ERROR);
+        commander_fill_report("sd_write", FLAG_ERR_SD_OPEN, ERROR);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
         goto err;
     }
 
-    memcpy(text, t, t_len);
+    memcpy(text, t, (t_len < sizeof(text) - 1) ? t_len : sizeof(text) - 1);
     if (0 == f_puts(text, &file_object)) {
         commander_fill_report("sd_write", FLAG_ERR_SD_WRITE, ERROR);
         f_close(&file_object);
@@ -104,11 +112,15 @@ err:
 
 char *sd_load(const char *f, uint16_t f_len)
 {
-    char file[256] = {0};
-    memcpy(file, "0:", 2);
-    memcpy(file + 2, f, (f_len < 256 - 2) ? f_len : 256 - 2);
+    FIL file_object;
+    char file[256];
+    memset(file, 0, sizeof(file));
+    memcpy(file, ROOTDIR, strlen(ROOTDIR));
+    strncat(file, "/", 1);
+    strncat(file, f, (f_len < sizeof(file) - strlen(file)) ? f_len : sizeof(file) - strlen(
+                file));
 
-    static char text[256];
+    static char text[512];
     memset(text, 0, sizeof(text));
 
     sd_mmc_init();
@@ -120,7 +132,6 @@ char *sd_load(const char *f, uint16_t f_len)
     }
 
     FRESULT res;
-    FIL file_object;
     memset(&fs, 0, sizeof(FATFS));
     res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
     if (FR_INVALID_DRIVE == res) {
@@ -128,7 +139,6 @@ char *sd_load(const char *f, uint16_t f_len)
         goto err;
     }
 
-    file[0] = LUN_ID_SD_MMC_0_MEM + '0';
     res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_READ);
     if (res != FR_OK) {
         commander_fill_report("sd_load", FLAG_ERR_SD_OPEN, ERROR);
@@ -136,7 +146,9 @@ char *sd_load(const char *f, uint16_t f_len)
         goto err;
     }
 
-    if (0 == f_gets(text, sizeof(text), &file_object)) {
+    UINT text_read;
+    res = f_read(&file_object, text, file_object.fsize, &text_read);
+    if (res != FR_OK) {
         commander_fill_report("sd_load", FLAG_ERR_SD_READ, ERROR);
         f_close(&file_object);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
@@ -160,7 +172,6 @@ uint8_t sd_list(void)
 {
     FILINFO fno;
     DIR dir;
-    const char *path = "0:";
 #if _USE_LFN
     char c_lfn[_MAX_LFN + 1];
     fno.lfname = c_lfn;
@@ -189,7 +200,7 @@ uint8_t sd_list(void)
     }
 
     // Open the directory
-    res = f_opendir(&dir, path);
+    res = f_opendir(&dir, ROOTDIR);
     if (res == FR_OK) {
         for (;;) {
             char *pc_fn;
@@ -203,7 +214,10 @@ uint8_t sd_list(void)
 #else
             pc_fn = fno.fname;
 #endif
-            if (*pc_fn == '.') {
+            if (*pc_fn == '.' && *(pc_fn + 1) == '\0') {
+                continue;
+            }
+            if (*pc_fn == '.' && *(pc_fn + 1) == '.' && *(pc_fn + 2) == '\0') {
                 continue;
             }
 
@@ -221,6 +235,8 @@ uint8_t sd_list(void)
 
             pos += 1;
         }
+    } else {
+        commander_fill_report("sd_list debug", "could not open dir", ERROR);
     }
 
     commander_fill_report("sd_list", files, SUCCESS);
@@ -236,18 +252,78 @@ err:
 }
 
 
+static uint8_t delete_files(char *path)
+{
+    int failed = 0;
+    FRESULT res;
+    FILINFO fno;
+    DIR dir;
+#if _USE_LFN
+    static char lfn[_MAX_LFN + 1];
+    fno.lfname = lfn;
+    fno.lfsize = sizeof lfn;
+#endif
+
+    res = f_opendir(&dir, path);
+    if (res == FR_OK) {
+        for (;;) {
+
+            char *pc_fn;
+            res = f_readdir(&dir, &fno);
+            if (res != FR_OK) {
+                failed++;
+                break;
+            }
+
+            if (fno.fname[0] == 0) { // no more files or directories
+                break;
+            }
+
+#if _USE_LFN
+            pc_fn = *fno.lfname ? fno.lfname : fno.fname;
+#else
+            pc_fn = fno.fname;
+#endif
+            if (*pc_fn == '.' && *(pc_fn + 1) == '\0') {
+                continue;
+            }
+            if (*pc_fn == '.' && *(pc_fn + 1) == '.' && *(pc_fn + 2) == '\0') {
+                continue;
+            }
+
+            char file[1024];
+            snprintf(file, sizeof(file), "%s/%s", path, pc_fn);
+
+            if (fno.fattrib & AM_DIR) { // is a directory
+                failed += delete_files(file);
+            } else { // is a file
+                FIL file_object;
+                res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_WRITE);
+                if (res != FR_OK) {
+                    failed++;
+                } else {
+                    DWORD f_ps, fsize = file_object.fsize;
+                    for (f_ps = 0; f_ps < fsize; f_ps++) {
+                        f_putc(0xAC, &file_object); // overwrite data
+                    }
+                    if (f_close(&file_object) != FR_OK) {
+                        failed++;
+                    }
+                }
+            }
+            if (f_unlink(file + 2) != FR_OK) {
+                failed++;
+            }
+        }
+    }
+    return failed;
+}
+
 
 uint8_t sd_erase(void)
 {
     int failed = 0;
-    FILINFO fno;
-    DIR dir;
-    const char *path = "0:";
-#if _USE_LFN
-    char c_lfn[_MAX_LFN + 1];
-    fno.lfname = c_lfn;
-    fno.lfsize = sizeof(c_lfn);
-#endif
+    char *path = ROOTDIR;
 
     sd_mmc_init();
     sd_listing_pos = 0;
@@ -265,58 +341,12 @@ uint8_t sd_erase(void)
         return ERROR;
     }
 
-    // Open the directory
-    res = f_opendir(&dir, path);
-    if (res == FR_OK) {
-        for (;;) {
-            char *pc_fn;
-            res = f_readdir(&dir, &fno);
-            if (res != FR_OK || fno.fname[0] == 0) {
-                break;
-            }
+    failed = delete_files(path);
 
-#if _USE_LFN
-            pc_fn = *fno.lfname ? fno.lfname : fno.fname;
-#else
-            pc_fn = fno.fname;
-#endif
-            if (*pc_fn == '.') {
-                continue;
-            }
-
-            char file[256] = {0};
-            memcpy(file, "0:", 2);
-            memcpy(file + 2, pc_fn, (strlen(pc_fn) < 256 - 2) ? strlen(pc_fn) : 256 - 2);
-
-            FIL file_object;
-            file[0] = LUN_ID_SD_MMC_0_MEM + '0';
-            res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_WRITE);
-            if (res != FR_OK) {
-                commander_fill_report("sd_erase", FLAG_ERR_SD_OPEN, ERROR);
-                failed = 1;
-                break;
-            }
-
-            DWORD f_ps, fsize = file_object.fsize;
-            for (f_ps = 0; f_ps < fsize; f_ps++) {
-                f_putc(0xAC, &file_object); // overwrite data
-            }
-
-            if (f_close(&file_object) != FR_OK) {
-                failed++;
-            }
-
-            if (f_unlink(pc_fn) != FR_OK) {
-                failed++;
-            }
-        }
-    }
-
-    // Unmount
-    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+    f_mount(LUN_ID_SD_MMC_0_MEM, NULL); // Unmount
 
     if (failed) {
-        commander_fill_report("sd_erase", FLAG_ERR_SD_NO_FILE, ERROR);
+        commander_fill_report("sd_erase", FLAG_ERR_SD_ERASE, ERROR);
         return ERROR;
     } else {
         commander_fill_report("sd_erase", "success", SUCCESS);

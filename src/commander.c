@@ -299,7 +299,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
             free(enc);
             return ERROR;
         }
-        ret = sd_write(filename, strlens(filename), enc, enc_len);
+        ret = sd_write(filename, strlens(filename), enc, enc_len, NO_REPLACE);
         if (ret != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
         } else {
@@ -315,7 +315,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), text, strlens(text));
+        ret = sd_write(filename, strlens(filename), text, strlens(text), NO_REPLACE);
         if (ret != SUCCESS) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, ERROR);
         } else {
@@ -407,14 +407,28 @@ static void commander_process_seed(yajl_val json_node)
     if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
 
         if (sd_list() != SUCCESS) {
+            commander_clear_report();
             commander_fill_report("seed", FLAG_ERR_SEED_SD, ERROR);
             return;
         }
+
+        char file[strlens(AUTOBACKUP_FILENAME) + 8];
+        int count = 1;
+        do {
+            if (count > AUTOBACKUP_NUM) {
+                commander_clear_report();
+                commander_fill_report("seed", FLAG_ERR_SEED_SD_NUM, ERROR);
+                return;
+            }
+            memset(file, 0, sizeof(file));
+            snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
+        } while (sd_load(file, strlens(file)));
+
         ret = wallet_master_from_mnemonic(NULL, 0, salt, strlens(salt));
         if (ret == SUCCESS) {
-            if (commander_process_backup_create(AUTOBACKUP_FILENAME, AUTOBACKUP_ENCRYPT) != SUCCESS) {
+            if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != SUCCESS) {
                 memory_erase_seed();
-                ret = ERROR;
+                return;
             }
         }
 
@@ -552,7 +566,7 @@ static void commander_process_verifypass(const char *value)
     } else if (strcmp(value, ATTR_STR[ATTR_export_]) == 0) {
         memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
         utils_clear_buffers();
-        ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1);
+        ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1, REPLACE);
         if (ret != SUCCESS) {
             commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_WRITE, ERROR);
             memset(text, 0, sizeof(text));

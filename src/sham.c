@@ -38,12 +38,14 @@ static char sd_text[512] = {0};
 
 void delay_ms(int delay)
 {
-    (void)delay;
+    (void) delay;
 }
 
 
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len)
+uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
+                 uint8_t replace)
 {
+    (void) replace;
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
     snprintf(sd_filename, sizeof(sd_filename), "%.*s", f_len, f);

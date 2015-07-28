@@ -79,7 +79,7 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
     f_mkdir(ROOTDIR);
 
     res = f_open(&file_object, (char const *)file,
-                 (replace == REPLACE ? FA_OPEN_EXISTING : FA_CREATE_NEW) | FA_WRITE);
+                 (replace == REPLACE ? FA_CREATE_ALWAYS : FA_CREATE_NEW) | FA_WRITE);
     if (res != FR_OK) {
         commander_fill_report("sd_write", FLAG_ERR_SD_OPEN, ERROR);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);

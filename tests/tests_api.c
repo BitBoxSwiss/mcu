@@ -583,7 +583,6 @@ static void tests_device(void)
     if (api_result_has("error")) {
         goto err;
     }
-    //if (!api_result_has(DIGITAL_BITBOX_VERSION)) {
     if (!api_result_has("version\":")) {
         goto err;
     }

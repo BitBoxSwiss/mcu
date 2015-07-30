@@ -1,17 +1,22 @@
 cmake_minimum_required(VERSION 2.8)
 project(mcu)
 
+
+#-----------------------------------------------------------------------------
+# Create version header file
+
 find_package(Git)
 if(GIT_FOUND)
-  execute_process(COMMAND git "rev-parse" "--short" "HEAD" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git "describe" "--tags" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
   set(GIT_COMMIT_HASH "Git not found.")
 endif()
+set(VERSION_STRING "${GIT_COMMIT_HASH}")
 
-set(VERSION_MAJOR  1)
-set(VERSION_MINOR  0)
-set(VERSION_BUGFIX 0)
-set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUGFIX} (${GIT_COMMIT_HASH})")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
+set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
+
 
 #-----------------------------------------------------------------------------
 # Options for building
@@ -155,8 +160,6 @@ endif()
 if(BUILD_TESTS)
   add_definitions(-DTESTING)
 endif()
-
-add_definitions(-DGIT_VERSION="${VERSION_STRING}")
 
 
 #-----------------------------------------------------------------------------

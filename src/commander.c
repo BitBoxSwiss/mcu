@@ -31,6 +31,7 @@
 
 #include "yajl/src/api/yajl_tree.h"
 #include "commander.h"
+#include "version.h"
 #include "random.h"
 #include "memory.h"
 #include "base64.h"

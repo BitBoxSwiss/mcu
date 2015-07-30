@@ -1,0 +1,3 @@
+#include "version.h"
+
+const char *DIGITAL_BITBOX_VERSION = "@VERSION_STRING@";

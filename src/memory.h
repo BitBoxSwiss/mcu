@@ -55,7 +55,7 @@
 #define DEFAULT_unlocked_           0xFF
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
-#define DEFAULT_access_err_         INITIALIZE
+#define DEFAULT_access_err_         STATUS_ACCESS_INITIALIZE
 #define DEFAULT_touch_timeout_      3000// msec
 #define DEFAULT_touch_thresh_       15//v0_4   25//v0_3x
 

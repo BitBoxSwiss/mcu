@@ -142,28 +142,28 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
 
 int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len)
 {
-    int ret = SUCCESS;
+    int ret = STATUS_SUCCESS;
     HDNode node;
 
     clear_static_variables();
 
     if (mnemo == NULL) {
-        if (random_bytes(rand_data_32, 32, 1) == ERROR) {
-            ret = ERROR_MEM;
+        if (random_bytes(rand_data_32, 32, 1) == STATUS_ERROR) {
+            ret = STATUS_ERROR_MEM;
             goto exit;
         }
         mnemo = wallet_mnemonic_from_data(rand_data_32, 32);
         memcpy(mnemonic, mnemo, strlens(mnemo));
     } else {
         if ((size_t)m_len > sizeof(mnemonic)) {
-            ret = ERROR;
+            ret = STATUS_ERROR;
             goto exit;
         }
         snprintf(mnemonic, sizeof(mnemonic), "%.*s", m_len, mnemo);
     }
 
-    if (wallet_mnemonic_check(mnemonic) == ERROR) {
-        ret = ERROR;
+    if (wallet_mnemonic_check(mnemonic) == STATUS_ERROR) {
+        ret = STATUS_ERROR;
         goto exit;
     }
 
@@ -173,18 +173,18 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
         wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
     }
 
-    if (hdnode_from_seed(seed, sizeof(seed), &node) == ERROR) {
-        ret = ERROR;
+    if (hdnode_from_seed(seed, sizeof(seed), &node) == STATUS_ERROR) {
+        ret = STATUS_ERROR;
         goto exit;
     }
 
     if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
             !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
             !memcmp(memory_mnemonic(wallet_index_from_mnemonic(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {
-        ret = ERROR_MEM;
+        ret = STATUS_ERROR_MEM;
         goto exit;
     } else {
-        ret = SUCCESS;
+        ret = STATUS_SUCCESS;
         goto exit;
     }
 
@@ -202,7 +202,7 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
     char *pch, *kp = malloc(keypath_len + 1);
 
     if (!kp) {
-        return ERROR_MEM;
+        return STATUS_ERROR_MEM;
     }
 
     memcpy(kp, keypath, keypath_len);
@@ -222,22 +222,22 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
                 pch[strlens(pch) - 1] == 'p'  ||
                 pch[strlens(pch) - 1] == 'h'  ||
                 pch[strlens(pch) - 1] == 'H') {
-            if (hdnode_private_ckd_prime(node, idx) != SUCCESS) {
+            if (hdnode_private_ckd_prime(node, idx) != STATUS_SUCCESS) {
                 goto err;
             }
         } else {
-            if (hdnode_private_ckd(node, idx) != SUCCESS) {
+            if (hdnode_private_ckd(node, idx) != STATUS_SUCCESS) {
                 goto err;
             }
         }
         pch = strtok(NULL, " /,m\\");
     }
     free(kp);
-    return SUCCESS;
+    return STATUS_SUCCESS;
 
 err:
     free(kp);
-    return ERROR;
+    return STATUS_ERROR;
 }
 
 
@@ -250,7 +250,7 @@ void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub)
     if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
             memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                                chain_code) == SUCCESS) {
+                                chain_code) == STATUS_SUCCESS) {
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
@@ -270,19 +270,19 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     HDNode node;
 
     if (!to_hash && msg_len != (32 * 2)) {
-        commander_fill_report("sign", FLAG_ERR_SIGN_LEN, ERROR);
+        commander_fill_report("sign", FLAG_ERR_SIGN_LEN, STATUS_ERROR);
         goto err;
     }
 
     if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
             !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        commander_fill_report("sign", FLAG_ERR_BIP32_MISSING, ERROR);
+        commander_fill_report("sign", FLAG_ERR_BIP32_MISSING, STATUS_ERROR);
         goto err;
     }
 
     if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                            chain_code) != SUCCESS) {
-        commander_fill_report("sign", FLAG_ERR_KEY_GEN, ERROR);
+                            chain_code) != STATUS_SUCCESS) {
+        commander_fill_report("sign", FLAG_ERR_KEY_GEN, STATUS_ERROR);
         goto err;
     }
 
@@ -294,20 +294,20 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
         ret = uECC_sign_digest(node.private_key, data, sig);
     }
     if (ret) {
-        commander_fill_report("sign", FLAG_ERR_SIGN, ERROR);
-        return ERROR;
+        commander_fill_report("sign", FLAG_ERR_SIGN, STATUS_ERROR);
+        return STATUS_ERROR;
     }
 
     uECC_get_public_key33(node.private_key, pub_key);
     commander_fill_report_signature(sig, pub_key);
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
-    return SUCCESS;
+    return STATUS_SUCCESS;
 
 err:
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
-    return ERROR;
+    return STATUS_ERROR;
 }
 
 
@@ -354,7 +354,7 @@ int wallet_mnemonic_check(const char *mnemo)
 
     if (!mnemo) {
         //commander_fill_report("seed", FLAG_ERR_MNEMO_EMPTY, ERROR);
-        return ERROR;
+        return STATUS_ERROR;
     }
 
     // check number of words
@@ -363,7 +363,7 @@ int wallet_mnemonic_check(const char *mnemo)
 
     if (n != 12 && n != 18 && n != 24) {
         //commander_fill_report("seed", FLAG_ERR_MNEMO_NUM_WORDS, ERROR);
-        return ERROR;
+        return STATUS_ERROR;
     }
 
     memset(bits, 0, sizeof(bits));
@@ -374,7 +374,7 @@ int wallet_mnemonic_check(const char *mnemo)
         while (mnemo[i] != ' ' && mnemo[i] != 0) {
             if (j >= sizeof(current_word)) {
                 //commander_fill_report("seed", FLAG_ERR_MNEMO_WORD, ERROR);
-                return ERROR;
+                return STATUS_ERROR;
             }
             current_word[j] = mnemo[i];
             i++;
@@ -388,7 +388,7 @@ int wallet_mnemonic_check(const char *mnemo)
         for (;;) {
             if (!wordlist[k]) { // word not found
                 //commander_fill_report("seed", FLAG_ERR_MNEMO_WORD, ERROR);
-                return ERROR;
+                return STATUS_ERROR;
             }
             if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
                 for (ki = 0; ki < 11; ki++) {
@@ -404,7 +404,7 @@ int wallet_mnemonic_check(const char *mnemo)
     }
     if (bi != n * 11) {
         //commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, ERROR);
-        return ERROR;
+        return STATUS_ERROR;
     }
     bits[32] = bits[n * 4 / 3];
     sha256_Raw(bits, n * 4 / 3, bits);
@@ -418,10 +418,10 @@ int wallet_mnemonic_check(const char *mnemo)
 
     if (!chksum) {
         //commander_fill_report("seed", FLAG_ERR_MNEMO_CHECKSUM, ERROR);
-        return ERROR;
+        return STATUS_ERROR;
     }
 
-    return SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 
@@ -456,7 +456,7 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input,
 
     // Inputs
     if (hex_len < idx + 16) {
-        return ERROR;
+        return STATUS_ERROR;
     }
     idx += utils_varint_to_uint64(hex + idx, &in_cnt);     // skip inCount
     for (j = 0; j < in_cnt; j++) {
@@ -464,7 +464,7 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input,
         idx += 64;                                  // skip prevOutHash
         idx += 8;                                   // skip preOutIndex
         if (hex_len < idx + 16) {
-            return ERROR;
+            return STATUS_ERROR;
         }
         idx += utils_varint_to_uint64(hex + idx, &n_len); // skip scriptSigLen
         idx += n_len * 2;                           // skip scriptSig (chars = 2 * bytes)
@@ -475,13 +475,13 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input,
     // Outputs
     id_start = idx;
     if (hex_len < idx + 16) {
-        return ERROR;
+        return STATUS_ERROR;
     }
     idx += utils_varint_to_uint64(hex + idx, &out_cnt);     // skip outCount
     for (j = 0; j < out_cnt; j++) {
         idx += 16;                                  // skip outValue
         if (hex_len < idx + 16) {
-            return ERROR;
+            return STATUS_ERROR;
         }
         idx += utils_varint_to_uint64(hex + idx, &n_len); // skip outScriptLen
         idx += n_len * 2;                           // skip outScript (chars = 2 * bytes)
@@ -502,9 +502,9 @@ int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input,
 
 
     if (not_same_input || not_same_output) {
-        return DIFFERENT;
+        return STATUS_VERIFY_DIFFERENT;
     } else {
-        return SAME;
+        return STATUS_VERIFY_SAME;
     }
 }
 
@@ -558,7 +558,7 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
 
         if (keypath && keypath_len > 0) {
             if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                                    chain_code) != SUCCESS) {
+                                    chain_code) != STATUS_SUCCESS) {
                 return NULL;
             }
             uECC_get_public_key33(node.private_key, pub_key33);

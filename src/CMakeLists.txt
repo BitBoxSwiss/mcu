@@ -15,7 +15,6 @@ set(C-SOURCES
     uECC.c
     utils.c
     wallet.c
-    version.c
 )
 
 set(C-HW-SOURCES

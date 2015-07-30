@@ -39,7 +39,6 @@
 #else
 #define COMMANDER_REPORT_SIZE   2048
 #endif
-#define DIGITAL_BITBOX_VERSION  GIT_VERSION
 #define VERIFYPASS_FILENAME     "verification.txt"
 #define COMMANDER_MAX_ATTEMPTS  5// max attempts before device reset
 

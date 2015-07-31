@@ -134,28 +134,28 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
         // skip writing if memory does not change
         if (read_b) {
             if (!memcmp(read_b, write_b, len)) {
-                return SUCCESS;
+                return STATUS_SUCCESS;
             }
         }
         aes_eeprom(len, addr, read_b, write_b);
         if (read_b) {
             if (!memcmp(write_b, read_b, len)) {
-                return SUCCESS;
+                return STATUS_SUCCESS;
             } else {
                 // error
                 if (len > 2) {
                     memcpy(read_b, MEM_PAGE_ERASE, len);
                 }
-                return ERROR;
+                return STATUS_ERROR;
             }
         }
 #else
         memcpy(read_b, write_b, len);
         (void) addr;
-        return SUCCESS;
+        return STATUS_SUCCESS;
 #endif
     }
-    return SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 
@@ -184,35 +184,38 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         }
         memcpy(enc_w, enc, enc_len);
         free(enc);
-        if (memory_eeprom((uint8_t *)enc_w, (uint8_t *)enc_r, addr, MEM_PAGE_LEN) == ERROR) {
+        if (memory_eeprom((uint8_t *)enc_w, (uint8_t *)enc_r, addr,
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN, (uint8_t *)enc_r + MEM_PAGE_LEN,
-                          addr + MEM_PAGE_LEN, MEM_PAGE_LEN) == ERROR) {
+                          addr + MEM_PAGE_LEN, MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 2,
-                          (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2, MEM_PAGE_LEN) == ERROR) {
+                          (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2,
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom((uint8_t *)enc_w + MEM_PAGE_LEN * 3,
-                          (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3, MEM_PAGE_LEN) == ERROR) {
+                          (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3,
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
     } else {
-        if (memory_eeprom(NULL, (uint8_t *)enc_r, addr, MEM_PAGE_LEN) == ERROR) {
+        if (memory_eeprom(NULL, (uint8_t *)enc_r, addr, MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN, addr + MEM_PAGE_LEN,
-                          MEM_PAGE_LEN) == ERROR) {
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 2, addr + MEM_PAGE_LEN * 2,
-                          MEM_PAGE_LEN) == ERROR) {
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
         if (memory_eeprom(NULL, (uint8_t *)enc_r + MEM_PAGE_LEN * 3, addr + MEM_PAGE_LEN * 3,
-                          MEM_PAGE_LEN) == ERROR) {
+                          MEM_PAGE_LEN) == STATUS_ERROR) {
             goto err;
         }
     }
@@ -227,10 +230,10 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     free(dec);
 
     utils_clear_buffers();
-    return SUCCESS;
+    return STATUS_SUCCESS;
 err:
     utils_clear_buffers();
-    return ERROR;
+    return STATUS_ERROR;
 }
 
 
@@ -321,9 +324,9 @@ int memory_aeskey_is_erased(PASSWORD_ID id)
     sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
 
     if (memcmp(memory_read_aeskey(id), mem_aeskey_erased, 32)) {
-        return NOT_ERASED;
+        return STATUS_MEM_NOT_ERASED;
     } else {
-        return ERASED;
+        return STATUS_MEM_ERASED;
     }
 }
 
@@ -336,18 +339,18 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 
 
     if (!password) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-        return ERROR;
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, STATUS_ERROR);
+        return STATUS_ERROR;
     }
 
     if (len < PASSWORD_LEN_MIN) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-        return ERROR;
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, STATUS_ERROR);
+        return STATUS_ERROR;
     }
 
     if (strlen(password) < PASSWORD_LEN_MIN) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, ERROR);
-        return ERROR;
+        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, STATUS_ERROR);
+        return STATUS_ERROR;
     }
 
     sha256_Raw((const uint8_t *)password, len, password_b);
@@ -356,11 +359,11 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     switch ((int)id) {
         case PASSWORD_MEMORY:
             memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
-            ret = SUCCESS;
+            ret = STATUS_SUCCESS;
             break;
         case PASSWORD_2FA:
             memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
-            ret = SUCCESS;
+            ret = STATUS_SUCCESS;
             break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
@@ -373,16 +376,16 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
             break;
         default:
             memset(password_b, 0, MEM_PAGE_LEN);
-            commander_fill_report("password", FLAG_ERR_PASSWORD_ID, ERROR);
-            return ERROR;
+            commander_fill_report("password", FLAG_ERR_PASSWORD_ID, STATUS_ERROR);
+            return STATUS_ERROR;
     }
 
     memset(password_b, 0, MEM_PAGE_LEN);
-    if (ret == SUCCESS) {
-        return SUCCESS;
+    if (ret == STATUS_SUCCESS) {
+        return STATUS_SUCCESS;
     } else {
-        commander_fill_report("password", FLAG_ERR_ATAES, ERROR);
-        return ERROR;
+        commander_fill_report("password", FLAG_ERR_ATAES, STATUS_ERROR);
+        return STATUS_ERROR;
     }
 }
 
@@ -469,10 +472,10 @@ uint16_t memory_read_touch_thresh(void)
 uint16_t memory_access_err_count(const uint8_t access)
 {
     uint16_t err_count = 0xF0F0;
-    if (access == ITERATE) {
+    if (access == STATUS_ACCESS_ITERATE) {
         memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
         err_count = MEM_access_err_ + 1;
-    } else if (access == INITIALIZE) {
+    } else if (access == STATUS_ACCESS_INITIALIZE) {
         err_count = 0;
     } else {
         err_count = COMMANDER_MAX_ATTEMPTS; // corrupted input

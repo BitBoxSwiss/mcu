@@ -69,8 +69,8 @@ void touch_init(void)
 
 uint8_t touch_button_press(int long_touch)
 {
-    int pushed = NOT_TOUCHED;
-    int status = ERROR;
+    int pushed = STATUS_NOT_TOUCHED;
+    int status = STATUS_ERROR;
     char message[128];
     int16_t touch_snks;
     int16_t touch_sns;
@@ -110,13 +110,13 @@ uint8_t touch_button_press(int long_touch)
 
                 // If released before exit_time_ms for long_touch, answer is 'reject'
                 if (long_touch && (touch_snks - touch_sns ) < (qt_sensor_thresh / 2)) {
-                    pushed = ERROR;
+                    pushed = STATUS_ERROR;
                     break;
                 } else if (!long_touch) {
-                    pushed = TOUCHED;
+                    pushed = STATUS_TOUCHED;
                     break;
                 } else {
-                    pushed = TOUCHED;
+                    pushed = STATUS_TOUCHED;
                 }
             }
             break;
@@ -125,9 +125,9 @@ uint8_t touch_button_press(int long_touch)
 
     // Reset lower priority
     NVIC_SetPriority(SysTick_IRQn, 15);
-    if (pushed == TOUCHED) {
+    if (pushed == STATUS_TOUCHED) {
         sprintf(message, "accept");
-        status = SUCCESS;
+        status = STATUS_SUCCESS;
         led_on();
         delay_ms(300);
         led_off();
@@ -136,9 +136,9 @@ uint8_t touch_button_press(int long_touch)
         delay_ms(300);
         led_off();
 
-    } else if (pushed == ERROR) {
+    } else if (pushed == STATUS_ERROR) {
         sprintf(message, "Aborted by user.");
-        status = ERROR;
+        status = STATUS_ERROR;
         led_on();
         delay_ms(100);
         led_off();
@@ -155,7 +155,7 @@ uint8_t touch_button_press(int long_touch)
         sprintf(message, "Touchbutton timed out. (%d/%d)",
                 qt_measure_data.channel_signals[TOUCH_CHANNEL],
                 qt_measure_data.channel_references[TOUCH_CHANNEL]);
-        status = ERROR;
+        status = STATUS_ERROR;
         led_off();
     }
 
@@ -184,8 +184,8 @@ void touch_button_parameters(uint16_t timeout, uint16_t threshold)
     }
 
     sprintf(message, "%d", qt_timeout_ms / 1000);
-    commander_fill_report("touch timeout", message, SUCCESS);
+    commander_fill_report("touch timeout", message, STATUS_SUCCESS);
 
     sprintf(message, "%d", qt_sensor_thresh);
-    commander_fill_report("touch threshold", message, SUCCESS);
+    commander_fill_report("touch threshold", message, STATUS_SUCCESS);
 }

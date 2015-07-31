@@ -50,8 +50,8 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
     memset(sd_text, 0, sizeof(sd_text));
     snprintf(sd_filename, sizeof(sd_filename), "%.*s", f_len, f);
     snprintf(sd_text, sizeof(sd_text), "%.*s", t_len, t);
-    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, SUCCESS);
-    return SUCCESS;
+    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
+    return STATUS_SUCCESS;
 }
 
 
@@ -59,7 +59,7 @@ char *sd_load(const char *f, uint16_t f_len)
 {
     static char text[512];
     memcpy(text, sd_text, 512);
-    commander_fill_report("sd_load", FLAG_ERR_NO_MCU, SUCCESS);
+    commander_fill_report("sd_load", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
     if (!strncmp(sd_filename, f, f_len)) {
         return text;
     }
@@ -69,28 +69,28 @@ char *sd_load(const char *f, uint16_t f_len)
 
 uint8_t sd_list(void)
 {
-    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, SUCCESS);
+    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
     if (sd_filename[0]) {
-        commander_fill_report("backup", sd_filename, SUCCESS);
+        commander_fill_report("backup", sd_filename, STATUS_SUCCESS);
     }
-    return SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 
 uint8_t sd_erase(void)
 {
-    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, SUCCESS);
+    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
-    return SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 
 uint8_t touch_button_press(int long_touch)
 {
     (void) long_touch;
-    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, SUCCESS);
-    return TOUCHED;
+    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
+    return STATUS_TOUCHED;
 }
 
 
@@ -98,7 +98,7 @@ void touch_button_parameters(uint16_t timeout, uint16_t threshold)
 {
     (void)timeout;
     (void)threshold;
-    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, SUCCESS);
+    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
 }
 
 

@@ -74,7 +74,7 @@ message(STATUS "C link flags:  ${CMAKE_C_LINK_FLAGS}")
 #-----------------------------------------------------------------------------
 # Get submodules
 
-#execute_process(COMMAND git "submodule" "update" "--init" "--recursive" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+execute_process(COMMAND git "submodule" "update" "--init" "--recursive" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 
 #-----------------------------------------------------------------------------

@@ -30,8 +30,10 @@
 
 #include <stdint.h>
 
+#define QTOUCH_TOUCH_TIMEOUT            3000// msec
+#define QTOUCH_TOUCH_THRESH             15//v0_4   25//v0_3x
 #ifndef TESTING
-#define TOUCH_CHANNEL                   CHANNEL_9
+#define QTOUCH_TOUCH_CHANNEL            CHANNEL_9
 #define QTOUCH_LIB_TYPE_MASK            0x01
 #define QTOUCH_LIB_COMPILER_OFFSET      2
 #define QTOUCH_LIB_COMPILER_MASK        0x01
@@ -45,7 +47,6 @@
 #endif
 
 
-void touch_button_parameters(uint16_t timeout, uint16_t threshold);
 void touch_init(void);
 uint8_t touch_button_press(int long_touch);
 

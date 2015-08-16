@@ -46,8 +46,6 @@ static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
 static uint8_t MEM_erased_ = DEFAULT_erased_;
 static uint8_t MEM_setup_ = DEFAULT_setup_;
 static uint16_t MEM_access_err_ = DEFAULT_access_err_;
-static uint16_t MEM_touch_thresh_ = DEFAULT_touch_thresh_;
-static uint16_t MEM_touch_timeout_ = DEFAULT_touch_timeout_;
 
 __extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -99,8 +97,6 @@ void memory_erase(void)
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased_);
     memory_write_unlocked(DEFAULT_unlocked_);
-    memory_write_touch_timeout(DEFAULT_touch_timeout_);
-    memory_write_touch_thresh(DEFAULT_touch_thresh_);
     memory_access_err_count(DEFAULT_access_err_);
     commander_create_verifypass();
 }
@@ -441,30 +437,6 @@ uint8_t memory_read_erased(void)
 {
     memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
     return MEM_erased_;
-}
-
-
-void memory_write_touch_timeout(const uint16_t t)
-{
-    memory_eeprom((const uint8_t *)&t, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR,
-                  2);
-}
-uint16_t memory_read_touch_timeout(void)
-{
-    memory_eeprom(NULL, (uint8_t *)&MEM_touch_timeout_, MEM_TOUCH_TIMEOUT_ADDR, 2);
-    return MEM_touch_timeout_;
-}
-
-
-void memory_write_touch_thresh(const uint16_t t)
-{
-    memory_eeprom((const uint8_t *)&t, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR,
-                  2);
-}
-uint16_t memory_read_touch_thresh(void)
-{
-    memory_eeprom(NULL, (uint8_t *)&MEM_touch_thresh_, MEM_TOUCH_THRESH_ADDR, 2);
-    return MEM_touch_thresh_;
 }
 
 

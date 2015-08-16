@@ -94,14 +94,6 @@ uint8_t touch_button_press(int long_touch)
 }
 
 
-void touch_button_parameters(uint16_t timeout, uint16_t threshold)
-{
-    (void)timeout;
-    (void)threshold;
-    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, STATUS_SUCCESS);
-}
-
-
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len)
 {
     memset(serial, 1, len);

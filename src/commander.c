@@ -983,8 +983,13 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
             memset(verify_output, 0, COMMANDER_REPORT_SIZE);
             return STATUS_ERROR;
         }
+    }
 
-    } else if (found_cmd == CMD_seed_ && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
+    // Reset if not sign command
+    memset(verify_input, 0, COMMANDER_REPORT_SIZE);
+    memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+
+    if (found_cmd == CMD_seed_ && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
         return STATUS_TOUCHED;
     } else if (found_cmd < CMD_require_touch_) {
         return (touch_button_press(0));

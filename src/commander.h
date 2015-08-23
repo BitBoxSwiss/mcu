@@ -35,26 +35,30 @@
 #include "conf_usb.h"
 
 
-#define COMMANDER_REPORT_SIZE   UDI_HID_REPORT_OUT_SIZE
+#define COMMANDER_REPORT_SIZE       UDI_HID_REPORT_OUT_SIZE
 #else
-#define COMMANDER_REPORT_SIZE   2048
+#define COMMANDER_REPORT_SIZE       2048
 #endif
-#define VERIFYPASS_FILENAME     "verification.txt"
-#define COMMANDER_MAX_ATTEMPTS  5// max attempts before device reset
 
-#define AUTOBACKUP_FILENAME     "autobackup_"
-#define AUTOBACKUP_ENCRYPT      "yes"
-#define AUTOBACKUP_NUM          10
+#define COMMANDER_ARRAY_ELEMENT_MAX  1024
+#define VERIFYPASS_FILENAME         "verification.txt"
+#define COMMANDER_MAX_ATTEMPTS      5// max attempts before device reset
+
+#define AUTOBACKUP_FILENAME         "autobackup_"
+#define AUTOBACKUP_ENCRYPT          "yes"
+#define AUTOBACKUP_NUM              10
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
                           PASSWORD_ID id);
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
                           PASSWORD_ID id);
 
-void commander_create_verifypass(void);
+void commander_clear_report(void);
 void commander_fill_report(const char *attr, const char *val, int err);
-void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey);
+int commander_fill_signature_array(const uint8_t *sig, const uint8_t *pubkey);
+int commander_fill_json_array(const char **key, const char **value, int cmd);
 void commander_force_reset(void);
+void commander_create_verifypass(void);
 int commander_test_static_functions(void);
 char *commander(const char *command);
 

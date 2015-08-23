@@ -94,7 +94,7 @@ char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
         buffer_uint8_to_hex[i * 2] = digits[(bin[i] >> 4) & 0xF];
         buffer_uint8_to_hex[i * 2 + 1] = digits[bin[i] & 0xF];
     }
-    buffer_uint8_to_hex[l * 2] = 0;
+    buffer_uint8_to_hex[l * 2] = '\0';
     return buffer_uint8_to_hex;
 }
 

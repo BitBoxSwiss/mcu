@@ -615,6 +615,14 @@ static void commander_process_xpub(yajl_val json_node)
 
     if (xpub[0]) {
         commander_fill_report("xpub", xpub, STATUS_SUCCESS);
+
+        int encrypt_len;
+        char *encoded_report;
+        encoded_report = aes_cbc_b64_encrypt((unsigned char *)xpub,
+                                             strlens(xpub),
+                                             &encrypt_len,
+                                             PASSWORD_VERIFY);
+        commander_fill_report_len("echo", encoded_report, STATUS_SUCCESS, encrypt_len);
     } else {
         commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, STATUS_ERROR);
     }

@@ -45,8 +45,7 @@ const char **wallet_mnemonic_wordlist(void);
 uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
 int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len);
-int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len,
-                int to_hash);
+int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len);
 void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub);
 int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
                         const uint8_t *privkeymaster, const uint8_t *chaincode);
@@ -55,10 +54,6 @@ int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
                              uint8_t s[512 / 8],
                              void (*progress_callback)(uint32_t current, uint32_t total));
-int wallet_check_input_output(const char *hex, uint64_t hex_len, char *v_input,
-                              char *v_output, int *input_cnt);
-char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *keypath,
-                                int keypath_len);
 /* Bitcoin formats */
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);

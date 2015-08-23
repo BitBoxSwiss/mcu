@@ -64,23 +64,23 @@
         CMD(threshold)          \
         CMD(generate)           \
         CMD(source)             \
+        CMD(hash)               \
         CMD(type)               \
         CMD(data)               \
         CMD(keypath)            \
-        CMD(change_keypath)     \
         CMD(strength)           \
         CMD(salt)               \
         CMD(filename)           \
         CMD(decrypt)            \
         CMD(encrypt)            \
+        CMD(pubkey)             \
+        CMD(eccsig)             \
         CMD(pin)                \
   /* placeholder don't move */  \
         CMD(none)                /* keep last */
 
 #define FOREACH_ATTR(ATTR)      \
   /*    command attributes  */  \
-        ATTR(transaction)       \
-        ATTR(hash)              \
         ATTR(true)              \
         ATTR(list)              \
         ATTR(lock)              \

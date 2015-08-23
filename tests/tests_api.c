@@ -404,10 +404,6 @@ static void tests_seed_xpub_backup(void)
     if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
         goto err;
     }
-    api_format_send_cmd("sign", "", PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
-        goto err;
-    }
     api_format_send_cmd("reset", "", PASSWORD_STAND);
     if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
         goto err;
@@ -425,6 +421,14 @@ static void tests_seed_xpub_backup(void)
         goto err;
     }
     api_format_send_cmd("verifypass", "", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("sign", "", PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", "", PASSWORD_STAND);
     if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
         goto err;
     }
@@ -616,11 +620,11 @@ static void tests_input(void)
     api_reset_device();
     if (!TEST_LIVE_DEVICE) {
         api_send_cmd("", PASSWORD_NONE);
-        if (!api_result_has(FLAG_ERR_NO_INPUT))                       {
+        if (!api_result_has(FLAG_ERR_NO_INPUT)) {
             goto err;
         }
         api_send_cmd(NULL, PASSWORD_NONE);
-        if (!api_result_has(FLAG_ERR_NO_INPUT))                     {
+        if (!api_result_has(FLAG_ERR_NO_INPUT)) {
             goto err;
         }
     }
@@ -699,15 +703,15 @@ static void tests_input(void)
 
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {
         api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-        if (!api_result_has(FLAG_ERR_DECRYPT))   {
+        if (!api_result_has(FLAG_ERR_DECRYPT)) {
             goto err;
         }
-        if (!api_result_has(FLAG_ERR_RESET_WARNING))   {
+        if (!api_result_has(FLAG_ERR_RESET_WARNING)) {
             goto err;
         }
     }
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-    if (!api_result_has(FLAG_ERR_RESET))   {
+    if (!api_result_has(FLAG_ERR_RESET)) {
         goto err;
     }
 
@@ -723,7 +727,7 @@ static void tests_password(void)
 {
     api_reset_device();
     api_format_send_cmd("name", "", PASSWORD_NONE);
-    if (!api_result_has(FLAG_ERR_NO_PASSWORD))  {
+    if (!api_result_has(FLAG_ERR_NO_PASSWORD)) {
         goto err;
     }
     api_format_send_cmd("password", "123", PASSWORD_NONE);
@@ -731,15 +735,15 @@ static void tests_password(void)
         goto err;
     }
     api_format_send_cmd("password", "", PASSWORD_NONE);
-    if (!api_result_has(FLAG_ERR_INVALID_CMD))  {
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
         goto err;
     }
     api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
-    if ( api_result_has("error"))               {
+    if ( api_result_has("error")) {
         goto err;
     }
     api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
-    if (!api_result_has(FLAG_ERR_DECRYPT))      {
+    if (!api_result_has(FLAG_ERR_DECRYPT)) {
         goto err;
     }
     api_format_send_cmd("password", "123", PASSWORD_STAND);
@@ -761,11 +765,11 @@ static void tests_echo_2FA(void)
     char export[] = "export";
     char seed[] = "{\"source\":\"create\"}";
     char hash_sign[] =
-        "{\"type\":\"hash\", \"keypath\":\"m/\", \"data\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign2[] =
-        "{\"type\":\"hash\", \"keypath\":\"m/\", \"data\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign3[] =
-        "{\"type\":\"hash\", \"keypath\":\"m/\", \"data\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
 
     api_reset_device();
     api_format_send_cmd("password", tests_pwd, PASSWORD_NONE);
@@ -788,25 +792,25 @@ static void tests_echo_2FA(void)
 
     // test verifypass
     api_format_send_cmd("verifypass", create, PASSWORD_STAND);
-    if ( api_result_has("error"))              {
+    if ( api_result_has("error")) {
         goto err;
     }
     api_format_send_cmd("backup", "erase", PASSWORD_STAND);
     if ( api_result_has("error") &&
-            !api_result_has(FLAG_ERR_SD_ERASE))  {
+            !api_result_has(FLAG_ERR_SD_ERASE)) {
         goto err;
     }
     api_format_send_cmd("backup", "list", PASSWORD_STAND);
-    if ( api_result_has(VERIFYPASS_FILENAME))  {
+    if ( api_result_has(VERIFYPASS_FILENAME)) {
         goto err;
     }
     api_format_send_cmd("verifypass", export, PASSWORD_STAND);
-    if ( api_result_has("error"))              {
+    if ( api_result_has("error")) {
         goto err;
     }
 
     api_format_send_cmd("backup", "list", PASSWORD_STAND);
-    if (!api_result_has(VERIFYPASS_FILENAME))  {
+    if (!api_result_has(VERIFYPASS_FILENAME)) {
         goto err;
     }
 
@@ -828,7 +832,7 @@ static void tests_echo_2FA(void)
         goto err;
     }
     api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
-    if ( api_result_has("2FA"))  {
+    if ( api_result_has("2FA")) {
         goto err;
     }
     api_format_send_cmd("sign", hash_sign2, PASSWORD_STAND);
@@ -852,11 +856,11 @@ static void tests_echo_2FA(void)
         goto err;
     }
     api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
-    if (!api_result_has("echo"))  {
+    if (!api_result_has("echo")) {
         goto err;
     }
     api_format_send_cmd("sign", hash_sign, PASSWORD_STAND);
-    if (!api_result_has("2FA"))   {
+    if (!api_result_has("2FA")) {
         goto err;
     }
     api_format_send_cmd("seed", seed, PASSWORD_STAND);
@@ -888,14 +892,6 @@ static void tests_sign(void)
         goto err;
     }
 
-    // signing before seeded
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_DESERIALIZE)) {
-        goto err;
-    }
-
     // seed
     api_format_send_cmd("seed",
                         "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}",
@@ -905,139 +901,124 @@ static void tests_sign(void)
     }
 
     // missing parameters
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
-                        PASSWORD_STAND);
+    api_format_send_cmd("sign", "{\"data\":[{\"keypath\":\"m/\"}]}", PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
-                        PASSWORD_STAND);
+    api_format_send_cmd("sign", "{\"data\":[{\"keypath\":\"m/\"}]}", PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
+        goto err;
+    }
+    api_format_send_cmd("sign", "{\"data\":[{\"hash\":\"empty\"}]}", PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign", "{\"data\":[{\"hash\":\"empty\"}]}", PASSWORD_STAND);
     if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
         goto err;
     }
 
-    // wrong type
-    api_format_send_cmd("sign",
-                        "{\"type\":\"invalid\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has("echo")) {
-        goto err;
-    }
-    api_format_send_cmd("sign",
-                        "{\"type\":\"invalid\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_INVALID_CMD)) {
-        goto err;
-    }
-
-    // wrong change keypath
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has(FLAG_ERR_DESERIALIZE)) {
-        goto err;
-    }
 
     // change output after echo (MITM attack)
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"data\":[{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e7af4862e10c88acffffffff0298080000000000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"data\":[{\"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
-    if ( api_result_has("sign")) {
+    if (api_result_has(CMD_STR[CMD_pubkey_])) {
         goto err;
     }
 
-    // sign using one input
+
+    // check buffer overflow prevention
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\": [{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}]}",
+                        PASSWORD_STAND);
+    if (!api_result_has("echo")) {
+        goto err;
+    }
+    api_format_send_cmd("sign",
+                        "{\"meta\":\"_meta_data_\", \"data\": [{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}]}",
+                        PASSWORD_STAND);
+    if (!api_result_has(FLAG_ERR_REPORT_BUFFER)) {
+        goto err;
+    }
+
+
+    // sign using one input
+    /*
+      raw_tx = 0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000
+      sha256(sha256(hex2byte(raw_tx))) = c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a
+    */
+    api_format_send_cmd("sign",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("verify_output")) {
+        if (!api_result_has("_meta_data_")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("m/44'/0'/0'/1/7")) {
             goto err;
         }
-        if (!api_result_has("2200"))          {
-            goto err;
-        }
-        if (!api_result_has("script"))        {
-            goto err;
-        }
-        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
+        if (api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
     }
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
-    if (!api_result_has("sign")) {
+    if (!api_result_has(CMD_STR[CMD_pubkey_])) {
         goto err;
     }
     if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
         goto err;
     }
-    if (!api_result_has("pubkey")) {
+    if (!api_result_has(CMD_STR[CMD_pubkey_])) {
         goto err;
     }
     if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) {
         goto err;
     }
 
+
     // sign using two inputs
+    /*
+      raw_tx = 01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000
+      sha256(sha256(hex2byte(raw_tx))) = 3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790
+
+      raw_tx = 01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000
+      sha256(sha256(hex2byte(raw_tx))) = c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d
+    */
+
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
     if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("verify_output")) {
+        if (!api_result_has("_meta_data_")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("m/44'/0'/0'/1/8")) {
             goto err;
         }
-        if (!api_result_has("200"))           {
-            goto err;
-        }
-        if (!api_result_has("script"))        {
-            goto err;
-        }
-        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
+        if (api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
     }
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has("sign")) {
-        goto err;
-    }
-    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
-        goto err;
-    }
-    if (!api_result_has("pubkey")) {
-        goto err;
-    }
-    if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
-        goto err;
-    }
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("sign")) {
         goto err;
@@ -1045,10 +1026,16 @@ static void tests_sign(void)
     if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
         goto err;
     }
-    if (!api_result_has("pubkey")) {
+    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+        goto err;
+    }
+    if (!api_result_has(CMD_STR[CMD_pubkey_])) {
         goto err;
     }
     if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) {
+        goto err;
+    }
+    if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
         goto err;
     }
 
@@ -1062,31 +1049,29 @@ static void tests_sign(void)
 
     // sign using one input
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
     if (!TEST_LIVE_DEVICE) {
         memory_write_aeskey(api_read_value(CMD_pin_), 4, PASSWORD_2FA);
-        if (!api_result_has("verify_output")) {
+        if (!api_result_has("_meta_data_")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("m/44'/0'/0'/1/7")) {
             goto err;
         }
-        if (!api_result_has("2200"))          {
+        if (api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
-        if (!api_result_has("script"))        {
-            goto err;
-        }
-        if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
+        if (!api_result_has(CMD_STR[CMD_pin_])) {
             goto err;
         }
     }
+
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"change_keypath\":\"m/44'/0'/0'/1/8\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("2FA")) {
         goto err;
@@ -1098,7 +1083,7 @@ static void tests_sign(void)
         if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
             goto err;
         }
-        if (!api_result_has("pubkey")) {
+        if (!api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
         if (!api_result_has("02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5")) {
@@ -1106,53 +1091,28 @@ static void tests_sign(void)
         }
     }
 
+
     // sign using two inputs
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("echo")) {
         goto err;
     }
     if (!TEST_LIVE_DEVICE) {
         memory_write_aeskey(api_read_value(CMD_pin_), 4, PASSWORD_2FA);
-        if (!api_result_has("verify_output")) {
+        if (!api_result_has("_meta_data_")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("m/44'/0'/0'/1/8")) {
             goto err;
         }
-        if (!api_result_has("200"))           {
-            goto err;
-        }
-        if (!api_result_has("script"))        {
-            goto err;
-        }
-        if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
+        if (api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
     }
     api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"None\"}",
-                        PASSWORD_STAND);
-    if (!api_result_has("2FA")) {
-        goto err;
-    }
-    if (!TEST_LIVE_DEVICE) {
-        if (!api_result_has("sign")) {
-            goto err;
-        }
-        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
-            goto err;
-        }
-        if (!api_result_has("pubkey")) {
-            goto err;
-        }
-        if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
-            goto err;
-        }
-    }
-    api_format_send_cmd("sign",
-                        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"None\"}",
+                        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}",
                         PASSWORD_STAND);
     if (!api_result_has("2FA")) {
         goto err;
@@ -1164,10 +1124,16 @@ static void tests_sign(void)
         if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
             goto err;
         }
-        if (!api_result_has("pubkey")) {
+        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+            goto err;
+        }
+        if (!api_result_has(CMD_STR[CMD_pubkey_])) {
             goto err;
         }
         if (!api_result_has("032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec")) {
+            goto err;
+        }
+        if (!api_result_has("0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6")) {
             goto err;
         }
     }
@@ -1179,7 +1145,6 @@ static void tests_sign(void)
 err:
     api_print_result("tests_sign", STATUS_ERROR);
 }
-
 
 
 // test vectors generated from Python 2.7 code using aes, base64, and hashlib imports

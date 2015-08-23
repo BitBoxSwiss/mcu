@@ -38,7 +38,6 @@
 #include "wallet.h"
 #include "utils.h"
 #include "flags.h"
-#include "sha2.h"
 #include "aes.h"
 #include "led.h"
 #ifndef TESTING
@@ -56,13 +55,11 @@ extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
 const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
 
-
 static int REPORT_BUF_OVERFLOW = 0;
-static int verify_keypath_cnt = 0;
-static char verify_keypath[COMMANDER_REPORT_SIZE] = {0};
-static char verify_output[COMMANDER_REPORT_SIZE] = {0};
-static char verify_input[COMMANDER_REPORT_SIZE] = {0};
-static char json_report[COMMANDER_REPORT_SIZE] = {0};
+__extension__ static char signature_array[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
+__extension__ static char previous_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
+__extension__ static char new_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
+__extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 
 
 // Must free() returned value (allocated inside base64() function)
@@ -160,10 +157,9 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
 //  Reporting results  //
 //
 
-static void commander_clear_report(void)
+void commander_clear_report(void)
 {
     memset(json_report, 0, COMMANDER_REPORT_SIZE);
-    //json_report[0] = '\0';
     REPORT_BUF_OVERFLOW = 0;
 }
 
@@ -193,7 +189,7 @@ static void commander_fill_report_len(const char *attr, const char *val, int err
             strcat(json_report, "\": ");
         }
 
-        if (val[0] == '{') {
+        if (val[0] == '{' || val[0] == '[') {
             strncat(json_report, val, vallen);
         } else {
             strcat(json_report, "\"");
@@ -217,15 +213,35 @@ void commander_fill_report(const char *attr, const char *val, int err)
 }
 
 
-void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey)
+
+int commander_fill_signature(const uint8_t *sig, const uint8_t *pubkey)
 {
-    char report[128 + 66 + 24] = {0};
-    strcat(report, "{\"sig\":\"");
+    char report[128 + 66 + 27] = {0};
+    strcat(report, "{\"");
+    strcat(report, CMD_STR[CMD_eccsig_]);
+    strcat(report, "\":\"");
     strncat(report, utils_uint8_to_hex(sig, 64), 128);
-    strcat(report, "\", \"pubkey\":\"");
+    strcat(report, "\", \"");
+    strcat(report, CMD_STR[CMD_pubkey_]);
+    strcat(report, "\":\"");
     strncat(report, utils_uint8_to_hex(pubkey, 33), 66);
     strcat(report, "\"}");
-    commander_fill_report("sign", report, STATUS_SUCCESS);
+
+    size_t len = strlens(signature_array);
+    if (len == 0) {
+        strncat(signature_array, "[", 1);
+    } else {
+        signature_array[len - 1] = ','; // replace closing ']' with continuing ','
+    }
+    if (sizeof(signature_array) < (strlens(report) + len + 3)) {
+        commander_clear_report();
+        commander_fill_report("sign", FLAG_ERR_REPORT_BUFFER, STATUS_ERROR);
+        return STATUS_ERROR;
+    } else {
+        strcat(signature_array, report);
+        strcat(signature_array, "]");
+        return STATUS_SUCCESS;
+    }
 }
 
 
@@ -471,33 +487,42 @@ static void commander_process_seed(yajl_val json_node)
 }
 
 
+
 static int commander_process_sign(yajl_val json_node)
 {
-    int to_hash = 0;
-
-    const char *type_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_type_], NULL };
     const char *data_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_data_], NULL };
-    const char *keypath_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_keypath_], NULL };
+    yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_array);
 
-    const char *type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
-    const char *data = YAJL_GET_STRING(yajl_tree_get(json_node, data_path, yajl_t_string));
-    const char *keypath = YAJL_GET_STRING(yajl_tree_get(json_node, keypath_path,
-                                          yajl_t_string));
-
-    if (!data || !keypath || !type) {
+    if (!data) {
         commander_fill_report("sign", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
         return STATUS_ERROR;
     }
 
-    if (strncmp(type, ATTR_STR[ATTR_transaction_],
-                strlens(ATTR_STR[ATTR_transaction_])) == 0) {
-        to_hash = 1;
-    } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlens(ATTR_STR[ATTR_hash_]))) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
-        return STATUS_ERROR;
+    memset(signature_array, 0, sizeof(signature_array));
+
+    int ret;
+    size_t i;
+    for (i = 0; i < data->u.array.len; i++) {
+        const char *keypath_path[] = { CMD_STR[CMD_keypath_], NULL };
+        const char *hash_path[] = { CMD_STR[CMD_hash_], NULL };
+
+        yajl_val obj = data->u.array.values[i];
+        const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
+        const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
+
+        if (!hash || !keypath) {
+            commander_fill_report("sign", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
+            return STATUS_ERROR;
+        }
+
+        ret = wallet_sign(hash, strlens(hash), keypath, strlens(keypath));
+        if (ret != STATUS_SUCCESS) {
+            return ret;
+        };
     }
 
-    return (wallet_sign(data, strlens(data), keypath, strlens(keypath), to_hash));
+    commander_fill_report("sign", signature_array, STATUS_SUCCESS);
+    return ret;
 }
 
 
@@ -826,7 +851,8 @@ int commander_test_static_functions(void)
     commander_clear_report();
     commander_fill_report_len("testing", val, STATUS_SUCCESS,
                               COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(FLAG_ERR_REPORT_BUFFER));
-    commander_fill_report_signature(sig, pubkey);
+    commander_fill_signature(sig, pubkey);
+    commander_fill_report("sign", signature_array, STATUS_SUCCESS);
     if (!strstr(json_report, FLAG_ERR_REPORT_BUFFER)) {
         goto err;
     }
@@ -841,12 +867,17 @@ err:
 //  Handle API input (preprocessing) //
 //
 
-static void commander_echo_2fa(char *command)
+static int commander_echo_command(void)
 {
-    int encrypt_len;
-    char *encoded_report;
+    if (!memcmp(previous_command, new_command, COMMANDER_REPORT_SIZE)) {
+        return STATUS_VERIFY_SAME;
+    }
+
+    memset(previous_command, 0, COMMANDER_REPORT_SIZE);
+    memcpy(previous_command, new_command, COMMANDER_REPORT_SIZE);
 
     commander_clear_report();
+    snprintf(json_report, COMMANDER_REPORT_SIZE, "%s", new_command);
 
     if (!memory_read_unlocked()) {
         // Create one-time PIN
@@ -854,24 +885,21 @@ static void commander_echo_2fa(char *command)
         char pin_c[5];
         if (random_bytes(pin_b, 2, 0) == STATUS_ERROR) {
             commander_fill_report("random", FLAG_ERR_ATAES, STATUS_ERROR);
-            return;
+            return STATUS_ERROR;
         }
         sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
-        // Append PIN to echoed command
-        command[strlens(command) - 1] = ','; // replace closing '}' with continuing ','
-        strcat(command, " \"");
-        strcat(command, CMD_STR[CMD_pin_]);
-        strcat(command, "\": \"");
-        strcat(command, pin_c);
-        strcat(command, "\" }");
-
-        // Create 2FA AES key for encryption
+        // Create 2FA AES key
         commander_process_password(pin_c, 4, PASSWORD_2FA);
+
+        // Append PIN to echo
+        commander_fill_report(CMD_STR[CMD_pin_], pin_c, STATUS_SUCCESS);
     }
 
-    encoded_report = aes_cbc_b64_encrypt((unsigned char *)command,
-                                         strlens(command),
+    int encrypt_len;
+    char *encoded_report;
+    encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
+                                         strlens(json_report),
                                          &encrypt_len,
                                          PASSWORD_VERIFY);
     commander_clear_report();
@@ -881,97 +909,23 @@ static void commander_echo_2fa(char *command)
         commander_fill_report("echo", FLAG_ERR_ENCRYPT_MEM, STATUS_ERROR);
     }
     free(encoded_report);
+
+    return STATUS_VERIFY_DIFFERENT;
 }
 
 
-static int commander_verify_signing(yajl_val json_node)
-{
-    const char *type_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_type_], NULL };
-    const char *data_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_data_], NULL };
-    const char *keypath_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_keypath_], NULL };
-    const char *change_keypath_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_change_keypath_], NULL };
-
-    const char *type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
-    const char *data = YAJL_GET_STRING(yajl_tree_get(json_node, data_path, yajl_t_string));
-    const char *keypath = YAJL_GET_STRING(yajl_tree_get(json_node, keypath_path,
-                                          yajl_t_string));
-    const char *change_keypath = YAJL_GET_STRING(yajl_tree_get(json_node, change_keypath_path,
-                                 yajl_t_string));
-
-    if (!data || !type) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
-        return STATUS_ERROR;
-    }
-
-    if (strncmp(type, ATTR_STR[ATTR_transaction_],
-                strlens(ATTR_STR[ATTR_transaction_])) == 0) {
-        int ret, same_io, same_keypath, input_cnt;
-        char *out;
-        // Check if deserialized inputs and outputs are the same (scriptSig's could be different).
-        // The function updates verify_input and verify_output.
-        same_io = wallet_check_input_output(data, strlens(data), verify_input, verify_output,
-                                            &input_cnt);
-
-        // Check if using the same signing keypath
-        same_keypath = (!memcmp(keypath, verify_keypath, strlens(keypath)) &&
-                        (strlens(keypath) == strlens(verify_keypath))) ? STATUS_VERIFY_SAME :
-                       STATUS_VERIFY_DIFFERENT;
-        memset(verify_keypath, 0, sizeof(verify_keypath));
-        memcpy(verify_keypath, keypath, strlens(keypath));
-
-        // Deserialize and check if a change address is present (when more than one output is given).
-        out = wallet_deserialize_output(verify_output, strlens(verify_output), change_keypath,
-                                        strlens(change_keypath));
-
-        if (!out) {
-            commander_fill_report("sign", FLAG_ERR_DESERIALIZE, STATUS_ERROR);
-            ret = STATUS_ERROR;
-        } else if (same_io == STATUS_VERIFY_SAME && same_keypath == STATUS_VERIFY_SAME) {
-            verify_keypath_cnt++;
-            ret = STATUS_VERIFY_SAME;
-        } else if (same_io == STATUS_VERIFY_SAME && same_keypath == STATUS_VERIFY_DIFFERENT) {
-            verify_keypath_cnt++;
-            ret = STATUS_VERIFY_NEXT;
-        } else {
-            verify_keypath_cnt = 0;
-            commander_echo_2fa(out);
-            ret = STATUS_VERIFY_DIFFERENT;
-        }
-        if (verify_keypath_cnt >= input_cnt) {
-            memset(verify_input, 0, COMMANDER_REPORT_SIZE);
-            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
-        }
-        return (ret);
-    } else {
-        // Because data is hashed, check the whole hash instead of only transaction inputs/outputs.
-        // When 'locked', the commander_echo_2fa function replaces ending '}' with ',' and adds PIN
-        // information to the end of verify_output. Therefore, compare verify_output over strlen of
-        // message minus 1 characters.
-        if (memcmp(verify_output, data, strlens(data) - 1)) {
-            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
-            memcpy(verify_output, data, strlens(data));
-            commander_echo_2fa(verify_output);
-            return STATUS_VERIFY_DIFFERENT;
-        } else {
-            return STATUS_VERIFY_SAME;
-        }
-    }
-}
-
-
-static int commander_touch_button(int found_cmd, yajl_val json_node)
+static int commander_touch_button(int found_cmd)
 {
     if (found_cmd == CMD_sign_) {
         int c;
-        c = commander_verify_signing(json_node);
+        c = commander_echo_command();
         if (c == STATUS_VERIFY_SAME) {
             int t;
             t = touch_button_press(1);
             if (t != STATUS_TOUCHED) {
                 // Clear previous signing information
                 // to force touch for next sign command.
-                memset(verify_input, 0, COMMANDER_REPORT_SIZE);
-                memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+                memset(previous_command, 0, COMMANDER_REPORT_SIZE);
             }
             return (t);
         } else if (c == STATUS_VERIFY_NEXT) {
@@ -979,15 +933,13 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
         } else if (c == STATUS_VERIFY_DIFFERENT) {
             return STATUS_VERIFY_ECHO;
         } else {
-            memset(verify_input, 0, COMMANDER_REPORT_SIZE);
-            memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+            memset(previous_command, 0, COMMANDER_REPORT_SIZE);
             return STATUS_ERROR;
         }
     }
 
     // Reset if not sign command
-    memset(verify_input, 0, COMMANDER_REPORT_SIZE);
-    memset(verify_output, 0, COMMANDER_REPORT_SIZE);
+    memset(previous_command, 0, COMMANDER_REPORT_SIZE);
 
     if (found_cmd == CMD_seed_ && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
         return STATUS_TOUCHED;
@@ -1004,6 +956,9 @@ static void commander_parse(char *command)
 {
     char *encoded_report;
     int t, cmd, ret, err, found, found_cmd = 0xFF, encrypt_len;
+
+    memset(new_command, 0, COMMANDER_REPORT_SIZE);
+    snprintf(new_command, COMMANDER_REPORT_SIZE, "%s", command);
 
     // Extract commands
     err = 0;
@@ -1026,7 +981,7 @@ static void commander_parse(char *command)
         commander_fill_report("input", FLAG_ERR_MULTIPLE_CMD, STATUS_ERROR);
     } else {
         memory_access_err_count(STATUS_ACCESS_INITIALIZE);
-        t = commander_touch_button(found_cmd, json_node);
+        t = commander_touch_button(found_cmd);
 
 
         if (t == STATUS_VERIFY_ECHO) {
@@ -1130,7 +1085,7 @@ static char *commander_decrypt(const char *encrypted_command)
 
 static int commander_check_init(const char *encrypted_command)
 {
-    int ret = STATUS_ERROR;
+    int ret;
 
     if (!encrypted_command) {
         commander_fill_report("input", FLAG_ERR_NO_INPUT " "
@@ -1231,14 +1186,12 @@ commander()
     |
     \_commander_touch_button()
             |--if sign command
-            |    |
-            |    \_commander_verify_signing()
-            |         |--if new transaction -> echo 2FA info -> RETURN
-            |         |--if no change address & >1 output -> RETURN
+            |      |--if new transaction -> echo 2FA info -> RETURN
+            |      |--if repeated, wait for user input (touch button)
             |
             |--if require touch & not touched -> RETURN
             |
-    \_commander_process()  { do command }
+    \_commander_process() { do command }
             |
       _____/
     |

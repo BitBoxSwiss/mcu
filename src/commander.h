@@ -51,10 +51,11 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
                           PASSWORD_ID id);
 
-void commander_create_verifypass(void);
+void commander_clear_report(void);
 void commander_fill_report(const char *attr, const char *val, int err);
-void commander_fill_report_signature(const uint8_t *sig, const uint8_t *pubkey);
+int commander_fill_signature(const uint8_t *sig, const uint8_t *pubkey);
 void commander_force_reset(void);
+void commander_create_verifypass(void);
 int commander_test_static_functions(void);
 char *commander(const char *command);
 

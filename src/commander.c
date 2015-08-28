@@ -622,7 +622,7 @@ static void commander_process_xpub(yajl_val json_node)
                                              PASSWORD_VERIFY);
         commander_fill_report_len("echo", encoded_report, STATUS_SUCCESS, encrypt_len);
     } else {
-        commander_fill_report("xpub", FLAG_ERR_BIP32_MISSING, STATUS_ERROR);
+        commander_fill_report("xpub", FLAG_ERR_XPUB, STATUS_ERROR);
     }
 }
 

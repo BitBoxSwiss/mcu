@@ -74,6 +74,7 @@
         CMD(decrypt)            \
         CMD(encrypt)            \
         CMD(pin)                \
+        CMD(echo)               \
   /* placeholder don't move */  \
         CMD(none)                /* keep last */
 

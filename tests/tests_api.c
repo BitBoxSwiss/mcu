@@ -191,6 +191,22 @@ static const char *api_read_value(int cmd)
 }
 
 
+static char *api_read_value_decrypt(int cmd, PASSWORD_ID id)
+{
+    const char *val = api_read_value(cmd);
+    static char val_dec[HID_REPORT_SIZE];
+    memset(val_dec, 0, sizeof(val_dec));
+
+    int decrypt_len;
+    char *dec = aes_cbc_b64_decrypt((const unsigned char *)val, strlens(val),
+                                    &decrypt_len, id);
+
+    snprintf(val_dec, HID_REPORT_SIZE, "%.*s", decrypt_len, dec);
+    free(dec);
+    return val_dec;
+}
+
+
 static int api_result_has(const char *str)
 {
     char *report = utils_read_decrypted_report();
@@ -209,7 +225,7 @@ static int api_result_has(const char *str)
 
 static void tests_seed_xpub_backup(void)
 {
-    char xpub0[112], xpub1[112];
+    char xpub0[112], xpub1[112], *echo;
     char filename[] = "tests_backup.txt";
     char keypath[] = "m/44\'/0\'/";
 
@@ -336,6 +352,12 @@ static void tests_seed_xpub_backup(void)
         if (!memcmp(xpub0, xpub1, 112)) {
             goto err;
         }
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo_, PASSWORD_VERIFY);
+            if (memcmp(xpub0, echo, 112)) {
+                goto err;
+            }
+        }
 
         // backup
         api_format_send_cmd("backup", "erase", PASSWORD_STAND);
@@ -365,6 +387,12 @@ static void tests_seed_xpub_backup(void)
             goto err;
         }
         memcpy(xpub1, api_read_value(CMD_xpub_), sizeof(xpub1));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo_, PASSWORD_VERIFY);
+            if (memcmp(xpub1, echo, 112)) {
+                goto err;
+            }
+        }
 
         // check xpubs
         if (memcmp(xpub0, xpub1, 112)) {

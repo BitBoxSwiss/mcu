@@ -34,10 +34,7 @@
 #define MEM_PAGE_LEN                32
 
 // User Zones: 0x0000 to 0x0FFF
-#define MEM_TOUCH_TIMEOUT_ADDR      0x0022// Zone 0
-#define MEM_TOUCH_THRESH_ADDR       0x0024
-#define MEM_TOUCH_ENABLE_ADDR       0x0026
-#define MEM_ERASED_ADDR             0x0028
+#define MEM_ERASED_ADDR             0x0028// Zone 0
 #define MEM_SETUP_ADDR              0x0030
 #define MEM_ACCESS_ERR_ADDR         0x0032
 #define MEM_UNLOCKED_ADDR           0x0034
@@ -56,8 +53,6 @@
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
 #define DEFAULT_access_err_         STATUS_ACCESS_INITIALIZE
-#define DEFAULT_touch_timeout_      3000// msec
-#define DEFAULT_touch_thresh_       15//v0_4   25//v0_3x
 
 
 typedef enum PASSWORD_ID {
@@ -85,15 +80,11 @@ uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint16_t *memory_mnemonic(const uint16_t *index);
 
 uint8_t *memory_read_memseed(void);
-uint16_t memory_read_touch_timeout(void);
-uint16_t memory_read_touch_thresh(void);
 uint8_t memory_read_erased(void);
 uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
 
 void memory_write_memseed(const uint8_t *s);
-void memory_write_touch_timeout(const uint16_t t);
-void memory_write_touch_thresh(const uint16_t t);
 void memory_write_erased(const uint8_t erase);
 void memory_write_setup(const uint8_t setup);
 void memory_write_unlocked(const uint8_t u);

@@ -51,7 +51,7 @@ uint16_t qt_timeout_ms_min              = 1000u;
 void touch_init(void)
 {
     qt_reset_sensing();
-    qt_enable_key(TOUCH_CHANNEL, AKS_GROUP_1, 4u, HYST_6_25);
+    qt_enable_key(QTOUCH_TOUCH_CHANNEL, AKS_GROUP_1, 4u, HYST_6_25);
     qt_init_sensing();
 
     qt_config_data.qt_di = DEF_QT_DI;
@@ -76,8 +76,6 @@ uint8_t touch_button_press(int long_touch)
     int16_t touch_sns;
     uint16_t exit_time_ms;
 
-    uint16_t qt_timeout_ms = memory_read_touch_timeout();
-    uint16_t qt_sensor_thresh = memory_read_touch_thresh();
 
     led_on();
 
@@ -85,31 +83,31 @@ uint8_t touch_button_press(int long_touch)
     NVIC_SetPriority(SysTick_IRQn, 0);
 
     systick_current_time_ms = 0;
-    exit_time_ms = systick_current_time_ms + qt_timeout_ms;
+    exit_time_ms = systick_current_time_ms + QTOUCH_TOUCH_TIMEOUT;
     while (systick_current_time_ms < exit_time_ms || long_touch) {
         do {
             status_flag = qt_measure_sensors(systick_current_time_ms);
             burst_flag = status_flag & QTLIB_BURST_AGAIN;
         } while (burst_flag);
 
-        touch_snks = qt_measure_data.channel_references[TOUCH_CHANNEL];
-        touch_sns = qt_measure_data.channel_signals[TOUCH_CHANNEL];
+        touch_snks = qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL];
+        touch_sns = qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL];
 
-        if ((touch_snks - touch_sns ) > qt_sensor_thresh) {
+        if ((touch_snks - touch_sns ) > QTOUCH_TOUCH_THRESH) {
             // Touched
             led_off();
-            exit_time_ms = systick_current_time_ms + qt_timeout_ms;
+            exit_time_ms = systick_current_time_ms + QTOUCH_TOUCH_TIMEOUT;
             while (systick_current_time_ms < exit_time_ms) {
                 do {
                     status_flag = qt_measure_sensors(systick_current_time_ms);
                     burst_flag = status_flag & QTLIB_BURST_AGAIN;
                 } while (burst_flag);
 
-                touch_snks = qt_measure_data.channel_references[TOUCH_CHANNEL];
-                touch_sns = qt_measure_data.channel_signals[TOUCH_CHANNEL];
+                touch_snks = qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL];
+                touch_sns = qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL];
 
                 // If released before exit_time_ms for long_touch, answer is 'reject'
-                if (long_touch && (touch_snks - touch_sns ) < (qt_sensor_thresh / 2)) {
+                if (long_touch && (touch_snks - touch_sns ) < (QTOUCH_TOUCH_THRESH / 2)) {
                     pushed = STATUS_ERROR;
                     break;
                 } else if (!long_touch) {
@@ -153,39 +151,12 @@ uint8_t touch_button_press(int long_touch)
 
     } else {
         sprintf(message, "Touchbutton timed out. (%d/%d)",
-                qt_measure_data.channel_signals[TOUCH_CHANNEL],
-                qt_measure_data.channel_references[TOUCH_CHANNEL]);
+                qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
+                qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
         status = STATUS_ERROR;
         led_off();
     }
 
     commander_fill_report("touchbutton", message, status);
     return pushed;
-}
-
-void touch_button_parameters(uint16_t timeout, uint16_t threshold)
-{
-    char message[32];
-    uint16_t qt_timeout_ms = memory_read_touch_timeout();
-    uint16_t qt_sensor_thresh = memory_read_touch_thresh();
-
-    if (timeout > 0 && qt_timeout_ms != timeout) {
-        if (timeout > qt_timeout_ms_min) {
-            qt_timeout_ms = timeout;
-        } else {
-            qt_timeout_ms = qt_timeout_ms_min;
-        }
-        memory_write_touch_timeout(qt_timeout_ms);
-    }
-
-    if (threshold > 0 && qt_sensor_thresh != threshold) {
-        qt_sensor_thresh = threshold;
-        memory_write_touch_thresh(qt_sensor_thresh);
-    }
-
-    sprintf(message, "%d", qt_timeout_ms / 1000);
-    commander_fill_report("touch timeout", message, STATUS_SUCCESS);
-
-    sprintf(message, "%d", qt_sensor_thresh);
-    commander_fill_report("touch threshold", message, STATUS_SUCCESS);
 }

@@ -27,27 +27,24 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 #include "random.h"
 #include "flags.h"
 
 
 #ifdef TESTING
 
-static FILE *f;
-static int f_open = 0;
 void random_init(void)
 {
-    if (!f_open) {
-        f = fopen("/dev/urandom", "r");
-        f_open = 1;
-    }
+    srand(time(NULL));
 }
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     (void) update_seed;
-    if (fread(buf, 1, len, f) != len) {
-        return STATUS_ERROR;
+    for (uint32_t i = 0; i < len; i++) {
+        buf[i] = rand();
     }
+
     return STATUS_SUCCESS;
 }
 

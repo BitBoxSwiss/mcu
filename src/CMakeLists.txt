@@ -45,7 +45,7 @@ endif()
 include_directories(SYSTEM)
 
 add_library(bitbox
-  SHARED
+  STATIC
   ${C-SOURCES}
   #${C-HW-SOURCES}
   ${YAJL-SOURCES}

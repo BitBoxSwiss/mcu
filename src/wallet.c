@@ -543,7 +543,7 @@ char *wallet_deserialize_output(const char *hex, uint64_t hex_len, const char *k
         memset(outval, 0, sizeof(outval));
         strncpy(outval, hex + idx, 16);
         utils_reverse_hex(outval, 16);
-        sscanf(outval, "%" PRIx64, &outValue);
+        outValue = strtoull(outval, NULL, 16);
         idx += 16;
         if (hex_len < idx + 16) {
             return NULL;

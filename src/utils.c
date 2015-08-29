@@ -24,7 +24,6 @@
 
 */
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -171,7 +170,7 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
     } else {
         strncpy(v, vi, len);
     }
-    sscanf(v, "%" PRIx64 , i);
+    *i = strtoull(v, NULL, 16);
 
     return len;
 }

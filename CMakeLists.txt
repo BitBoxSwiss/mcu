@@ -82,18 +82,19 @@ execute_process(COMMAND git "submodule" "update" "--init" "--recursive" WORKING_
 
 if(BUILD_TESTS)
   find_package(OpenSSL REQUIRED)
+    if(NOT WIN32)
+      if(NOT CONTINUOUS_INTEGRATION)
+        find_library(HIDAPI_LIBRARY
+          NAMES hidapi hidapi-libusb)
 
-    if(NOT CONTINUOUS_INTEGRATION)
-      find_library(HIDAPI_LIBRARY
-        NAMES hidapi hidapi-libusb)
+        find_path(HIDAPI_INCLUDE_DIR
+          NAMES hidapi.h
+          PATH_SUFFIXES
+          hidapi)
 
-      find_path(HIDAPI_INCLUDE_DIR
-        NAMES hidapi.h
-        PATH_SUFFIXES
-        hidapi)
-
-      if(!HIDAPI_FOUND)
-        message(FATAL_ERROR "hidapi not found.")
+        if(!HIDAPI_FOUND)
+          message(FATAL_ERROR "hidapi not found.")
+        endif()
       endif()
     endif()
 endif()

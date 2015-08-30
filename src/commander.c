@@ -212,7 +212,8 @@ void commander_fill_report(const char *attr, const char *val, int status)
 }
 
 
-int commander_fill_json_array(const char **key, const char **value, int cmd)
+int commander_fill_json_array(const char **key, const char **value, JSON_TYPE *type,
+                              int cmd)
 {
     int i = 0;
     char array_element[COMMANDER_ARRAY_ELEMENT_MAX];
@@ -233,11 +234,18 @@ int commander_fill_json_array(const char **key, const char **value, int cmd)
         }
         strcat(array_element, "\"");
         strcat(array_element, *key);
-        strcat(array_element, "\":\"");
-        strcat(array_element, *value);
         strcat(array_element, "\"");
+        strcat(array_element, ":");
+        if (type == JSON_TYPE_STRING) {
+            strcat(array_element, "\"");
+        }
+        strcat(array_element, *value);
+        if (type == JSON_TYPE_STRING) {
+            strcat(array_element, "\"");
+        }
         key++;
         value++;
+        type++;
     }
     strcat(array_element, "}");
 
@@ -267,7 +275,8 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
     strncpy(pub_key_c, utils_uint8_to_hex(pubkey, 33), 66 + 1);
     const char *key[] = {CMD_STR[CMD_sig_], CMD_STR[CMD_pubkey_], 0};
     const char *value[] = {sig_c, pub_key_c, 0};
-    return commander_fill_json_array(key, value, CMD_sign_);
+    JSON_TYPE type[] = {JSON_TYPE_STRING, JSON_TYPE_STRING, JSON_TYPE_NONE};
+    return commander_fill_json_array(key, value, type, CMD_sign_);
 }
 
 
@@ -1022,7 +1031,8 @@ static int commander_echo_command(yajl_val json_node)
 
                 const char *key[] = {CMD_STR[CMD_hash_], CMD_STR[CMD_keypath_], 0};
                 const char *value[] = {hash, keypath, 0};
-                commander_fill_json_array(key, value, CMD_data_);
+                JSON_TYPE t[] = {JSON_TYPE_STRING, JSON_TYPE_STRING, JSON_TYPE_NONE};
+                commander_fill_json_array(key, value, t, CMD_data_);
             }
             commander_fill_report(CMD_STR[CMD_data_], json_array, STATUS_SUCCESS);
         }
@@ -1047,16 +1057,17 @@ static int commander_echo_command(yajl_val json_node)
                 ret = wallet_check_pubkey(address, keypath, strlens(keypath));
                 const char *status;
                 if (ret == STATUS_KEY_PRESENT) {
-                    status = "present";
+                    status = "true";
                 } else if (ret == STATUS_KEY_ABSENT) {
-                    status = "absent";
+                    status = "false";
                 } else {
                     return STATUS_ERROR;
                 }
 
-                const char *key[] = {CMD_STR[CMD_address_], CMD_STR[CMD_status_], 0};
+                const char *key[] = {CMD_STR[CMD_address_], CMD_STR[CMD_present_], 0};
                 const char *value[] = {address, status, 0};
-                commander_fill_json_array(key, value, CMD_checkpub_);
+                JSON_TYPE t[] = {JSON_TYPE_STRING, JSON_TYPE_BOOL, JSON_TYPE_NONE};
+                commander_fill_json_array(key, value, t, CMD_checkpub_);
             }
             commander_fill_report(CMD_STR[CMD_checkpub_], json_array, STATUS_SUCCESS);
         }

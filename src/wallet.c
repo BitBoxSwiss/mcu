@@ -610,7 +610,8 @@ int wallet_deserialize_output(char *outputs, const char *keypath, int keypath_le
         }
         const char *key[] = {CMD_STR[CMD_value_], CMD_STR[CMD_script_], 0};
         const char *value[] = {outval, outaddr, 0};
-        commander_fill_json_array(key, value, CMD_verify_output_);
+        JSON_TYPE t[] = {JSON_TYPE_STRING, JSON_TYPE_STRING, JSON_TYPE_NONE};
+        commander_fill_json_array(key, value, t, CMD_verify_output_);
     }
     memset(&node, 0, sizeof(HDNode));
 

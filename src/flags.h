@@ -78,7 +78,7 @@
         CMD(encrypt)            \
         CMD(pubkey)             \
         CMD(address)            \
-        CMD(status)             \
+        CMD(present)            \
         CMD(sig)                \
         CMD(pin)                \
         CMD(echo)               \
@@ -117,6 +117,12 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define CMD_NUM      CMD_none_
 #define ATTR_NUM     ATTR_none_
 
+typedef enum JSON_TYPE {
+    JSON_TYPE_STRING,
+    JSON_TYPE_BOOL,
+    JSON_TYPE_NUMBER,
+    JSON_TYPE_NONE
+} JSON_TYPE;
 
 enum STATUS_FLAGS {
     STATUS_SUCCESS, STATUS_ERROR, STATUS_ERROR_MEM,

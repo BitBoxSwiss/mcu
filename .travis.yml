@@ -9,16 +9,15 @@ compiler:
     - gcc
 
 matrix:
-    exclude:
-        - os: osx
-          compiler: gcc
     fast_finish:
         - true
 
-before_install: 
-    - tar xfv contrib/astyle_2.05.1_linux.tar.gz
-    - cd astyle/build/gcc && make
-    - export PATH=$PATH:$PWD/bin/
+before_install:
+    - if [ $LINUX ]; then
+        tar xfv contrib/astyle_2.05.1_linux.tar.gz;
+        cd astyle/build/gcc && make;
+        export PATH=$PATH:$PWD/bin/;
+      fi;
 
 before_script:
     - cd $TRAVIS_BUILD_DIR

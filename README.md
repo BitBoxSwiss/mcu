@@ -1,6 +1,8 @@
+Digital Bitbox Firmware
+============
+
 [![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
-
 
 **MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 

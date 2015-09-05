@@ -22,7 +22,7 @@ set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
 # Options for building
 
 option(BUILD_TESTS         "Build the unit tests." ON)
-#option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
+option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -39,7 +39,7 @@ message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Testing:                ${BUILD_TESTS}")
-#message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}")
+message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}")
 
 
 #-----------------------------------------------------------------------------
@@ -61,10 +61,6 @@ if(APPLE)
   set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -framework AppKit -framework IOKit")
   set(CMAKE_MACOSX_RPATH ON)
 endif()
-
-#if(${CMAKE_C_COMPILER_ID} MATCHES GNU)
-#elseif(${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
-#endif()
 
 message(STATUS "C Compiler ID: ${CMAKE_C_COMPILER_ID}")
 message(STATUS "C Flags:       ${CMAKE_C_FLAGS}")
@@ -128,27 +124,26 @@ endif()
 #-----------------------------------------------------------------------------
 # Build Documentation
 
-#if(BUILD_DOCUMENTATION)
-#  set(DOC_GRAPHS "YES" CACHE STRING "Create dependency graphs (needs graphviz)")
-#  set(DOC_FULLGRAPHS "NO" CACHE STRING "Create call/callee graphs (large)")
-#
-#  find_program(DOT_PATH dot)
-#
-#  if (DOT_PATH STREQUAL "DOT_PATH-NOTFOUND")
-#    message("Doxygen: graphviz not found - graphs disabled")
-#    set(DOC_GRAPHS "NO")
-#  endif()
-#
-#  find_package(Doxygen)
-#  if(DOXYGEN_FOUND)
-#    configure_file("cmake/Doxyfile.in" "Doxyfile" @ONLY)
-#    configure_file("cmake/Doxygen.extra.css.in" "Doxygen.extra.css" @ONLY)
-#    add_custom_target(doc
-#      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-#      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#      COMMENT "Generating API documentation with Doxygen.." VERBATIM)
-#  endif()
-#endif()
+if(BUILD_DOCUMENTATION)
+  set(DOC_GRAPHS "YES" CACHE STRING "Create dependency graphs (needs graphviz)")
+  set(DOC_FULLGRAPHS "NO" CACHE STRING "Create call/callee graphs (large)")
+
+  find_program(DOT_PATH dot)
+
+  if (DOT_PATH STREQUAL "DOT_PATH-NOTFOUND")
+    message("Doxygen: graphviz not found - graphs disabled")
+    set(DOC_GRAPHS "NO")
+  endif()
+
+  find_package(Doxygen)
+  if(DOXYGEN_FOUND)
+    configure_file("doc/Doxyfile.in" "Doxyfile" @ONLY)
+    add_custom_target(doc
+      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen.." VERBATIM)
+  endif()
+endif()
 
 
 #-----------------------------------------------------------------------------

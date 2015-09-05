@@ -27,7 +27,7 @@
 #define BIP39_MAX_WORD_LEN     8
 
 
-const char *wordlist[] = {
+const char *const wordlist[] = {
     "abandon",
     "ability",
     "able",

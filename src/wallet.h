@@ -41,7 +41,7 @@
 
 /* BIP32 */
 int wallet_split_seed(char **seed_words, const char *message);
-const char **wallet_mnemonic_wordlist(void);
+const char *const *wallet_mnemonic_wordlist(void);
 uint16_t *wallet_index_from_mnemonic(const char *mnemo);
 char *wallet_mnemonic_from_index(const uint16_t *index);
 int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len);

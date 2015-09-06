@@ -83,7 +83,7 @@ int wallet_split_seed(char **seed_words, const char *message)
 }
 
 
-const char **wallet_mnemonic_wordlist(void)
+const char *const *wallet_mnemonic_wordlist(void)
 {
     return wordlist;
 }

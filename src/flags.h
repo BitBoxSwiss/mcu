@@ -64,17 +64,27 @@
         CMD(threshold)          \
         CMD(generate)           \
         CMD(source)             \
+        CMD(hash)               \
         CMD(type)               \
         CMD(data)               \
+        CMD(meta)               \
+        CMD(checkpub)           \
         CMD(keypath)            \
-        CMD(change_keypath)     \
+        CMD(changekeypath)      \
         CMD(strength)           \
         CMD(salt)               \
         CMD(filename)           \
         CMD(decrypt)            \
         CMD(encrypt)            \
+        CMD(pubkey)             \
+        CMD(address)            \
+        CMD(present)            \
+        CMD(sig)                \
         CMD(pin)                \
         CMD(echo)               \
+        CMD(value)              \
+        CMD(script)             \
+        CMD(verify_output)      \
   /* placeholder don't move */  \
         CMD(none)                /* keep last */
 
@@ -82,6 +92,7 @@
   /*    command attributes  */  \
         ATTR(transaction)       \
         ATTR(hash)              \
+        ATTR(meta)              \
         ATTR(true)              \
         ATTR(list)              \
         ATTR(lock)              \
@@ -106,11 +117,18 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define CMD_NUM      CMD_none_
 #define ATTR_NUM     ATTR_none_
 
+typedef enum JSON_TYPE {
+    JSON_TYPE_STRING,
+    JSON_TYPE_BOOL,
+    JSON_TYPE_NUMBER,
+    JSON_TYPE_NONE
+} JSON_TYPE;
 
 enum STATUS_FLAGS {
     STATUS_SUCCESS, STATUS_ERROR, STATUS_ERROR_MEM,
-    STATUS_VERIFY_ECHO, STATUS_VERIFY_SAME, STATUS_VERIFY_DIFFERENT, STATUS_VERIFY_NEXT,
+    STATUS_VERIFY_ECHO, STATUS_VERIFY_SAME, STATUS_VERIFY_DIFFERENT,
     STATUS_TOUCHED, STATUS_NOT_TOUCHED,
+    STATUS_KEY_PRESENT, STATUS_KEY_ABSENT,
     STATUS_RESET,
     STATUS_ACCESS_INITIALIZE, STATUS_ACCESS_ITERATE,
     STATUS_MEM_ERASED, STATUS_MEM_NOT_ERASED,
@@ -137,7 +155,8 @@ enum STATUS_FLAGS {
 #define FLAG_ERR_XPUB               "Could not get xpub."
 #define FLAG_ERR_DECRYPT            "Could not decrypt."
 #define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
-#define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."
+#define FLAG_ERR_ADDRESS_LEN        "Incorrect address length. A 34 character address is expected."
+#define FLAG_ERR_SIGN_LEN           "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected."
 #define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
 #define FLAG_ERR_KEY_GEN            "Could not generate key."
 #define FLAG_ERR_SIGN               "Could not sign."

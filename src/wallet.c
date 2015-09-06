@@ -193,15 +193,26 @@ exit:
 int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
                         const uint8_t *privkeymaster, const uint8_t *chaincode)
 {
-    unsigned long idx = 0;
+    static char delim[] = "/";
+    static char prime[] = "phH\'";
+    static char digits[] = "0123456789";
+    uint32_t idx = 0;
     char *pch, *kp = malloc(keypath_len + 1);
 
     if (!kp) {
         return STATUS_ERROR_MEM;
     }
 
+    if (keypath_len < 2) {
+        goto err;
+    }
+
+    memset(kp, 0, keypath_len + 1);
     memcpy(kp, keypath, keypath_len);
-    kp[keypath_len] = '\0';
+
+    if (kp[0] != 'm' || kp[1] != '/') {
+        goto err;
+    }
 
     node->depth = 0;
     node->child_num = 0;
@@ -210,13 +221,23 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
     memcpy(node->private_key, privkeymaster, 32);
     hdnode_fill_public_key(node);
 
-    pch = strtok(kp, " /,m\\");
+    pch = strtok(kp + 2, delim);
     while (pch != NULL) {
-        sscanf(pch, "%lu", &idx);
-        if (pch[strlens(pch) - 1] == '\'' ||
-                pch[strlens(pch) - 1] == 'p'  ||
-                pch[strlens(pch) - 1] == 'h'  ||
-                pch[strlens(pch) - 1] == 'H') {
+        size_t i = 0;
+        int prm = 0;
+        for ( ; i < strlens(pch); i++) {
+            if (strchr(prime, pch[i])) {
+                if (i != strlens(pch) - 1) {
+                    goto err;
+                }
+                prm = 1;
+            } else if (!strchr(digits, pch[i])) {
+                goto err;
+            }
+        }
+
+        sscanf(pch, "%" SCNu32, &idx);
+        if (prm) {
             if (hdnode_private_ckd_prime(node, idx) != STATUS_SUCCESS) {
                 goto err;
             }
@@ -225,7 +246,7 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
                 goto err;
             }
         }
-        pch = strtok(NULL, " /,m\\");
+        pch = strtok(NULL, delim);
     }
     free(kp);
     return STATUS_SUCCESS;

@@ -134,6 +134,7 @@ enum STATUS_FLAGS {
 #define FLAG_ERR_RESET_WARNING      "Too many access errors will cause the device to reset."
 #define FLAG_ERR_DEVICE_LOCKED      "Device locked. Erase device to access this command."
 #define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
+#define FLAG_ERR_XPUB               "Could not get xpub."
 #define FLAG_ERR_DECRYPT            "Could not decrypt."
 #define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
 #define FLAG_ERR_SIGN_LEN           "Incorrect data length. A 32-byte hexadecimal value (64 characters) is expected."

@@ -25,12 +25,10 @@
 */
 
 
-#include <string.h>
 #include <stdio.h>
 #include "led.h"
 #include "flags.h"
 #include "touch.h"
-#include "memory.h"
 #include "systick.h"
 #include "commander.h"
 

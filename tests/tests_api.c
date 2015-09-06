@@ -28,10 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <time.h>
 
-#include "uECC.h"
 #include "utils.h"
 #include "flags.h"
 #include "random.h"

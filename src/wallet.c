@@ -35,18 +35,13 @@
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
-#include "memory.h"
 #include "random.h"
-#include "base64.h"
 #include "base58.h"
 #include "pbkdf2.h"
 #include "utils.h"
-#include "bip32.h"
 #include "flags.h"
-#include "hmac.h"
 #include "sha2.h"
 #include "uECC.h"
-#include "led.h"
 
 #include "bip39_english.h"
 

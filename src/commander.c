@@ -33,12 +33,10 @@
 #include "commander.h"
 #include "version.h"
 #include "random.h"
-#include "memory.h"
 #include "base64.h"
 #include "wallet.h"
 #include "utils.h"
 #include "flags.h"
-#include "sha2.h"
 #include "aes.h"
 #include "led.h"
 #ifndef TESTING

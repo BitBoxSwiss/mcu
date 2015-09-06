@@ -45,7 +45,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         buf[i] = rand();
     }
 
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 #else
@@ -82,7 +82,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
     }
 
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 #endif

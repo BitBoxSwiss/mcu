@@ -130,13 +130,13 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
         // skip writing if memory does not change
         if (read_b) {
             if (!memcmp(read_b, write_b, len)) {
-                return STATUS_SUCCESS;
+                return STATUS_OK;
             }
         }
         aes_eeprom(len, addr, read_b, write_b);
         if (read_b) {
             if (!memcmp(write_b, read_b, len)) {
-                return STATUS_SUCCESS;
+                return STATUS_OK;
             } else {
                 // error
                 if (len > 2) {
@@ -148,10 +148,10 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
 #else
         memcpy(read_b, write_b, len);
         (void) addr;
-        return STATUS_SUCCESS;
+        return STATUS_OK;
 #endif
     }
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -226,7 +226,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     free(dec);
 
     utils_clear_buffers();
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 err:
     utils_clear_buffers();
     return STATUS_ERROR;
@@ -355,11 +355,11 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     switch ((int)id) {
         case PASSWORD_MEMORY:
             memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
-            ret = STATUS_SUCCESS;
+            ret = STATUS_OK;
             break;
         case PASSWORD_2FA:
             memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
-            ret = STATUS_SUCCESS;
+            ret = STATUS_OK;
             break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
@@ -377,8 +377,8 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     }
 
     memset(password_b, 0, MEM_PAGE_LEN);
-    if (ret == STATUS_SUCCESS) {
-        return STATUS_SUCCESS;
+    if (ret == STATUS_OK) {
+        return STATUS_OK;
     } else {
         commander_fill_report("password", FLAG_ERR_ATAES, STATUS_ERROR);
         return STATUS_ERROR;

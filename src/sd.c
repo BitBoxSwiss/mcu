@@ -95,13 +95,13 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
         goto err;
     }
 
-    commander_fill_report("sd_write", "success", STATUS_SUCCESS);
+    commander_fill_report("sd_write", "success", STATUS_OK);
 
     f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
     memset(text, 0, sizeof(text));
     memset(file, 0, sizeof(file));
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 
 err:
     memset(text, 0, sizeof(text));
@@ -155,7 +155,7 @@ char *sd_load(const char *f, uint16_t f_len)
         goto err;
     }
 
-    commander_fill_report("sd_load", "success", STATUS_SUCCESS);
+    commander_fill_report("sd_load", "success", STATUS_OK);
 
     f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
@@ -239,11 +239,11 @@ uint8_t sd_list(void)
         commander_fill_report("sd_list debug", "could not open dir", STATUS_ERROR);
     }
 
-    commander_fill_report("sd_list", files, STATUS_SUCCESS);
+    commander_fill_report("sd_list", files, STATUS_OK);
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
     memset(files, 0, sizeof(files));
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 
 err:
     memset(files, 0, sizeof(files));
@@ -349,7 +349,7 @@ uint8_t sd_erase(void)
         commander_fill_report("sd_erase", FLAG_ERR_SD_ERASE, STATUS_ERROR);
         return STATUS_ERROR;
     } else {
-        commander_fill_report("sd_erase", "success", STATUS_SUCCESS);
-        return STATUS_SUCCESS;
+        commander_fill_report("sd_erase", "success", STATUS_OK);
+        return STATUS_OK;
     }
 }

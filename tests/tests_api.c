@@ -60,7 +60,7 @@ static int api_hid_init(void)
     if (!HID_HANDLE) {
         return STATUS_ERROR;
     }
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -108,7 +108,7 @@ static void api_hid_send_encrypt(const char *cmd)
 
 static void api_print_result(const char *attr, int result)
 {
-    if (result == STATUS_SUCCESS) {
+    if (result == STATUS_OK) {
         printf("%s:\tOK\n", attr);
     } else {
         printf("%s:\tFAILED at command %i\n", attr, TESTS_CMD_COUNT);
@@ -462,7 +462,7 @@ static void tests_seed_xpub_backup(void)
     }
 
 
-    api_print_result("tests_seed_xpub_backup", STATUS_SUCCESS);
+    api_print_result("tests_seed_xpub_backup", STATUS_OK);
     return;
 
 err:
@@ -514,7 +514,7 @@ static void tests_random(void)
     }
 
 
-    api_print_result("tests_random", STATUS_SUCCESS);
+    api_print_result("tests_random", STATUS_OK);
     return;
 
 err:
@@ -564,7 +564,7 @@ static void tests_name(void)
     }
 
 
-    api_print_result("tests_name", STATUS_SUCCESS);
+    api_print_result("tests_name", STATUS_OK);
     return;
 
 err:
@@ -639,7 +639,7 @@ static void tests_device(void)
     }
 
 
-    api_print_result("tests_device", STATUS_SUCCESS);
+    api_print_result("tests_device", STATUS_OK);
     return;
 
 err:
@@ -751,7 +751,7 @@ static void tests_input(void)
         goto err;
     }
 
-    api_print_result("tests_input", STATUS_SUCCESS);
+    api_print_result("tests_input", STATUS_OK);
     return;
 
 err:
@@ -789,7 +789,7 @@ static void tests_password(void)
         goto err;
     }
 
-    api_print_result("tests_password", STATUS_SUCCESS);
+    api_print_result("tests_password", STATUS_OK);
     return;
 
 err:
@@ -916,7 +916,7 @@ static void tests_echo_2FA(void)
         goto err;
     }
 
-    api_print_result("tests_echo_2FA", STATUS_SUCCESS);
+    api_print_result("tests_echo_2FA", STATUS_OK);
     return;
 
 err:
@@ -1183,7 +1183,7 @@ static void tests_sign_meta(void)
     }
 
 
-    api_print_result("tests_sign_meta", STATUS_SUCCESS);
+    api_print_result("tests_sign_meta", STATUS_OK);
     return;
 
 err:
@@ -1480,7 +1480,7 @@ static void tests_sign(void)
     }
 
 
-    api_print_result("tests_sign", STATUS_SUCCESS);
+    api_print_result("tests_sign", STATUS_OK);
     return;
 
 err:
@@ -1624,7 +1624,7 @@ static void tests_aes_cbc(void)
         cipherp += 2;
     }
 
-    api_print_result("tests_aes_cbc", STATUS_SUCCESS);
+    api_print_result("tests_aes_cbc", STATUS_OK);
     return;
 
 err:

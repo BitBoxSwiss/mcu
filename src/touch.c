@@ -123,7 +123,7 @@ uint8_t touch_button_press(int long_touch)
     NVIC_SetPriority(SysTick_IRQn, 15);
     if (pushed == STATUS_TOUCHED) {
         sprintf(message, "accept");
-        status = STATUS_SUCCESS;
+        status = STATUS_OK;
         led_on();
         delay_ms(300);
         led_off();

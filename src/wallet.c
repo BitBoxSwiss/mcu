@@ -138,7 +138,7 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
 
 int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len)
 {
-    int ret = STATUS_SUCCESS;
+    int ret = STATUS_OK;
     HDNode node;
 
     clear_static_variables();
@@ -180,7 +180,7 @@ int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_
         ret = STATUS_ERROR_MEM;
         goto exit;
     } else {
-        ret = STATUS_SUCCESS;
+        ret = STATUS_OK;
         goto exit;
     }
 
@@ -239,18 +239,18 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
 
         sscanf(pch, "%" SCNu32, &idx);
         if (prm) {
-            if (hdnode_private_ckd_prime(node, idx) != STATUS_SUCCESS) {
+            if (hdnode_private_ckd_prime(node, idx) != STATUS_OK) {
                 goto err;
             }
         } else {
-            if (hdnode_private_ckd(node, idx) != STATUS_SUCCESS) {
+            if (hdnode_private_ckd(node, idx) != STATUS_OK) {
                 goto err;
             }
         }
         pch = strtok(NULL, delim);
     }
     free(kp);
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 
 err:
     free(kp);
@@ -267,7 +267,7 @@ void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub)
     if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
             memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
         if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                                chain_code) == STATUS_SUCCESS) {
+                                chain_code) == STATUS_OK) {
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
@@ -298,7 +298,7 @@ int wallet_check_pubkey(const char *address, const char *keypath, int keypath_le
     }
 
     if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                            chain_code) != STATUS_SUCCESS) {
+                            chain_code) != STATUS_OK) {
         commander_clear_report();
         commander_fill_report(CMD_STR[CMD_checkpub_], FLAG_ERR_KEY_GEN, STATUS_ERROR);
         goto err;
@@ -346,7 +346,7 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
     }
 
     if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                            chain_code) != STATUS_SUCCESS) {
+                            chain_code) != STATUS_OK) {
         commander_clear_report();
         commander_fill_report("sign", FLAG_ERR_KEY_GEN, STATUS_ERROR);
         goto err;
@@ -488,7 +488,7 @@ int wallet_mnemonic_check(const char *mnemo)
         return STATUS_ERROR;
     }
 
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -554,7 +554,7 @@ int wallet_get_outputs(const char *tx, uint64_t tx_len, char *outputs, int outpu
     memset(outputs, 0, outputs_len);
     memcpy(outputs, tx + id_start, len < outputs_len ? len : outputs_len);
 
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -596,7 +596,7 @@ int wallet_deserialize_output(char *outputs, const char *keypath, int keypath_le
 
         if (keypath && keypath_len > 0) {
             if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
-                                    chain_code) != STATUS_SUCCESS) {
+                                    chain_code) != STATUS_OK) {
                 memset(&node, 0, sizeof(HDNode));
                 return STATUS_ERROR;
             }
@@ -616,7 +616,7 @@ int wallet_deserialize_output(char *outputs, const char *keypath, int keypath_le
     memset(&node, 0, sizeof(HDNode));
 
     if (change_addr_present || n_cnt == 1) {
-        return STATUS_SUCCESS;
+        return STATUS_OK;
     } else {
         // More than 1 output but a change address is not present.
         // Consider this an error in order to prevent MITM attacks.

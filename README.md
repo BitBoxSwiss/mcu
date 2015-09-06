@@ -24,11 +24,13 @@ ECDSA signatures are performed using a simplified version of the [micro ECC libr
 Dependencies:
 
 - https://github.com/signal11/hidapi
+- Doxygen (Optional, to generate source code documentation)
+- Graphviz (Optional, to generate graphs for the Doxygen documentation)
 
 OSX:
 
     brew install hidapi
-
+    brew install doxygen graphviz
 --------------
 
 Basic build steps:
@@ -37,7 +39,7 @@ Basic build steps:
     cd build
     cmake ..
     make
-
+    make doc # optional
 
 
 ## Contributing

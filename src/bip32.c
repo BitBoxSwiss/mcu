@@ -72,7 +72,7 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
     memcpy(out->chain_code, I + 32, 32);
     hdnode_fill_public_key(out);
     memset(I, 0, sizeof(I));
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -126,7 +126,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
     memset(data, 0, sizeof(data));
     memset(I, 0, sizeof(I));
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }
 
 
@@ -191,5 +191,5 @@ int hdnode_deserialize(const char *str, HDNode *node)
     node->fingerprint = read_be(node_data + 5);
     node->child_num = read_be(node_data + 9);
     memcpy(node->chain_code, node_data + 13, 32);
-    return STATUS_SUCCESS;
+    return STATUS_OK;
 }

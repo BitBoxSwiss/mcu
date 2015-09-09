@@ -55,7 +55,6 @@ __extension__ static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN - 1] = 
 __extension__ static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
 __extension__ static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint16_t MEM_mnemonic_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
 
 __extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
@@ -82,7 +81,6 @@ void memory_setup(void)
 
 void memory_erase_seed(void)
 {
-    memory_mnemonic(MEM_PAGE_ERASE_2X);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
 }
@@ -113,7 +111,6 @@ void memory_clear_variables(void)
     memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_mnemonic_, MEM_PAGE_ERASE_2X, MEM_PAGE_LEN * 2);
 #endif
 }
 
@@ -292,24 +289,6 @@ uint8_t *memory_chaincode(const uint8_t *chain)
 {
     memory_eeprom_crypt(chain, MEM_master_chain_, MEM_MASTER_BIP32_CHAIN_ADDR);
     return MEM_master_chain_;
-}
-
-
-uint16_t *memory_mnemonic(const uint16_t *idx)
-{
-    if (idx) {
-        memory_eeprom_crypt((const uint8_t *)idx, (uint8_t *)MEM_mnemonic_,
-                            MEM_MNEMONIC_BIP32_ADDR_0);
-        memory_eeprom_crypt((const uint8_t *)idx + MEM_PAGE_LEN,
-                            (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
-                            MEM_MNEMONIC_BIP32_ADDR_1);
-    } else {
-        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_,
-                            MEM_MNEMONIC_BIP32_ADDR_0);
-        memory_eeprom_crypt(NULL, (uint8_t *)MEM_mnemonic_ + MEM_PAGE_LEN,
-                            MEM_MNEMONIC_BIP32_ADDR_1);
-    }
-    return MEM_mnemonic_;
 }
 
 

@@ -326,39 +326,26 @@ static void commander_process_name(yajl_val json_node)
 }
 
 
-static int commander_process_backup_create(const char *filename, const char *encrypt,
-        const char *type)
+static int commander_process_backup_create(const char *filename, const char *encrypt)
 {
-    char *text, *l;
-    char xpriv[112] = {0};
-    int ret;
-
     if (!filename) {
         commander_fill_report("backup", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
         return STATUS_ERROR;
     }
 
-    if (!strlens(type)) {
-        wallet_report_xpriv("m/", 2, xpriv);
-        text = xpriv;
-    } else if (strcmp(type, ATTR_STR[ATTR_xpriv_]) == 0) {
-        wallet_report_xpriv("m/", 2, xpriv);
-        text = xpriv;
-    } else if (strcmp(type, ATTR_STR[ATTR_mnemonic_]) == 0) {
-        text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
-    } else {
-        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
-        return STATUS_ERROR;
-    }
+    char xpriv[112] = {0};
+    wallet_report_xpriv("m/", 2, xpriv);
 
-    if (!strlens(text)) {
+    if (!strlens(xpriv)) {
         commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, STATUS_ERROR);
         return STATUS_ERROR;
     }
 
+    int ret;
+    char *l;
     if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt
         int enc_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlens(text), &enc_len,
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
                                         PASSWORD_STAND);
         if (!enc) {
             commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, STATUS_ERROR);
@@ -381,13 +368,13 @@ static int commander_process_backup_create(const char *filename, const char *enc
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), text, strlens(text), STATUS_SD_NO_REPLACE);
+        ret = sd_write(filename, strlens(filename), xpriv, strlens(xpriv), STATUS_SD_NO_REPLACE);
         if (ret != STATUS_OK) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, STATUS_ERROR);
         } else {
             l = sd_load(filename, strlens(filename));
             if (l) {
-                if (memcmp(text, l, strlens(text))) {
+                if (memcmp(xpriv, l, strlens(xpriv))) {
                     commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, STATUS_ERROR);
                     ret = STATUS_ERROR;
                 }
@@ -401,7 +388,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
 
 static void commander_process_backup(yajl_val json_node)
 {
-    const char *encrypt, *filename, *value, *type;
+    const char *encrypt, *filename, *value;
 
     if (!memory_read_unlocked()) {
         commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, STATUS_ERROR);
@@ -425,12 +412,10 @@ static void commander_process_backup(yajl_val json_node)
 
     const char *filename_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_filename_], NULL };
     const char *encrypt_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_encrypt_], NULL };
-    const char *type_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_type_], NULL };
     filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path, yajl_t_string));
     encrypt = YAJL_GET_STRING(yajl_tree_get(json_node, encrypt_path, yajl_t_string));
-    type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
 
-    commander_process_backup_create(filename, encrypt, type);
+    commander_process_backup_create(filename, encrypt);
 }
 
 
@@ -493,8 +478,7 @@ static void commander_process_seed(yajl_val json_node)
 
         ret = wallet_master_from_mnemonic(NULL, 0, salt, strlens(salt));
         if (ret == STATUS_OK) {
-            if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT,
-                                                ATTR_STR[ATTR_xpriv_]) != STATUS_OK) {
+            if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != STATUS_OK) {
                 memory_erase_seed();
                 goto exit;
             }
@@ -505,9 +489,6 @@ static void commander_process_seed(yajl_val json_node)
         ret = wallet_master_from_xpriv(src, strlens(source));
     } else {
         char *text = sd_load(src, strlens(source));
-        printf("dbg %s\n", text);
-
-
         if (text && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
             int dec_len;
             char *dec = aes_cbc_b64_decrypt((unsigned char *)text, strlens(text), &dec_len,

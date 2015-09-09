@@ -34,19 +34,16 @@
 #define MEM_PAGE_LEN                32
 
 // User Zones: 0x0000 to 0x0FFF
-#define MEM_ERASED_ADDR             0x0028// Zone 0
-#define MEM_SETUP_ADDR              0x0030
-#define MEM_ACCESS_ERR_ADDR         0x0032
-#define MEM_UNLOCKED_ADDR           0x0034
-#define MEM_AESKEY_MEMSEED_ADDR     0x0036
+#define MEM_ERASED_ADDR             0x0000// Zone 0
+#define MEM_SETUP_ADDR              0x0002
+#define MEM_ACCESS_ERR_ADDR         0x0004
+#define MEM_UNLOCKED_ADDR           0x0006
 #define MEM_NAME_ADDR               0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR       0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR 0x0300// Zone 3
-#define MEM_MNEMONIC_BIP32_ADDR_0   0x0400// Zone 4
-#define MEM_MNEMONIC_BIP32_ADDR_1   0x0500// Zone 5
-#define MEM_AESKEY_STAND_ADDR       0x0600// Zone 6
-#define MEM_AESKEY_VERIFY_ADDR      0x0700// Zone 7
-#define MEM_AESKEY_CRYPT_ADDR       0x0800// Zone 8
+#define MEM_AESKEY_STAND_ADDR       0x0400// Zone 4
+#define MEM_AESKEY_VERIFY_ADDR      0x0500// Zone 5
+#define MEM_AESKEY_CRYPT_ADDR       0x0600// Zone 6
 
 // Default settings
 #define DEFAULT_unlocked_           0xFF
@@ -77,7 +74,6 @@ uint8_t *memory_read_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
-uint16_t *memory_mnemonic(const uint16_t *index);
 
 uint8_t *memory_read_memseed(void);
 uint8_t memory_read_erased(void);

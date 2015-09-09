@@ -45,7 +45,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         buf[i] = rand();
     }
 
-    return STATUS_OK;
+    return DBB_OK;
 }
 
 #else
@@ -71,7 +71,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         if (ataes_ret[0]) {
             memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16);
         } else {
-            return STATUS_ERROR;
+            return DBB_ERROR;
         }
         cnt += 16;
     }
@@ -82,7 +82,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
     }
 
-    return STATUS_OK;
+    return DBB_OK;
 }
 
 #endif

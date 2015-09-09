@@ -149,7 +149,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         }
         if (cnt++ > timeout) {
             sprintf(errmsg, "Status buffer 0:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
         delay_ms(delay);
@@ -163,7 +163,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         } else if (cnt++ > timeout) {
             sprintf(errmsg, "Reset buffer 1:  %lu", ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
     }
@@ -179,7 +179,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         } else if (cnt++ > timeout) {
             sprintf(errmsg, "Status buffer 1:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
         delay_ms(delay);
@@ -193,7 +193,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         } else if (cnt++ > timeout) {
             sprintf(errmsg, "Command buffer:  %lu", ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
     }
@@ -207,7 +207,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         }
         if (cnt++ > timeout) {
             sprintf(errmsg, "Status buffer 2:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
         delay_ms(delay);
@@ -221,7 +221,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         } else if (cnt++ > timeout) {
             sprintf(errmsg, "Reset buffer 2:  %lu", ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
     }
@@ -234,7 +234,7 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         } else if (cnt++ > timeout) {
             sprintf(errmsg, "Response buffer 1:  %lu", ret);
-            commander_fill_report("ataes", errmsg, STATUS_ERROR);
+            commander_fill_report("ataes", errmsg, DBB_ERROR);
             return;
         }
     }
@@ -257,7 +257,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
         ret = aes_eeprom_write(ADDR, LEN, userdata_write);
         if (ret) {
             sprintf(message, "EEPROM write error %i.", ret);
-            commander_fill_report("eeprom", message, STATUS_ERROR);
+            commander_fill_report("eeprom", message, DBB_ERROR);
             return;
         }
         while (1) {
@@ -266,7 +266,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
                 break;
             } else if (cnt++ > timeout) {
                 sprintf(message, "EEPROM write error [status]:  %u  %i", aes_status, ret);
-                commander_fill_report("eeprom", message, STATUS_ERROR);
+                commander_fill_report("eeprom", message, DBB_ERROR);
                 return;
             }
             delay_ms(delay);
@@ -277,7 +277,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
         ret = aes_eeprom_read(ADDR, LEN, userdata_read);
         if (ret) {
             sprintf(message, "EEPROM read error %i.", ret);
-            commander_fill_report("eeprom", message, STATUS_ERROR);
+            commander_fill_report("eeprom", message, DBB_ERROR);
             return;
         }
         while (1) {
@@ -286,7 +286,7 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
                 break;
             } else if (cnt++ > timeout) {
                 sprintf(message, "EEPROM read error [status]:  %u  %i", aes_status, ret);
-                commander_fill_report("eeprom", message, STATUS_ERROR);
+                commander_fill_report("eeprom", message, DBB_ERROR);
                 return;
             }
             delay_ms(delay);

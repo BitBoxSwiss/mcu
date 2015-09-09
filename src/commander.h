@@ -31,7 +31,6 @@
 
 #include <stdint.h>
 #include "memory.h"
-#include "flags.h"
 #ifndef TESTING
 #include "conf_usb.h"
 
@@ -57,7 +56,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
 void commander_clear_report(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 int commander_fill_signature_array(const uint8_t *sig, const uint8_t *pubkey);
-int commander_fill_json_array(const char **key, const char **value, JSON_TYPE *type,
+int commander_fill_json_array(const char **key, const char **value, int *type,
                               int cmd);
 void commander_force_reset(void);
 void commander_create_verifypass(void);

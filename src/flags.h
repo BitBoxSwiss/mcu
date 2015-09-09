@@ -107,6 +107,7 @@
         ATTR(encrypt)           \
         ATTR(password)          \
         ATTR(xpub)              \
+        ATTR(info)              \
         ATTR(__ERASE__)         \
         ATTR(__FORCE__)         \
         ATTR(none)               /* keep last */
@@ -117,13 +118,6 @@ enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
 #define CMD_NUM      CMD_none_
 #define ATTR_NUM     ATTR_none_
 
-typedef enum JSON_TYPE {
-    JSON_TYPE_STRING,
-    JSON_TYPE_BOOL,
-    JSON_TYPE_NUMBER,
-    JSON_TYPE_NONE
-} JSON_TYPE;
-
 enum STATUS_FLAGS {
     STATUS_OK, STATUS_ERROR, STATUS_ERROR_MEM,
     STATUS_VERIFY_ECHO, STATUS_VERIFY_SAME, STATUS_VERIFY_DIFFERENT,
@@ -132,7 +126,8 @@ enum STATUS_FLAGS {
     STATUS_RESET,
     STATUS_ACCESS_INITIALIZE, STATUS_ACCESS_ITERATE,
     STATUS_MEM_ERASED, STATUS_MEM_NOT_ERASED,
-    STATUS_SD_REPLACE, STATUS_SD_NO_REPLACE
+    STATUS_SD_REPLACE, STATUS_SD_NO_REPLACE,
+    STATUS_TYPE_STRING, STATUS_TYPE_BOOL, STATUS_TYPE_NUMBER, STATUS_TYPE_NONE
 };
 
 

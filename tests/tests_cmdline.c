@@ -42,7 +42,7 @@ void usage(char *argv[])
 {
     printf("\nExample code to run the Digital Bitbox MCU code.\n");
     printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline \"{ \\\"seed\\\":{\\\"source\\\":\\\"create\\\"} }\"\n\n" );
+    printf("  Example:\n\t./tests_cmdline '{ \"seed\":{\"source\":\"create\"} }'\n\n" );
     printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com.\n\n\n");
 }
 
@@ -54,9 +54,14 @@ int main ( int argc, char *argv[] )
     } else {
         random_init();
         memory_setup();
+
         // A password is required before sending commands.
-        // Refer to the API documentation for more details.
         utils_send_print_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE);
+
+        // Uncomment to test a command that requires a seed
+        //utils_send_print_cmd("{\"seed\":{\"source\":\"create\"}}", PASSWORD_STAND);
+
+        // Send the command
         utils_send_print_cmd(argv[1], PASSWORD_STAND);
     }
     return 0;

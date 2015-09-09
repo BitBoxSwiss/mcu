@@ -268,8 +268,8 @@ void memory_mempass(void)
 uint8_t *memory_name(const char *name)
 {
     uint8_t name_b[MEM_PAGE_LEN] = {0};
-    if (strlen(name)) {
-        memcpy(name_b, name, (strlen(name) > MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlen(name));
+    if (strlens(name)) {
+        memcpy(name_b, name, (strlens(name) > MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlens(name));
         memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
     } else {
         memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
@@ -323,7 +323,7 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         return STATUS_ERROR;
     }
 
-    if (strlen(password) < PASSWORD_LEN_MIN) {
+    if (strlens(password) < PASSWORD_LEN_MIN) {
         commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, STATUS_ERROR);
         return STATUS_ERROR;
     }

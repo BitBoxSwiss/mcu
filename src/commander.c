@@ -191,9 +191,13 @@ static void commander_fill_report_len(const char *attr, const char *val, int sta
         if (val[0] == '{' || val[0] == '[') {
             strncat(json_report, val, vallen);
         } else {
-            strcat(json_report, "\"");
+            if (status != STATUS_TYPE_BOOL) {
+                strcat(json_report, "\"");
+            }
             strncat(json_report, val, vallen);
-            strcat(json_report, "\"");
+            if (status != STATUS_TYPE_BOOL) {
+                strcat(json_report, "\"");
+            }
         }
 
         // Add closing '}'
@@ -212,7 +216,7 @@ void commander_fill_report(const char *attr, const char *val, int status)
 }
 
 
-int commander_fill_json_array(const char **key, const char **value, JSON_TYPE *type,
+int commander_fill_json_array(const char **key, const char **value, int *type,
                               int cmd)
 {
     int i = 0;
@@ -236,16 +240,15 @@ int commander_fill_json_array(const char **key, const char **value, JSON_TYPE *t
         strcat(array_element, *key);
         strcat(array_element, "\"");
         strcat(array_element, ":");
-        if (type == JSON_TYPE_STRING) {
+        if (type[i - 1] == STATUS_TYPE_STRING) {
             strcat(array_element, "\"");
         }
         strcat(array_element, *value);
-        if (type == JSON_TYPE_STRING) {
+        if (type[i - 1] == STATUS_TYPE_STRING) {
             strcat(array_element, "\"");
         }
         key++;
         value++;
-        type++;
     }
     strcat(array_element, "}");
 
@@ -275,7 +278,7 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
     strncpy(pub_key_c, utils_uint8_to_hex(pubkey, 33), 66 + 1);
     const char *key[] = {CMD_STR[CMD_sig_], CMD_STR[CMD_pubkey_], 0};
     const char *value[] = {sig_c, pub_key_c, 0};
-    JSON_TYPE type[] = {JSON_TYPE_STRING, JSON_TYPE_STRING, JSON_TYPE_NONE};
+    int type[] = {STATUS_TYPE_STRING, STATUS_TYPE_STRING, STATUS_TYPE_NONE};
     return commander_fill_json_array(key, value, type, CMD_sign_);
 }
 
@@ -735,14 +738,17 @@ static void commander_process_xpub(yajl_val json_node)
 
 static void commander_process_device(yajl_val json_node)
 {
+    int valid = 0;
     const char *path[] = { CMD_STR[CMD_device_], NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
     if (!value || !strlens(value)) {
         commander_fill_report("device", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
+        return;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_serial_]) == 0) {
+    if (strcmp(value, ATTR_STR[ATTR_serial_]) == 0 ||
+            strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
         uint32_t serial[4] = {0};
         if (!flash_read_unique_id(serial, 4)) {
             commander_fill_report(ATTR_STR[ATTR_serial_], utils_uint8_to_hex((uint8_t *)serial,
@@ -750,22 +756,46 @@ static void commander_process_device(yajl_val json_node)
         } else {
             commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, STATUS_ERROR);
         }
-        return;
+        valid++;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_version_]) == 0) {
+    if (strcmp(value, ATTR_STR[ATTR_version_]) == 0 ||
+            strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
         commander_fill_report(ATTR_STR[ATTR_version_], (const char *)DIGITAL_BITBOX_VERSION,
                               STATUS_OK);
-        return;
+        valid++;
+    }
+
+    if (strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
+        char xpub[112] = {0};
+        char keypath[] = "m/";
+        wallet_report_xpub(keypath, strlens(keypath), xpub);
+        if (xpub[0]) {
+            commander_fill_report("xpub", xpub, STATUS_OK);
+        } else {
+            commander_fill_report("xpub", "\0", STATUS_OK);
+        }
+
+        if (!memory_read_unlocked()) {
+            commander_fill_report("lock", "true", STATUS_TYPE_BOOL);
+        } else {
+            commander_fill_report("lock", "false", STATUS_TYPE_BOOL);
+        }
+
+        commander_fill_report("name", (char *)memory_name(""), STATUS_OK);
+
+        valid++;
     }
 
     if (strcmp(value, ATTR_STR[ATTR_lock_]) == 0) {
         memory_write_unlocked(0);
         commander_fill_report("device", "locked", STATUS_OK);
-        return;
+        valid++;
     }
 
-    commander_fill_report("device", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
+    if (!valid) {
+        commander_fill_report("device", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
+    }
 }
 
 
@@ -1036,7 +1066,7 @@ static int commander_echo_command(yajl_val json_node)
 
                 const char *key[] = {CMD_STR[CMD_hash_], CMD_STR[CMD_keypath_], 0};
                 const char *value[] = {hash, keypath, 0};
-                JSON_TYPE t[] = {JSON_TYPE_STRING, JSON_TYPE_STRING, JSON_TYPE_NONE};
+                int t[] = {STATUS_TYPE_STRING, STATUS_TYPE_STRING, STATUS_TYPE_NONE};
                 commander_fill_json_array(key, value, t, CMD_data_);
             }
             commander_fill_report(CMD_STR[CMD_data_], json_array, STATUS_OK);
@@ -1071,7 +1101,7 @@ static int commander_echo_command(yajl_val json_node)
 
                 const char *key[] = {CMD_STR[CMD_address_], CMD_STR[CMD_present_], 0};
                 const char *value[] = {address, status, 0};
-                JSON_TYPE t[] = {JSON_TYPE_STRING, JSON_TYPE_BOOL, JSON_TYPE_NONE};
+                int t[] = {STATUS_TYPE_STRING, STATUS_TYPE_BOOL, STATUS_TYPE_NONE};
                 commander_fill_json_array(key, value, t, CMD_checkpub_);
             }
             commander_fill_report(CMD_STR[CMD_checkpub_], json_array, STATUS_OK);

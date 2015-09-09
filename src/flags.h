@@ -106,6 +106,8 @@
         ATTR(decrypt)           \
         ATTR(encrypt)           \
         ATTR(password)          \
+        ATTR(mnemonic)          \
+        ATTR(xpriv)             \
         ATTR(xpub)              \
         ATTR(__ERASE__)         \
         ATTR(__FORCE__)         \

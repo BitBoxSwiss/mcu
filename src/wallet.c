@@ -136,6 +136,36 @@ char *wallet_mnemonic_from_index(const uint16_t *idx)
 }
 
 
+int wallet_master_from_xpriv(char *src, int src_len)
+{
+    if (src_len != 112 - 1) {
+        return STATUS_ERROR;
+    }
+
+    HDNode node;
+
+    clear_static_variables();
+
+    int ret = hdnode_deserialize(src, &node);
+    if (ret != STATUS_OK) {
+        goto exit;
+    }
+
+    if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
+            !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32) ||
+            !memcmp(memory_mnemonic(wallet_index_from_mnemonic(mnemonic)), MEM_PAGE_ERASE_2X, 64)) {
+        ret = STATUS_ERROR_MEM;
+    } else {
+        ret = STATUS_OK;
+    }
+
+exit:
+    memset(&node, 0, sizeof(HDNode));
+    clear_static_variables();
+    return ret;
+}
+
+
 int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len)
 {
     int ret = STATUS_OK;
@@ -255,6 +285,24 @@ int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
 err:
     free(kp);
     return STATUS_ERROR;
+}
+
+
+void wallet_report_xpriv(const char *keypath, int keypath_len, char *xpriv)
+{
+    uint8_t *priv_key_master = memory_master(NULL);
+    uint8_t *chain_code = memory_chaincode(NULL);
+    HDNode node;
+
+    if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
+            memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+        if (wallet_generate_key(&node, keypath, keypath_len, priv_key_master,
+                                chain_code) == STATUS_OK) {
+            hdnode_serialize_private(&node, xpriv, 112);
+        }
+    }
+    memset(&node, 0, sizeof(HDNode));
+    clear_static_variables();
 }
 
 

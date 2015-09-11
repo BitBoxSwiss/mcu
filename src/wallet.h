@@ -36,28 +36,24 @@
 
 #define BIP39_PBKDF2_ROUNDS 2048
 #define MAX_SEED_WORDS      25// 24 mnemonic words + 1 for NULL ending
-#define SALT_LEN_MAX        256// 24 mnemonic words + 1 for NULL ending
 
 
 /* BIP32 */
 int wallet_split_seed(char **seed_words, const char *message);
-const char *const *wallet_mnemonic_wordlist(void);
-int wallet_master_from_xpriv(char *src, int src_len);
-int wallet_master_from_mnemonic(char *mnemo, int m_len, const char *salt, int s_len);
-int wallet_check_pubkey(const char *pubkeyhash, const char *keypath, int keypath_len);
-int wallet_sign(const char *message, int msg_len, const char *keypath, int keypath_len,
-                int to_hash);
-void wallet_report_xpriv(const char *keypath, int keypath_len, char *xpub);
-void wallet_report_xpub(const char *keypath, int keypath_len, char *xpub);
-int wallet_generate_key(HDNode *node, const char *keypath, int keypath_len,
-                        const uint8_t *privkeymaster, const uint8_t *chaincode);
+int wallet_master_from_xpriv(char *src);
+int wallet_master_from_mnemonic(char *mnemo, const char *salt);
+int wallet_check_pubkey(const char *pubkeyhash, const char *keypath);
+int wallet_sign(const char *message, const char *keypath, int to_hash);
+void wallet_report_xpriv(const char *keypath, char *xpub);
+void wallet_report_xpub(const char *keypath, char *xpub);
+int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
+                        const uint8_t *chaincode);
 char *wallet_mnemonic_from_data(const uint8_t *data, int len);
 int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
-                             uint8_t s[512 / 8],
-                             void (*progress_callback)(uint32_t current, uint32_t total));
+                             uint8_t s[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total));
 int wallet_get_outputs(const char *tx, uint64_t tx_len, char *outputs, int outputs_len);
-int wallet_deserialize_output(char *outputs, const char *keypath, int keypath_len);
+int wallet_deserialize_output(char *outputs, const char *keypath);
 /* Bitcoin formats */
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);

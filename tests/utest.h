@@ -75,7 +75,6 @@
 
 #ifndef _UTEST_H_
 #define _UTEST_H_
-
 #include <stdio.h>
 #include <string.h>
 
@@ -90,20 +89,55 @@
  int r_ = (R); \
  int e_ = (E); \
  do { if (r_!=e_) { \
-  printf("FAILED - %s:%d - %s()\n", __FILE__, __LINE__, __func__);\
-  printf("\tExpected:\t%d\n", e_);\
-  printf("\tReceived:\t%d\n", r_);\
-  U_TESTS_FAIL++; }; \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tExpect: \t%d\n", e_);\
+  printf("\tReceive:\t%d\n", r_);\
+  U_TESTS_FAIL++;\
+  return; }; \
  } while(0); }
 
 #define u_assert_str_eq(R,E) {\
  const char * r_ = (R); \
  const char * e_ = (E); \
  do { if (strcmp(r_,e_)) { \
-  printf("FAILED - %s:%d - %s()\n", __FILE__, __LINE__, __func__);\
-  printf("\tExpected:\t%s\n", e_);\
-  printf("\tReceived:\t%s\n", r_);\
-  U_TESTS_FAIL++; }; \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tExpect: \t%s\n", e_);\
+  printf("\tReceive:\t%s\n", r_);\
+  U_TESTS_FAIL++;\
+  return; }; \
+ } while(0); }
+
+#define u_assert_str_not_eq(R,E) {\
+ const char * r_ = (R); \
+ const char * e_ = (E); \
+ do { if (!strcmp(r_,e_)) { \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tNot expect:\t%s\n", e_);\
+  printf("\tReceive:\t%s\n", r_);\
+  U_TESTS_FAIL++;\
+  return; }; \
+ } while(0); }
+
+#define u_assert_str_has(R,E) {\
+ const char * r_ = (R); \
+ const char * e_ = (E); \
+ do { if (!strstr(r_,e_)) { \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tExpect: \t%s\n", e_);\
+  printf("\tReceive:\t%s\n", r_);\
+  U_TESTS_FAIL++;\
+  return; }; \
+ } while(0); }
+
+#define u_assert_str_has_not(R,E) {\
+ const char * r_ = (R); \
+ const char * e_ = (E); \
+ do { if (strstr(r_,e_)) { \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tNot expect:\t%s\n", e_);\
+  printf("\tReceive:\t%s\n", r_);\
+  U_TESTS_FAIL++;\
+  return; }; \
  } while(0); }
 
 #define u_assert_mem_eq(R,E,L) {\
@@ -111,10 +145,11 @@
  const void * e_ = (E); \
  size_t l_ = (L); \
  do { if (memcmp(r_,e_,l_)) { \
-  printf("FAILED - %s:%d - %s()\n", __FILE__, __LINE__, __func__);\
-  printf("\tExpected:\t%s\n", utils_uint8_to_hex(e_,l_));\
-  printf("\tReceived:\t%s\n", utils_uint8_to_hex(r_,l_));\
-  U_TESTS_FAIL++; }; \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tExpect: \t%s\n", utils_uint8_to_hex(e_,l_));\
+  printf("\tReceive:\t%s\n", utils_uint8_to_hex(r_,l_));\
+  U_TESTS_FAIL++;\
+  return; }; \
  } while(0); }
 
 extern int U_TESTS_RUN;

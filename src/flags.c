@@ -25,21 +25,55 @@
 */
 
 
-#ifndef _SHAM_H_
-#define _SHAM_H_
+#include "flags.h"
 
 
-#include <stdint.h>
+#define X(a) #a,
+const char *const CMD_STR[] = { CMD_TABLE };
+#undef X
+
+#define X(a) #a,
+const char *const ATTR_STR[] = { ATTR_TABLE };
+#undef X
+
+#define X(a, b, c) #b,
+const char *const FLAG_CODE[] = { FLAG_TABLE };
+#undef X
+
+#define X(a, b, c) c,
+const char *const FLAG_MSG[] = { FLAG_TABLE };
+#undef X
+
+#define X(a, b, c) #a,
+const char *const FLAG_ID[] = { FLAG_TABLE };
+#undef X
+
+const char *cmd_str(int cmd)
+{
+    return CMD_STR[cmd];
+}
 
 
-void delay_ms(int delay);
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
-                 uint8_t replace, int cmd);
-char *sd_load(const char *f, uint16_t f_len, int cmd);
-uint8_t sd_list(int cmd);
-uint8_t sd_erase(int cmd);
-uint8_t touch_button_press(int long_touch);
-uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
+const char *attr_str(int attr)
+{
+    return ATTR_STR[attr];
+}
 
 
-#endif
+const char *flag_code(int flag)
+{
+    return FLAG_CODE[flag];
+}
+
+
+const char *flag_msg(int flag)
+{
+    return FLAG_MSG[flag];
+}
+
+
+const char *flag_id(int flag)
+{
+    return FLAG_ID[flag];
+}
+

@@ -29,150 +29,188 @@
 #define _FLAGS_H_
 
 
+#define AES_DATA_LEN_MAX 1024// base64 increases size by ~4/3; AES encryption by max 32 char
+#define PASSWORD_LEN_MIN 4
+#define SALT_LEN_MAX     256
+
+
 #define _STRINGIFY(S) #S
 #define STRINGIFY(S) _STRINGIFY(S)
 
-#define GENERATE_STRING(STRING) #STRING,
-#define GENERATE_ENUM_ATTR(ENUM) ATTR_ ## ENUM ## _,
-#define GENERATE_ENUM_CMD(ENUM) CMD_ ## ENUM ## _,
 
-#define FOREACH_CMD(CMD)        \
-  /*    parent commands     */  \
-  /*    requiring touch     */  \
-        CMD(sign)               \
-        CMD(seed)               \
-        CMD(test)               \
-        CMD(password)           \
-        CMD(touchbutton)        \
-  /* placeholder don't move */  \
-        CMD(require_touch)      \
-  /*    parent commands     */  \
-  /*    not requiring touch */  \
-        CMD(led)                \
-        CMD(xpub)               \
-        CMD(name)               \
-        CMD(reset)              \
-        CMD(device)             \
-        CMD(random)             \
-        CMD(backup)             \
-        CMD(aes256cbc)          \
-        CMD(verifypass)         \
-        CMD(ciphertext)         \
-  /*    child commands      */  \
-        CMD(timeout)            \
-        CMD(holdtime)           \
-        CMD(threshold)          \
-        CMD(generate)           \
-        CMD(source)             \
-        CMD(hash)               \
-        CMD(type)               \
-        CMD(data)               \
-        CMD(meta)               \
-        CMD(checkpub)           \
-        CMD(keypath)            \
-        CMD(changekeypath)      \
-        CMD(strength)           \
-        CMD(salt)               \
-        CMD(filename)           \
-        CMD(decrypt)            \
-        CMD(encrypt)            \
-        CMD(pubkey)             \
-        CMD(address)            \
-        CMD(present)            \
-        CMD(sig)                \
-        CMD(pin)                \
-        CMD(echo)               \
-        CMD(value)              \
-        CMD(script)             \
-        CMD(verify_output)      \
-  /* placeholder don't move */  \
-        CMD(none)                /* keep last */
-
-#define FOREACH_ATTR(ATTR)      \
-  /*    command attributes  */  \
-        ATTR(transaction)       \
-        ATTR(hash)              \
-        ATTR(meta)              \
-        ATTR(true)              \
-        ATTR(list)              \
-        ATTR(lock)              \
-        ATTR(erase)             \
-        ATTR(toggle)            \
-        ATTR(pseudo)            \
-        ATTR(create)            \
-        ATTR(export)            \
-        ATTR(serial)            \
-        ATTR(version)           \
-        ATTR(decrypt)           \
-        ATTR(encrypt)           \
-        ATTR(password)          \
-        ATTR(xpub)              \
-        ATTR(info)              \
-        ATTR(__ERASE__)         \
-        ATTR(__FORCE__)         \
-        ATTR(none)               /* keep last */
-
-enum CMD_ENUM { FOREACH_CMD(GENERATE_ENUM_CMD) };
-enum ATTR_ENUM { FOREACH_ATTR(GENERATE_ENUM_ATTR) };
-
-#define CMD_NUM      CMD_none_
-#define ATTR_NUM     ATTR_none_
-
-enum STATUS_FLAGS {
-    DBB_OK, DBB_ERROR, DBB_ERROR_MEM,
-    DBB_VERIFY_ECHO, DBB_VERIFY_SAME, DBB_VERIFY_DIFFERENT,
-    DBB_TOUCHED, DBB_NOT_TOUCHED,
-    DBB_KEY_PRESENT, DBB_KEY_ABSENT,
-    DBB_RESET,
-    DBB_ACCESS_INITIALIZE, DBB_ACCESS_ITERATE,
-    DBB_MEM_ERASED, DBB_MEM_NOT_ERASED,
-    DBB_SD_REPLACE, DBB_SD_NO_REPLACE,
-    DBB_JSON_STRING, DBB_JSON_BOOL, DBB_JSON_NUMBER, DBB_JSON_NONE
-};
+// Command keys
+#define CMD_TABLE \
+/* parent keys  */\
+/*  with touch  */\
+X(seed)           \
+X(sign)           \
+X(password)       \
+/* placeholder  */\
+/* do not move  */\
+X(REQUIRE_TOUCH)  \
+/* parent keys  */\
+/*  w/o touch   */\
+X(led)            \
+X(xpub)           \
+X(name)           \
+X(reset)          \
+X(device)         \
+X(random)         \
+X(backup)         \
+X(aes256cbc)      \
+X(verifypass)     \
+/* placeholder  */\
+/* do not move  */\
+X(END_PARENT)     \
+/*  child keys  */\
+X(source)         \
+X(type)           \
+X(hash)           \
+X(data)           \
+X(meta)           \
+X(salt)           \
+X(pubkey)         \
+X(checkpub)       \
+X(filename)       \
+X(changekeypath)  \
+X(keypath)        \
+X(address)        \
+X(present)        \
+X(decrypt)        \
+X(encrypt)        \
+X(script)         \
+X(value)          \
+X(sig)            \
+X(pin)            \
+/* placeholder  */\
+/* do not move  */\
+X(END_CHILD)      \
+/*  reply keys  */\
+X(ciphertext)     \
+X(echo)           \
+X(2FA)            \
+X(sham)           \
+X(input)          \
+X(ataes)          \
+X(touchbutton)    \
+X(NUM)             /* keep last */
 
 
-#define PASSWORD_LEN_MIN            4
-#define DATA_LEN_MAX                1024/*base64 increases size by ~4/3; AES encryption by max 32 char*/
+// Attributes
+#define ATTR_TABLE \
+X(success)        \
+X(error)          \
+X(yes)            \
+X(transaction)    \
+X(hash)           \
+X(meta)           \
+X(list)           \
+X(lock)           \
+X(decrypt)        \
+X(encrypt)        \
+X(true)           \
+X(false)          \
+X(erase)          \
+X(toggle)         \
+X(pseudo)         \
+X(create)         \
+X(export)         \
+X(xpub)           \
+X(name)           \
+X(info)           \
+X(serial)         \
+X(version)        \
+X(password)       \
+X(__ERASE__)      \
+X(__FORCE__)      \
+X(NUM)             /* keep last */
 
-#define FLAG_ERR_PASSWORD_LEN       "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters."
-#define FLAG_ERR_NO_PASSWORD        "Please set a password."
-#define FLAG_ERR_NO_INPUT           "No input received."
-#define FLAG_ERR_DATA_LEN           "Data must be less than " STRINGIFY(DATA_LEN_MAX)" characters."
-#define FLAG_ERR_REPORT_BUFFER      "{\"output\":{\"error\":\"Output report buffer overflow.\"}}"
-#define FLAG_ERR_JSON_PARSE         "JSON parse error."
-#define FLAG_ERR_JSON_BRACKET       "Is the command enclosed by curly brackets?"
-#define FLAG_ERR_INVALID_CMD        "Invalid command."
-#define FLAG_ERR_MULTIPLE_CMD       "Only one command allowed at a time."
-#define FLAG_ERR_RESET              "Too many failed access attempts. Device reset."
-#define FLAG_ERR_RESET_WARNING      "attempts remain before the device is reset."
-#define FLAG_ERR_DEVICE_LOCKED      "Device locked. Erase device to access this command."
-#define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
-#define FLAG_ERR_XPUB               "Could not get xpub."
-#define FLAG_ERR_DECRYPT            "Could not decrypt."
-#define FLAG_ERR_MNEMO_CHECK        "Invalid mnemonic."
-#define FLAG_ERR_ADDRESS_LEN        "Incorrect address length. A 34 character address is expected."
-#define FLAG_ERR_SIGN_LEN           "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected."
-#define FLAG_ERR_DESERIALIZE        "Could not deserialize outputs or wrong change keypath."
-#define FLAG_ERR_KEY_GEN            "Could not generate key."
-#define FLAG_ERR_SIGN               "Could not sign."
-#define FLAG_ERR_SALT_LEN           "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters."
-#define FLAG_ERR_SEED_SD            "Seed creation requires an SD card for automatic encrypted backup of the seed."
-#define FLAG_ERR_SEED_SD_NUM        "Too many backup files. Please remove one from the SD card."
-#define FLAG_ERR_SEED_MEM           "Could not allocate memory for seed."
-#define FLAG_ERR_ENCRYPT_MEM        "Could not encrypt."
-#define FLAG_ERR_ATAES              "Chip communication error."
-#define FLAG_ERR_FLASH              "Could not read flash."
-#define FLAG_ERR_NO_MCU             "Ignored for non-embedded testing."
-#define FLAG_ERR_SD_CARD            "Please insert SD card."
-#define FLAG_ERR_SD_MOUNT           "Could not mount the SD card."
-#define FLAG_ERR_SD_OPEN            "Could not open a file to write - it may already exist."
-#define FLAG_ERR_SD_OPEN_DIR        "Could not open the directory."
-#define FLAG_ERR_SD_FILE_CORRUPT    "Corrupted file."
-#define FLAG_ERR_SD_WRITE           "Could not write the file."
-#define FLAG_ERR_SD_WRITE_LEN       "Text to write is too large."
-#define FLAG_ERR_SD_READ            "Could not read the file."
-#define FLAG_ERR_SD_ERASE           "May not have erased all files (or no file present)."
-#define FLAG_ERR_NUM_FILES          "Too many files to read. The list is truncated."
-#define FLAG_ERR_PASSWORD_ID        "Invalid password ID."
+
+// Status and error flags
+#define FLAG_TABLE \
+X(OK,                    0, 0)\
+X(ERROR,                 0, 0)\
+X(ERROR_MEM,             0, 0)\
+X(VERIFY_ECHO,           0, 0)\
+X(VERIFY_SAME,           0, 0)\
+X(VERIFY_DIFFERENT,      0, 0)\
+X(TOUCHED,               0, 0)\
+X(NOT_TOUCHED,           0, 0)\
+X(KEY_PRESENT,           0, 0)\
+X(KEY_ABSENT,            0, 0)\
+X(RESET,                 0, 0)\
+X(ACCESS_INITIALIZE,     0, 0)\
+X(ACCESS_ITERATE,        0, 0)\
+X(MEM_ERASED,            0, 0)\
+X(MEM_NOT_ERASED,        0, 0)\
+X(SD_REPLACE,            0, 0)\
+X(SD_NO_REPLACE,         0, 0)\
+X(JSON_STRING,           0, 0)\
+X(JSON_BOOL,             0, 0)\
+X(JSON_ARRAY,            0, 0)\
+X(JSON_NUMBER,           0, 0)\
+X(JSON_NONE,             0, 0)\
+/* placeholder don't move  */ \
+X(FLAG_ERROR_START,      0, 0)\
+/* error flags             */ \
+X(ERR_IO_NO_PASSWORD,  101, "Please set a password.")\
+X(ERR_IO_PASSWORD_LEN, 102, "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters.")\
+X(ERR_IO_NO_INPUT,     103, "No input received.")\
+X(ERR_IO_INVALID_CMD,  104, "Invalid command.")\
+X(ERR_IO_MULT_CMD,     105, "Only one command allowed at a time.")\
+X(ERR_IO_DATA_LEN,     106, "Data must be less than " STRINGIFY(AES_DATA_LEN_MAX)" characters.")\
+X(ERR_IO_REPORT_BUF,   107, "Output buffer overflow.")\
+X(ERR_IO_DECRYPT,      108, "Could not decrypt.")\
+X(ERR_IO_JSON_PARSE,   109, "JSON parse error.")\
+X(ERR_IO_RESET,        110, "Too many failed access attempts. Device reset.")\
+X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.")\
+X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic encrypted backup of the seed.")\
+X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
+X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\
+X(ERR_SEED_SALT_LEN,   203, "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters.")\
+X(ERR_SEED_INVALID,    204, "Invalid seed.")\
+X(ERR_KEY_MASTER,      250, "Master key not present.")\
+X(ERR_KEY_CHILD,       251, "Could not generate key.")\
+X(ERR_SIGN_ADDR_LEN,   300, "Incorrect address length. A 34 character address is expected.")\
+X(ERR_SIGN_HASH_LEN,   301, "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected.")\
+X(ERR_SIGN_DESERIAL,   302, "Could not deserialize outputs or wrong change keypath.")\
+X(ERR_SIGN_ECCLIB,     303, "Could not sign.")\
+X(ERR_SD_CARD,         400, "Please insert SD card.")\
+X(ERR_SD_MOUNT,        401, "Could not mount the SD card.")\
+X(ERR_SD_OPEN_FILE,    402, "Could not open a file to write - it may already exist.")\
+X(ERR_SD_OPEN_DIR,     403, "Could not open the directory.")\
+X(ERR_SD_CORRUPT_FILE, 404, "Corrupted file.")\
+X(ERR_SD_WRITE_FILE,   405, "Could not write the file.")\
+X(ERR_SD_WRITE_LEN,    406, "Text to write is too large.")\
+X(ERR_SD_READ_FILE,    407, "Could not read the file.")\
+X(ERR_SD_ERASE,        408, "May not have erased all files (or no file present).")\
+X(ERR_SD_NUM_FILES,    409, "Too many files to read. The list is truncated.")\
+X(ERR_MEM_ATAES,       500, "Chip communication error.")\
+X(ERR_MEM_FLASH,       501, "Could not read flash.")\
+X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\
+X(WARN_RESET,          900, "attempts remain before the device is reset.")\
+X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
+X(FLAG_NUM,              0, 0)/* keep last */
+
+
+#define X(a) CMD_ ## a,
+enum CMD_ENUM { CMD_TABLE };
+#undef X
+
+#define X(a) ATTR_ ## a,
+enum CMD_ATTR_ENUM { ATTR_TABLE };
+#undef X
+
+#define X(a, b, c) DBB_ ## a,
+enum FLAG_ENUM { FLAG_TABLE };
+#undef X
+
+
+const char *cmd_str(int cmd);
+const char *attr_str(int attr);
+const char *flag_code(int flag);
+const char *flag_msg(int flag);
+const char *flag_id(int flag);
+
 
 #endif

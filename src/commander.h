@@ -39,14 +39,14 @@
 #else
 #define COMMANDER_REPORT_SIZE       2048
 #endif
-
-#define COMMANDER_ARRAY_ELEMENT_MAX  1024
-#define VERIFYPASS_FILENAME         "verification.txt"
+#define COMMANDER_ARRAY_MAX         COMMANDER_REPORT_SIZE
+#define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max attempts before device reset
-
+#define VERIFYPASS_FILENAME         "verification.txt"
 #define AUTOBACKUP_FILENAME         "autobackup_"
 #define AUTOBACKUP_ENCRYPT          "yes"
 #define AUTOBACKUP_NUM              10
+
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
                           PASSWORD_ID id);
@@ -54,13 +54,14 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
                           PASSWORD_ID id);
 
 void commander_clear_report(void);
+const char *commander_read_report(void);
+const char *commander_read_array(void);
 void commander_fill_report(const char *attr, const char *val, int err);
 int commander_fill_signature_array(const uint8_t *sig, const uint8_t *pubkey);
 int commander_fill_json_array(const char **key, const char **value, int *type,
                               int cmd);
 void commander_force_reset(void);
 void commander_create_verifypass(void);
-int commander_test_static_functions(void);
 char *commander(const char *command);
 
 

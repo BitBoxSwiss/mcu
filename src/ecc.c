@@ -144,16 +144,6 @@ int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_
 }
 
 
-int ecc_verify_double(const uint8_t *public_key, const uint8_t *signature,
-                      const uint8_t *msg, uint32_t msg_len)
-{
-    uint8_t hash[SHA256_DIGEST_LENGTH];
-    sha256_Raw(msg, msg_len, hash);
-    sha256_Raw(hash, SHA256_DIGEST_LENGTH, hash);
-    return ecc_verify_digest(public_key, hash, signature);
-}
-
-
 int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_master,
                              const uint8_t *z)
 {
@@ -250,13 +240,6 @@ int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_
                uint32_t msg_len)
 {
     return uECC_verify(public_key, signature, msg, msg_len);
-}
-
-
-int ecc_verify_double(const uint8_t *public_key, const uint8_t *signature,
-                      const uint8_t *msg, uint32_t msg_len)
-{
-    return uECC_verify_double(public_key, signature, msg, msg_len);
 }
 
 

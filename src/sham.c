@@ -29,8 +29,8 @@
 #include <stdio.h>
 
 #include "sham.h"
-#include "commander.h"
 #include "flags.h"
+#include "commander.h"
 
 
 static char sd_filename[64] = {0};
@@ -43,23 +43,25 @@ void delay_ms(int delay)
 
 
 uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
-                 uint8_t replace)
+                 uint8_t replace, int cmd)
 {
+    (void) cmd;
     (void) replace;
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
     snprintf(sd_filename, sizeof(sd_filename), "%.*s", f_len, f);
     snprintf(sd_text, sizeof(sd_text), "%.*s", t_len, t);
-    commander_fill_report("sd_write", FLAG_ERR_NO_MCU, DBB_OK);
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_OK;
 }
 
 
-char *sd_load(const char *f, uint16_t f_len)
+char *sd_load(const char *f, uint16_t f_len, int cmd)
 {
-    static char text[512];
-    memcpy(text, sd_text, 512);
-    commander_fill_report("sd_load", FLAG_ERR_NO_MCU, DBB_OK);
+    (void) cmd;
+    static char text[sizeof(sd_text)];
+    memcpy(text, sd_text, sizeof(sd_text));
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     if (!strncmp(sd_filename, f, f_len)) {
         return text;
     }
@@ -67,19 +69,20 @@ char *sd_load(const char *f, uint16_t f_len)
 }
 
 
-uint8_t sd_list(void)
+uint8_t sd_list(int cmd)
 {
-    commander_fill_report("sd_list", FLAG_ERR_NO_MCU, DBB_OK);
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     if (sd_filename[0]) {
-        commander_fill_report("backup", sd_filename, DBB_OK);
+        commander_fill_report(cmd_str(cmd), sd_filename, DBB_OK);
     }
     return DBB_OK;
 }
 
 
-uint8_t sd_erase(void)
+uint8_t sd_erase(int cmd)
 {
-    commander_fill_report("sd_erase", FLAG_ERR_NO_MCU, DBB_OK);
+    (void) cmd;
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
     return DBB_OK;
@@ -89,7 +92,7 @@ uint8_t sd_erase(void)
 uint8_t touch_button_press(int long_touch)
 {
     (void) long_touch;
-    commander_fill_report("touchbutton", FLAG_ERR_NO_MCU, DBB_OK);
+    commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_TOUCHED;
 }
 

@@ -113,8 +113,8 @@ uint32_t aes_eeprom_read(uint32_t u32_start_address, uint16_t u16_length,
                      0xXX  0xXX  0xXX  0xXX  0xXX  0xXX  0xXX ... 0xXX
  Return block:       [Count(1) || Return Code (1) | Data(...) || CRC (2)]
 */
-void aes_process(uint8_t const *command, uint16_t cmd_len,
-                 uint8_t *response_block, uint16_t response_len)
+int aes_process(uint8_t const *command, uint16_t cmd_len,
+                uint8_t *response_block, uint16_t response_len)
 {
     char errmsg[128];
     uint32_t ret = 0;
@@ -148,9 +148,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         }
         if (cnt++ > timeout) {
-            sprintf(errmsg, "Status buffer 0:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Status buffer 0:  %u  %lu",
+                     flag_msg(DBB_ERR_MEM_ATAES), aes_status, ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
         delay_ms(delay);
     }
@@ -162,9 +163,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
-            sprintf(errmsg, "Reset buffer 1:  %lu", ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Reset buffer 1:  %lu", flag_msg(DBB_ERR_MEM_ATAES),
+                     ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
     }
 
@@ -178,9 +180,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         if ((aes_status & 0x40) && !ret) {
             break;
         } else if (cnt++ > timeout) {
-            sprintf(errmsg, "Status buffer 1:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Status buffer 1:  %u  %lu",
+                     flag_msg(DBB_ERR_MEM_ATAES), aes_status, ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
         delay_ms(delay);
     }
@@ -192,9 +195,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
-            sprintf(errmsg, "Command buffer:  %lu", ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Command buffer:  %lu", flag_msg(DBB_ERR_MEM_ATAES),
+                     ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
     }
 
@@ -206,9 +210,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
             break;
         }
         if (cnt++ > timeout) {
-            sprintf(errmsg, "Status buffer 2:  %u  %lu", aes_status, ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Status buffer 2:  %u  %lu",
+                     flag_msg(DBB_ERR_MEM_ATAES), aes_status, ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
         delay_ms(delay);
     }
@@ -220,9 +225,10 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
-            sprintf(errmsg, "Reset buffer 2:  %lu", ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Reset buffer 2:  %lu", flag_msg(DBB_ERR_MEM_ATAES),
+                     ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
     }
 
@@ -233,20 +239,23 @@ void aes_process(uint8_t const *command, uint16_t cmd_len,
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
-            sprintf(errmsg, "Response buffer 1:  %lu", ret);
-            commander_fill_report("ataes", errmsg, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s Response buffer 1:  %lu",
+                     flag_msg(DBB_ERR_MEM_ATAES), ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
     }
+
+    return DBB_OK;
 }
 
 
 // Pass NULL to read only or write only
-void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
-                const uint8_t *userdata_write)
+int aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
+               const uint8_t *userdata_write)
 {
     int ret;
-    char message[64];
+    char errmsg[64];
 
     uint8_t aes_status = 0;
     uint8_t delay = 2; // msec
@@ -256,18 +265,19 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
     if (userdata_write != NULL) {
         ret = aes_eeprom_write(ADDR, LEN, userdata_write);
         if (ret) {
-            sprintf(message, "EEPROM write error %i.", ret);
-            commander_fill_report("eeprom", message, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s EEPROM write: %i", flag_msg(DBB_ERR_MEM_ATAES), ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
         while (1) {
             ret = aes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &aes_status);
             if (!(aes_status & 0x81) && !ret) { // 0x81 = no error and device ready
                 break;
             } else if (cnt++ > timeout) {
-                sprintf(message, "EEPROM write error [status]:  %u  %i", aes_status, ret);
-                commander_fill_report("eeprom", message, DBB_ERROR);
-                return;
+                snprintf(errmsg, sizeof(errmsg), "%s EEPROM write status:  %u  %i",
+                         flag_msg(DBB_ERR_MEM_ATAES), aes_status, ret);
+                commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+                return DBB_ERROR;
             }
             delay_ms(delay);
         }
@@ -276,21 +286,24 @@ void aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
     if (userdata_read != NULL) {
         ret = aes_eeprom_read(ADDR, LEN, userdata_read);
         if (ret) {
-            sprintf(message, "EEPROM read error %i.", ret);
-            commander_fill_report("eeprom", message, DBB_ERROR);
-            return;
+            snprintf(errmsg, sizeof(errmsg), "%s EEPROM read: %i", flag_msg(DBB_ERR_MEM_ATAES), ret);
+            commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
         }
         while (1) {
             ret = aes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &aes_status);
             if (!aes_status && !ret) {
                 break;
             } else if (cnt++ > timeout) {
-                sprintf(message, "EEPROM read error [status]:  %u  %i", aes_status, ret);
-                commander_fill_report("eeprom", message, DBB_ERROR);
-                return;
+                snprintf(errmsg, sizeof(errmsg), "%s EEPROM read status:  %u  %i",
+                         flag_msg(DBB_ERR_MEM_ATAES), aes_status, ret);
+                commander_fill_report(cmd_str(CMD_ataes), errmsg, DBB_ERR_MEM_ATAES);
+                return DBB_ERROR;
             }
             delay_ms(delay);
         }
     }
+
+    return DBB_OK;
 }
 

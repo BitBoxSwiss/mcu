@@ -33,11 +33,12 @@
 
 
 #ifdef TESTING
-
 void random_init(void)
 {
     srand(time(NULL));
 }
+
+
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     (void) update_seed;
@@ -47,28 +48,32 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
     return DBB_OK;
 }
-
 #else
+
 
 #include "ataes132.h"
 #include "memory.h"
 
+
 void random_init(void) { };
+
+
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
     uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
-
+    int ret;
     uint32_t cnt = 0;
+
     while (len > cnt) {
         if (update_seed) {
-            aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
+            ret = aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
         } else {
-            aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
+            ret = aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
-        if (ataes_ret[0]) {
+        if (ret == DBB_OK && ataes_ret[0]) {
             memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16);
         } else {
             return DBB_ERROR;
@@ -84,28 +89,4 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
     return DBB_OK;
 }
-
 #endif
-
-
-/*
-   Adapted from:
-   http://benpfaff.org/writings/clc/shuffle.html
-*/
-/*
-void random_shuffle(int *array, size_t n)
-{
-    int r_len = 15;
-    uint8_t r[r_len + 1];
-    random_bytes(r, r_len + 1, 0);
-    if (n > 1) {
-        size_t i;
-        for (i = 0; i < n - 1; i++) {
-            size_t j = i + (r[i % r_len] + (r[i % r_len + 1] << 8)) / (65536 / (n - i) + 1);
-            int t = array[j];
-            array[j] = array[i];
-            array[i] = t;
-        }
-    }
-}
-*/

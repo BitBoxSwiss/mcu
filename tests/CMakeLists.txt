@@ -22,9 +22,15 @@ target_link_libraries(tests_cmdline bitbox)
 
 
 #-----------------------------------------------------------------------------
-# Build tests for secp256k1
+# Build secp256k1 submodule tests
 add_executable(tests_secp256k1 tests_secp256k1.c)
 target_link_libraries(tests_secp256k1 bitbox)
+
+
+#-----------------------------------------------------------------------------
+# Build yajl submodule tests
+add_executable(tests_yajl tests_yajl.c)
+target_link_libraries(tests_yajl bitbox)
 
 
 #-----------------------------------------------------------------------------

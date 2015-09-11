@@ -98,7 +98,7 @@ static void test_bip32_vector_1(void)
 
     // [Chain m/0']
     char path0[] = "m/0'";
-    wallet_generate_key(&node, path0, strlen(path0), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path0, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0x3442193e);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("47fdacbd0f1097043b78c63c20c34ef4ed9a111d980047ad16282c7ae6236141"),
@@ -127,7 +127,7 @@ static void test_bip32_vector_1(void)
 
     // [Chain m/0'/1]
     char path1[] = "m/0'/1";
-    wallet_generate_key(&node, path1, strlen(path1), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path1, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0x5c1bd648);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("2a7857631386ba23dacac34180dd1983734e444fdbf774041578e9b6adb37c19"),
@@ -155,7 +155,7 @@ static void test_bip32_vector_1(void)
 
     // [Chain m/0'/1/2']
     char path2[] = "m/0'/1/2'";
-    wallet_generate_key(&node, path2, strlen(path2), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path2, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0xbef5a2f9);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("04466b9cc8e161e966409ca52986c584f07e9dc81f735db683c3ff6ec7b1503f"),
@@ -183,7 +183,7 @@ static void test_bip32_vector_1(void)
 
     // [Chain m/0'/1/2'/2]
     char path3[] = "m/0'/1/2'/2";
-    wallet_generate_key(&node, path3, strlen(path3), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path3, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0xee7ab90c);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("cfb71883f01676f587d023cc53a35bc7f88f724b1f8c2892ac1275ac822a3edd"),
@@ -211,7 +211,7 @@ static void test_bip32_vector_1(void)
 
     // [Chain m/0'/1/2'/2/1000000000]
     char path4[] = "m/0'/1/2'/2/1000000000";
-    wallet_generate_key(&node, path4, strlen(path4), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path4, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0xd880d7d8);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("c783e67b921d2beb8f6b389cc646d7263b4145701dadd2161548a8b078e65e9e"),
@@ -283,7 +283,7 @@ static void test_bip32_vector_2(void)
 
     // [Chain m/0]
     char path0[] = "m/0";
-    wallet_generate_key(&node, path0, strlen(path0), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path0, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0xbd16bee5);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c"),
@@ -311,7 +311,7 @@ static void test_bip32_vector_2(void)
 
     // [Chain m/0/2147483647']
     char path1[] = "m/0/2147483647'";
-    wallet_generate_key(&node, path1, strlen(path1), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path1, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0x5a61ff8e);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("be17a268474a6bb9c61e1d720cf6215e2a88c5406c4aee7b38547f585c9a37d9"),
@@ -339,7 +339,7 @@ static void test_bip32_vector_2(void)
 
     // [Chain m/0/2147483647'/1]
     char path2[] = "m/0/2147483647'/1";
-    wallet_generate_key(&node, path2, strlen(path2), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path2, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0xd8ab4937);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("f366f48f1ea9f2d1d3fe958c95ca84ea18e4c4ddb9366c336c927eb246fb38cb"),
@@ -367,7 +367,7 @@ static void test_bip32_vector_2(void)
 
     // [Chain m/0/2147483647'/1/2147483646']
     char path3[] = "m/0/2147483647'/1/2147483646'";
-    wallet_generate_key(&node, path3, strlen(path3), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path3, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0x78412e3a);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("637807030d55d01f9a0cb3a7839515d796bd07706386a6eddf06cc29a65a0e29"),
@@ -395,7 +395,7 @@ static void test_bip32_vector_2(void)
 
     // [Chain m/0/2147483647'/1/2147483646'/2]
     char path4[] = "m/0/2147483647'/1/2147483646'/2";
-    wallet_generate_key(&node, path4, strlen(path4), private_key_master, chain_code_master);
+    wallet_generate_key(&node, path4, private_key_master, chain_code_master);
     u_assert_int_eq(node.fingerprint, 0x31a507b8);
     u_assert_mem_eq(node.chain_code,
                     utils_hex_to_uint8("9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271"),
@@ -1098,9 +1098,91 @@ static void test_base64(void)
 }
 
 
-static void test_commander_static_functions(void)
+static void test_buffer_overflow(void)
 {
-    u_assert_int_eq(commander_test_static_functions(), 0);
+    __extension__ char val[] = { [0 ... COMMANDER_REPORT_SIZE + 2] = '1' };
+
+    commander_clear_report();
+    const char *key[] = {"testing", 0};
+    const char *value[] = {val, 0};
+    int t[] = {DBB_JSON_STRING, DBB_JSON_NONE};
+    commander_fill_json_array(key, value, t, CMD_data);
+    u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
+
+    commander_clear_report();
+    commander_fill_report("testing", val, DBB_OK);
+    u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
+
+    uint8_t sig[64] = {0};
+    uint8_t pubkey[33] = {0};
+    commander_clear_report();
+    val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(flag_msg(
+                DBB_ERR_IO_REPORT_BUF))] = '\0';
+    commander_fill_report("testing", val, DBB_OK);
+    commander_fill_signature_array(sig, pubkey);
+    commander_fill_report("sign", commander_read_array(), DBB_OK);
+    u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
+}
+
+
+static void test_utils(void)
+{
+    // hex conversion
+    uint8_t uppercase[12];
+    uint8_t lowercase[12];
+    uint8_t *binary;
+    binary = utils_hex_to_uint8("ABCDEF");
+    memcpy(uppercase, binary, 12);
+    binary = utils_hex_to_uint8("abcdef");
+    memcpy(lowercase, binary, 12);
+    u_assert_mem_eq(uppercase, lowercase, 12);
+
+    // overflow
+    char overflow[TO_UINT8_HEX_BUF_LEN + 2];
+    memset(overflow, 'a', sizeof(overflow));
+    overflow[TO_UINT8_HEX_BUF_LEN + 1] = '\0';
+    binary = (uint8_t *)overflow;
+    u_assert_int_eq(1, (binary != NULL));
+    binary = utils_hex_to_uint8(overflow);
+    u_assert_int_eq(1, (binary == NULL));
+
+    binary = (uint8_t *)overflow;
+    u_assert_int_eq(1, (binary != NULL));
+    binary = (uint8_t *)utils_uint8_to_hex((uint8_t *)overflow, TO_UINT8_HEX_BUF_LEN / 2);
+    u_assert_int_eq(1, (binary == NULL));
+
+    // varint conversion
+    uint64_t *I_p;
+    const char **VI_p;
+    uint64_t I[] = {0x05, 0x32, 0xfc, 0xfd, 0xff, 0xfffe, 0xffff, 0x10000, 0x100000, 0xffffffff, 0x100000000, 0xffffffffff, 0};
+    static const char *VI[] = {"05", "32", "fc", "fdfd00", "fdff00", "fdfeff", "fdffff", "fe00000100", "fe00001000", "feffffffff", "ff0000000001000000", "ffffffffffff000000", 0};
+
+    I_p = I;
+    VI_p = VI;
+    while (*I_p && *VI_p) {
+        int l;
+        static char vi[VARINT_LEN];
+        char *vi_p = vi;
+        memset(vi, 0, sizeof(vi));
+
+        utils_uint64_to_varint(vi_p, &l, *I_p);
+        u_assert_str_eq(vi, *VI_p);
+
+        I_p++;
+        VI_p++;
+    }
+
+    I_p = I;
+    VI_p = VI;
+    while (*I_p && *VI_p) {
+        uint64_t i = 0;
+
+        utils_varint_to_uint64(*VI_p, &i);
+        u_assert_int_eq(i, *I_p);
+
+        I_p++;
+        VI_p++;
+    }
 }
 
 
@@ -1121,7 +1203,8 @@ int main(void)
     u_run_test(test_pbkdf2_hmac_sha512);
     u_run_test(test_mnemonic);
     u_run_test(test_mnemonic_check);
-    u_run_test(test_commander_static_functions);
+    u_run_test(test_buffer_overflow);
+    u_run_test(test_utils);
 #ifdef ECC_USE_UECC_LIB
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);
@@ -1129,10 +1212,10 @@ int main(void)
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
+    } else {
+        printf("\n%i of %i TESTS PASSED\n\n", U_TESTS_RUN - U_TESTS_FAIL, U_TESTS_RUN);
     }
 
     ecc_context_destroy();
     return U_TESTS_FAIL;
 }
-
-

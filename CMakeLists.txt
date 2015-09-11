@@ -22,6 +22,7 @@ set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
 # Options for building
 
 option(BUILD_TESTS "Build the unit tests." ON)
+option(BUILD_COVERAGE "Compile with test coverage flags." OFF)
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build." OFF)
 option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." OFF)
@@ -45,6 +46,7 @@ endif()
 
 message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Testing:                ${BUILD_TESTS}")
+message(STATUS "Coverage:               ${BUILD_COVERAGE}")
 message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}")
 
 
@@ -59,8 +61,8 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 # Compiler flags
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g") # valgrind
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -Werror -pedantic -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wbad-function-cast -Winline -Wnested-externs -Wfloat-equal -Wmissing-declarations -Wswitch-default -Wwrite-strings -Wcast-qual -Wmissing-prototypes")
 
 if(APPLE)
@@ -76,6 +78,15 @@ endif()
 message(STATUS "C Compiler ID: ${CMAKE_C_COMPILER_ID}")
 message(STATUS "C Flags:       ${CMAKE_C_FLAGS}")
 message(STATUS "C link flags:  ${CMAKE_C_LINK_FLAGS}")
+
+
+#-----------------------------------------------------------------------------
+# Test coverage flags
+
+if(BUILD_COVERAGE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+  set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -fprofile-arcs")
+endif()
 
 
 #-----------------------------------------------------------------------------
@@ -172,6 +183,7 @@ if(USE_UECC_LIB)
     add_definitions(-DECC_USE_UECC_LIB)
 endif()
 
+
 #-----------------------------------------------------------------------------
 # Build source
 
@@ -181,7 +193,8 @@ if(BUILD_TESTS)
   add_subdirectory(tests)
   add_test(NAME tests_unit COMMAND tests_unit)
   add_test(NAME tests_openssl COMMAND tests_openssl 200)
+  add_test(NAME tests_cmdline COMMAND tests_cmdline '{"name":""}')
   add_test(NAME tests_api COMMAND tests_api)
-  add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 4)
+  add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 2)
   enable_testing()
 endif()

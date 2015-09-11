@@ -209,14 +209,13 @@ void utils_decrypt_report(const char *report)
                                       &decrypt_len, PASSWORD_STAND);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
-                return;
+                goto exit;
             }
 
             char tfa_report[decrypt_len + 1];
             memcpy(tfa_report, dec, decrypt_len);
             tfa_report[decrypt_len] = '\0';
             yajl_val tfa_node = yajl_tree_parse(tfa_report, NULL, 0);
-
 
             const char *tfa_path[] = { "2FA", (const char *) 0 };
             tfa = YAJL_GET_STRING(yajl_tree_get(tfa_node, tfa_path, yajl_t_string));
@@ -225,21 +224,23 @@ void utils_decrypt_report(const char *report)
                                               PASSWORD_2FA);
                 if (!dec_tfa) {
                     strcpy(decrypted_report, "/* error: Failed to decrypt 2FA. */");
-                    return;
+                    yajl_tree_free(tfa_node);
+                    goto exit;
                 }
                 sprintf(decrypted_report, "/* 2FA */ %.*s", dec_tfa_len, dec_tfa);
                 free(dec_tfa);
             } else {
                 sprintf(decrypted_report, "/* ciphertext */ %.*s", decrypt_len, dec);
             }
+            yajl_tree_free(tfa_node);
             free(dec);
-            return;
+            goto exit;
         } else if (echo) {
             dec = aes_cbc_b64_decrypt((const unsigned char *)echo, strlens(echo), &decrypt_len,
                                       PASSWORD_VERIFY);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt echo. */");
-                return;
+                goto exit;
             }
 
             char pin_report[decrypt_len + 1];
@@ -255,11 +256,14 @@ void utils_decrypt_report(const char *report)
                 memset(PIN_2FA, 0, sizeof(PIN_2FA));
             }
             sprintf(decrypted_report, "/* echo */ %.*s", decrypt_len, dec);
+            yajl_tree_free(pin_node);
             free(dec);
-            return;
+            goto exit;
         }
     }
     strcpy(decrypted_report, report);
+exit:
+    yajl_tree_free(json_node);
     return;
 }
 

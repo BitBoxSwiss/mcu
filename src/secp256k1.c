@@ -25,43 +25,29 @@
 */
 
 
-#include <stdio.h>
-#include <string.h>
-
-#include "ecc.h"
-#include "utils.h"
-#include "random.h"
-#include "memory.h"
-#include "commander.h"
+// Provides secp256k1 access in libbitbox.a, as required by the test
+// functions. Then, the secp256k1/ submodule code is left 'as is'.
 
 
-static void usage(char *argv[])
-{
-    printf("\nExample code to run the Digital Bitbox MCU code.\n");
-    printf("  Usage:\n\t%s json_commands\n\n", argv[0]);
-    printf("  Example:\n\t./tests_cmdline '{ \"seed\":{\"source\":\"create\"} }'\n\n" );
-    printf( "See the online API documentation for a list of JSON commands at\ndigitalbitbox.com.\n\n\n");
-}
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winline"
+#endif
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
 
 
-int main ( int argc, char *argv[] )
-{
-    if (argc != 2) {
-        usage(argv);
-    } else {
-        random_init();
-        memory_setup();
-        ecc_context_init();
+#define USE_ECMULT_STATIC_PRECOMPUTATION 1
+#define USE_BASIC_CONFIG 1
 
-        // A password is required before sending commands.
-        utils_send_print_cmd("{\"password\":\"standard_password\"}", PASSWORD_NONE);
+#include "secp256k1/src/basic-config.h"
+#include "secp256k1/src/secp256k1.c"
 
-        // Uncomment to test a command that requires a seed
-        //utils_send_print_cmd("{\"seed\":{\"source\":\"create\"}}", PASSWORD_STAND);
-
-        // Send the command
-        utils_send_print_cmd(argv[1], PASSWORD_STAND);
-        ecc_context_destroy();
-    }
-    return 0;
-}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

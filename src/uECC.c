@@ -894,7 +894,7 @@ int uECC_sign_double(const uint8_t *p_privateKey, const uint8_t *msg, uint32_t m
     return uECC_sign_digest(p_privateKey, p_hash, p_signature);
 }
 
-/* Verify an ECDSA signature.
+/* ECDSA signature.
    Returns 0 always. */
 int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES],
                      const uint8_t p_hash[uECC_BYTES], uint8_t p_signature[uECC_BYTES * 2])
@@ -909,7 +909,7 @@ int uECC_sign_digest(const uint8_t p_privateKey[uECC_BYTES],
     do {
     repeat:
         // Deterministic K
-        generate_k_rfc6979_test(k_b, p_privateKey, p_hash);
+        uECC_generate_k_rfc6979_test(k_b, p_privateKey, p_hash);
         vli_bytesToNative(k, k_b);
 
         if (vli_isZero(k)) {
@@ -1152,7 +1152,8 @@ void uECC_get_public_key64(const uint8_t p_privateKey[uECC_BYTES],
 
 /* generate K in a deterministic way, according to RFC6979
    http://tools.ietf.org/html/rfc6979 */
-int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key, const uint8_t *hash)
+int uECC_generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key,
+                                 const uint8_t *hash)
 {
     int i;
     uint8_t v[32], k[32], bx[2 * 32], buf[32 + 1 + sizeof(bx)], z1[32];

@@ -80,8 +80,8 @@ void uECC_generate_private_key(uint8_t *p_privateChild,
 int uECC_isValid(uint8_t *p_key);
 
 // Deterministic signatures following RFC6979
-int generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key,
-                            const uint8_t *hash);
+int uECC_generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key,
+                                 const uint8_t *hash);
 
 // Get the public key from the private key
 void uECC_get_public_key65(const uint8_t p_privateKey[uECC_BYTES],

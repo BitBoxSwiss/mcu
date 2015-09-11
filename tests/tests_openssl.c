@@ -22,13 +22,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
 #include <openssl/sha.h>
 #include <stdio.h>
 #include <stdint.h>
 
-#include "uECC.h"
+#include "ecc.h"
 #include "random.h"
 #include "utils.h"
 
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
     int cnt = 0, err = 0;
 
     random_init();
+    ecc_context_init();
     ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
 
     unsigned long max_iterations = -1;
@@ -87,24 +89,24 @@ int main(int argc, char *argv[])
             }
         }
 
-        // use our ECDSA signer to sign the message with the key
-        if (uECC_sign(priv_key, msg, msg_len, sig)) {
+        if (ecc_sign(priv_key, msg, msg_len, sig)) {
             printf("signing failed\n");
             err++;
             break;
         }
 
         // generate public key from private key
-        uECC_get_public_key33(priv_key, pub_key33);
-        uECC_get_public_key65(priv_key, pub_key65);
+        ecc_get_public_key33(priv_key, pub_key33);
+        ecc_get_public_key65(priv_key, pub_key65);
+
 
         // verify the message signature
-        if (uECC_verify(pub_key65, sig, msg, msg_len)) {
+        if (ecc_verify(pub_key65, sig, msg, msg_len)) {
             printf("verification failed (pub_key_len = 65)\n");
             err++;
             break;
         }
-        if (uECC_verify(pub_key33, sig, msg, msg_len)) {
+        if (ecc_verify(pub_key33, sig, msg, msg_len)) {
             printf("verification failed (pub_key_len = 33)\n");
             err++;
             break;
@@ -138,9 +140,9 @@ int main(int argc, char *argv[])
     if (err) {
         printf("message to sign:\n%s\n\n", utils_uint8_to_hex(msg, msg_len));
         printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
-        //printf("eckey dump:\n%s\n\n", utils_uint8_to_hex(p, sizeof(buffer)));
     }
 
     EC_GROUP_free(ecgroup);
+    ecc_context_destroy();
     return err;
 }

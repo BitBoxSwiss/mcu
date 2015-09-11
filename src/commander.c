@@ -467,7 +467,8 @@ static void commander_process_seed(yajl_val json_node)
             commander_fill_report("seed", FLAG_ERR_SEED_SD, DBB_ERROR);
             goto exit;
         }
-        char file[strlens(AUTOBACKUP_FILENAME) + 8];
+        int flen = strlens(AUTOBACKUP_FILENAME) + 8;
+        char file[flen];
         int count = 1;
         do {
             if (count > AUTOBACKUP_NUM) {
@@ -729,7 +730,13 @@ static void commander_process_xpub(yajl_val json_node)
                                              strlens(xpub),
                                              &encrypt_len,
                                              PASSWORD_VERIFY);
-        commander_fill_report_len("echo", encoded_report, DBB_OK, encrypt_len);
+        if (encoded_report) {
+            commander_fill_report_len("echo", encoded_report, DBB_OK, encrypt_len);
+            free(encoded_report);
+        } else {
+            commander_clear_report();
+            commander_fill_report("xpub", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+        }
     } else {
         commander_fill_report("xpub", FLAG_ERR_XPUB, DBB_ERROR);
     }
@@ -1245,7 +1252,6 @@ static void commander_parse(char *command)
         }
     }
 
-
     // Process commands
     if (!found) {
         commander_fill_report("input", FLAG_ERR_INVALID_CMD, DBB_ERROR);
@@ -1290,15 +1296,15 @@ static void commander_parse(char *command)
                                          &encrypt_len,
                                          PASSWORD_STAND);
     commander_clear_report();
-
     if (encoded_report) {
         commander_fill_report_len("ciphertext", encoded_report, DBB_OK, encrypt_len);
+        free(encoded_report);
     } else {
         commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
     }
-    free(encoded_report);
 
 exit:
+    yajl_tree_free(value);
     yajl_tree_free(json_node);
 }
 

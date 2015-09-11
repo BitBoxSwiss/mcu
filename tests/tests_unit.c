@@ -748,7 +748,6 @@ static void test_mnemonic(void)
         u_assert_str_eq(m, *b);
         wallet_mnemonic_to_seed(m, "TREZOR", seed, 0);
         u_assert_mem_eq(seed, utils_hex_to_uint8(*c), strlen(*c) / 2);
-        u_assert_str_eq(wallet_mnemonic_from_index(wallet_index_from_mnemonic(*b)), *b);
         a += 3;
         b += 3;
         c += 3;

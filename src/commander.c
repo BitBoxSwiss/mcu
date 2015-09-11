@@ -328,23 +328,24 @@ static void commander_process_name(yajl_val json_node)
 
 static int commander_process_backup_create(const char *filename, const char *encrypt)
 {
-    char *text, *l;
-    int ret;
-
     if (!filename) {
         commander_fill_report("backup", FLAG_ERR_INVALID_CMD, STATUS_ERROR);
         return STATUS_ERROR;
     }
 
-    text = wallet_mnemonic_from_index(memory_mnemonic(NULL));
-    if (!text) {
+    char xpriv[112] = {0};
+    wallet_report_xpriv("m/", 2, xpriv);
+
+    if (!strlens(xpriv)) {
         commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, STATUS_ERROR);
         return STATUS_ERROR;
     }
 
+    int ret;
+    char *l;
     if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt
         int enc_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)text, strlens(text), &enc_len,
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
                                         PASSWORD_STAND);
         if (!enc) {
             commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, STATUS_ERROR);
@@ -367,13 +368,13 @@ static int commander_process_backup_create(const char *filename, const char *enc
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), text, strlens(text), STATUS_SD_NO_REPLACE);
+        ret = sd_write(filename, strlens(filename), xpriv, strlens(xpriv), STATUS_SD_NO_REPLACE);
         if (ret != STATUS_OK) {
             commander_fill_report("backup", FLAG_ERR_SD_WRITE, STATUS_ERROR);
         } else {
             l = sd_load(filename, strlens(filename));
             if (l) {
-                if (memcmp(text, l, strlens(text))) {
+                if (memcmp(xpriv, l, strlens(xpriv))) {
                     commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, STATUS_ERROR);
                     ret = STATUS_ERROR;
                 }
@@ -453,24 +454,23 @@ static void commander_process_seed(yajl_val json_node)
         commander_fill_report("seed", FLAG_ERR_SEED_MEM, STATUS_ERROR);
         return;
     }
+
     memcpy(src, source, strlens(source));
     src[strlens(source)] = '\0';
 
     if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
-
         if (sd_list() != STATUS_OK) {
             commander_clear_report();
             commander_fill_report("seed", FLAG_ERR_SEED_SD, STATUS_ERROR);
-            return;
+            goto exit;
         }
-
         char file[strlens(AUTOBACKUP_FILENAME) + 8];
         int count = 1;
         do {
             if (count > AUTOBACKUP_NUM) {
                 commander_clear_report();
                 commander_fill_report("seed", FLAG_ERR_SEED_SD_NUM, STATUS_ERROR);
-                return;
+                goto exit;
             }
             memset(file, 0, sizeof(file));
             snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
@@ -480,45 +480,50 @@ static void commander_process_seed(yajl_val json_node)
         if (ret == STATUS_OK) {
             if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != STATUS_OK) {
                 memory_erase_seed();
-                return;
+                goto exit;
             }
         }
-
     } else if (wallet_split_seed(seed_word, src) > 1) {
         ret = wallet_master_from_mnemonic(src, strlens(source), salt, strlens(salt));
+    } else if (strncmp(src, "xprv", 4) == 0) {
+        ret = wallet_master_from_xpriv(src, strlens(source));
     } else {
-        char *mnemo = sd_load(src, strlens(source));
-        if (mnemo && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
+        char *text = sd_load(src, strlens(source));
+        if (text && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
             int dec_len;
-            char *dec = aes_cbc_b64_decrypt((unsigned char *)mnemo, strlens(mnemo), &dec_len,
+            char *dec = aes_cbc_b64_decrypt((unsigned char *)text, strlens(text), &dec_len,
                                             PASSWORD_STAND);
-            memset(mnemo, 0, strlens(mnemo));
-            memcpy(mnemo, dec, dec_len);
+            memset(text, 0, strlens(text));
+            memcpy(text, dec, dec_len);
             memset(dec, 0, dec_len);
             free(dec);
         }
-        if (mnemo) {
-            ret = wallet_master_from_mnemonic(mnemo, strlens(mnemo), salt, strlens(salt));
-            memset(mnemo, 0, strlens(mnemo));
+        if (text) {
+            if (wallet_split_seed(seed_word, text) > 1) {
+                ret = wallet_master_from_mnemonic(text, strlens(text), salt, strlens(salt));
+            } else if (strncmp(text, "xprv", 4) == 0) {
+                ret = wallet_master_from_xpriv(text, strlens(text));
+            } else {
+                ret = STATUS_ERROR;
+            }
+            memset(text, 0, strlens(text));
         } else {
             ret = STATUS_ERROR;
         }
     }
-    memset(src, 0, strlens(source));
-    free(src);
 
     if (ret == STATUS_ERROR) {
         commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, STATUS_ERROR);
-        return;
-    }
-
-    if (ret == STATUS_ERROR_MEM) {
+    } else if (ret == STATUS_ERROR_MEM) {
         commander_fill_report("seed", FLAG_ERR_ATAES, STATUS_ERROR);
-        return;
+    } else {
+        commander_clear_report();
+        commander_fill_report("seed", "success", STATUS_OK);
     }
 
-    commander_clear_report();
-    commander_fill_report("seed", "success", STATUS_OK);
+exit:
+    memset(src, 0, strlens(source));
+    free(src);
 }
 
 

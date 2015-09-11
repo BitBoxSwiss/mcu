@@ -621,9 +621,22 @@ static void tests_device(void)
     if (api_result_has("error")) {
         goto err;
     }
-    if (!api_result_has("version\":")) {
+    if (!api_result_has("\"version\":")) {
         goto err;
     }
+
+    api_format_send_cmd("device", "info", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    if (!api_result_has("\"serial\":") || !api_result_has("\"version\":") ||
+            !api_result_has("\"xpub\":") || !api_result_has("\"name\":")) {
+        goto err;
+    }
+    if (!api_result_has("true") || !api_result_has("\"lock\":")) {
+        goto err;
+    }
+
 
     api_format_send_cmd("reset", "__ERASE__", PASSWORD_STAND);
     if (api_result_has("error")) {
@@ -633,6 +646,22 @@ static void tests_device(void)
     if (api_result_has("error")) {
         goto err;
     }
+
+    api_format_send_cmd("device", "info", PASSWORD_STAND);
+    if (api_result_has("error")) {
+        goto err;
+    }
+    if (!api_result_has("\"serial\":") || !api_result_has("\"version\":") ||
+            !api_result_has("\"xpub\": \"\"") || !api_result_has("\"name\":")) {
+        goto err;
+    }
+    if (!api_result_has("false") || !api_result_has("\"lock\":")) {
+        goto err;
+    }
+
+
+
+
     api_format_send_cmd("reset", "__ERASE__", PASSWORD_NONE);
     if (api_result_has("error")) {
         goto err;

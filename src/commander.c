@@ -1290,10 +1290,12 @@ static char *commander_decrypt(const char *encrypted_command)
     err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
 
     if (command == NULL) {
+        char msg[256];
         err++;
-        commander_fill_report("input", FLAG_ERR_DECRYPT " "
-                              FLAG_ERR_RESET_WARNING, STATUS_ERROR);
         err_iter = memory_access_err_count(STATUS_ACCESS_ITERATE);
+        snprintf(msg, sizeof(msg), "%s %i %s", FLAG_ERR_DECRYPT,
+                 COMMANDER_MAX_ATTEMPTS - err_iter, FLAG_ERR_RESET_WARNING);
+        commander_fill_report("input", msg, STATUS_ERROR);
     } else {
         yajl_val json_node = yajl_tree_parse(command, NULL, 0);
         if (json_node && YAJL_IS_OBJECT(json_node)) {
@@ -1303,11 +1305,12 @@ static char *commander_decrypt(const char *encrypted_command)
     }
 
     if (!json_object_len && err == 0) {
+        char msg[256];
         err++;
-        commander_fill_report("input", FLAG_ERR_JSON_PARSE " "
-                              FLAG_ERR_RESET_WARNING " "
-                              FLAG_ERR_JSON_BRACKET, STATUS_ERROR);
         err_iter = memory_access_err_count(STATUS_ACCESS_ITERATE);
+        snprintf(msg, sizeof(msg), "%s %s %i %s", FLAG_ERR_JSON_PARSE, FLAG_ERR_JSON_BRACKET,
+                 COMMANDER_MAX_ATTEMPTS - err_iter, FLAG_ERR_RESET_WARNING);
+        commander_fill_report("input", msg, STATUS_ERROR);
     }
 
     if (err_iter - err_count == 0 && err == 0) {

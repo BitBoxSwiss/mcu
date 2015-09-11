@@ -149,7 +149,7 @@ enum STATUS_FLAGS {
 #define FLAG_ERR_INVALID_CMD        "Invalid command."
 #define FLAG_ERR_MULTIPLE_CMD       "Only one command allowed at a time."
 #define FLAG_ERR_RESET              "Too many failed access attempts. Device reset."
-#define FLAG_ERR_RESET_WARNING      "Too many access errors will cause the device to reset."
+#define FLAG_ERR_RESET_WARNING      "attempts remain before the device is reset."
 #define FLAG_ERR_DEVICE_LOCKED      "Device locked. Erase device to access this command."
 #define FLAG_ERR_BIP32_MISSING      "BIP32 mnemonic not present."
 #define FLAG_ERR_XPUB               "Could not get xpub."

@@ -96,6 +96,6 @@ uint8_t touch_button_press(int long_touch)
 
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len)
 {
-    memset(serial, 1, len);
+    memset(serial, 1, sizeof(uint32_t) * len);
     return 0; // success
 }

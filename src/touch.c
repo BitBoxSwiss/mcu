@@ -67,8 +67,8 @@ void touch_init(void)
 
 uint8_t touch_button_press(int long_touch)
 {
-    int pushed = STATUS_NOT_TOUCHED;
-    int status = STATUS_ERROR;
+    int pushed = DBB_NOT_TOUCHED;
+    int status = DBB_ERROR;
     char message[128];
     int16_t touch_snks;
     int16_t touch_sns;
@@ -106,13 +106,13 @@ uint8_t touch_button_press(int long_touch)
 
                 // If released before exit_time_ms for long_touch, answer is 'reject'
                 if (long_touch && (touch_snks - touch_sns ) < (QTOUCH_TOUCH_THRESH / 2)) {
-                    pushed = STATUS_ERROR;
+                    pushed = DBB_ERROR;
                     break;
                 } else if (!long_touch) {
-                    pushed = STATUS_TOUCHED;
+                    pushed = DBB_TOUCHED;
                     break;
                 } else {
-                    pushed = STATUS_TOUCHED;
+                    pushed = DBB_TOUCHED;
                 }
             }
             break;
@@ -121,9 +121,9 @@ uint8_t touch_button_press(int long_touch)
 
     // Reset lower priority
     NVIC_SetPriority(SysTick_IRQn, 15);
-    if (pushed == STATUS_TOUCHED) {
+    if (pushed == DBB_TOUCHED) {
         sprintf(message, "accept");
-        status = STATUS_OK;
+        status = DBB_OK;
         led_on();
         delay_ms(300);
         led_off();
@@ -132,9 +132,9 @@ uint8_t touch_button_press(int long_touch)
         delay_ms(300);
         led_off();
 
-    } else if (pushed == STATUS_ERROR) {
+    } else if (pushed == DBB_ERROR) {
         sprintf(message, "Aborted by user.");
-        status = STATUS_ERROR;
+        status = DBB_ERROR;
         led_on();
         delay_ms(100);
         led_off();
@@ -151,7 +151,7 @@ uint8_t touch_button_press(int long_touch)
         sprintf(message, "Touchbutton timed out. (%d/%d)",
                 qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
                 qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
-        status = STATUS_ERROR;
+        status = DBB_ERROR;
         led_off();
     }
 

@@ -49,7 +49,7 @@
 #define DEFAULT_unlocked_           0xFF
 #define DEFAULT_erased_             0xFF
 #define DEFAULT_setup_              0xFF
-#define DEFAULT_access_err_         STATUS_ACCESS_INITIALIZE
+#define DEFAULT_access_err_         DBB_ACCESS_INITIALIZE
 
 
 typedef enum PASSWORD_ID {

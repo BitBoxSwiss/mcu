@@ -58,9 +58,9 @@ static int api_hid_init(void)
 {
     HID_HANDLE = hid_open(0x03eb, 0x2402, NULL);
     if (!HID_HANDLE) {
-        return STATUS_ERROR;
+        return DBB_ERROR;
     }
-    return STATUS_OK;
+    return DBB_OK;
 }
 
 
@@ -108,7 +108,7 @@ static void api_hid_send_encrypt(const char *cmd)
 
 static void api_print_result(const char *attr, int result)
 {
-    if (result == STATUS_OK) {
+    if (result == DBB_OK) {
         printf("%s:\tOK\n", attr);
     } else {
         printf("%s:\tFAILED at command %i\n", attr, TESTS_CMD_COUNT);
@@ -462,11 +462,11 @@ static void tests_seed_xpub_backup(void)
     }
 
 
-    api_print_result("tests_seed_xpub_backup", STATUS_OK);
+    api_print_result("tests_seed_xpub_backup", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_seed_xpub_backup", STATUS_ERROR);
+    api_print_result("tests_seed_xpub_backup", DBB_ERROR);
 }
 
 
@@ -514,11 +514,11 @@ static void tests_random(void)
     }
 
 
-    api_print_result("tests_random", STATUS_OK);
+    api_print_result("tests_random", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_random", STATUS_ERROR);
+    api_print_result("tests_random", DBB_ERROR);
 }
 
 
@@ -564,11 +564,11 @@ static void tests_name(void)
     }
 
 
-    api_print_result("tests_name", STATUS_OK);
+    api_print_result("tests_name", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_name", STATUS_ERROR);
+    api_print_result("tests_name", DBB_ERROR);
 }
 
 
@@ -668,11 +668,11 @@ static void tests_device(void)
     }
 
 
-    api_print_result("tests_device", STATUS_OK);
+    api_print_result("tests_device", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_device", STATUS_ERROR);
+    api_print_result("tests_device", DBB_ERROR);
 }
 
 
@@ -780,11 +780,11 @@ static void tests_input(void)
         goto err;
     }
 
-    api_print_result("tests_input", STATUS_OK);
+    api_print_result("tests_input", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_input", STATUS_ERROR);
+    api_print_result("tests_input", DBB_ERROR);
 }
 
 
@@ -818,11 +818,11 @@ static void tests_password(void)
         goto err;
     }
 
-    api_print_result("tests_password", STATUS_OK);
+    api_print_result("tests_password", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_password", STATUS_ERROR);
+    api_print_result("tests_password", DBB_ERROR);
 }
 
 
@@ -945,11 +945,11 @@ static void tests_echo_2FA(void)
         goto err;
     }
 
-    api_print_result("tests_echo_2FA", STATUS_OK);
+    api_print_result("tests_echo_2FA", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_echo_2FA", STATUS_ERROR);
+    api_print_result("tests_echo_2FA", DBB_ERROR);
 }
 
 
@@ -1212,11 +1212,11 @@ static void tests_sign_meta(void)
     }
 
 
-    api_print_result("tests_sign_meta", STATUS_OK);
+    api_print_result("tests_sign_meta", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_sign_meta", STATUS_ERROR);
+    api_print_result("tests_sign_meta", DBB_ERROR);
 }
 
 
@@ -1509,11 +1509,11 @@ static void tests_sign(void)
     }
 
 
-    api_print_result("tests_sign", STATUS_OK);
+    api_print_result("tests_sign", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_sign", STATUS_ERROR);
+    api_print_result("tests_sign", DBB_ERROR);
 }
 
 
@@ -1653,11 +1653,11 @@ static void tests_aes_cbc(void)
         cipherp += 2;
     }
 
-    api_print_result("tests_aes_cbc", STATUS_OK);
+    api_print_result("tests_aes_cbc", DBB_OK);
     return;
 
 err:
-    api_print_result("tests_aes_cbc", STATUS_ERROR);
+    api_print_result("tests_aes_cbc", DBB_ERROR);
 }
 
 
@@ -1693,7 +1693,7 @@ int main(void)
     //     http://www.signal11.us/oss/hidapi/
     TEST_LIVE_DEVICE = 1;
     memory_write_aeskey(tests_pwd, 4, PASSWORD_STAND);
-    if (api_hid_init() == STATUS_ERROR) {
+    if (api_hid_init() == DBB_ERROR) {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
     } else {
         printf("\n\nHID API Result:\n");

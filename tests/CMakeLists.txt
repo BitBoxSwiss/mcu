@@ -1,4 +1,6 @@
 include_directories(../src)
+include_directories(../src/secp256k1)
+
 
 #-----------------------------------------------------------------------------
 # Build tests_unit
@@ -17,6 +19,12 @@ target_link_libraries(tests_openssl bitbox ${OPENSSL_LIBRARIES})
 # Build tests_cmdline
 add_executable(tests_cmdline tests_cmdline.c)
 target_link_libraries(tests_cmdline bitbox)
+
+
+#-----------------------------------------------------------------------------
+# Build tests for secp256k1
+add_executable(tests_secp256k1 tests_secp256k1.c)
+target_link_libraries(tests_secp256k1 bitbox)
 
 
 #-----------------------------------------------------------------------------

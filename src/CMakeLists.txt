@@ -13,6 +13,8 @@ set(C-SOURCES
     sha2.c
     sham.c
     uECC.c
+    ecc.c
+    secp256k1.c
     utils.c
     wallet.c
 )
@@ -43,6 +45,7 @@ if(WIN32)
 endif()
 
 include_directories(SYSTEM)
+include_directories(secp256k1)
 
 add_library(bitbox
   STATIC

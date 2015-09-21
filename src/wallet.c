@@ -41,9 +41,9 @@
 #include "utils.h"
 #include "flags.h"
 #include "sha2.h"
-#include "uECC.h"
-
+#include "ecc.h"
 #include "bip39_english.h"
+
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
@@ -301,7 +301,7 @@ int wallet_check_pubkey(const char *address, const char *keypath, int keypath_le
         goto err;
     }
 
-    uECC_get_public_key33(node.private_key, pub_key);
+    ecc_get_public_key33(node.private_key, pub_key);
     wallet_get_address(pub_key, 0, addr, sizeof(addr));
 
     memset(&node, 0, sizeof(HDNode));
@@ -351,10 +351,10 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
 
     int ret = 0;
     if (to_hash) {
-        ret = uECC_sign_double(node.private_key, utils_hex_to_uint8(message), msg_len / 2, sig);
+        ret = ecc_sign_double(node.private_key, utils_hex_to_uint8(message), msg_len / 2, sig);
     } else {
         memcpy(data, utils_hex_to_uint8(message), 32);
-        ret = uECC_sign_digest(node.private_key, data, sig);
+        ret = ecc_sign_digest(node.private_key, data, sig);
     }
 
     if (ret) {
@@ -363,7 +363,7 @@ int wallet_sign(const char *message, int msg_len, const char *keypath, int keypa
         goto err;
     }
 
-    uECC_get_public_key33(node.private_key, pub_key);
+    ecc_get_public_key33(node.private_key, pub_key);
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
     return commander_fill_signature_array(sig, pub_key);
@@ -597,7 +597,7 @@ int wallet_deserialize_output(char *outputs, const char *keypath, int keypath_le
                 memset(&node, 0, sizeof(HDNode));
                 return DBB_ERROR;
             }
-            uECC_get_public_key33(node.private_key, pub_key33);
+            ecc_get_public_key33(node.private_key, pub_key33);
             wallet_get_pubkeyhash(pub_key33, pubkeyhash);
             wallet_get_address(pub_key33, 0, address, 36);
             if (strstr(outaddr, utils_uint8_to_hex(pubkeyhash, 20))) {

@@ -21,10 +21,10 @@ set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
 #-----------------------------------------------------------------------------
 # Options for building
 
-option(BUILD_TESTS         "Build the unit tests." ON)
+option(BUILD_TESTS "Build the unit tests." ON)
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
-
-set(CMAKE_VERBOSE_MAKEFILE ON)
+option(CMAKE_VERBOSE_MAKEFILE "Verbose build." OFF)
+option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." OFF)
 
 
 #-----------------------------------------------------------------------------
@@ -36,6 +36,12 @@ message(STATUS "Git Commit Hash:        ${GIT_COMMIT_HASH}")
 message(STATUS "CMake version:          ${CMAKE_VERSION}")
 message(STATUS "System:                 ${CMAKE_SYSTEM}")
 message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
+
+if(USE_UECC_LIB)
+    message(STATUS "ECC library:            micro ECC")
+else()
+    message(STATUS "ECC library:            secp256k1")
+endif()
 
 message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Testing:                ${BUILD_TESTS}")
@@ -54,12 +60,17 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g") # valgrind
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -Werror -pedantic -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wbad-function-cast -Winline -Wnested-externs -Wfloat-equal -Wmissing-declarations -Wswitch-default -Wwrite-strings -Wcast-qual -Wmissing-prototypes")
 
 if(APPLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
   set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -framework AppKit -framework IOKit")
   set(CMAKE_MACOSX_RPATH ON)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 endif()
 
 message(STATUS "C Compiler ID: ${CMAKE_C_COMPILER_ID}")
@@ -157,6 +168,9 @@ if(BUILD_TESTS)
   add_definitions(-DTESTING)
 endif()
 
+if(USE_UECC_LIB)
+    add_definitions(-DECC_USE_UECC_LIB)
+endif()
 
 #-----------------------------------------------------------------------------
 # Build source
@@ -168,5 +182,6 @@ if(BUILD_TESTS)
   add_test(NAME tests_unit COMMAND tests_unit)
   add_test(NAME tests_openssl COMMAND tests_openssl 200)
   add_test(NAME tests_api COMMAND tests_api)
+  add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 4)
   enable_testing()
 endif()

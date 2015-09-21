@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#include "ecc.h"
 #include "utils.h"
 #include "flags.h"
 #include "random.h"
@@ -953,6 +955,23 @@ err:
 }
 
 
+#ifdef ECC_USE_UECC_LIB
+const char hash_1_input[] =
+    "41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e";
+const char hash_2_input_1[] =
+    "d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad";
+const char hash_2_input_2[] =
+    "031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340";
+#else
+const char hash_1_input[] =
+    "41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812a31210367582780ec861047b2397b546a3ce9f762dc84be66b09b3e7a1c5d77e3";
+const char hash_2_input_1[] =
+    "d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bc0e94da93028889720e4431dfccc6fb38d1766917ccdddbf50ff4fbe796eacd94";
+const char hash_2_input_2[] =
+    "031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd727161341b6341d773b906f25e642eaad3bf919a785d7394a2056f28184716802c706e01";
+#endif
+
+
 static void tests_sign_meta(void)
 {
     api_reset_cmd_count();
@@ -1053,7 +1072,7 @@ static void tests_sign_meta(void)
     if (!api_result_has(CMD_STR[CMD_pubkey_])) {
         goto err;
     }
-    if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+    if (!api_result_has(hash_1_input)) {
         goto err;
     }
     if (!api_result_has(CMD_STR[CMD_pubkey_])) {
@@ -1072,7 +1091,6 @@ static void tests_sign_meta(void)
       raw_tx = 01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000
       sha256(sha256(hex2byte(raw_tx))) = c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d
     */
-
     api_format_send_cmd("sign",
                         "{\"type\":\"meta\", \"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}",
                         PASSWORD_STAND);
@@ -1096,10 +1114,10 @@ static void tests_sign_meta(void)
     if (!api_result_has("sign")) {
         goto err;
     }
-    if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+    if (!api_result_has(hash_2_input_1)) {
         goto err;
     }
-    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+    if (!api_result_has(hash_2_input_2)) {
         goto err;
     }
     if (!api_result_has(CMD_STR[CMD_pubkey_])) {
@@ -1153,7 +1171,7 @@ static void tests_sign_meta(void)
         if (!api_result_has("sign")) {
             goto err;
         }
-        if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+        if (!api_result_has(hash_1_input)) {
             goto err;
         }
         if (!api_result_has(CMD_STR[CMD_pubkey_])) {
@@ -1194,10 +1212,10 @@ static void tests_sign_meta(void)
         if (!api_result_has("sign")) {
             goto err;
         }
-        if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+        if (!api_result_has(hash_2_input_1)) {
             goto err;
         }
-        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+        if (!api_result_has(hash_2_input_2)) {
             goto err;
         }
         if (!api_result_has(CMD_STR[CMD_pubkey_])) {
@@ -1304,26 +1322,27 @@ static void tests_sign(void)
         if (!api_result_has("verify_output")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("value")) {
             goto err;
         }
-        if (!api_result_has("2200"))          {
+        if (!api_result_has("2200")) {
             goto err;
         }
-        if (!api_result_has("script"))        {
+        if (!api_result_has("script")) {
             goto err;
         }
         if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
             goto err;
         }
     }
+
     api_format_send_cmd("sign",
                         "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}",
                         PASSWORD_STAND);
     if (!api_result_has("sign")) {
         goto err;
     }
-    if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+    if (!api_result_has(hash_1_input)) {
         goto err;
     }
     if (!api_result_has("pubkey")) {
@@ -1344,13 +1363,13 @@ static void tests_sign(void)
         if (!api_result_has("verify_output")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("value")) {
             goto err;
         }
-        if (!api_result_has("200"))           {
+        if (!api_result_has("200")) {
             goto err;
         }
-        if (!api_result_has("script"))        {
+        if (!api_result_has("script")) {
             goto err;
         }
         if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
@@ -1363,7 +1382,7 @@ static void tests_sign(void)
     if (!api_result_has("sign")) {
         goto err;
     }
-    if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+    if (!api_result_has(hash_2_input_2)) {
         goto err;
     }
     if (!api_result_has("pubkey")) {
@@ -1378,7 +1397,7 @@ static void tests_sign(void)
     if (!api_result_has("sign")) {
         goto err;
     }
-    if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+    if (!api_result_has(hash_2_input_1)) {
         goto err;
     }
     if (!api_result_has("pubkey")) {
@@ -1408,13 +1427,13 @@ static void tests_sign(void)
         if (!api_result_has("verify_output")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("value")) {
             goto err;
         }
-        if (!api_result_has("2200"))          {
+        if (!api_result_has("2200")) {
             goto err;
         }
-        if (!api_result_has("script"))        {
+        if (!api_result_has("script")) {
             goto err;
         }
         if (!api_result_has("76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac")) {
@@ -1431,7 +1450,7 @@ static void tests_sign(void)
         if (!api_result_has("sign")) {
             goto err;
         }
-        if (!api_result_has("41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e")) {
+        if (!api_result_has(hash_1_input)) {
             goto err;
         }
         if (!api_result_has("pubkey")) {
@@ -1454,13 +1473,13 @@ static void tests_sign(void)
         if (!api_result_has("verify_output")) {
             goto err;
         }
-        if (!api_result_has("value"))         {
+        if (!api_result_has("value")) {
             goto err;
         }
-        if (!api_result_has("200"))           {
+        if (!api_result_has("200")) {
             goto err;
         }
-        if (!api_result_has("script"))        {
+        if (!api_result_has("script")) {
             goto err;
         }
         if (!api_result_has("76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac")) {
@@ -1477,7 +1496,7 @@ static void tests_sign(void)
         if (!api_result_has("sign")) {
             goto err;
         }
-        if (!api_result_has("031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340")) {
+        if (!api_result_has(hash_2_input_2)) {
             goto err;
         }
         if (!api_result_has("pubkey")) {
@@ -1497,7 +1516,7 @@ static void tests_sign(void)
         if (!api_result_has("sign")) {
             goto err;
         }
-        if (!api_result_has("d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad")) {
+        if (!api_result_has(hash_2_input_1)) {
             goto err;
         }
         if (!api_result_has("pubkey")) {
@@ -1682,6 +1701,7 @@ int main(void)
     // Test the C code API
     TEST_LIVE_DEVICE = 0;
     random_init();
+    ecc_context_init();
     memory_setup();
     printf("\n\nInternal API Result:\n");
     tests_run();
@@ -1702,5 +1722,6 @@ int main(void)
 #endif
 
 
+    ecc_context_destroy();
     return TESTS_FAIL;
 }

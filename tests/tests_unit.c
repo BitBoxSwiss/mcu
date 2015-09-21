@@ -33,7 +33,6 @@
 
 #include "commander.h"
 #include "wallet.h"
-#include "random.h"
 #include "base64.h"
 #include "base58.h"
 #include "pbkdf2.h"
@@ -42,8 +41,9 @@
 #include "bip32.h"
 #include "utils.h"
 #include "utest.h"
-#include "uECC.h"
 #include "sha2.h"
+#include "uECC.h"
+#include "ecc.h"
 #include "aes.h"
 
 
@@ -437,9 +437,10 @@ static void test_bip32_vector_2(void)
 }
 
 
+#ifdef ECC_USE_UECC_LIB
 #define test_deterministic(KEY, MSG, K) do { \
     sha256_Raw((const uint8_t *)MSG, strlen(MSG), buf); \
-    res = generate_k_rfc6979_test(k, utils_hex_to_uint8(KEY), buf); \
+    res = uECC_generate_k_rfc6979_test(k, utils_hex_to_uint8(KEY), buf); \
     u_assert_int_eq(res, 0); \
     u_assert_mem_eq(k, utils_hex_to_uint8(K), 32); \
 } while (0)
@@ -465,6 +466,7 @@ static void test_rfc6979(void)
                        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!",
                        "1f4b84c23a86a221d233f2521be018d9318639d5b8bbd6374a8a59232d16ad3d");
 }
+#endif
 
 
 static void test_sign_speed(void)
@@ -482,7 +484,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = uECC_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
         u_assert_int_eq(res, 0);
     }
 
@@ -490,7 +492,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = uECC_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
         u_assert_int_eq(res, 0);
     }
 
@@ -521,9 +523,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = uECC_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
         u_assert_int_eq(res, 0);
-        res = uECC_verify(pub_key33, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
         u_assert_int_eq(res, 0);
     }
 
@@ -538,9 +540,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = uECC_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
         u_assert_int_eq(res, 0);
-        res = uECC_verify(pub_key33, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
         u_assert_int_eq(res, 0);
     }
 
@@ -1104,13 +1106,14 @@ static void test_commander_static_functions(void)
 
 int main(void)
 {
+    ecc_context_init();
+
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);
     u_run_test(test_bip32_vector_1);
     u_run_test(test_bip32_vector_2);
     u_run_test(test_base58);
     u_run_test(test_base64);
-    u_run_test(test_rfc6979);
     u_run_test(test_address);
     u_run_test(test_wif);
     u_run_test(test_aes_cbc);
@@ -1119,12 +1122,16 @@ int main(void)
     u_run_test(test_mnemonic);
     u_run_test(test_mnemonic_check);
     u_run_test(test_commander_static_functions);
-
+#ifdef ECC_USE_UECC_LIB
+    // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
+    u_run_test(test_rfc6979);
+#endif
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
     }
 
+    ecc_context_destroy();
     return U_TESTS_FAIL;
 }
 

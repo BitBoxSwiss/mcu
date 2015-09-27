@@ -148,13 +148,13 @@ uint8_t touch_button_press(int long_touch)
         led_off();
 
     } else {
-        sprintf(message, "Touchbutton timed out. (%d/%d)",
-                qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
-                qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
+        snprintf(message, sizeof(message), "Touchbutton timed out. (%d/%d)",
+                 qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
+                 qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
         status = DBB_ERROR;
         led_off();
     }
 
-    commander_fill_report("touchbutton", message, status);
+    commander_fill_report(cmd_str(CMD_touchbutton), message, status);
     return pushed;
 }

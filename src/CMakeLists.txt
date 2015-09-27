@@ -17,6 +17,7 @@ set(C-SOURCES
     secp256k1.c
     utils.c
     wallet.c
+    flags.c
 )
 
 set(C-HW-SOURCES

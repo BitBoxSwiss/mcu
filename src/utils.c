@@ -34,9 +34,7 @@
 #include "commander.h"
 #include "yajl/src/api/yajl_tree.h"
 
-extern const char *CMD_STR[];
-static char PIN_2FA[5] = {0};
-static char decrypted_report[COMMANDER_REPORT_SIZE];
+
 static uint8_t buffer_hex_to_uint8[TO_UINT8_HEX_BUF_LEN];
 static char buffer_uint8_to_hex[TO_UINT8_HEX_BUF_LEN];
 
@@ -176,7 +174,12 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
 }
 
 
-char *utils_read_decrypted_report(void)
+#ifdef TESTING
+
+static char PIN_2FA[5] = {0};
+static char decrypted_report[COMMANDER_REPORT_SIZE];
+
+const char *utils_read_decrypted_report(void)
 {
     return decrypted_report;
 }
@@ -199,7 +202,7 @@ void utils_decrypt_report(const char *report)
 
     size_t i, r = json_node->u.object.len;
     for (i = 0; i < r; i++) {
-        const char *ciphertext_path[] = { CMD_STR[CMD_ciphertext_], (const char *) 0 };
+        const char *ciphertext_path[] = { cmd_str(CMD_ciphertext), (const char *) 0 };
         const char *echo_path[] = { "echo", (const char *) 0 };
         const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
                                  yajl_t_string));
@@ -248,7 +251,7 @@ void utils_decrypt_report(const char *report)
             pin_report[decrypt_len] = '\0';
             yajl_val pin_node = yajl_tree_parse(pin_report, NULL, 0);
 
-            const char *pin_path[] = { CMD_STR[CMD_pin_], (const char *) 0 };
+            const char *pin_path[] = { cmd_str(CMD_pin), (const char *) 0 };
             pin = YAJL_GET_STRING(yajl_tree_get(pin_node, pin_path, yajl_t_string));
             if (pin) {
                 memcpy(PIN_2FA, pin, 4);
@@ -286,14 +289,11 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
 }
 
 
-#ifdef TESTING
-
 void utils_send_print_cmd(const char *command, PASSWORD_ID enc_id)
 {
     printf("\nutils send:   %s\n", command);
     utils_send_cmd(command, enc_id);
     printf("utils recv:   %s\n\n", decrypted_report);
 }
-
 
 #endif

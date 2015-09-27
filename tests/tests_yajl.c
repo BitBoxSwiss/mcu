@@ -25,21 +25,14 @@
 */
 
 
-#ifndef _SHAM_H_
-#define _SHAM_H_
+#include <stdio.h>
+#include <stdlib.h>
 
 
-#include <stdint.h>
-
-
-void delay_ms(int delay);
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
-                 uint8_t replace, int cmd);
-char *sd_load(const char *f, uint16_t f_len, int cmd);
-uint8_t sd_list(int cmd);
-uint8_t sd_erase(int cmd);
-uint8_t touch_button_press(int long_touch);
-uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
-
-
-#endif
+int main(void)
+{
+    // The submodule must be built in order to run the yajl tests. See:
+    // https://github.com/digitalbitbox/yajl/blob/master/BUILDING
+    const char command[] = "cd ../src/yajl/test/parsing/; ./run_tests.sh";
+    return system(command);
+}

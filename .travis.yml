@@ -25,5 +25,7 @@ before_script:
 
 script: 
     - mkdir build && cd build
-    - cmake .. -DCONTINUOUS_INTEGRATION=1 && make
+    - cmake .. -DCONTINUOUS_INTEGRATION=1 -DBUILD_COVERAGE=OFF && make
     - make test
+    - bin/tests_api
+    - bin/tests_unit

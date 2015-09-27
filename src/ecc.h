@@ -39,8 +39,6 @@ int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
              uint8_t *sig);
 int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
                     uint8_t *sig);
-int ecc_verify_double(const uint8_t *public_key, const uint8_t *signature,
-                      const uint8_t *msg, uint32_t msg_len);
 int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,
                uint32_t msg_len);
 int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_master,

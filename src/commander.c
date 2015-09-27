@@ -51,12 +51,9 @@
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 
-const char *CMD_STR[] = { FOREACH_CMD(GENERATE_STRING) };
-const char *ATTR_STR[] = { FOREACH_ATTR(GENERATE_STRING) };
-
 static int REPORT_BUF_OVERFLOW = 0;
+__extension__ static char json_array[] = {[0 ... COMMANDER_ARRAY_MAX] = 0};
 __extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-__extension__ static char json_array[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char new_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char previous_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 
@@ -85,7 +82,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
 
     // Make a random initialization vector
     if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == DBB_ERROR) {
-        commander_fill_report("random", FLAG_ERR_ATAES, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
         memset(inpad, 0, inpadlen);
         return NULL;
     }
@@ -163,110 +160,111 @@ void commander_clear_report(void)
 }
 
 
-static void commander_fill_report_len(const char *attr, const char *val, int status,
-                                      size_t vallen)
+const char *commander_read_report(void)
 {
-    size_t len = strlens(json_report);
-    if (len == 0) {
+    return json_report;
+}
+
+
+void commander_fill_report(const char *cmd, const char *msg, int flag)
+{
+    char *p = json_report;
+
+    if (!strlens(json_report)) {
         strncat(json_report, "{", 1);
     } else {
-        json_report[len - 1] = ','; // replace closing '}' with continuing ','
+        json_report[strlens(json_report) - 1] = ','; // replace closing '}' with continuing ','
     }
 
-    if (COMMANDER_REPORT_SIZE < (vallen + strlens(attr) + len +
-                                 (22 < strlens(FLAG_ERR_REPORT_BUFFER) ? strlens(FLAG_ERR_REPORT_BUFFER) : 22))) {
+    if (flag > DBB_FLAG_ERROR_START) {
+        if (strlens(msg)) {
+            snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
+                     " \"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}",
+                     attr_str(ATTR_error), msg, flag_code(flag), cmd);
+        } else {
+            snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
+                     " \"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}",
+                     attr_str(ATTR_error), flag_msg(flag), flag_code(flag), cmd);
+        }
+    } else if (flag == DBB_JSON_BOOL || flag == DBB_JSON_ARRAY || flag == DBB_JSON_NUMBER) {
+        snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
+                 " \"%s\": %s", cmd, msg);
+    } else {
+        snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
+                 " \"%s\": \"%s\"", cmd, msg);
+    }
+
+    if ((strlens(json_report) + 1) >= COMMANDER_REPORT_SIZE) {
         if (!REPORT_BUF_OVERFLOW) {
-            strcat(json_report, FLAG_ERR_REPORT_BUFFER);
+            snprintf(json_report, COMMANDER_REPORT_SIZE,
+                     "{\"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}}", attr_str(ATTR_error),
+                     flag_msg(DBB_ERR_IO_REPORT_BUF), flag_code(DBB_ERR_IO_REPORT_BUF), cmd);
             REPORT_BUF_OVERFLOW = 1;
         }
     } else {
-        strcat(json_report, " \"");
-        strcat(json_report, attr);
-        if (status == DBB_ERROR) {
-            strcat(json_report, "\":{ \"error\": ");
-        } else {
-            strcat(json_report, "\": ");
-        }
-
-        if (val[0] == '{' || val[0] == '[') {
-            strncat(json_report, val, vallen);
-        } else {
-            if (status != DBB_JSON_BOOL) {
-                strcat(json_report, "\"");
-            }
-            strncat(json_report, val, vallen);
-            if (status != DBB_JSON_BOOL) {
-                strcat(json_report, "\"");
-            }
-        }
-
-        // Add closing '}'
-        if (status == DBB_ERROR) {
-            strcat(json_report, " } }");
-        } else {
-            strcat(json_report, " }");
-        }
+        strcat(json_report, "}");
     }
 }
 
 
-void commander_fill_report(const char *attr, const char *val, int status)
-{
-    commander_fill_report_len(attr, val, status, strlens(val));
-}
-
-
-int commander_fill_json_array(const char **key, const char **value, int *type,
-                              int cmd)
+int commander_fill_json_array(const char **key, const char **value, int *type, int cmd)
 {
     int i = 0;
     char array_element[COMMANDER_ARRAY_ELEMENT_MAX];
+    char *p = array_element;
     memset(array_element, 0, COMMANDER_ARRAY_ELEMENT_MAX);
 
-    size_t len;
-
+    // create array element
     strcat(array_element, "{");
-    while (*key && *value) {
-        len = strlens(array_element) + strlens(*key) + strlens(*value) + strlens(", \"\":\"\"}");
-        if (len >= COMMANDER_ARRAY_ELEMENT_MAX - 1) {
-            commander_clear_report();
-            commander_fill_report(CMD_STR[cmd], FLAG_ERR_REPORT_BUFFER, DBB_ERROR);
-            return DBB_ERROR;
-        }
+    while (*key && *value && !REPORT_BUF_OVERFLOW) {
         if (i++ > 0) {
-            strcat(array_element, ", ");
+            strcat(array_element, ",");
         }
-        strcat(array_element, "\"");
-        strcat(array_element, *key);
-        strcat(array_element, "\"");
-        strcat(array_element, ":");
         if (type[i - 1] == DBB_JSON_STRING) {
-            strcat(array_element, "\"");
+            snprintf(p + strlens(array_element),
+                     COMMANDER_ARRAY_ELEMENT_MAX - strlens(array_element), " \"%s\":\"%s\"", *key, *value);
+        } else {
+            snprintf(p + strlens(array_element),
+                     COMMANDER_ARRAY_ELEMENT_MAX - strlens(array_element), " \"%s\":%s", *key, *value);
         }
-        strcat(array_element, *value);
-        if (type[i - 1] == DBB_JSON_STRING) {
-            strcat(array_element, "\"");
+        if ((strlens(array_element) + 1) >= COMMANDER_ARRAY_ELEMENT_MAX) {
+            commander_clear_report();
+            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_IO_REPORT_BUF);
+            REPORT_BUF_OVERFLOW = 1;
+            return DBB_ERROR;
         }
         key++;
         value++;
     }
     strcat(array_element, "}");
 
-    len = strlens(json_array);
-    if (len == 0) {
+    // add element to array
+    if (!strlens(json_array)) {
         strncat(json_array, "[", 1);
     } else {
-        json_array[len - 1] = ','; // replace closing ']' with continuing ','
+        json_array[strlens(json_array) - 1] = ','; // replace closing ']' with continuing ','
     }
-    if (sizeof(json_array) < (strlens(array_element) + len + 3)) {
+
+    p = json_array;
+
+    snprintf(p + strlens(json_array), COMMANDER_ARRAY_MAX - strlens(json_array), "%s",
+             array_element);
+
+    if ((strlens(json_array) + 1) > COMMANDER_ARRAY_MAX) {
         commander_clear_report();
-        commander_fill_report(CMD_STR[cmd], FLAG_ERR_REPORT_BUFFER, DBB_ERROR);
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_IO_REPORT_BUF);
+        REPORT_BUF_OVERFLOW = 1;
         return DBB_ERROR;
     } else {
-        strcat(json_array, array_element);
         strcat(json_array, "]");
         return DBB_OK;
     }
+}
+
+
+const char *commander_read_array(void)
+{
+    return json_array;
 }
 
 
@@ -276,10 +274,10 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
     char pub_key_c[66 + 1];
     strncpy(sig_c, utils_uint8_to_hex(sig, 64), 128 + 1);
     strncpy(pub_key_c, utils_uint8_to_hex(pubkey, 33), 66 + 1);
-    const char *key[] = {CMD_STR[CMD_sig_], CMD_STR[CMD_pubkey_], 0};
+    const char *key[] = {cmd_str(CMD_sig), cmd_str(CMD_pubkey), 0};
     const char *value[] = {sig_c, pub_key_c, 0};
     int type[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
-    return commander_fill_json_array(key, value, type, CMD_sign_);
+    return commander_fill_json_array(key, value, type, CMD_sign);
 }
 
 
@@ -291,20 +289,21 @@ void commander_force_reset(void)
 {
     memory_erase();
     commander_clear_report();
-    commander_fill_report("reset", FLAG_ERR_RESET, DBB_ERROR);
+    commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_RESET);
 }
 
 
 static void commander_process_reset(yajl_val json_node)
 {
-    const char *path[] = { CMD_STR[CMD_reset_], NULL };
+    const char *path[] = { cmd_str(CMD_reset), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("reset", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
-    if (strncmp(value, ATTR_STR[ATTR___ERASE___], strlens(ATTR_STR[ATTR___ERASE___])) == 0) {
+    if (strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__))) == 0) {
         if (touch_button_press(0) == DBB_TOUCHED) {
             delay_ms(100);
             if (touch_button_press(0) == DBB_TOUCHED) {
@@ -312,7 +311,7 @@ static void commander_process_reset(yajl_val json_node)
                 if (touch_button_press(0) == DBB_TOUCHED) {
                     memory_erase();
                     commander_clear_report();
-                    commander_fill_report("reset", "success", DBB_OK);
+                    commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
                 }
             }
         }
@@ -323,67 +322,72 @@ static void commander_process_reset(yajl_val json_node)
 
 static void commander_process_name(yajl_val json_node)
 {
-    const char *path[] = { CMD_STR[CMD_name_], NULL };
+    const char *path[] = { cmd_str(CMD_name), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
-    commander_fill_report("name", (char *)memory_name(value), DBB_OK);
+    commander_fill_report(cmd_str(CMD_name), (char *)memory_name(value), DBB_OK);
 }
 
 
 static int commander_process_backup_create(const char *filename, const char *encrypt)
 {
     if (!filename) {
-        commander_fill_report("backup", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
     char xpriv[112] = {0};
-    wallet_report_xpriv("m/", 2, xpriv);
+    wallet_report_xpriv("m/", xpriv);
 
     if (!strlens(xpriv)) {
-        commander_fill_report("backup", FLAG_ERR_BIP32_MISSING, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
         return DBB_ERROR;
     }
 
     int ret;
     char *l;
-    if (encrypt ? !strncmp(encrypt, "yes", 3) : 0) { // default = do not encrypt
+    if (encrypt ? !strncmp(encrypt, attr_str(ATTR_yes), 3) : 0) { // default = do not encrypt
         int enc_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
                                         PASSWORD_STAND);
         if (!enc) {
-            commander_fill_report("backup", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
             free(enc);
             return DBB_ERROR;
         }
-        ret = sd_write(filename, strlens(filename), enc, enc_len, DBB_SD_NO_REPLACE);
-        if (ret != DBB_OK) {
-            commander_fill_report("backup", FLAG_ERR_SD_WRITE, DBB_ERROR);
-        } else {
-            l = sd_load(filename, strlens(filename));
+        ret = sd_write(filename, strlens(filename), enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
+
+        if (ret == DBB_OK) {
+            l = sd_load(filename, strlens(filename), CMD_backup);
             if (l) {
                 if (memcmp(enc, l, enc_len)) {
-                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, DBB_ERROR);
+                    commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
                     ret = DBB_ERROR;
+                } else {
+                    commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
                 }
                 memset(l, 0, strlens(l));
             }
         }
+
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), xpriv, strlens(xpriv), DBB_SD_NO_REPLACE);
-        if (ret != DBB_OK) {
-            commander_fill_report("backup", FLAG_ERR_SD_WRITE, DBB_ERROR);
-        } else {
-            l = sd_load(filename, strlens(filename));
+        ret = sd_write(filename, strlens(filename), xpriv, strlens(xpriv), DBB_SD_NO_REPLACE,
+                       CMD_backup);
+
+        if (ret == DBB_OK) {
+            l = sd_load(filename, strlens(filename), CMD_backup);
             if (l) {
                 if (memcmp(xpriv, l, strlens(xpriv))) {
-                    commander_fill_report("backup", FLAG_ERR_SD_FILE_CORRUPT, DBB_ERROR);
+                    commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
                     ret = DBB_ERROR;
+                } else {
+                    commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
                 }
                 memset(l, 0, strlens(l));
             }
         }
+
         return ret;
     }
 }
@@ -394,27 +398,27 @@ static void commander_process_backup(yajl_val json_node)
     const char *encrypt, *filename, *value;
 
     if (!memory_read_unlocked()) {
-        commander_fill_report("backup", FLAG_ERR_DEVICE_LOCKED, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
 
-    const char *value_path[] = { CMD_STR[CMD_backup_], NULL };
+    const char *value_path[] = { cmd_str(CMD_backup), NULL };
     value = YAJL_GET_STRING(yajl_tree_get(json_node, value_path, yajl_t_string));
 
     if (value) {
-        if (strcmp(value, ATTR_STR[ATTR_list_]) == 0) {
-            sd_list();
+        if (strcmp(value, attr_str(ATTR_list)) == 0) {
+            sd_list(CMD_backup);
             return;
         }
 
-        if (strcmp(value, ATTR_STR[ATTR_erase_]) == 0) {
-            sd_erase();
+        if (strcmp(value, attr_str(ATTR_erase)) == 0) {
+            sd_erase(CMD_backup);
             return;
         }
     }
 
-    const char *filename_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_filename_], NULL };
-    const char *encrypt_path[] = { CMD_STR[CMD_backup_], CMD_STR[CMD_encrypt_], NULL };
+    const char *filename_path[] = { cmd_str(CMD_backup), cmd_str(CMD_filename), NULL };
+    const char *encrypt_path[] = { cmd_str(CMD_backup), cmd_str(CMD_encrypt), NULL };
     filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path, yajl_t_string));
     encrypt = YAJL_GET_STRING(yajl_tree_get(json_node, encrypt_path, yajl_t_string));
 
@@ -427,9 +431,9 @@ static void commander_process_seed(yajl_val json_node)
     int ret;
     char *seed_word[MAX_SEED_WORDS] = {NULL};
 
-    const char *salt_path[] = { CMD_STR[CMD_seed_], CMD_STR[CMD_salt_], NULL };
-    const char *source_path[] = { CMD_STR[CMD_seed_], CMD_STR[CMD_source_], NULL };
-    const char *decrypt_path[] = { CMD_STR[CMD_seed_], CMD_STR[CMD_decrypt_], NULL };
+    const char *salt_path[] = { cmd_str(CMD_seed), cmd_str(CMD_salt), NULL };
+    const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
+    const char *decrypt_path[] = { cmd_str(CMD_seed), cmd_str(CMD_decrypt), NULL };
 
     const char *salt = YAJL_GET_STRING(yajl_tree_get(json_node, salt_path, yajl_t_string));
     const char *source = YAJL_GET_STRING(yajl_tree_get(json_node, source_path,
@@ -438,33 +442,33 @@ static void commander_process_seed(yajl_val json_node)
                                           yajl_t_string));
 
     if (!memory_read_unlocked()) {
-        commander_fill_report("seed", FLAG_ERR_DEVICE_LOCKED, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
 
     if (!source) {
-        commander_fill_report("seed", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
     if (strlens(salt) > SALT_LEN_MAX) {
-        commander_fill_report("seed", FLAG_ERR_SALT_LEN, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SALT_LEN);
         return;
     }
 
     char *src = malloc(strlens(source) + 1);
     if (!src) {
-        commander_fill_report("seed", FLAG_ERR_SEED_MEM, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_MEM);
         return;
     }
 
     memcpy(src, source, strlens(source));
     src[strlens(source)] = '\0';
 
-    if (strcmp(src, ATTR_STR[ATTR_create_]) == 0) {
-        if (sd_list() != DBB_OK) {
+    if (strcmp(src, attr_str(ATTR_create)) == 0) {
+        if (sd_list(CMD_seed) != DBB_OK) {
             commander_clear_report();
-            commander_fill_report("seed", FLAG_ERR_SEED_SD, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
             goto exit;
         }
         int flen = strlens(AUTOBACKUP_FILENAME) + 8;
@@ -473,14 +477,14 @@ static void commander_process_seed(yajl_val json_node)
         do {
             if (count > AUTOBACKUP_NUM) {
                 commander_clear_report();
-                commander_fill_report("seed", FLAG_ERR_SEED_SD_NUM, DBB_ERROR);
+                commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD_NUM);
                 goto exit;
             }
             memset(file, 0, sizeof(file));
             snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
-        } while (sd_load(file, strlens(file)));
+        } while (sd_load(file, strlens(file), CMD_seed));
 
-        ret = wallet_master_from_mnemonic(NULL, 0, salt, strlens(salt));
+        ret = wallet_master_from_mnemonic(NULL, salt);
         if (ret == DBB_OK) {
             if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != DBB_OK) {
                 memory_erase_seed();
@@ -488,25 +492,31 @@ static void commander_process_seed(yajl_val json_node)
             }
         }
     } else if (wallet_split_seed(seed_word, src) > 1) {
-        ret = wallet_master_from_mnemonic(src, strlens(source), salt, strlens(salt));
+        ret = wallet_master_from_mnemonic(src, salt);
     } else if (strncmp(src, "xprv", 4) == 0) {
-        ret = wallet_master_from_xpriv(src, strlens(source));
+        ret = wallet_master_from_xpriv(src);
     } else {
-        char *text = sd_load(src, strlens(source));
-        if (text && (decrypt ? !strncmp(decrypt, "yes", 3) : 0)) { // default = do not decrypt
+        char *text = sd_load(src, strlens(source), CMD_seed);
+        if (text &&
+                (decrypt ? !strncmp(decrypt, attr_str(ATTR_yes), 3) : 0)) { // default = do not decrypt
             int dec_len;
             char *dec = aes_cbc_b64_decrypt((unsigned char *)text, strlens(text), &dec_len,
                                             PASSWORD_STAND);
             memset(text, 0, strlens(text));
-            memcpy(text, dec, dec_len);
-            memset(dec, 0, dec_len);
-            free(dec);
+            if (dec) {
+                memcpy(text, dec, dec_len);
+                memset(dec, 0, dec_len);
+                free(dec);
+            } else {
+                commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_DECRYPT);
+                goto exit;
+            }
         }
         if (text) {
             if (wallet_split_seed(seed_word, text) > 1) {
-                ret = wallet_master_from_mnemonic(text, strlens(text), salt, strlens(salt));
+                ret = wallet_master_from_mnemonic(text, salt);
             } else if (strncmp(text, "xprv", 4) == 0) {
-                ret = wallet_master_from_xpriv(text, strlens(text));
+                ret = wallet_master_from_xpriv(text);
             } else {
                 ret = DBB_ERROR;
             }
@@ -517,12 +527,12 @@ static void commander_process_seed(yajl_val json_node)
     }
 
     if (ret == DBB_ERROR) {
-        commander_fill_report("seed", FLAG_ERR_MNEMO_CHECK, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_INVALID);
     } else if (ret == DBB_ERROR_MEM) {
-        commander_fill_report("seed", FLAG_ERR_ATAES, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_MEM_ATAES);
     } else {
         commander_clear_report();
-        commander_fill_report("seed", "success", DBB_OK);
+        commander_fill_report(cmd_str(CMD_seed), attr_str(ATTR_success), DBB_OK);
     }
 
 exit:
@@ -535,35 +545,35 @@ static int commander_process_sign_meta(yajl_val json_node)
 {
     size_t i;
     int ret;
-    const char *data_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_data_], NULL };
+    const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_array);
 
     if (!data) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
-    memset(json_array, 0, sizeof(json_array));
+    memset(json_array, 0, COMMANDER_ARRAY_MAX);
     for (i = 0; i < data->u.array.len; i++) {
-        const char *keypath_path[] = { CMD_STR[CMD_keypath_], NULL };
-        const char *hash_path[] = { CMD_STR[CMD_hash_], NULL };
+        const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+        const char *hash_path[] = { cmd_str(CMD_hash), NULL };
 
         yajl_val obj = data->u.array.values[i];
         const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
         const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
 
         if (!hash || !keypath) {
-            commander_fill_report("sign", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
             return DBB_ERROR;
         }
 
-        ret = wallet_sign(hash, strlens(hash), keypath, strlens(keypath), 0);
+        ret = wallet_sign(hash, keypath, 0);
         if (ret != DBB_OK) {
             return ret;
         };
     }
-    commander_fill_report("sign", json_array, DBB_OK);
-    memset(json_array, 0, sizeof(json_array));
+    commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
+    memset(json_array, 0, COMMANDER_ARRAY_MAX);
     return ret;
 }
 
@@ -572,39 +582,37 @@ static int commander_process_sign(yajl_val json_node)
 {
     int to_hash = 0;
 
-    const char *type_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_type_], NULL };
-    const char *data_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_data_], NULL };
-    const char *keypath_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_keypath_], NULL };
+    const char *type_path[] = { cmd_str(CMD_sign), cmd_str(CMD_type), NULL };
+    const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
+    const char *keypath_path[] = { cmd_str(CMD_sign), cmd_str(CMD_keypath), NULL };
 
     const char *type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
     const char *data = YAJL_GET_STRING(yajl_tree_get(json_node, data_path, yajl_t_string));
     const char *keypath = YAJL_GET_STRING(yajl_tree_get(json_node, keypath_path,
                                           yajl_t_string));
+
     if (!type) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
-    if (!strncmp(type, ATTR_STR[ATTR_meta_], strlens(ATTR_STR[ATTR_meta_]))) {
+    if (!strncmp(type, attr_str(ATTR_meta), strlens(attr_str(ATTR_meta)))) {
         return commander_process_sign_meta(json_node);
     }
 
     if (!data || !keypath) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
-    if (!strncmp(type, ATTR_STR[ATTR_transaction_], strlens(ATTR_STR[ATTR_transaction_]))) {
+    if (!strncmp(type, attr_str(ATTR_transaction), strlens(attr_str(ATTR_transaction)))) {
         to_hash = 1;
-    } else if (strncmp(type, ATTR_STR[ATTR_hash_], strlens(ATTR_STR[ATTR_hash_]))) {
-        commander_fill_report("sign", FLAG_ERR_INVALID_CMD, DBB_ERROR);
-        return DBB_ERROR;
     }
 
-    memset(json_array, 0, sizeof(json_array));
-    int ret = wallet_sign(data, strlens(data), keypath, strlens(keypath), to_hash);
-    commander_fill_report("sign", json_array, DBB_OK);
-    memset(json_array, 0, sizeof(json_array));
+    memset(json_array, 0, COMMANDER_ARRAY_MAX);
+    int ret = wallet_sign(data, keypath, to_hash);
+    commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
+    memset(json_array, 0, COMMANDER_ARRAY_MAX);
     return ret;
 }
 
@@ -614,28 +622,29 @@ static void commander_process_random(yajl_val json_node)
     int update_seed;
     uint8_t number[16];
 
-    const char *path[] = { CMD_STR[CMD_random_], NULL };
+    const char *path[] = { cmd_str(CMD_random), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("random", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_true_]) == 0) {
+    if (strcmp(value, attr_str(ATTR_true)) == 0) {
         update_seed = 1;
-    } else if (strcmp(value, ATTR_STR[ATTR_pseudo_]) == 0) {
+    } else if (strcmp(value, attr_str(ATTR_pseudo)) == 0) {
         update_seed = 0;
     } else {
-        commander_fill_report("random", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
     if (random_bytes(number, sizeof(number), update_seed) == DBB_ERROR) {
-        commander_fill_report("random", FLAG_ERR_ATAES, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
         return;
     }
 
-    commander_fill_report("random", utils_uint8_to_hex(number, sizeof(number)),
+    commander_fill_report(cmd_str(CMD_random), utils_uint8_to_hex(number, sizeof(number)),
                           DBB_OK);
 }
 
@@ -653,76 +662,75 @@ static void commander_process_verifypass(const char *value)
     char *l, text[64 + 1];
 
     if (!memory_read_unlocked()) {
-        commander_fill_report("verifypass", FLAG_ERR_DEVICE_LOCKED, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
 
-    if (strcmp(value, ATTR_STR[ATTR_create_]) == 0) {
+    if (strcmp(value, attr_str(ATTR_create)) == 0) {
         if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
-            commander_fill_report("random", FLAG_ERR_ATAES, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_MEM_ATAES);
             return;
         }
-        if (commander_process_password(utils_uint8_to_hex(number, sizeof(number)),
-                                       sizeof(number) * 2, PASSWORD_VERIFY) != DBB_OK) {
+        ret = commander_process_password(utils_uint8_to_hex(number, sizeof(number)),
+                                         sizeof(number) * 2, PASSWORD_VERIFY);
+        if (ret != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_verifypass), NULL, ret);
             return;
         }
-        commander_fill_report(ATTR_STR[ATTR_create_], "success", DBB_OK);
+        commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
 
-    } else if (strcmp(value, ATTR_STR[ATTR_export_]) == 0) {
+    } else if (strcmp(value, attr_str(ATTR_export)) == 0) {
         memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
         utils_clear_buffers();
         ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1,
-                       DBB_SD_REPLACE);
-        if (ret != DBB_OK) {
-            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_WRITE, DBB_ERROR);
-            memset(text, 0, sizeof(text));
-            return;
+                       DBB_SD_REPLACE, CMD_verifypass);
+
+        if (ret == DBB_OK) {
+            l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), CMD_verifypass);
+            if (l) {
+                if (memcmp(text, l, strlens(text))) {
+                    commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);
+                } else {
+                    commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
+                }
+                memset(l, 0, strlens(l));
+            }
         }
-        l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME));
-        if (!l) {
-            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, DBB_ERROR);
-            memset(text, 0, sizeof(text));
-            return;
-        }
-        if (memcmp(text, l, strlens(text))) {
-            commander_fill_report(ATTR_STR[ATTR_export_], FLAG_ERR_SD_FILE_CORRUPT, DBB_ERROR);
-        } else {
-            commander_fill_report(ATTR_STR[ATTR_export_], "success", DBB_OK);
-        }
-        memset(l, 0, strlens(l));
+
         memset(text, 0, sizeof(text));
     } else {
-        commander_fill_report("verifypass", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
     }
 }
 
 
 void commander_create_verifypass(void)
 {
-    commander_process_verifypass(ATTR_STR[ATTR_create_]);
+    commander_process_verifypass(attr_str(ATTR_create));
 }
 
 
 static void commander_process_xpub(yajl_val json_node)
 {
     char xpub[112] = {0};
-    const char *path[] = { CMD_STR[CMD_xpub_], NULL };
+    const char *path[] = { cmd_str(CMD_xpub), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("xpub", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
-    wallet_report_xpub(value, strlens(value), xpub);
+    wallet_report_xpub(value, xpub);
 
     if (xpub[0]) {
-        commander_fill_report("xpub", xpub, DBB_OK);
+        commander_fill_report(cmd_str(CMD_xpub), xpub, DBB_OK);
 
         int encrypt_len;
         char *encoded_report;
@@ -731,78 +739,86 @@ static void commander_process_xpub(yajl_val json_node)
                                              &encrypt_len,
                                              PASSWORD_VERIFY);
         if (encoded_report) {
-            commander_fill_report_len("echo", encoded_report, DBB_OK, encrypt_len);
+            commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
             free(encoded_report);
         } else {
             commander_clear_report();
-            commander_fill_report("xpub", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_MEM_ENCRYPT);
         }
     } else {
-        commander_fill_report("xpub", FLAG_ERR_XPUB, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_KEY_CHILD);
     }
 }
 
 
 static void commander_process_device(yajl_val json_node)
 {
-    int valid = 0;
-    const char *path[] = { CMD_STR[CMD_device_], NULL };
+    const char *path[] = { cmd_str(CMD_device), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("device", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_serial_]) == 0 ||
-            strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
-        uint32_t serial[4] = {0};
-        if (!flash_read_unique_id(serial, 4)) {
-            commander_fill_report(ATTR_STR[ATTR_serial_], utils_uint8_to_hex((uint8_t *)serial,
-                                  sizeof(serial)), DBB_OK);
-        } else {
-            commander_fill_report(ATTR_STR[ATTR_serial_], FLAG_ERR_FLASH, DBB_ERROR);
+    if (strcmp(value, attr_str(ATTR_lock)) == 0) {
+        char msg[256];
+        memory_write_unlocked(0);
+        snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
+        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        return;
+    }
+
+    if (!strcmp(value, attr_str(ATTR_version))) {
+        char msg[256];
+        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_version),
+                 (const char *)DIGITAL_BITBOX_VERSION);
+        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        return;
+    }
+
+    uint32_t serial[4] = {0};
+    if (!strcmp(value, attr_str(ATTR_serial)) || !strcmp(value, attr_str(ATTR_info))) {
+        if (flash_read_unique_id(serial, 4)) {
+            commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_FLASH);
+            return;
         }
-        valid++;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_version_]) == 0 ||
-            strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
-        commander_fill_report(ATTR_STR[ATTR_version_], (const char *)DIGITAL_BITBOX_VERSION,
-                              DBB_OK);
-        valid++;
+    if (!strcmp(value, attr_str(ATTR_serial))) {
+        char msg[256];
+        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_serial),
+                 utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)));
+        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        return;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_info_]) == 0) {
+    if (!strcmp(value, attr_str(ATTR_info))) {
+        char msg[1024];
+        char lock[6] = {0};
         char xpub[112] = {0};
-        char keypath[] = "m/";
-        wallet_report_xpub(keypath, strlens(keypath), xpub);
-        if (xpub[0]) {
-            commander_fill_report("xpub", xpub, DBB_OK);
-        } else {
-            commander_fill_report("xpub", "\0", DBB_OK);
-        }
 
         if (!memory_read_unlocked()) {
-            commander_fill_report("lock", "true", DBB_JSON_BOOL);
+            strcpy(lock, attr_str(ATTR_true));
         } else {
-            commander_fill_report("lock", "false", DBB_JSON_BOOL);
+            strcpy(lock, attr_str(ATTR_false));
         }
 
-        commander_fill_report("name", (char *)memory_name(""), DBB_OK);
+        wallet_report_xpub("m/", xpub);
 
-        valid++;
+        snprintf(msg, sizeof(msg),
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s}",
+                 attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
+                 attr_str(ATTR_version), (const char *)DIGITAL_BITBOX_VERSION,
+                 attr_str(ATTR_name), (char *)memory_name(""),
+                 attr_str(ATTR_xpub), xpub,
+                 attr_str(ATTR_lock), lock);
+
+        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        return;
     }
 
-    if (strcmp(value, ATTR_STR[ATTR_lock_]) == 0) {
-        memory_write_unlocked(0);
-        commander_fill_report("device", "locked", DBB_OK);
-        valid++;
-    }
-
-    if (!valid) {
-        commander_fill_report("device", FLAG_ERR_INVALID_CMD, DBB_ERROR);
-    }
+    commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 
@@ -812,79 +828,86 @@ static void commander_process_aes256cbc(yajl_val json_node)
     char *crypt;
     int crypt_len;
 
-    const char *type_path[] = { CMD_STR[CMD_aes256cbc_], CMD_STR[CMD_type_], NULL };
-    const char *data_path[] = { CMD_STR[CMD_aes256cbc_], CMD_STR[CMD_data_], NULL };
+    const char *type_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_type), NULL };
+    const char *data_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_data), NULL };
     type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
     data = YAJL_GET_STRING(yajl_tree_get(json_node, data_path, yajl_t_string));
 
     if (!type || !data) {
-        commander_fill_report("aes256cbc", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
-    if (strncmp(type, ATTR_STR[ATTR_password_], strlens(ATTR_STR[ATTR_password_])) == 0) {
-        if (commander_process_password(data, strlens(data), PASSWORD_CRYPT) == DBB_OK) {
-            commander_fill_report("aes256cbc", "success", DBB_OK);
+    if (strncmp(type, attr_str(ATTR_password), strlens(attr_str(ATTR_password))) == 0) {
+        int ret = commander_process_password(data, strlens(data), PASSWORD_CRYPT);
+        if (ret == DBB_OK) {
+            commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
+        } else {
+            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, ret);
         }
-    } else if (strncmp(type, ATTR_STR[ATTR_xpub_], strlens(ATTR_STR[ATTR_xpub_])) == 0) {
+    } else if (strncmp(type, attr_str(ATTR_xpub), strlens(attr_str(ATTR_xpub))) == 0) {
         char xpub[112] = {0};
-        wallet_report_xpub(data, strlens(data), xpub);
+        wallet_report_xpub(data, xpub);
         if (xpub[0]) {
-            if (commander_process_password(xpub, 112, PASSWORD_CRYPT) == DBB_OK) {
-                commander_fill_report("aes256cbc", "success", DBB_OK);
+            int ret = commander_process_password(xpub, 112, PASSWORD_CRYPT);
+            if (ret == DBB_OK) {
+                commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
+            } else {
+                commander_fill_report(cmd_str(CMD_aes256cbc), NULL, ret);
             }
         } else {
-            commander_fill_report("aes256cbc", FLAG_ERR_BIP32_MISSING, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_KEY_MASTER);
         }
     } else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == DBB_MEM_ERASED) {
-        commander_fill_report("aes256cbc", FLAG_ERR_NO_PASSWORD, DBB_ERROR);
-    } else if (strncmp(type, ATTR_STR[ATTR_encrypt_],
-                       strlens(ATTR_STR[ATTR_encrypt_])) == 0) {
-        if (strlens(data) > DATA_LEN_MAX) {
-            commander_fill_report("aes256cbc", FLAG_ERR_DATA_LEN, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_NO_PASSWORD);
+    } else if (strncmp(type, attr_str(ATTR_encrypt),
+                       strlens(attr_str(ATTR_encrypt))) == 0) {
+        if (strlens(data) > AES_DATA_LEN_MAX) {
+            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DATA_LEN);
         } else {
             crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len,
                                         PASSWORD_CRYPT);
             if (crypt) {
-                commander_fill_report_len("aes256cbc", crypt, DBB_OK, crypt_len);
+                commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
             } else {
-                commander_fill_report("aes256cbc", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+                commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_MEM_ENCRYPT);
             }
             free(crypt);
         }
-    } else if (strncmp(type, ATTR_STR[ATTR_decrypt_],
-                       strlens(ATTR_STR[ATTR_decrypt_])) == 0) {
+    } else if (strncmp(type, attr_str(ATTR_decrypt),
+                       strlens(attr_str(ATTR_decrypt))) == 0) {
         crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len,
                                     PASSWORD_CRYPT);
         if (crypt) {
-            commander_fill_report_len("aes256cbc", crypt, DBB_OK, crypt_len);
+            commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
         } else {
-            commander_fill_report("aes256cbc", FLAG_ERR_DECRYPT, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DECRYPT);
         }
         free(crypt);
     } else {
-        commander_fill_report("aes256cbc", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
     }
 }
 
 
 static void commander_process_led(yajl_val json_node)
 {
-    const char *path[] = { CMD_STR[CMD_led_], NULL };
+    const char *path[] = { cmd_str(CMD_led), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    if (!value || !strlens(value)) {
-        commander_fill_report("led", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_led), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
-    if (strncmp(value, ATTR_STR[ATTR_toggle_],
-                strlens(ATTR_STR[ATTR_toggle_])) != 0) {
-        commander_fill_report("led", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (strncmp(value, attr_str(ATTR_toggle),
+                strlens(attr_str(ATTR_toggle))) != 0) {
+        commander_fill_report(cmd_str(CMD_led), NULL, DBB_ERR_IO_INVALID_CMD);
     } else {
         led_toggle();
         delay_ms(300);
         led_toggle();
-        commander_fill_report("led", "toggled", DBB_OK);
+        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_toggle), DBB_OK);
     }
 }
 
@@ -892,98 +915,69 @@ static void commander_process_led(yajl_val json_node)
 static int commander_process(int cmd, yajl_val json_node)
 {
     switch (cmd) {
-        case CMD_reset_:
+        case CMD_reset:
             commander_process_reset(json_node);
             return DBB_RESET;
 
-        case CMD_password_: {
-            const char *path[] = { CMD_STR[CMD_password_], NULL };
+        case CMD_password: {
+            const char *path[] = { cmd_str(CMD_password), NULL };
             const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
-            if (commander_process_password(value, strlens(value), PASSWORD_STAND) == DBB_OK) {
-                commander_fill_report(CMD_STR[cmd], "success", DBB_OK);
+            int ret = commander_process_password(value, strlens(value), PASSWORD_STAND);
+            if (ret == DBB_OK) {
+                commander_fill_report(cmd_str(cmd), attr_str(ATTR_success), DBB_OK);
+            } else {
+                commander_fill_report(cmd_str(cmd), NULL, ret);
             }
             break;
         }
 
-        case CMD_verifypass_: {
-            const char *path[] = { CMD_STR[CMD_verifypass_], NULL };
+        case CMD_verifypass: {
+            const char *path[] = { cmd_str(CMD_verifypass), NULL };
             const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
             commander_process_verifypass(value);
             break;
         }
 
-        case CMD_led_:
+        case CMD_led:
             commander_process_led(json_node);
             break;
 
-        case CMD_name_:
+        case CMD_name:
             commander_process_name(json_node);
             break;
 
-        case CMD_seed_:
+        case CMD_seed:
             commander_process_seed(json_node);
             break;
 
-        case CMD_backup_:
+        case CMD_backup:
             commander_process_backup(json_node);
             break;
 
-        case CMD_sign_:
+        case CMD_sign:
             return commander_process_sign(json_node);
 
-        case CMD_random_:
+        case CMD_random:
             commander_process_random(json_node);
             break;
 
-        case CMD_xpub_:
+        case CMD_xpub:
             commander_process_xpub(json_node);
             break;
 
-        case CMD_device_:
+        case CMD_device:
             commander_process_device(json_node);
             break;
 
-        case CMD_aes256cbc_:
+        case CMD_aes256cbc:
             commander_process_aes256cbc(json_node);
             break;
 
-        default:
-            commander_fill_report("input", FLAG_ERR_INVALID_CMD, DBB_ERROR);
-            return DBB_ERROR;
+        default: {
+            /* never reached */
+        }
     }
     return DBB_OK;
-}
-
-
-//
-//  Unit testing
-//
-
-int commander_test_static_functions(void)
-{
-    // test json_report overflows
-    __extension__ char val[] = { [0 ... COMMANDER_REPORT_SIZE] = '1' };
-    commander_clear_report();
-    commander_fill_report_len("testing", val, DBB_OK, COMMANDER_REPORT_SIZE / 2);
-    commander_fill_report_len("testing", val, DBB_OK, COMMANDER_REPORT_SIZE / 2);
-    if (!strstr(json_report, FLAG_ERR_REPORT_BUFFER)) {
-        goto err;
-    }
-
-    uint8_t sig[64] = {0};
-    uint8_t pubkey[33] = {0};
-    commander_clear_report();
-    commander_fill_report_len("testing", val, DBB_OK,
-                              COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(FLAG_ERR_REPORT_BUFFER));
-    commander_fill_signature_array(sig, pubkey);
-    commander_fill_report("sign", json_array, DBB_OK);
-    if (!strstr(json_report, FLAG_ERR_REPORT_BUFFER)) {
-        goto err;
-    }
-
-    return 0;
-err:
-    return 1;
 }
 
 
@@ -998,7 +992,7 @@ static int commander_append_pin(void)
         uint8_t pin_b[2];
         char pin_c[5];
         if (random_bytes(pin_b, 2, 0) == DBB_ERROR) {
-            commander_fill_report("random", FLAG_ERR_ATAES, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
         }
         sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
@@ -1007,7 +1001,7 @@ static int commander_append_pin(void)
         commander_process_password(pin_c, 4, PASSWORD_2FA);
 
         // Append PIN to echo
-        commander_fill_report(CMD_STR[CMD_pin_], pin_c, DBB_OK);
+        commander_fill_report(cmd_str(CMD_pin), pin_c, DBB_OK);
     }
     return DBB_OK;
 }
@@ -1015,11 +1009,11 @@ static int commander_append_pin(void)
 
 static int commander_echo_command(yajl_val json_node)
 {
-    const char *type_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_type_], NULL };
-    const char *meta_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_meta_], NULL };
-    const char *change_keypath_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_changekeypath_], NULL };
-    const char *check_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_checkpub_], NULL };
-    const char *data_path[] = { CMD_STR[CMD_sign_], CMD_STR[CMD_data_], NULL };
+    const char *type_path[] = { cmd_str(CMD_sign), cmd_str(CMD_type), NULL };
+    const char *meta_path[] = { cmd_str(CMD_sign), cmd_str(CMD_meta), NULL };
+    const char *change_keypath_path[] = { cmd_str(CMD_sign), cmd_str(CMD_changekeypath), NULL };
+    const char *check_path[] = { cmd_str(CMD_sign), cmd_str(CMD_checkpub), NULL };
+    const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
 
     const char *type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
     const char *meta = YAJL_GET_STRING(yajl_tree_get(json_node, meta_path, yajl_t_string));
@@ -1028,15 +1022,12 @@ static int commander_echo_command(yajl_val json_node)
     yajl_val check = yajl_tree_get(json_node, check_path, yajl_t_array);
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_any);
 
-
-
     if (!type) {
-        commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
-
-    if (!strncmp(type, ATTR_STR[ATTR_meta_], strlens(ATTR_STR[ATTR_meta_]))) {
+    if (!strncmp(type, attr_str(ATTR_meta), strlens(attr_str(ATTR_meta)))) {
         // Type: meta
 
         if (!memcmp(previous_command, new_command, COMMANDER_REPORT_SIZE)) {
@@ -1047,18 +1038,18 @@ static int commander_echo_command(yajl_val json_node)
         commander_clear_report();
 
         if (meta) {
-            commander_fill_report(CMD_STR[CMD_meta_], meta, DBB_OK);
+            commander_fill_report(cmd_str(CMD_meta), meta, DBB_OK);
         }
 
         if (!YAJL_IS_ARRAY(data)) {
             commander_clear_report();
-            commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
             return DBB_ERROR;
         } else {
-            memset(json_array, 0, sizeof(json_array));
+            memset(json_array, 0, COMMANDER_ARRAY_MAX);
             for (size_t i = 0; i < data->u.array.len; i++) {
-                const char *keypath_path[] = { CMD_STR[CMD_keypath_], NULL };
-                const char *hash_path[] = { CMD_STR[CMD_hash_], NULL };
+                const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+                const char *hash_path[] = { cmd_str(CMD_hash), NULL };
 
                 yajl_val obj = data->u.array.values[i];
                 const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
@@ -1066,25 +1057,25 @@ static int commander_echo_command(yajl_val json_node)
 
                 if (!hash || !keypath) {
                     commander_clear_report();
-                    commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
-                    memset(json_array, 0, sizeof(json_array));
+                    commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
+                    memset(json_array, 0, COMMANDER_ARRAY_MAX);
                     return DBB_ERROR;
                 }
 
-                const char *key[] = {CMD_STR[CMD_hash_], CMD_STR[CMD_keypath_], 0};
+                const char *key[] = {cmd_str(CMD_hash), cmd_str(CMD_keypath), 0};
                 const char *value[] = {hash, keypath, 0};
                 int t[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
-                commander_fill_json_array(key, value, t, CMD_data_);
+                commander_fill_json_array(key, value, t, CMD_data);
             }
-            commander_fill_report(CMD_STR[CMD_data_], json_array, DBB_OK);
+            commander_fill_report(cmd_str(CMD_data), json_array, DBB_JSON_ARRAY);
         }
 
         if (check) {
             int ret;
-            memset(json_array, 0, sizeof(json_array));
+            memset(json_array, 0, COMMANDER_ARRAY_MAX);
             for (size_t i = 0; i < check->u.array.len; i++) {
-                const char *keypath_path[] = { CMD_STR[CMD_keypath_], NULL };
-                const char *address_path[] = { CMD_STR[CMD_address_], NULL };
+                const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+                const char *address_path[] = { cmd_str(CMD_address), NULL };
 
                 yajl_val obj = check->u.array.values[i];
                 const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
@@ -1092,55 +1083,55 @@ static int commander_echo_command(yajl_val json_node)
 
                 if (!address || !keypath) {
                     commander_clear_report();
-                    commander_fill_report(CMD_STR[CMD_checkpub_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
+                    commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
                     return DBB_ERROR;
                 }
 
-                ret = wallet_check_pubkey(address, keypath, strlens(keypath));
+                ret = wallet_check_pubkey(address, keypath);
                 const char *status;
                 if (ret == DBB_KEY_PRESENT) {
-                    status = "true";
+                    status = attr_str(ATTR_true);
                 } else if (ret == DBB_KEY_ABSENT) {
-                    status = "false";
+                    status = attr_str(ATTR_false);
                 } else {
                     return DBB_ERROR;
                 }
 
-                const char *key[] = {CMD_STR[CMD_address_], CMD_STR[CMD_present_], 0};
+                const char *key[] = {cmd_str(CMD_address), cmd_str(CMD_present), 0};
                 const char *value[] = {address, status, 0};
                 int t[] = {DBB_JSON_STRING, DBB_JSON_BOOL, DBB_JSON_NONE};
-                commander_fill_json_array(key, value, t, CMD_checkpub_);
+                commander_fill_json_array(key, value, t, CMD_checkpub);
             }
-            commander_fill_report(CMD_STR[CMD_checkpub_], json_array, DBB_OK);
+            commander_fill_report(cmd_str(CMD_checkpub), json_array, DBB_JSON_ARRAY);
         }
 
-        memcpy(json_array, json_report, COMMANDER_REPORT_SIZE);
+        snprintf(json_array, COMMANDER_ARRAY_MAX, "%s", json_report);
         memset(json_report, 0, COMMANDER_REPORT_SIZE);
-        commander_fill_report(CMD_STR[CMD_sign_], json_array, DBB_OK);
+        commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
 
 
-    } else if (!strncmp(type, ATTR_STR[ATTR_transaction_],
-                        strlens(ATTR_STR[ATTR_transaction_]))) {
+    } else if (!strncmp(type, attr_str(ATTR_transaction),
+                        strlens(attr_str(ATTR_transaction)))) {
         // Type: transaction
 
         const char *data_str = YAJL_GET_STRING(data);
 
         if (!data_str) {
-            commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
             return DBB_ERROR;
         }
 
         char outputs[strlens(data_str)];
         if (wallet_get_outputs(data_str, strlens(data_str), outputs,
                                sizeof(outputs)) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_DESERIAL);
             return DBB_ERROR;
         }
 
         // Deserialize and check if a change address is present (when more than one output is given).
-        memset(json_array, 0, sizeof(json_array));
-        if (wallet_deserialize_output(outputs, change_keypath,
-                                      strlens(change_keypath)) != DBB_OK) {
-            commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_DESERIALIZE, DBB_ERROR);
+        memset(json_array, 0, COMMANDER_ARRAY_MAX);
+        if (wallet_deserialize_output(outputs, change_keypath) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_DESERIAL);
             return DBB_ERROR;
         }
 
@@ -1151,10 +1142,10 @@ static int commander_echo_command(yajl_val json_node)
         memcpy(previous_command, outputs, strlens(outputs));
 
         commander_clear_report();
-        commander_fill_report(CMD_STR[CMD_verify_output_], json_array, DBB_OK);
+        commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
 
 
-    } else if (!strncmp(type, ATTR_STR[ATTR_hash_], strlens(ATTR_STR[ATTR_hash_]))) {
+    } else if (!strncmp(type, attr_str(ATTR_hash), strlens(attr_str(ATTR_hash)))) {
         // Type: hash
 
         if (!memcmp(previous_command, new_command, COMMANDER_REPORT_SIZE)) {
@@ -1169,7 +1160,7 @@ static int commander_echo_command(yajl_val json_node)
 
 
     } else {
-        commander_fill_report(CMD_STR[CMD_sign_], FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
 
@@ -1186,9 +1177,9 @@ static int commander_echo_command(yajl_val json_node)
                                          PASSWORD_VERIFY);
     commander_clear_report();
     if (encoded_report) {
-        commander_fill_report_len("echo", encoded_report, DBB_OK, encrypt_len);
+        commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
     } else {
-        commander_fill_report("echo", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_echo), NULL, DBB_ERR_MEM_ENCRYPT);
     }
     free(encoded_report);
 
@@ -1198,7 +1189,7 @@ static int commander_echo_command(yajl_val json_node)
 
 static int commander_touch_button(int found_cmd, yajl_val json_node)
 {
-    if (found_cmd == CMD_sign_) {
+    if (found_cmd == CMD_sign) {
         int c = commander_echo_command(json_node);
         if (c == DBB_VERIFY_SAME) {
             int t;
@@ -1220,9 +1211,9 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
     // Reset if not sign command
     memset(previous_command, 0, COMMANDER_REPORT_SIZE);
 
-    if (found_cmd == CMD_seed_ && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
+    if (found_cmd == CMD_seed && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
         return DBB_TOUCHED;
-    } else if (found_cmd < CMD_require_touch_) {
+    } else if (found_cmd < CMD_REQUIRE_TOUCH) {
         return (touch_button_press(0));
 
     } else {
@@ -1244,7 +1235,7 @@ static void commander_parse(char *command)
     found = 0;
     yajl_val value, json_node = yajl_tree_parse(command, NULL, 0);
     for (cmd = 0; cmd < CMD_NUM; cmd++) {
-        const char *path[] = { CMD_STR[cmd], (const char *) 0 };
+        const char *path[] = { cmd_str(cmd), (const char *) 0 };
         value = yajl_tree_get(json_node, path, yajl_t_any);
         if (value) {
             found++;
@@ -1254,13 +1245,12 @@ static void commander_parse(char *command)
 
     // Process commands
     if (!found) {
-        commander_fill_report("input", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_INVALID_CMD);
     } else if (json_node->u.object.len > 1) {
-        commander_fill_report("input", FLAG_ERR_MULTIPLE_CMD, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_MULT_CMD);
     } else {
         memory_access_err_count(DBB_ACCESS_INITIALIZE);
         t = commander_touch_button(found_cmd, json_node);
-
 
         if (t == DBB_VERIFY_ECHO) {
             goto exit;
@@ -1272,21 +1262,21 @@ static void commander_parse(char *command)
                 err++;
             }
         } else {
-            // error or not touched
+            // Error or not touched
             err++;
         }
 
-        if (found_cmd == CMD_sign_ && !memory_read_unlocked() && !err) {
+        if (found_cmd == CMD_sign && !memory_read_unlocked() && !err) {
             encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                                  strlens(json_report),
                                                  &encrypt_len,
                                                  PASSWORD_2FA);
             commander_clear_report();
             if (encoded_report) {
-                commander_fill_report_len("2FA", encoded_report, DBB_OK, encrypt_len);
+                commander_fill_report(cmd_str(CMD_2FA), encoded_report, DBB_OK);
                 free(encoded_report);
             } else {
-                commander_fill_report("2FA", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+                commander_fill_report(cmd_str(CMD_2FA), NULL, DBB_ERR_MEM_ENCRYPT);
             }
         }
     }
@@ -1297,10 +1287,10 @@ static void commander_parse(char *command)
                                          PASSWORD_STAND);
     commander_clear_report();
     if (encoded_report) {
-        commander_fill_report_len("ciphertext", encoded_report, DBB_OK, encrypt_len);
+        commander_fill_report(cmd_str(CMD_ciphertext), encoded_report, DBB_OK);
         free(encoded_report);
     } else {
-        commander_fill_report("output", FLAG_ERR_ENCRYPT_MEM, DBB_ERROR);
+        commander_fill_report(cmd_str(CMD_ciphertext), NULL, DBB_ERR_MEM_ENCRYPT);
     }
 
 exit:
@@ -1316,7 +1306,6 @@ static char *commander_decrypt(const char *encrypted_command)
     uint16_t err_count = 0, err_iter = 0;
     size_t json_object_len = 0;
 
-
     command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                   strlens(encrypted_command),
                                   &command_len,
@@ -1328,10 +1317,10 @@ static char *commander_decrypt(const char *encrypted_command)
     if (command == NULL) {
         char msg[256];
         err++;
+        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_DECRYPT),
+                 COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
+        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_DECRYPT);
         err_iter = memory_access_err_count(DBB_ACCESS_ITERATE);
-        snprintf(msg, sizeof(msg), "%s %i %s", FLAG_ERR_DECRYPT,
-                 COMMANDER_MAX_ATTEMPTS - err_iter, FLAG_ERR_RESET_WARNING);
-        commander_fill_report("input", msg, DBB_ERROR);
     } else {
         yajl_val json_node = yajl_tree_parse(command, NULL, 0);
         if (json_node && YAJL_IS_OBJECT(json_node)) {
@@ -1343,10 +1332,10 @@ static char *commander_decrypt(const char *encrypted_command)
     if (!json_object_len && err == 0) {
         char msg[256];
         err++;
+        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_JSON_PARSE),
+                 COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
+        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_JSON_PARSE);
         err_iter = memory_access_err_count(DBB_ACCESS_ITERATE);
-        snprintf(msg, sizeof(msg), "%s %s %i %s", FLAG_ERR_JSON_PARSE, FLAG_ERR_JSON_BRACKET,
-                 COMMANDER_MAX_ATTEMPTS - err_iter, FLAG_ERR_RESET_WARNING);
-        commander_fill_report("input", msg, DBB_ERROR);
     }
 
     if (err_iter - err_count == 0 && err == 0) {
@@ -1366,63 +1355,64 @@ static char *commander_decrypt(const char *encrypted_command)
 
 static int commander_check_init(const char *encrypted_command)
 {
-    int ret;
-
     if (!encrypted_command) {
-        commander_fill_report("input", FLAG_ERR_NO_INPUT " "
-                              FLAG_ERR_RESET_WARNING, DBB_ERROR);
-        memory_access_err_count(DBB_ACCESS_ITERATE);
-        ret = DBB_ERROR;
-        goto exit;
+        char msg[256];
+        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
+                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
+                 flag_msg(DBB_WARN_RESET));
+        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        return DBB_ERROR;
     }
 
     if (!strlens(encrypted_command)) {
-        commander_fill_report("input", FLAG_ERR_NO_INPUT " "
-                              FLAG_ERR_RESET_WARNING, DBB_ERROR);
-        memory_access_err_count(DBB_ACCESS_ITERATE);
-        ret = DBB_ERROR;
-        goto exit;
+        char msg[256];
+        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
+                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
+                 flag_msg(DBB_WARN_RESET));
+        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        return DBB_ERROR;
     }
 
-    yajl_val json_node = yajl_tree_parse(encrypted_command, NULL, 0);
-
-    // In case of a forgotten password, allow reset from an unencrypted command.
-    if (json_node && YAJL_IS_OBJECT(json_node)) {
-        const char *path[] = { CMD_STR[CMD_reset_], NULL };
-        if (yajl_tree_get(json_node, path, yajl_t_string)) {
-            commander_process_reset(json_node);
-            ret = DBB_RESET;
-            goto exit_free;
-        }
-    }
-
-    // Force setting a password for encryption before processing command.
-    if (!memory_read_erased()) {
-        ret = DBB_OK;
-        goto exit_free;
-    }
-
-    ret = DBB_ERROR;
-    if (json_node && YAJL_IS_OBJECT(json_node)) {
-        const char *path[] = { CMD_STR[CMD_password_], NULL };
-        const char *pw = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
-        if (pw) {
-            if (commander_process_password(pw, strlens(pw), PASSWORD_STAND) == DBB_OK) {
-                memory_write_erased(0);
-                commander_fill_report(CMD_STR[CMD_password_], "success", DBB_OK);
-            } else {
-                commander_fill_report("input", FLAG_ERR_INVALID_CMD, DBB_ERROR);
+    if (encrypted_command[0] == '{') {
+        yajl_val json_node = yajl_tree_parse(encrypted_command, NULL, 0);
+        if (json_node && YAJL_IS_OBJECT(json_node)) {
+            const char *path[] = { cmd_str(CMD_reset), NULL };
+            if (yajl_tree_get(json_node, path, yajl_t_string)) {
+                commander_process_reset(json_node);
+                yajl_tree_free(json_node);
+                return DBB_RESET;
             }
-            goto exit_free;
         }
+        yajl_tree_free(json_node);
     }
-    commander_fill_report("input", FLAG_ERR_NO_PASSWORD, DBB_ERROR);
 
-exit_free:
-    yajl_tree_free(json_node);
-exit:
-    return ret;
+    // Force setting a password before processing any other command.
+    if (!memory_read_erased()) {
+        return DBB_OK;
+    }
 
+    if (encrypted_command[0] == '{') {
+        yajl_val json_node = yajl_tree_parse(encrypted_command, NULL, 0);
+        if (json_node && YAJL_IS_OBJECT(json_node)) {
+            const char *path[] = { cmd_str(CMD_password), NULL };
+            const char *pw = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+            if (pw) {
+                int ret = commander_process_password(pw, strlens(pw), PASSWORD_STAND);
+                if (ret == DBB_OK) {
+                    memory_write_erased(0);
+                    commander_fill_report(cmd_str(CMD_password), attr_str(ATTR_success), DBB_OK);
+                } else {
+                    commander_fill_report(cmd_str(CMD_password), NULL, ret);
+                }
+                yajl_tree_free(json_node);
+                return DBB_ERROR;
+            }
+        }
+        yajl_tree_free(json_node);
+    }
+
+    commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_NO_PASSWORD);
+    return DBB_ERROR;
 }
 
 

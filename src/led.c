@@ -54,16 +54,6 @@ int ioport_get_pin_level(int led)
 #endif
 
 
-void led_off(void)
-{
-    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
-}
-
-void led_on(void)
-{
-    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);
-}
-
 void led_toggle(void)
 {
     ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));

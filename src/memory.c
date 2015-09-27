@@ -61,7 +61,7 @@ __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0
 
 
 // One-time setup on factory install
-void memory_setup(void)
+int memory_setup(void)
 {
     if (memory_read_setup()) {
         memory_erase();
@@ -70,12 +70,15 @@ void memory_setup(void)
         const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
         // Return packet [Count(1) || Return Code (1) || CRC (2)]
         uint8_t ataes_ret[4] = {0};
-        aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4);
+        if (aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
+            return DBB_ERROR;
+        }
 #endif
         memory_write_setup(0x00);
     } else {
         memory_mempass();
     }
+    return DBB_OK;
 }
 
 
@@ -120,7 +123,9 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
 {
 #ifndef TESTING
     // read current memory
-    aes_eeprom(len, addr, read_b, NULL);
+    if (aes_eeprom(len, addr, read_b, NULL) != DBB_OK) {
+        return DBB_ERROR;
+    }
 #endif
     if (write_b) {
 #ifndef TESTING
@@ -130,7 +135,9 @@ static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t 
                 return DBB_OK;
             }
         }
-        aes_eeprom(len, addr, read_b, write_b);
+        if (aes_eeprom(len, addr, read_b, write_b) != DBB_OK) {
+            return DBB_ERROR;
+        }
         if (read_b) {
             if (!memcmp(write_b, read_b, len)) {
                 return DBB_OK;
@@ -164,7 +171,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         if (!enc) {
             goto err;
         }
-        memcpy(enc_r, enc, enc_len);
+        snprintf(enc_r, sizeof(enc_r), "%.*s", enc_len, enc);
         free(enc);
     }
 
@@ -175,7 +182,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         if (!enc) {
             goto err;
         }
-        memcpy(enc_w, enc, enc_len);
+        snprintf(enc_w, sizeof(enc_w), "%.*s", enc_len, enc);
         free(enc);
         if (memory_eeprom((uint8_t *)enc_w, (uint8_t *)enc_r, addr,
                           MEM_PAGE_LEN) == DBB_ERROR) {
@@ -269,7 +276,7 @@ uint8_t *memory_name(const char *name)
 {
     uint8_t name_b[MEM_PAGE_LEN] = {0};
     if (strlens(name)) {
-        memcpy(name_b, name, (strlens(name) > MEM_PAGE_LEN) ? MEM_PAGE_LEN : strlens(name));
+        snprintf((char *)name_b, MEM_PAGE_LEN, "%s", name);
         memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
     } else {
         memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
@@ -308,24 +315,12 @@ int memory_aeskey_is_erased(PASSWORD_ID id)
 
 int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
-    int ret = 0;
+    int ret = DBB_ERROR;
     uint8_t password_b[MEM_PAGE_LEN];
     memset(password_b, 0, MEM_PAGE_LEN);
 
-
-    if (!password) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, DBB_ERROR);
-        return DBB_ERROR;
-    }
-
-    if (len < PASSWORD_LEN_MIN) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, DBB_ERROR);
-        return DBB_ERROR;
-    }
-
-    if (strlens(password) < PASSWORD_LEN_MIN) {
-        commander_fill_report("password", FLAG_ERR_PASSWORD_LEN, DBB_ERROR);
-        return DBB_ERROR;
+    if (len < PASSWORD_LEN_MIN || strlens(password) < PASSWORD_LEN_MIN) {
+        return DBB_ERR_IO_PASSWORD_LEN;
     }
 
     sha256_Raw((const uint8_t *)password, len, password_b);
@@ -349,18 +344,16 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
             break;
-        default:
-            memset(password_b, 0, MEM_PAGE_LEN);
-            commander_fill_report("password", FLAG_ERR_PASSWORD_ID, DBB_ERROR);
-            return DBB_ERROR;
+        default: {
+            /* never reached */
+        }
     }
 
     memset(password_b, 0, MEM_PAGE_LEN);
     if (ret == DBB_OK) {
         return DBB_OK;
     } else {
-        commander_fill_report("password", FLAG_ERR_ATAES, DBB_ERROR);
-        return DBB_ERROR;
+        return DBB_ERR_MEM_ATAES;
     }
 }
 

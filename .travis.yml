@@ -12,16 +12,19 @@ matrix:
     fast_finish:
         - true
 
-before_install:
-    - if [ $LINUX ]; then
+install:
+    - if [ $TRAVIS_OS_NAME == linux ]; then
         tar xfv contrib/astyle_2.05.1_linux.tar.gz;
         cd astyle/build/gcc && make;
         export PATH=$PATH:$PWD/bin/;
       fi;
+    - if [ $TRAVIS_OS_NAME == osx ]; then brew install gnupg; fi
 
 before_script:
     - cd $TRAVIS_BUILD_DIR
-    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --exclude=src/yajl --exclude=tests/windows/hidapi --dry-run -Q | grep "Formatted" ; then exit 1 ; fi
+    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --exclude=src/yajl --exclude=tests/windows/hidapi --dry-run -Q | grep "Formatted" ; then exit 1 ; fi;
+    - gpg --import contrib/contributors_gpg_keys/*
+    - if git log --pretty="format:%H   %aN   %s   %G?" f0a012e224fedac87b0393a161d4af1473fea74a..HEAD^1 | (grep -v "${t} G$" || grep -v "${t} U$"); then exit 1 ; fi;
 
 script: 
     - mkdir build && cd build

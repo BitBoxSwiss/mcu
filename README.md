@@ -46,7 +46,16 @@ Basic build steps:
 Please do *NOT* use an editor that automatically reformats.
 
 Use the coding style set by astyle (http://astyle.sourceforge.net/) with the following parameteres:
-> astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=src/yajl --exclude=tests/windows/hidapi
+
+    astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=src/yajl --exclude=src/secp256k1 --exclude=tests/windows/hidapi
+
+All commits have to be signed with PGP.
+Set Git to auto-sign your commits:
+
+    git config --global user.signingkey YourGPGKeyID
+    git config --global commit.gpgsign true
+
+The PGP public keys of the contributors can be found in contrib/contributors_gpg_keys. Please add your PGP key with your first pull request.
 
 
 #### astyle Git hook

@@ -63,7 +63,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
     uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
-    int ret;
+    uint8_t *entropy, i, ret;
     uint32_t cnt = 0;
 
     while (len > cnt) {
@@ -81,9 +81,15 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         cnt += 16;
     }
 
-    // add ataes independent entropy
-    uint8_t *entropy = memory_read_aeskey(PASSWORD_MEMORY);
-    for (uint32_t i = 0; i < len; i++) {
+    // add ataes independent entropy from factory install
+    entropy = memory_read_aeskey(PASSWORD_MEMORY);
+    for (i = 0; i < len; i++) {
+        buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
+    }
+
+    // add ataes independent entropy from user
+    entropy = memory_read_aeskey(PASSWORD_STAND);
+    for (i = 0; i < len; i++) {
         buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
     }
 

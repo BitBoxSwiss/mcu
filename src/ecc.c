@@ -37,7 +37,7 @@
 #include "secp256k1/include/secp256k1.h"
 
 
-static secp256k1_context_t *ctx = NULL;
+static secp256k1_context *ctx = NULL;
 
 
 void ecc_context_init(void)
@@ -58,7 +58,7 @@ void ecc_context_destroy(void)
 
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
 {
-    secp256k1_ecdsa_signature_t signature;
+    secp256k1_ecdsa_signature signature;
 
     if (!ctx) {
         ecc_context_init();
@@ -102,8 +102,8 @@ static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
 {
 
     int public_key_len;
-    secp256k1_ecdsa_signature_t signature;
-    secp256k1_pubkey_t pubkey;
+    secp256k1_ecdsa_signature signature;
+    secp256k1_pubkey pubkey;
 
     if (!ctx) {
         ecc_context_init();
@@ -163,9 +163,9 @@ int ecc_isValid(uint8_t *private_key)
 
 
 static void ecc_get_pubkey(const uint8_t *private_key, uint8_t *public_key,
-                           int public_key_len, int compressed)
+                           size_t public_key_len, int compressed)
 {
-    secp256k1_pubkey_t pubkey;
+    secp256k1_pubkey pubkey;
 
     memset(public_key, 0, public_key_len);
 

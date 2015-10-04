@@ -680,14 +680,14 @@ static int commander_process_ecdh(int cmd, uint8_t *pair_pubkey, uint8_t ledcode
         led_code(rand_led, sizeof(rand_led));
 
         // Xor with the ECDH secret
-        for (i = 0; i < sizeof(ecdh_secret); i++) {
+        for (i = 0; i < 32; i++) {
             ecdh_secret[i] ^= rand_led[i % sizeof(rand_led)];
         }
     }
 
     // Save to eeprom
-    ret = commander_process_password(utils_uint8_to_hex(ecdh_secret, sizeof(ecdh_secret)),
-                                     sizeof(ecdh_secret) * 2, PASSWORD_VERIFY);
+    ret = commander_process_password(utils_uint8_to_hex(ecdh_secret, 32), 64,
+                                     PASSWORD_VERIFY);
     if (ret != DBB_OK) {
         commander_fill_report(cmd_str(cmd), NULL, ret);
         return ret;
@@ -769,7 +769,7 @@ static void commander_process_verifypass(yajl_val json_node)
             char msg[256];
             snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", cmd_str(CMD_ecdh),
                      utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)));
-            commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_OK);
+            commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_JSON_ARRAY);
         }
         memset(ecdh_secret, 0, sizeof(ecdh_secret));
         return;

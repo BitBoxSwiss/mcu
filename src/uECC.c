@@ -546,12 +546,10 @@ static void vli_modInv(uECC_word_t *p_result, uECC_word_t *p_input, uECC_word_t 
 /* ------ Point operations ------ */
 
 /* Returns 1 if p_point is the point at infinity, 0 otherwise. */
-/*
 static cmpresult_t EccPoint_isZero(EccPoint *p_point)
 {
     return (vli_isZero(p_point->x) && vli_isZero(p_point->y));
 }
-*/
 
 /* Point multiplication algorithm using Montgomery's ladder with co-Z coordinates.
 From http://eprint.iacr.org/2011/338.pdf
@@ -790,8 +788,8 @@ static void uECC_compress(const uint8_t p_publicKey[uECC_BYTES * 2],
     p_compressed[0] = 2 + (p_publicKey[uECC_BYTES * 2 - 1] & 0x01);
 }
 
-static void uECC_decompress(const uint8_t p_compressed[uECC_BYTES + 1],
-                            uint8_t p_publicKey[uECC_BYTES * 2])
+void uECC_decompress(const uint8_t p_compressed[uECC_BYTES + 1],
+                     uint8_t p_publicKey[uECC_BYTES * 2])
 {
     EccPoint l_point;
     vli_bytesToNative(l_point.x, p_compressed + 1);
@@ -866,6 +864,59 @@ static bitcount_t smax(bitcount_t a, bitcount_t b)
 {
     return (a > b ? a : b);
 }
+
+
+/* Compute a shared secret given your secret key and someone's public key.
+   Returns 0 on success. */
+int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
+                       const uint8_t private_key[uECC_BYTES],
+                       uint8_t secret[uECC_BYTES])
+{
+    EccPoint public;
+    EccPoint product;
+    uECC_word_t private[uECC_WORDS];
+    uECC_word_t tmp[uECC_WORDS];
+    uECC_word_t *p2[2] = {private, tmp};
+    uECC_word_t random[uECC_WORDS];
+    uECC_word_t *initial_Z = 0;
+    uECC_word_t tries;
+    uECC_word_t carry;
+    uint8_t secret_point[uECC_BYTES * 2];
+    uint8_t secret_compressed[uECC_BYTES + 1];
+
+    // Try to get a random initial Z value to improve protection against side-channel
+    // attacks. If the RNG fails every time (eg it was not defined), we continue so that
+    // uECC_shared_secret() can still work without an RNG defined.
+    for (tries = 0; tries < MAX_TRIES; ++tries) {
+        random_bytes((uint8_t *)random, sizeof(random), 0);
+        if ((uint8_t *)random  && !vli_isZero(random)) {
+            initial_Z = random;
+            break;
+        }
+    }
+
+    vli_bytesToNative(private, private_key);
+    vli_bytesToNative(public.x, public_key);
+    vli_bytesToNative(public.y, public_key + uECC_BYTES);
+
+    // Regularize the bitcount for the private key so that attackers cannot use a side channel
+    // attack to learn the number of leading zeros.
+    carry = vli_add(private, private, curve_n);
+    vli_add(tmp, private, curve_n);
+    EccPoint_mult(&product, &public, p2[!carry], initial_Z, (uECC_BYTES * 8) + 1);
+
+    // Return the hash of the compressed point as the shared secret
+    vli_nativeToBytes(secret_point, product.x);
+    vli_nativeToBytes(secret_point + uECC_BYTES, product.y);
+    uECC_compress(secret_point, secret_compressed);
+
+    sha256_Raw(secret_compressed, uECC_BYTES + 1, secret);
+
+    return EccPoint_isZero(&product);
+}
+
+
+
 
 /* Performs sha256 hash on msg before signing.
    Returns 0 on success. */
@@ -1201,4 +1252,3 @@ int uECC_generate_k_rfc6979_test(uint8_t *secret, const uint8_t *priv_key,
     // we generated 10000 numbers, none of them is good -> fail
     return 1;
 }
-

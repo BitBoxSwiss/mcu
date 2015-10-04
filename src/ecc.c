@@ -295,12 +295,13 @@ void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 }
 
 
-int ecc_ecdh(const uint8_t *pubkey, uint8_t *ecdh_secret)
+int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+             uint8_t *ecdh_secret)
 {
-    (void)pubkey;
-    (void)ecdh_secret;
-
-    return 1; // error - not implemented for uECC
+    uint8_t public_key[64];
+    uECC_decompress(pair_pubkey, public_key);
+    return uECC_shared_secret(public_key, rand_privkey, ecdh_secret);
 }
+
 
 #endif

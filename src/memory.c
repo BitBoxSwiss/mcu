@@ -31,6 +31,7 @@
 
 #include "commander.h"
 #include "memory.h"
+#include "random.h"
 #include "utils.h"
 #include "flags.h"
 #include "sha2.h"
@@ -58,6 +59,52 @@ __extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN - 1] = 0
 
 __extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
+
+
+static void memory_mempass(void)
+{
+    uint8_t mempass[88] = {0};
+#ifndef TESTING
+    // Encrypt data saved to memory using an AES key obfuscated by the
+    // compilation time and date, which is used to 'randomly' read bytes
+    // (i.e. the AES key) from the MCU code in flash memory.
+    uint8_t *mp = mempass;
+    int r[8] = {0};
+    char c[3] = {0};
+    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
+    sscanf(__DATE__, "%c%c%c %d ", &c[0], &c[1], &c[2], &r[3]);
+    r[7] = __LINE__ % 1028;
+    r[4] = c[0];
+    r[5] = c[1];
+    r[6] = c[2];
+    memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
+    memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
+    memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
+    memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
+    memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
+    memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
+    memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
+    memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
+    memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
+    memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
+    memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
+#endif
+    memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
+                        PASSWORD_MEMORY);
+    memset(mempass, 0, sizeof(mempass));
+    utils_clear_buffers();
+}
+
+
+static void memory_create_verifypass(void)
+{
+    uint8_t number[16] = {0};
+    random_bytes(number, sizeof(number), 0);
+    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
+                        PASSWORD_VERIFY);
+    memset(number, 0, sizeof(number));
+    utils_clear_buffers();
+}
 
 
 // One-time setup on factory install
@@ -92,6 +139,7 @@ void memory_erase_seed(void)
 void memory_erase(void)
 {
     memory_mempass();
+    memory_create_verifypass();
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_seed();
@@ -99,7 +147,6 @@ void memory_erase(void)
     memory_write_erased(DEFAULT_erased_);
     memory_write_unlocked(DEFAULT_unlocked_);
     memory_access_err_count(DEFAULT_access_err_);
-    commander_create_verifypass();
 }
 
 
@@ -234,41 +281,6 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
 err:
     utils_clear_buffers();
     return DBB_ERROR;
-}
-
-
-void memory_mempass(void)
-{
-    uint8_t mempass[88] = {0};
-#ifndef TESTING
-    // Encrypt data saved to memory using an AES key obfuscated by the
-    // compilation time and date, which is used to 'randomly' read bytes
-    // (i.e. the AES key) from the MCU code in flash memory.
-    uint8_t *mp = mempass;
-    int r[8] = {0};
-    char c[3] = {0};
-    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
-    sscanf(__DATE__, "%c%c%c %d ", &c[0], &c[1], &c[2], &r[3]);
-    r[7] = __LINE__ % 1028;
-    r[4] = c[0];
-    r[5] = c[1];
-    r[6] = c[2];
-    memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
-    memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
-    memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
-    memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
-    memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
-    memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
-    memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
-    memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
-    memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
-    memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
-    memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
-#endif
-    memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
-                        PASSWORD_MEMORY);
-    memset(mempass, 0, sizeof(mempass));
-    utils_clear_buffers();
 }
 
 

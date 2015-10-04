@@ -66,7 +66,6 @@ int memory_setup(void);
 void memory_erase(void);
 void memory_erase_seed(void);
 void memory_clear_variables(void);
-void memory_mempass(void);
 
 int memory_aeskey_is_erased(PASSWORD_ID id);
 int memory_write_aeskey(const char *password, int len, PASSWORD_ID id);

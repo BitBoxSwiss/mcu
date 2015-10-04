@@ -40,6 +40,7 @@
 
 
 #define USE_ECMULT_STATIC_PRECOMPUTATION 1
+#define ENABLE_MODULE_ECDH 1
 #define USE_BASIC_CONFIG 1
 
 #include "secp256k1/src/basic-config.h"

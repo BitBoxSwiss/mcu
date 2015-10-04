@@ -35,6 +35,7 @@
 #include "ecc.h"
 #ifndef ECC_USE_UECC_LIB
 #include "secp256k1/include/secp256k1.h"
+#include "secp256k1/include/secp256k1_ecdh.h"
 
 
 static secp256k1_context *ctx = NULL;
@@ -198,6 +199,31 @@ void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 }
 
 
+int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+             uint8_t *ecdh_secret)
+{
+    secp256k1_pubkey pubkey_secp;
+
+    if (!rand_privkey || !pair_pubkey) {
+        return 1;
+    }
+
+    if (!ctx) {
+        ecc_context_init();
+    }
+
+    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey_secp, pair_pubkey, 33)) {
+        return 1;
+    }
+
+    if (!secp256k1_ecdh(ctx, ecdh_secret, &pubkey_secp, rand_privkey)) {
+        return 1;
+    }
+
+    return 0; // success
+}
+
+
 #else
 
 
@@ -268,5 +294,13 @@ void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
     uECC_get_public_key33(private_key, public_key);
 }
 
+
+int ecc_ecdh(const uint8_t *pubkey, uint8_t *ecdh_secret)
+{
+    (void)pubkey;
+    (void)ecdh_secret;
+
+    return 1; // error - not implemented for uECC
+}
 
 #endif

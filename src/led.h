@@ -29,7 +29,16 @@
 #define _LED_H_
 
 
+#include <stdint.h>
+
+
+#define LED_MAX_CODE_BLINKS 4
+
+
+void led_on(void);
+void led_off(void);
 void led_toggle(void);
+void led_code(uint8_t *code, uint8_t len);
 
 
 #endif

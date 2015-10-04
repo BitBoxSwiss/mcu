@@ -32,6 +32,7 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push

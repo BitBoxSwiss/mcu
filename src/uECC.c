@@ -889,7 +889,7 @@ int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
     // uECC_shared_secret() can still work without an RNG defined.
     for (tries = 0; tries < MAX_TRIES; ++tries) {
         random_bytes((uint8_t *)random, sizeof(random), 0);
-        if ((uint8_t *)random  && !vli_isZero(random)) {
+        if (!vli_isZero(random)) {
             initial_Z = random;
             break;
         }

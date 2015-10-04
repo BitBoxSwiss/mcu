@@ -304,16 +304,10 @@ static void commander_process_reset(yajl_val json_node)
     }
 
     if (strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__))) == 0) {
-        if (touch_button_press(0) == DBB_TOUCHED) {
-            delay_ms(100);
-            if (touch_button_press(0) == DBB_TOUCHED) {
-                delay_ms(100);
-                if (touch_button_press(0) == DBB_TOUCHED) {
-                    memory_erase();
-                    commander_clear_report();
-                    commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
-                }
-            }
+        if (touch_button_press(DBB_TOUCH_LONG) == DBB_TOUCHED) {
+            memory_erase();
+            commander_clear_report();
+            commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
         }
         return;
     }
@@ -1193,7 +1187,7 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
         int c = commander_echo_command(json_node);
         if (c == DBB_VERIFY_SAME) {
             int t;
-            t = touch_button_press(1);
+            t = touch_button_press(DBB_TOUCH_LONG);
             if (t != DBB_TOUCHED) {
                 // Clear previous signing information
                 // to force touch for next sign command.
@@ -1212,9 +1206,10 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
     memset(previous_command, 0, COMMANDER_REPORT_SIZE);
 
     if (found_cmd == CMD_seed && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
+        // No touch required if not yet seeded
         return DBB_TOUCHED;
     } else if (found_cmd < CMD_REQUIRE_TOUCH) {
-        return (touch_button_press(0));
+        return (touch_button_press(DBB_TOUCH_LONG));
 
     } else {
         return DBB_TOUCHED;

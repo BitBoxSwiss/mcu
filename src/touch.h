@@ -48,7 +48,7 @@
 
 
 void touch_init(void);
-uint8_t touch_button_press(int long_touch);
+uint8_t touch_button_press(uint8_t touch_type);
 
 
 #endif

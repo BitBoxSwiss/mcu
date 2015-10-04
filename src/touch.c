@@ -65,7 +65,7 @@ void touch_init(void)
 #endif
 
 
-uint8_t touch_button_press(int long_touch)
+uint8_t touch_button_press(uint8_t touch_type)
 {
     int pushed = DBB_NOT_TOUCHED;
     int status = DBB_ERROR;
@@ -74,6 +74,9 @@ uint8_t touch_button_press(int long_touch)
     int16_t touch_sns;
     uint16_t exit_time_ms;
 
+    if (touch_type != DBB_TOUCH_LONG && touch_type != DBB_TOUCH_SHORT) {
+        return DBB_ERROR;
+    }
 
     led_on();
 
@@ -82,7 +85,7 @@ uint8_t touch_button_press(int long_touch)
 
     systick_current_time_ms = 0;
     exit_time_ms = systick_current_time_ms + QTOUCH_TOUCH_TIMEOUT;
-    while (systick_current_time_ms < exit_time_ms || long_touch) {
+    while (systick_current_time_ms < exit_time_ms || touch_type == DBB_TOUCH_LONG) {
         do {
             status_flag = qt_measure_sensors(systick_current_time_ms);
             burst_flag = status_flag & QTLIB_BURST_AGAIN;
@@ -104,11 +107,12 @@ uint8_t touch_button_press(int long_touch)
                 touch_snks = qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL];
                 touch_sns = qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL];
 
-                // If released before exit_time_ms for long_touch, answer is 'reject'
-                if (long_touch && (touch_snks - touch_sns ) < (QTOUCH_TOUCH_THRESH / 2)) {
+                // If released before exit_time_ms for DBB_TOUCH_LONG, answer is 'reject'
+                if (touch_type == DBB_TOUCH_LONG &&
+                        (touch_snks - touch_sns ) < (QTOUCH_TOUCH_THRESH / 2)) {
                     pushed = DBB_ERROR;
                     break;
-                } else if (!long_touch) {
+                } else if (touch_type == DBB_TOUCH_SHORT) {
                     pushed = DBB_TOUCHED;
                     break;
                 } else {

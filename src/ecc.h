@@ -46,6 +46,8 @@ int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_mast
 int ecc_isValid(uint8_t *private_key);
 void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key);
 void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key);
+int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+             uint8_t *ecdh_secret);
 
 
 #endif

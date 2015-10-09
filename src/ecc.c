@@ -35,9 +35,10 @@
 #include "ecc.h"
 #ifndef ECC_USE_UECC_LIB
 #include "secp256k1/include/secp256k1.h"
+#include "secp256k1/include/secp256k1_ecdh.h"
 
 
-static secp256k1_context_t *ctx = NULL;
+static secp256k1_context *ctx = NULL;
 
 
 void ecc_context_init(void)
@@ -58,7 +59,7 @@ void ecc_context_destroy(void)
 
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
 {
-    secp256k1_ecdsa_signature_t signature;
+    secp256k1_ecdsa_signature signature;
 
     if (!ctx) {
         ecc_context_init();
@@ -102,8 +103,8 @@ static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
 {
 
     int public_key_len;
-    secp256k1_ecdsa_signature_t signature;
-    secp256k1_pubkey_t pubkey;
+    secp256k1_ecdsa_signature signature;
+    secp256k1_pubkey pubkey;
 
     if (!ctx) {
         ecc_context_init();
@@ -163,9 +164,9 @@ int ecc_isValid(uint8_t *private_key)
 
 
 static void ecc_get_pubkey(const uint8_t *private_key, uint8_t *public_key,
-                           int public_key_len, int compressed)
+                           size_t public_key_len, int compressed)
 {
-    secp256k1_pubkey_t pubkey;
+    secp256k1_pubkey pubkey;
 
     memset(public_key, 0, public_key_len);
 
@@ -195,6 +196,31 @@ void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key)
 void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 {
     ecc_get_pubkey(private_key, public_key, 33, 1);
+}
+
+
+int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+             uint8_t *ecdh_secret)
+{
+    secp256k1_pubkey pubkey_secp;
+
+    if (!rand_privkey || !pair_pubkey) {
+        return 1;
+    }
+
+    if (!ctx) {
+        ecc_context_init();
+    }
+
+    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey_secp, pair_pubkey, 33)) {
+        return 1;
+    }
+
+    if (!secp256k1_ecdh(ctx, ecdh_secret, &pubkey_secp, rand_privkey)) {
+        return 1;
+    }
+
+    return 0; // success
 }
 
 
@@ -266,6 +292,15 @@ void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key)
 void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 {
     uECC_get_public_key33(private_key, public_key);
+}
+
+
+int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+             uint8_t *ecdh_secret)
+{
+    uint8_t public_key[64];
+    uECC_decompress(pair_pubkey, public_key);
+    return uECC_shared_secret(public_key, rand_privkey, ecdh_secret);
 }
 
 

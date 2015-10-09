@@ -32,6 +32,7 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -40,6 +41,7 @@
 
 
 #define USE_ECMULT_STATIC_PRECOMPUTATION 1
+#define ENABLE_MODULE_ECDH 1
 #define USE_BASIC_CONFIG 1
 
 #include "secp256k1/src/basic-config.h"

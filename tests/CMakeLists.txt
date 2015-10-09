@@ -1,5 +1,6 @@
 include_directories(../src)
 include_directories(../src/secp256k1)
+include_directories(../src/secp256k1/src)
 
 
 #-----------------------------------------------------------------------------

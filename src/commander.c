@@ -39,6 +39,7 @@
 #include "flags.h"
 #include "aes.h"
 #include "led.h"
+#include "ecc.h"
 #ifndef TESTING
 #include "ataes132.h"
 #include "touch.h"
@@ -649,64 +650,132 @@ static int commander_process_password(const char *message, int msg_len, PASSWORD
 }
 
 
-static void commander_process_verifypass(const char *value)
+static int commander_process_ecdh(int cmd, uint8_t *pair_pubkey, uint8_t ledcode,
+                                  uint8_t *out_pubkey, uint8_t *ecdh_secret)
 {
-    int ret;
-    uint8_t number[16];
+    uint8_t rand_privkey[32], rand_led[4], ret, i;
+
+    if (random_bytes(rand_privkey, sizeof(rand_privkey), 0) == DBB_ERROR) {
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
+        return DBB_ERROR;
+    }
+
+    if (ecc_ecdh(pair_pubkey, rand_privkey, ecdh_secret)) {
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_KEY_ECDH);
+        return DBB_ERROR;
+    }
+
+    // Second channel LED blink code to avoid MITM
+    if (ledcode) {
+        if (random_bytes(rand_led, sizeof(rand_led), 0) == DBB_ERROR) {
+            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
+            return DBB_ERROR;
+        }
+
+        for (i = 0; i < sizeof(rand_led); i++) {
+            rand_led[i] %= LED_MAX_CODE_BLINKS;
+            rand_led[i]++;
+        }
+
+        led_code(rand_led, sizeof(rand_led));
+
+        // Xor with the ECDH secret
+        for (i = 0; i < 32; i++) {
+            ecdh_secret[i] ^= rand_led[i % sizeof(rand_led)];
+        }
+    }
+
+    // Save to eeprom
+    ret = commander_process_password(utils_uint8_to_hex(ecdh_secret, 32), 64,
+                                     PASSWORD_VERIFY);
+    if (ret != DBB_OK) {
+        commander_fill_report(cmd_str(cmd), NULL, ret);
+        return ret;
+    }
+
+    ecc_get_public_key33(rand_privkey, out_pubkey);
+    memset(rand_privkey, 0, sizeof(rand_privkey));
+    utils_clear_buffers();
+    return DBB_OK;
+}
+
+
+static void commander_process_verifypass(yajl_val json_node)
+{
+    uint8_t number[32] = {0};
     char *l, text[64 + 1];
+
+    const char *value_path[] = { cmd_str(CMD_verifypass), NULL };
+    const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, value_path, yajl_t_string));
+
+    const char *pair_pubkey_path[] = { cmd_str(CMD_verifypass), cmd_str(CMD_ecdh), NULL };
+    const char *pair_pubkey = YAJL_GET_STRING(yajl_tree_get(json_node, pair_pubkey_path,
+                              yajl_t_string));
 
     if (!memory_read_unlocked()) {
         commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
 
-    if (!strlens(value)) {
-        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
+    if (strlens(value)) {
+        if (strcmp(value, attr_str(ATTR_export)) == 0) {
+            memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
+            utils_clear_buffers();
+            int ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1,
+                               DBB_SD_REPLACE, CMD_verifypass);
+
+            if (ret == DBB_OK) {
+                l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), CMD_verifypass);
+                if (l) {
+                    if (memcmp(text, l, strlens(text))) {
+                        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);
+                    } else {
+                        commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
+                    }
+                    memset(l, 0, strlens(l));
+                }
+            }
+            memset(text, 0, sizeof(text));
+            return;
+        }
+    }
+
+    if (strlens(value)) {
+        if (strcmp(value, attr_str(ATTR_create)) == 0) {
+            if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
+                commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_MEM_ATAES);
+                return;
+            }
+            int ret = commander_process_password(utils_uint8_to_hex(number, sizeof(number)),
+                                                 sizeof(number) * 2, PASSWORD_VERIFY);
+            if (ret != DBB_OK) {
+                commander_fill_report(cmd_str(CMD_verifypass), NULL, ret);
+                return;
+            }
+            commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
+            return;
+        }
+    }
+
+    if (strlens(pair_pubkey)) {
+        if (strlens(pair_pubkey) != 66) {
+            commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_KEY_ECDH_LEN);
+            return;
+        }
+
+        uint8_t out_pubkey[33], ecdh_secret[32];
+        if (commander_process_ecdh(CMD_verifypass, utils_hex_to_uint8(pair_pubkey), 1, out_pubkey,
+                                   ecdh_secret) == DBB_OK) {
+            char msg[256];
+            snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", cmd_str(CMD_ecdh),
+                     utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)));
+            commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_JSON_ARRAY);
+        }
+        memset(ecdh_secret, 0, sizeof(ecdh_secret));
         return;
     }
 
-
-    if (strcmp(value, attr_str(ATTR_create)) == 0) {
-        if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
-            commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_MEM_ATAES);
-            return;
-        }
-        ret = commander_process_password(utils_uint8_to_hex(number, sizeof(number)),
-                                         sizeof(number) * 2, PASSWORD_VERIFY);
-        if (ret != DBB_OK) {
-            commander_fill_report(cmd_str(CMD_verifypass), NULL, ret);
-            return;
-        }
-        commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
-
-    } else if (strcmp(value, attr_str(ATTR_export)) == 0) {
-        memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
-        utils_clear_buffers();
-        ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1,
-                       DBB_SD_REPLACE, CMD_verifypass);
-
-        if (ret == DBB_OK) {
-            l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), CMD_verifypass);
-            if (l) {
-                if (memcmp(text, l, strlens(text))) {
-                    commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);
-                } else {
-                    commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
-                }
-                memset(l, 0, strlens(l));
-            }
-        }
-
-        memset(text, 0, sizeof(text));
-    } else {
-        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
-    }
-}
-
-
-void commander_create_verifypass(void)
-{
-    commander_process_verifypass(attr_str(ATTR_create));
+    commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 
@@ -926,9 +995,7 @@ static int commander_process(int cmd, yajl_val json_node)
         }
 
         case CMD_verifypass: {
-            const char *path[] = { cmd_str(CMD_verifypass), NULL };
-            const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
-            commander_process_verifypass(value);
+            commander_process_verifypass(json_node);
             break;
         }
 

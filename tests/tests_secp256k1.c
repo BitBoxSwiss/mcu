@@ -29,6 +29,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wshadow"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -38,6 +40,7 @@
 
 
 #define USE_ECMULT_STATIC_PRECOMPUTATION 1
+#define ENABLE_MODULE_ECDH 1
 #define USE_BASIC_CONFIG 1
 #define VERIFY 1
 

@@ -700,6 +700,12 @@ static void tests_password(void)
 
     api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
+
+    char ecdh[] =
+        "{\"ecdh\":\"028d3bce812ac027fdea0e4ad98b2549a90bb9aa996396eec6bb1a8ed56e6976b8\"}";
+    api_format_send_cmd(cmd_str(CMD_verifypass), ecdh, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_ecdh));
 }
 
 

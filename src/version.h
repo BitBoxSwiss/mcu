@@ -28,6 +28,6 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-const char *DIGITAL_BITBOX_VERSION = "v1.2.0-10-g11fe104";
+const char *DIGITAL_BITBOX_VERSION = "v1.2.0-19-g3cf2f77";
 
 #endif

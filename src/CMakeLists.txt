@@ -47,6 +47,7 @@ endif()
 
 include_directories(SYSTEM)
 include_directories(secp256k1)
+include_directories(secp256k1/src)
 
 add_library(bitbox
   STATIC

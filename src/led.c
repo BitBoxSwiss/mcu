@@ -31,27 +31,42 @@
 #include <delay.h>
 #include <ioport.h>
 #else
+#include "sham.h"
+
 
 #define LED_0_PIN               0
 #define IOPORT_PIN_LEVEL_LOW    1
 #define IOPORT_PIN_LEVEL_HIGH   0
 
-void ioport_set_pin_level(int led, int level);
-int ioport_get_pin_level(int led);
 
-
-void ioport_set_pin_level(int led, int level)
+static void ioport_set_pin_level(int led, int level)
 {
     (void)led;
     (void)level;
 }
-int ioport_get_pin_level(int led)
+
+
+static int ioport_get_pin_level(int led)
 {
     (void)led;
     return 0;
 }
 
+
 #endif
+
+
+void led_on(void)
+{
+    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_LOW);
+}
+
+
+void led_off(void)
+{
+    ioport_set_pin_level(LED_0_PIN, IOPORT_PIN_LEVEL_HIGH);
+
+}
 
 
 void led_toggle(void)
@@ -59,3 +74,18 @@ void led_toggle(void)
     ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));
 }
 
+
+void led_code(uint8_t *code, uint8_t len)
+{
+    uint8_t i, j;
+    delay_ms(1000);
+    for (i = 0; i < len; i++) {
+        for (j = 0; j < code[i]; j++) {
+            led_toggle();
+            delay_ms(300);
+            led_toggle();
+            delay_ms(300);
+        }
+        delay_ms(1000);
+    }
+}

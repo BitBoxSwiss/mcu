@@ -566,9 +566,8 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_xpub));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_lock));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_true));
+    u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
+    u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -581,9 +580,8 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_xpub));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_lock));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_false));
+    u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":false");
+    u_assert_str_has(utils_read_decrypted_report(), "\"lock\":false");
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));

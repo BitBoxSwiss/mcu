@@ -119,6 +119,7 @@ X(export)         \
 X(xpub)           \
 X(name)           \
 X(info)           \
+X(seeded)         \
 X(serial)         \
 X(version)        \
 X(password)       \

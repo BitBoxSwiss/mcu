@@ -73,7 +73,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
 
     // Set cipher key
     memset(ctx, 0, sizeof(ctx));
-    aes_set_key(memory_read_aeskey(id), 32, ctx);
+    aes_set_key(memory_report_aeskey(id), 32, ctx);
 
     // PKCS7 padding
     memcpy(inpad, in, inlen);
@@ -124,7 +124,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     // Set cipher key
     aes_context ctx[1];
     memset(ctx, 0, sizeof(ctx));
-    aes_set_key(memory_read_aeskey(id), 32, ctx);
+    aes_set_key(memory_report_aeskey(id), 32, ctx);
 
     unsigned char dec_pad[ub64len - N_BLOCK];
     aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
@@ -719,7 +719,7 @@ static void commander_process_verifypass(yajl_val json_node)
 
     if (strlens(value)) {
         if (strcmp(value, attr_str(ATTR_export)) == 0) {
-            memcpy(text, utils_uint8_to_hex(memory_read_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
+            memcpy(text, utils_uint8_to_hex(memory_report_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
             utils_clear_buffers();
             int ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1,
                                DBB_SD_REPLACE, CMD_verifypass);
@@ -1483,6 +1483,7 @@ static int commander_check_init(const char *encrypted_command)
 //
 char *commander(const char *command)
 {
+    memory_load_aeskeys();
     commander_clear_report();
     if (commander_check_init(command) == DBB_OK) {
         char *command_dec = commander_decrypt(command);
@@ -1492,7 +1493,7 @@ char *commander(const char *command)
         }
     }
 
-    memory_clear_variables();
+    memory_clear();
     return json_report;
 }
 

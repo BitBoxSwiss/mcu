@@ -28,45 +28,37 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+
 #include "random.h"
+#include "memory.h"
 #include "flags.h"
+#include "utils.h"
+#ifndef TESTING
+#include "ataes132.h"
 
 
-#ifdef TESTING
+void random_init(void)
+{
+    /* pass */
+}
+#else
 void random_init(void)
 {
     srand(time(NULL));
 }
+#endif
 
 
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
-    (void) update_seed;
-    for (uint32_t i = 0; i < len; i++) {
-        buf[i] = rand();
-    }
-
-    return DBB_OK;
-}
-#else
-
-
-#include "ataes132.h"
-#include "memory.h"
-
-
-void random_init(void) { };
-
-
-int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
-{
+    uint8_t *entropy;
+    uint32_t i;
+#ifndef TESTING
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
-    uint8_t ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
-    uint8_t *entropy, i, ret;
-    uint32_t cnt = 0;
+    uint8_t ret, ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
 
-    while (len > cnt) {
+    while (len > i) {
         if (update_seed) {
             ret = aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
@@ -74,25 +66,31 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
             ret = aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ret == DBB_OK && ataes_ret[0]) {
-            memcpy(buf + cnt, ataes_ret + 2, (len - cnt) < 16 ? (len - cnt) : 16);
+            memcpy(buf + i, ataes_ret + 2, (len - i) < 16 ? (len - i) : 16);
         } else {
             return DBB_ERROR;
         }
-        cnt += 16;
+        i += 16;
     }
+#else
+    // use standard libary for off chip RNG
+    (void) update_seed;
+    for (i = 0; i < len; i++) {
+        buf[i] = rand();
+    }
+#endif
 
     // add ataes independent entropy from factory install
-    entropy = memory_read_aeskey(PASSWORD_MEMORY);
+    entropy = memory_report_aeskey(PASSWORD_MEMORY);
     for (i = 0; i < len; i++) {
-        buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
+        buf[i] ^= entropy[i % MEM_PAGE_LEN];
     }
 
     // add ataes independent entropy from user
-    entropy = memory_read_aeskey(PASSWORD_STAND);
+    entropy = memory_report_aeskey(PASSWORD_STAND);
     for (i = 0; i < len; i++) {
-        buf[i] = buf[i] ^ entropy[i % MEM_PAGE_LEN];
+        buf[i] ^= entropy[i % MEM_PAGE_LEN];
     }
 
     return DBB_OK;
 }
-#endif

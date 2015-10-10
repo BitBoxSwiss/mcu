@@ -728,6 +728,9 @@ static void tests_echo_2FA(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
+
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 

@@ -825,10 +825,14 @@ static void commander_process_device(yajl_val json_node)
     }
 
     if (strcmp(value, attr_str(ATTR_lock)) == 0) {
-        char msg[256];
-        memory_write_unlocked(0);
-        snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        if (wallet_seeded() == DBB_OK) {
+            char msg[256];
+            memory_write_unlocked(0);
+            snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
+            commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        } else {
+            commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_KEY_MASTER);
+        }
         return;
     }
 
@@ -860,7 +864,6 @@ static void commander_process_device(yajl_val json_node)
         char msg[1024];
         char lock[6] = {0};
         char seeded[6] = {0};
-        char xpub[112] = {0};
 
         if (!memory_read_unlocked()) {
             strcpy(lock, attr_str(ATTR_true));
@@ -868,8 +871,7 @@ static void commander_process_device(yajl_val json_node)
             strcpy(lock, attr_str(ATTR_false));
         }
 
-        wallet_report_xpub("m/", xpub);
-        if (strlens(xpub)) {
+        if (wallet_seeded() == DBB_OK) {
             strcpy(seeded, attr_str(ATTR_true));
         } else {
             strcpy(seeded, attr_str(ATTR_false));

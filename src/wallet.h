@@ -41,6 +41,7 @@
 /* BIP32 */
 int wallet_split_seed(char **seed_words, const char *message);
 int wallet_master_from_xpriv(char *src);
+int wallet_seeded(void);
 int wallet_master_from_mnemonic(char *mnemo, const char *salt);
 int wallet_check_pubkey(const char *pubkeyhash, const char *keypath);
 int wallet_sign(const char *message, const char *keypath, int to_hash);

@@ -554,21 +554,15 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_device), "invalid_cmd", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_serial), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_version), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
-
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_xpub));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_lock));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_true));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_id));
+    u_assert_str_has_not(utils_read_decrypted_report(), "\"id\":\"\"");
+    u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
+    u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -581,9 +575,10 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_xpub));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_lock));
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_false));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_id));
+    u_assert_str_has(utils_read_decrypted_report(), "\"id\":\"\"");
+    u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":false");
+    u_assert_str_has(utils_read_decrypted_report(), "\"lock\":false");
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -728,6 +723,9 @@ static void tests_echo_2FA(void)
                      strstr(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER))), 1);
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);

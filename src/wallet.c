@@ -80,6 +80,17 @@ int wallet_split_seed(char **seed_words, const char *message)
 }
 
 
+int wallet_seeded(void)
+{
+    if (!memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)  ||
+            !memcmp(memory_chaincode(NULL), MEM_PAGE_ERASE, 32)) {
+        return DBB_ERROR;
+    } else {
+        return DBB_OK;
+    }
+}
+
+
 int wallet_master_from_xpriv(char *src)
 {
     if (strlens(src) != 112 - 1) {
@@ -95,11 +106,12 @@ int wallet_master_from_xpriv(char *src)
         goto exit;
     }
 
-    if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
-            !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32)) {
+    memory_master(node.private_key);
+    memory_chaincode(node.chain_code);
+
+    ret = wallet_seeded();
+    if (ret != DBB_OK) {
         ret = DBB_ERROR_MEM;
-    } else {
-        ret = DBB_OK;
     }
 
 exit:
@@ -147,13 +159,12 @@ int wallet_master_from_mnemonic(char *mnemo, const char *salt)
         goto exit;
     }
 
-    if (!memcmp(memory_master(node.private_key), MEM_PAGE_ERASE, 32)  ||
-            !memcmp(memory_chaincode(node.chain_code), MEM_PAGE_ERASE, 32)) {
+    memory_master(node.private_key);
+    memory_chaincode(node.chain_code);
+
+    ret = wallet_seeded();
+    if (ret != DBB_OK) {
         ret = DBB_ERROR_MEM;
-        goto exit;
-    } else {
-        ret = DBB_OK;
-        goto exit;
     }
 
 exit:
@@ -236,13 +247,10 @@ err:
 
 void wallet_report_xpriv(const char *keypath, char *xpriv)
 {
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
     HDNode node;
-
-    if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
-            memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        if (wallet_generate_key(&node, keypath, priv_key_master, chain_code) == DBB_OK) {
+    if (wallet_seeded() == DBB_OK) {
+        if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                                memory_chaincode(NULL)) == DBB_OK) {
             hdnode_serialize_private(&node, xpriv, 112);
         }
     }
@@ -253,13 +261,10 @@ void wallet_report_xpriv(const char *keypath, char *xpriv)
 
 void wallet_report_xpub(const char *keypath, char *xpub)
 {
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
     HDNode node;
-
-    if (memcmp(priv_key_master, MEM_PAGE_ERASE, 32) &&
-            memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
-        if (wallet_generate_key(&node, keypath, priv_key_master, chain_code) == DBB_OK) {
+    if (wallet_seeded() == DBB_OK) {
+        if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                                memory_chaincode(NULL)) == DBB_OK) {
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
@@ -268,10 +273,18 @@ void wallet_report_xpub(const char *keypath, char *xpub)
 }
 
 
+void wallet_report_id(char *id)
+{
+    uint8_t h[32];
+    char xpub[112] = {0};
+    wallet_report_xpub("m/", xpub);
+    sha256_Raw((uint8_t *)xpub, 112, h);
+    memcpy(id, utils_uint8_to_hex(h, 32), 64);
+}
+
+
 int wallet_check_pubkey(const char *address, const char *keypath)
 {
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
     uint8_t pub_key[33];
     char addr[36];
     HDNode node;
@@ -282,14 +295,14 @@ int wallet_check_pubkey(const char *address, const char *keypath)
         goto err;
     }
 
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
-            !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+    if (wallet_seeded() != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_KEY_MASTER);
         goto err;
     }
 
-    if (wallet_generate_key(&node, keypath, priv_key_master, chain_code) != DBB_OK) {
+    if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                            memory_chaincode(NULL)) != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_KEY_CHILD);
         goto err;
@@ -317,8 +330,6 @@ int wallet_sign(const char *message, const char *keypath, int to_hash)
 {
     uint8_t data[32];
     uint8_t sig[64];
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
     uint8_t pub_key[33];
     HDNode node;
 
@@ -328,14 +339,14 @@ int wallet_sign(const char *message, const char *keypath, int to_hash)
         goto err;
     }
 
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
-            !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+    if (wallet_seeded() != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_MASTER);
         goto err;
     }
 
-    if (wallet_generate_key(&node, keypath, priv_key_master, chain_code) != DBB_OK) {
+    if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                            memory_chaincode(NULL)) != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_CHILD);
         goto err;
@@ -546,12 +557,9 @@ int wallet_deserialize_output(char *outputs, const char *keypath)
     char outval[64], outaddr[256], address[36];
     int change_addr_present = 0;
     uint8_t pubkeyhash[20], pub_key33[33];
-    uint8_t *priv_key_master = memory_master(NULL);
-    uint8_t *chain_code = memory_chaincode(NULL);
     HDNode node;
 
-    if (!memcmp(priv_key_master, MEM_PAGE_ERASE, 32) ||
-            !memcmp(chain_code, MEM_PAGE_ERASE, 32)) {
+    if (wallet_seeded() != DBB_OK) {
         return DBB_ERROR;
     }
 
@@ -577,7 +585,8 @@ int wallet_deserialize_output(char *outputs, const char *keypath)
         idx += n_len * 2; // chars = 2 * bytes
 
         if (strlens(keypath)) {
-            if (wallet_generate_key(&node, keypath, priv_key_master, chain_code) != DBB_OK) {
+            if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                                    memory_chaincode(NULL)) != DBB_OK) {
                 memset(&node, 0, sizeof(HDNode));
                 return DBB_ERROR;
             }

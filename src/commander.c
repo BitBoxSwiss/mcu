@@ -825,41 +825,25 @@ static void commander_process_device(yajl_val json_node)
     }
 
     if (strcmp(value, attr_str(ATTR_lock)) == 0) {
-        char msg[256];
-        memory_write_unlocked(0);
-        snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
-        return;
-    }
-
-    if (!strcmp(value, attr_str(ATTR_version))) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_version),
-                 (const char *)DIGITAL_BITBOX_VERSION);
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
-        return;
-    }
-
-    uint32_t serial[4] = {0};
-    if (!strcmp(value, attr_str(ATTR_serial)) || !strcmp(value, attr_str(ATTR_info))) {
-        if (flash_read_unique_id(serial, 4)) {
-            commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_FLASH);
-            return;
+        if (wallet_seeded() == DBB_OK) {
+            char msg[256];
+            memory_write_unlocked(0);
+            snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
+            commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+        } else {
+            commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_KEY_MASTER);
         }
-    }
-
-    if (!strcmp(value, attr_str(ATTR_serial))) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_serial),
-                 utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)));
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
         return;
     }
 
     if (!strcmp(value, attr_str(ATTR_info))) {
         char msg[1024];
+        char id[65] = {0};
         char lock[6] = {0};
-        char xpub[112] = {0};
+        char seeded[6] = {0};
+        uint32_t serial[4] = {0};
+
+        flash_read_unique_id(serial, 4);
 
         if (!memory_read_unlocked()) {
             strcpy(lock, attr_str(ATTR_true));
@@ -867,14 +851,20 @@ static void commander_process_device(yajl_val json_node)
             strcpy(lock, attr_str(ATTR_false));
         }
 
-        wallet_report_xpub("m/", xpub);
+        if (wallet_seeded() == DBB_OK) {
+            strcpy(seeded, attr_str(ATTR_true));
+            wallet_report_id(id);
+        } else {
+            strcpy(seeded, attr_str(ATTR_false));
+        }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s}",
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), (const char *)DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
-                 attr_str(ATTR_xpub), xpub,
+                 attr_str(ATTR_id), id,
+                 attr_str(ATTR_seeded), seeded,
                  attr_str(ATTR_lock), lock);
 
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);

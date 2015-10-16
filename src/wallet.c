@@ -273,6 +273,16 @@ void wallet_report_xpub(const char *keypath, char *xpub)
 }
 
 
+void wallet_report_id(char *id)
+{
+    uint8_t h[32];
+    char xpub[112] = {0};
+    wallet_report_xpub("m/", xpub);
+    sha256_Raw((uint8_t *)xpub, 112, h);
+    memcpy(id, utils_uint8_to_hex(h, 32), 64);
+}
+
+
 int wallet_check_pubkey(const char *address, const char *keypath)
 {
     uint8_t pub_key[33];

@@ -566,6 +566,8 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_id));
+    u_assert_str_has_not(utils_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
 
@@ -580,6 +582,8 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_id));
+    u_assert_str_has(utils_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":false");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":false");
 

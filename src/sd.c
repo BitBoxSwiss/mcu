@@ -31,6 +31,7 @@
 #include "sd.h"
 #include "commander.h"
 #include "flags.h"
+#include "utils.h"
 #include "mcu.h"
 
 
@@ -200,6 +201,8 @@ uint8_t sd_list(int cmd)
     // Open the directory
     res = f_opendir(&dir, ROOTDIR);
     if (res == FR_OK) {
+        strcat(files, "[");
+        f_len++;
         for (;;) {
             char *pc_fn;
             res = f_readdir(&dir, &fno);
@@ -219,25 +222,28 @@ uint8_t sd_list(int cmd)
                 continue;
             }
 
-            f_len += strlen(pc_fn) + 2;
-            if (f_len >= sizeof(files)) {
+            f_len += strlen(pc_fn) + strlens(",\"\"");
+            if (f_len + 1 >= sizeof(files)) {
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
                 commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_NUM_FILES);
                 goto err;
             }
 
             if (pos >= sd_listing_pos) {
-                strcat(files, pc_fn);
-                strcat(files, ", ");
+                if (strlens(files) > 1) {
+                    strcat(files, ",");
+                }
+                snprintf(files + strlens(files), sizeof(files) - f_len, "\"%s\"", pc_fn);
             }
 
             pos += 1;
         }
+        strcat(files, "]");
     } else {
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_OPEN_DIR);
     }
 
-    commander_fill_report(cmd_str(cmd), files, DBB_OK);
+    commander_fill_report(cmd_str(cmd), files, DBB_JSON_ARRAY);
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
     memset(files, 0, sizeof(files));

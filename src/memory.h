@@ -46,10 +46,10 @@
 #define MEM_AESKEY_CRYPT_ADDR       0x0600// Zone 6
 
 // Default settings
-#define DEFAULT_unlocked_           0xFF
-#define DEFAULT_erased_             0xFF
-#define DEFAULT_setup_              0xFF
-#define DEFAULT_access_err_         DBB_ACCESS_INITIALIZE
+#define DEFAULT_unlocked            0xFF
+#define DEFAULT_erased              0xFF
+#define DEFAULT_setup               0xFF
+#define DEFAULT_access_err          DBB_ACCESS_INITIALIZE
 
 
 typedef enum PASSWORD_ID {
@@ -65,11 +65,12 @@ typedef enum PASSWORD_ID {
 int memory_setup(void);
 void memory_erase(void);
 void memory_erase_seed(void);
-void memory_clear_variables(void);
+void memory_clear(void);
 
 int memory_aeskey_is_erased(PASSWORD_ID id);
 int memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
-uint8_t *memory_read_aeskey(PASSWORD_ID id);
+void memory_load_aeskeys(void);
+uint8_t *memory_report_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);

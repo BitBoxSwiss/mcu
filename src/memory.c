@@ -43,19 +43,19 @@
 #endif
 
 
-static uint8_t MEM_unlocked_ = DEFAULT_unlocked_;
-static uint8_t MEM_erased_ = DEFAULT_erased_;
-static uint8_t MEM_setup_ = DEFAULT_setup_;
-static uint16_t MEM_access_err_ = DEFAULT_access_err_;
+static uint8_t MEM_unlocked = DEFAULT_unlocked;
+static uint8_t MEM_erased = DEFAULT_erased;
+static uint8_t MEM_setup = DEFAULT_setup;
+static uint16_t MEM_access_err = DEFAULT_access_err;
 
-__extension__ static uint8_t MEM_aeskey_2FA_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_stand_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_crypt_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_verify_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_memory_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_name_[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
-__extension__ static uint8_t MEM_master_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_master_chain_[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_2FA[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_memory[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_name[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
+__extension__ static uint8_t MEM_master[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 
 __extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
@@ -63,8 +63,8 @@ __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0
 
 static void memory_mempass(void)
 {
-    uint8_t mempass[88] = {0};
-#ifndef TESTING
+    uint8_t mempass[88];
+    memset(mempass, 0, sizeof(mempass));
     // Encrypt data saved to memory using an AES key obfuscated by the
     // compilation time and date, which is used to 'randomly' read bytes
     // (i.e. the AES key) from the MCU code in flash memory.
@@ -77,6 +77,7 @@ static void memory_mempass(void)
     r[4] = c[0];
     r[5] = c[1];
     r[6] = c[2];
+#ifndef TESTING
     memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
     memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
     memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
@@ -88,6 +89,8 @@ static void memory_mempass(void)
     memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
     memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
     memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
+#else
+    memcpy(mp, r, sizeof(r));
 #endif
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
                         PASSWORD_MEMORY);
@@ -144,23 +147,24 @@ void memory_erase(void)
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_seed();
     memory_name("Digital Bitbox");
-    memory_write_erased(DEFAULT_erased_);
-    memory_write_unlocked(DEFAULT_unlocked_);
-    memory_access_err_count(DEFAULT_access_err_);
+    memory_write_erased(DEFAULT_erased);
+    memory_write_unlocked(DEFAULT_unlocked);
+    memory_access_err_count(DEFAULT_access_err);
 }
 
 
-void memory_clear_variables(void)
+void memory_clear(void)
 {
 #ifndef TESTING
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).
-    memcpy(MEM_name_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_stand_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_crypt_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_verify_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_chain_, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_name, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_2FA, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_stand, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_crypt, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_verify, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
 #endif
 }
 
@@ -289,25 +293,25 @@ uint8_t *memory_name(const char *name)
     uint8_t name_b[MEM_PAGE_LEN] = {0};
     if (strlens(name)) {
         snprintf((char *)name_b, MEM_PAGE_LEN, "%s", name);
-        memory_eeprom(name_b, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
+        memory_eeprom(name_b, MEM_name, MEM_NAME_ADDR, MEM_PAGE_LEN);
     } else {
-        memory_eeprom(NULL, MEM_name_, MEM_NAME_ADDR, MEM_PAGE_LEN);
+        memory_eeprom(NULL, MEM_name, MEM_NAME_ADDR, MEM_PAGE_LEN);
     }
-    return MEM_name_;
+    return MEM_name;
 }
 
 
 uint8_t *memory_master(const uint8_t *master)
 {
-    memory_eeprom_crypt(master, MEM_master_, MEM_MASTER_BIP32_ADDR);
-    return MEM_master_;
+    memory_eeprom_crypt(master, MEM_master, MEM_MASTER_BIP32_ADDR);
+    return MEM_master;
 }
 
 
 uint8_t *memory_chaincode(const uint8_t *chain)
 {
-    memory_eeprom_crypt(chain, MEM_master_chain_, MEM_MASTER_BIP32_CHAIN_ADDR);
-    return MEM_master_chain_;
+    memory_eeprom_crypt(chain, MEM_master_chain, MEM_MASTER_BIP32_CHAIN_ADDR);
+    return MEM_master_chain;
 }
 
 
@@ -317,7 +321,7 @@ int memory_aeskey_is_erased(PASSWORD_ID id)
     sha256_Raw((const uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
     sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
 
-    if (memcmp(memory_read_aeskey(id), mem_aeskey_erased, 32)) {
+    if (memcmp(memory_report_aeskey(id), mem_aeskey_erased, 32)) {
         return DBB_MEM_NOT_ERASED;
     } else {
         return DBB_MEM_ERASED;
@@ -340,21 +344,21 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 
     switch ((int)id) {
         case PASSWORD_MEMORY:
-            memcpy(MEM_aeskey_memory_, password_b, MEM_PAGE_LEN);
+            memcpy(MEM_aeskey_memory, password_b, MEM_PAGE_LEN);
             ret = DBB_OK;
             break;
         case PASSWORD_2FA:
-            memcpy(MEM_aeskey_2FA_, password_b, MEM_PAGE_LEN);
+            memcpy(MEM_aeskey_2FA, password_b, MEM_PAGE_LEN);
             ret = DBB_OK;
             break;
         case PASSWORD_STAND:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
         case PASSWORD_CRYPT:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
             break;
         case PASSWORD_VERIFY:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
             break;
         default: {
             /* never reached */
@@ -369,22 +373,26 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     }
 }
 
-uint8_t *memory_read_aeskey(PASSWORD_ID id)
+void memory_load_aeskeys(void)
+{
+    memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
+    memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
+    memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
+}
+
+uint8_t *memory_report_aeskey(PASSWORD_ID id)
 {
     switch ((int)id) {
         case PASSWORD_MEMORY:
-            return MEM_aeskey_memory_;
+            return MEM_aeskey_memory;
         case PASSWORD_2FA:
-            return MEM_aeskey_2FA_;
+            return MEM_aeskey_2FA;
         case PASSWORD_STAND:
-            memory_eeprom_crypt(NULL, MEM_aeskey_stand_, MEM_AESKEY_STAND_ADDR);
-            return MEM_aeskey_stand_;
+            return MEM_aeskey_stand;
         case PASSWORD_CRYPT:
-            memory_eeprom_crypt(NULL, MEM_aeskey_crypt_, MEM_AESKEY_CRYPT_ADDR);
-            return MEM_aeskey_crypt_;
+            return MEM_aeskey_crypt;
         case PASSWORD_VERIFY:
-            memory_eeprom_crypt(NULL, MEM_aeskey_verify_, MEM_AESKEY_VERIFY_ADDR);
-            return MEM_aeskey_verify_;
+            return MEM_aeskey_verify;
         default:
             return 0;
     }
@@ -393,34 +401,34 @@ uint8_t *memory_read_aeskey(PASSWORD_ID id)
 
 void memory_write_setup(const uint8_t setup)
 {
-    memory_eeprom(&setup, &MEM_setup_, MEM_SETUP_ADDR, 1);
+    memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
 }
 uint8_t memory_read_setup(void)
 {
-    memory_eeprom(NULL, &MEM_setup_, MEM_SETUP_ADDR, 1);
-    return MEM_setup_;
+    memory_eeprom(NULL, &MEM_setup, MEM_SETUP_ADDR, 1);
+    return MEM_setup;
 }
 
 
 void memory_write_unlocked(const uint8_t u)
 {
-    memory_eeprom(&u, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
+    memory_eeprom(&u, &MEM_unlocked, MEM_UNLOCKED_ADDR, 1);
 }
 uint8_t memory_read_unlocked(void)
 {
-    memory_eeprom(NULL, &MEM_unlocked_, MEM_UNLOCKED_ADDR, 1);
-    return MEM_unlocked_;
+    memory_eeprom(NULL, &MEM_unlocked, MEM_UNLOCKED_ADDR, 1);
+    return MEM_unlocked;
 }
 
 
 void memory_write_erased(const uint8_t erased)
 {
-    memory_eeprom(&erased, &MEM_erased_, MEM_ERASED_ADDR, 1);
+    memory_eeprom(&erased, &MEM_erased, MEM_ERASED_ADDR, 1);
 }
 uint8_t memory_read_erased(void)
 {
-    memory_eeprom(NULL, &MEM_erased_, MEM_ERASED_ADDR, 1);
-    return MEM_erased_;
+    memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
+    return MEM_erased;
 }
 
 
@@ -429,8 +437,8 @@ uint16_t memory_access_err_count(const uint8_t access)
 {
     uint16_t err_count = 0xF0F0;
     if (access == DBB_ACCESS_ITERATE) {
-        memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
-        err_count = MEM_access_err_ + 1;
+        memory_eeprom(NULL, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
+        err_count = MEM_access_err + 1;
     } else if (access == DBB_ACCESS_INITIALIZE) {
         err_count = 0;
     } else {
@@ -441,13 +449,13 @@ uint16_t memory_access_err_count(const uint8_t access)
     if (err_count >= COMMANDER_MAX_ATTEMPTS) {
         commander_force_reset();
     } else {
-        memory_eeprom((uint8_t *)&err_count, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
+        memory_eeprom((uint8_t *)&err_count, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
     }
     return err_count;
 }
 uint16_t memory_read_access_err_count(void)
 {
-    memory_eeprom(NULL, (uint8_t *)&MEM_access_err_, MEM_ACCESS_ERR_ADDR, 2);
-    return MEM_access_err_;
+    memory_eeprom(NULL, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
+    return MEM_access_err;
 }
 

@@ -836,35 +836,14 @@ static void commander_process_device(yajl_val json_node)
         return;
     }
 
-    if (!strcmp(value, attr_str(ATTR_version))) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_version),
-                 (const char *)DIGITAL_BITBOX_VERSION);
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
-        return;
-    }
-
-    uint32_t serial[4] = {0};
-    if (!strcmp(value, attr_str(ATTR_serial)) || !strcmp(value, attr_str(ATTR_info))) {
-        if (flash_read_unique_id(serial, 4)) {
-            commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_FLASH);
-            return;
-        }
-    }
-
-    if (!strcmp(value, attr_str(ATTR_serial))) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", attr_str(ATTR_serial),
-                 utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)));
-        commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
-        return;
-    }
-
     if (!strcmp(value, attr_str(ATTR_info))) {
         char msg[1024];
         char id[65] = {0};
         char lock[6] = {0};
         char seeded[6] = {0};
+        uint32_t serial[4] = {0};
+
+        flash_read_unique_id(serial, 4);
 
         if (!memory_read_unlocked()) {
             strcpy(lock, attr_str(ATTR_true));

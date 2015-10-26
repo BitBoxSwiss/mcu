@@ -12,13 +12,15 @@ set(CMAKE_LINKER "arm-none-eabi-ld" CACHE PATH "" FORCE)
 set(CMAKE_SIZE "arm-none-eabi-size")
 set(CMAKE_OBJCOPY "arm-none-eabi-objcopy")
 
-# search for programs in the build host directories
+# Search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
-# for libraries and headers in the target directories
-#SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-#SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+# For libraries and headers in the target directories
+#set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+#set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-
-
+# Avoid known bug in linux giving: 
+#    arm-none-eabi-gcc: error: unrecognized command line option '-rdynamic'
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 

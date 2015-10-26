@@ -50,9 +50,9 @@ void ecc_context_init(void)
     ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 #endif
 
-    uint8_t random[32] = {0};
-    random_bytes(random, sizeof(random), 0);
-    if (secp256k1_context_randomize(ctx, random)) {
+    uint8_t rndm[32] = {0};
+    random_bytes(rndm, sizeof(rndm), 0);
+    if (secp256k1_context_randomize(ctx, rndm)) {
         /* pass */
     }
 }

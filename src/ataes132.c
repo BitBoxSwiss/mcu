@@ -83,13 +83,13 @@ void aes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *crc)
 
 
 uint8_t aes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length,
-                         uint8_t const *p_wr_buffer)
+                         uint8_t *p_wr_buffer)
 {
     twi_package_t twi_package;
     twi_package.chip = AES_DEVICE_ADDR;
     aes_build_word_address(twi_package.addr, u32_start_address);
     twi_package.addr_length = AES_MEM_ADDR_LEN;
-    twi_package.buffer = (uint8_t *)p_wr_buffer;
+    twi_package.buffer = p_wr_buffer;
     twi_package.length = u16_length;
     return twi_master_write(AES_TWI, &twi_package);
 }
@@ -252,7 +252,7 @@ int aes_process(uint8_t const *command, uint16_t cmd_len,
 
 // Pass NULL to read only or write only
 int aes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
-               const uint8_t *userdata_write)
+               uint8_t *userdata_write)
 {
     int ret;
     char errmsg[64];

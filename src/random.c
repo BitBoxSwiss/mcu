@@ -52,7 +52,7 @@ void random_init(void)
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     uint8_t *entropy;
-    uint32_t i;
+    uint32_t i = 0;
 #ifndef TESTING
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
     const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM

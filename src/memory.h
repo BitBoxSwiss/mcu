@@ -81,9 +81,9 @@ uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
 
 void memory_write_memseed(const uint8_t *s);
-void memory_write_erased(const uint8_t erase);
-void memory_write_setup(const uint8_t setup);
-void memory_write_unlocked(const uint8_t u);
+void memory_write_erased(uint8_t erase);
+void memory_write_setup(uint8_t setup);
+void memory_write_unlocked(uint8_t u);
 
 uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);

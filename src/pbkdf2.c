@@ -29,7 +29,7 @@ void pbkdf2_hmac_sha256(const uint8_t *pass, int passlen, uint8_t *salt, int sal
                         uint32_t iterations, uint8_t *key, int keylen, void (*progress_callback)(uint32_t current,
                                 uint32_t total))
 {
-    const uint32_t HMACLEN = 256 / 8;
+    uint32_t HMACLEN = 256 / 8;
     uint32_t i, j, k;
     uint8_t f[HMACLEN], g[HMACLEN];
     uint32_t blocks = keylen / HMACLEN;
@@ -64,7 +64,7 @@ void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *salt, int sal
                         uint32_t iterations, uint8_t *key, int keylen, void (*progress_callback)(uint32_t current,
                                 uint32_t total))
 {
-    const uint32_t HMACLEN = 512 / 8;
+    uint32_t HMACLEN = 512 / 8;
     uint32_t i, j, k;
     uint8_t f[HMACLEN], g[HMACLEN];
     uint32_t blocks = keylen / HMACLEN;

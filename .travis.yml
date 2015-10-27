@@ -3,14 +3,33 @@ sudo: false
 os:
     - osx
     - linux
-    
+
+env:
+    - ENV="-DBUILD_TESTS=ON -DUSE_UECC_LIB=ON"   TEST=yes
+    - ENV="-DBUILD_TESTS=ON -DUSE_UECC_LIB=OFF"  TEST=yes
+    - ENV="-DBUILD_TESTS=OFF -DUSE_UECC_LIB=ON"  TEST=no
+#    - ENV="-DBUILD_TESTS=OFF -DUSE_UECC_LIB=OFF" TEST=no # secp lib too big at the moment
+
 compiler:
     - clang
     - gcc
 
 matrix:
+    exclude:
+        # mcu build uses its own arm compiler, so reduce the matrix size
+        - compiler: gcc 
+          env: ENV="-DBUILD_TESTS=OFF -DUSE_UECC_LIB=ON"  TEST=no
+        # osx gcc compiler seems to default to clang, so skip gcc
+        - compiler: gcc
+          os: osx
     fast_finish:
         - true
+
+addons:
+  apt_packages:
+    - lib32bz2-1.0
+    - lib32ncurses5
+    - lib32z1
 
 install:
     - if [ $TRAVIS_OS_NAME == linux ]; then
@@ -19,6 +38,18 @@ install:
         export PATH=$PATH:$PWD/bin/;
       fi;
     - if [ $TRAVIS_OS_NAME == osx ]; then brew install gnupg; fi
+    - if [ "$TEST" = "no" ]; then
+      if [ $TRAVIS_OS_NAME == linux ]; then
+        wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
+        tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
+        export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
+      fi;
+      if [ $TRAVIS_OS_NAME == osx ]; then
+        wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
+        tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
+        export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
+      fi;
+      fi;
 
 before_script:
     - cd $TRAVIS_BUILD_DIR
@@ -28,7 +59,5 @@ before_script:
 
 script: 
     - mkdir build && cd build
-    - cmake .. -DCONTINUOUS_INTEGRATION=1 -DBUILD_COVERAGE=OFF && make
-    - make test
-    - bin/tests_api
-    - bin/tests_unit
+    - cmake .. $ENV -DCONTINUOUS_INTEGRATION=1 && make
+    - if [ "$TEST" = "yes" ]; then make test; fi

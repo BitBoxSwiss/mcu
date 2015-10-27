@@ -31,6 +31,7 @@
 #pragma GCC diagnostic ignored "-Winline"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push

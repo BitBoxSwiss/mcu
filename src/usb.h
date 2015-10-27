@@ -25,9 +25,20 @@
 */
 
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef _USB_H_
+#define _USB_H_
 
-const char *DIGITAL_BITBOX_VERSION = "v1.2.0-19-g3cf2f77";
+
+void usb_report(const unsigned char *command);
+void usb_process(uint16_t framenumber);
+bool usb_enable(void);
+void usb_disable(void);
+void usb_sof_action(void);
+void usb_suspend_action(void);
+void usb_resume_action(void);
+void usb_remotewakeup_enable(void);
+void usb_remotewakeup_disable(void);
+void usb_hid_set_feature(uint8_t *report);
+
 
 #endif

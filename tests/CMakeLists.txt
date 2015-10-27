@@ -1,3 +1,9 @@
+#-----------------------------------------------------------------------------
+# CmakeLists.txt for the Digital Bitbox
+# Copyright (c) 2015 Lucas Betschart, Douglas J. Bakkum
+# MIT License
+
+
 include_directories(../src)
 include_directories(../src/secp256k1)
 include_directories(../src/secp256k1/src)
@@ -11,6 +17,7 @@ target_link_libraries(tests_unit bitbox)
 
 #-----------------------------------------------------------------------------
 # Build tests_openssl
+find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 add_executable(tests_openssl tests_openssl.c)
 target_link_libraries(tests_openssl bitbox ${OPENSSL_LIBRARIES})
@@ -51,19 +58,31 @@ if(WIN32)
           ${HIDAPI-SOURCES}
   )
 else()
-  if(NOT CONTINUOUS_INTEGRATION)
-    include_directories(${HIDAPI_INCLUDE_DIR})
-  endif()
+    if(NOT CONTINUOUS_INTEGRATION)
+        find_library(HIDAPI_LIBRARY
+            NAMES hidapi hidapi-libusb)
+
+        find_path(HIDAPI_INCLUDE_DIR
+            NAMES hidapi.h
+            PATH_SUFFIXES
+            hidapi)
+
+        if(!HIDAPI_FOUND)
+            message(FATAL_ERROR "hidapi not found.")
+        endif()
+        include_directories(${HIDAPI_INCLUDE_DIR})
+    endif()
 endif()
 
 add_executable(tests_api tests_api.c ${WINDOWS-SOURCES})
 
 if(NOT CONTINUOUS_INTEGRATION)
-  if(WIN32)
-    target_link_libraries(tests_api bitbox hidapi setupapi)
-  else()
-    target_link_libraries(tests_api bitbox ${HIDAPI_LIBRARY})
-  endif()
+    if(WIN32)
+        target_link_libraries(tests_api bitbox hidapi)
+    else()
+        target_link_libraries(tests_api bitbox ${HIDAPI_LIBRARY})
+    endif()
 else()
-  target_link_libraries(tests_api bitbox)
+    target_link_libraries(tests_api bitbox)
 endif()
+

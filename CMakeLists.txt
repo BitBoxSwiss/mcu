@@ -1,120 +1,28 @@
-cmake_minimum_required(VERSION 2.8)
-project(mcu)
-
-
 #-----------------------------------------------------------------------------
-# Create version header file
+# CmakeLists.txt for the Digital Bitbox 
+# Copyright (c) 2015 Lucas Betschart, Douglas J. Bakkum
+# MIT License
 
-find_package(Git)
-if(GIT_FOUND)
-  execute_process(COMMAND git "describe" "--tags" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
-else()
-  set(GIT_COMMIT_HASH "Git not found.")
-endif()
-set(VERSION_STRING "${GIT_COMMIT_HASH}")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
-               ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
-set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
+cmake_minimum_required(VERSION 2.8.5)
+
+set(MYPROJECT "firmware")
+set(ELF ${MYPROJECT}.elf)
+project(${MYPROJECT} C)
 
 
 #-----------------------------------------------------------------------------
 # Options for building
 
-option(BUILD_TESTS "Build the unit tests." ON)
-option(BUILD_COVERAGE "Compile with test coverage flags." OFF)
-option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
+option(BUILD_TESTS "Build unit tests instead of ARM binary." ON)
+option(BUILD_DOCUMENTATION "Build the Doxygen documentation." OFF)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build." OFF)
-option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." OFF)
+option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." ON)
 
 
-#-----------------------------------------------------------------------------
-# Print system information and build options
-
-message(STATUS "General -------------------------------------")
-message(STATUS "mcu version:            ${VERSION_STRING}")
-message(STATUS "Git Commit Hash:        ${GIT_COMMIT_HASH}")
-message(STATUS "CMake version:          ${CMAKE_VERSION}")
-message(STATUS "System:                 ${CMAKE_SYSTEM}")
-message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
-
-if(USE_UECC_LIB)
-    message(STATUS "ECC library:            micro ECC")
-else()
-    message(STATUS "ECC library:            secp256k1")
-endif()
-
-message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
-message(STATUS "Testing:                ${BUILD_TESTS}")
-message(STATUS "Coverage:               ${BUILD_COVERAGE}")
-message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}")
-
-
-#-----------------------------------------------------------------------------
-# Collect all binaries into bin subdirectory
-
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
-
-
-#-----------------------------------------------------------------------------
-# Compiler flags
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g") # valgrind
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -Werror -pedantic -Wredundant-decls -Wstrict-prototypes -Wundef -Wshadow -Wpointer-arith -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wbad-function-cast -Winline -Wnested-externs -Wfloat-equal -Wmissing-declarations -Wswitch-default -Wwrite-strings -Wcast-qual -Wmissing-prototypes")
-
-if(APPLE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
-  set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -framework AppKit -framework IOKit")
-  set(CMAKE_MACOSX_RPATH ON)
-endif()
-
-if(CMAKE_COMPILER_IS_GNUCC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
-endif()
-
-message(STATUS "C Compiler ID: ${CMAKE_C_COMPILER_ID}")
-message(STATUS "C Flags:       ${CMAKE_C_FLAGS}")
-message(STATUS "C link flags:  ${CMAKE_C_LINK_FLAGS}")
-
-
-#-----------------------------------------------------------------------------
-# Test coverage flags
-
-if(BUILD_COVERAGE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-  set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -fprofile-arcs")
-endif()
-
-
-#-----------------------------------------------------------------------------
-# Get submodules
-
-execute_process(COMMAND git "submodule" "update" "--init" "--recursive" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-
-#-----------------------------------------------------------------------------
-# Third party libraries
-
-if(BUILD_TESTS)
-  find_package(OpenSSL REQUIRED)
-    if(NOT WIN32)
-      if(NOT CONTINUOUS_INTEGRATION)
-        find_library(HIDAPI_LIBRARY
-          NAMES hidapi hidapi-libusb)
-
-        find_path(HIDAPI_INCLUDE_DIR
-          NAMES hidapi.h
-          PATH_SUFFIXES
-          hidapi)
-
-        if(!HIDAPI_FOUND)
-          message(FATAL_ERROR "hidapi not found.")
-        endif()
-      endif()
-    endif()
+if(NOT BUILD_TESTS)
+    set(CMAKE_TOOLCHAIN_FILE firmware.cmake)
+    include(${CMAKE_TOOLCHAIN_FILE})
 endif()
 
 
@@ -134,38 +42,19 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Default to Release build
+# Create version header file
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING
-      "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
-      FORCE)
+find_package(Git)
+if(GIT_FOUND)
+    execute_process(COMMAND git "describe" "--tags" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+    set(GIT_COMMIT_HASH "Git not found.")
 endif()
+set(VERSION_STRING "${GIT_COMMIT_HASH}")
 
-
-#-----------------------------------------------------------------------------
-# Build Documentation
-
-if(BUILD_DOCUMENTATION)
-  set(DOC_GRAPHS "YES" CACHE STRING "Create dependency graphs (needs graphviz)")
-  set(DOC_FULLGRAPHS "NO" CACHE STRING "Create call/callee graphs (large)")
-
-  find_program(DOT_PATH dot)
-
-  if (DOT_PATH STREQUAL "DOT_PATH-NOTFOUND")
-    message("Doxygen: graphviz not found - graphs disabled")
-    set(DOC_GRAPHS "NO")
-  endif()
-
-  find_package(Doxygen)
-  if(DOXYGEN_FOUND)
-    configure_file("doc/Doxyfile.in" "Doxyfile" @ONLY)
-    add_custom_target(doc
-      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      COMMENT "Generating API documentation with Doxygen.." VERBATIM)
-  endif()
-endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
+set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
 
 
 #-----------------------------------------------------------------------------
@@ -185,16 +74,134 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Build source
+# Print system information and build options
+
+message(STATUS "\n\n=============================================")
+message(STATUS "            - General -")
+message(STATUS "MCU version:            ${VERSION_STRING}")
+message(STATUS "CMake version:          ${CMAKE_VERSION}")
+message(STATUS "System:                 ${CMAKE_SYSTEM}")
+message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "             - Build -")
+message(STATUS "Compiler:               ${CMAKE_C_COMPILER}")
+message(STATUS "Linker:                 ${CMAKE_LINKER}")
+message(STATUS "Archiver:               ${CMAKE_AR}")
+message(STATUS "            - Options -")
+message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
+message(STATUS "Testing:                ${BUILD_TESTS}  (make test)")
+message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}  (make doc)")
+if(USE_UECC_LIB)
+    message(STATUS "ECC library:            micro ECC")
+else()
+    message(STATUS "ECC library:            secp256k1")
+endif()
+message(STATUS "\n=============================================\n\n")
+
+
+#-----------------------------------------------------------------------------
+# Get submodules
+
+execute_process(COMMAND git "submodule" "update" "--init" "--recursive" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+
+#-----------------------------------------------------------------------------
+# Collect all binaries into bin subdirectory
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
+
+
+#-----------------------------------------------------------------------------
+# Compiler
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Os")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Werror -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
+
+if(BUILD_TESTS)
+    if(APPLE)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+        set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -framework AppKit -framework IOKit")
+        set(CMAKE_MACOSX_RPATH ON)
+    endif()
+endif()
+
+if(NOT BUILD_TESTS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -fdata-sections -fomit-frame-pointer -ffunction-sections -mlong-calls -mcpu=cortex-m4 -pipe -fno-strict-aliasing --param max-inline-insns-single=500 -D__SAM4S4A__ -DNDEBUG -DBOARD=USER_BOARD -DARM_MATH_CM4=true -DUDD_ENABLE -D_QTOUCH_ -Dscanf=iscanf -Dprintf=iprintf")
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Test coverage flags
+
+if(BUILD_TESTS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -fprofile-arcs")
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Build Documentation
+
+if(BUILD_DOCUMENTATION)
+    set(DOC_GRAPHS "YES" CACHE STRING "Create dependency graphs (needs graphviz)")
+    set(DOC_FULLGRAPHS "NO" CACHE STRING "Create call/callee graphs (large)")
+
+    find_program(DOT_PATH dot)
+
+    if (DOT_PATH STREQUAL "DOT_PATH-NOTFOUND")
+        message("Doxygen: graphviz not found - graphs disabled")
+        set(DOC_GRAPHS "NO")
+    endif()
+
+    find_package(Doxygen)
+    if(DOXYGEN_FOUND)
+        configure_file("doc/Doxyfile.in" "Doxyfile" @ONLY)
+        add_custom_target(doc
+            ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMENT "Generating API documentation with Doxygen.." VERBATIM)
+    endif()
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Build 
+
+message(STATUS "C Compiler ID:    ${CMAKE_C_COMPILER_ID}")
+message(STATUS "C Flags:          ${CMAKE_C_FLAGS}")
 
 add_subdirectory(src)
 
 if(BUILD_TESTS)
-  add_subdirectory(tests)
-  add_test(NAME tests_unit COMMAND tests_unit)
-  add_test(NAME tests_openssl COMMAND tests_openssl 200)
-  add_test(NAME tests_cmdline COMMAND tests_cmdline '{"name":""}')
-  add_test(NAME tests_api COMMAND tests_api)
-  add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 2)
-  enable_testing()
+    add_subdirectory(tests)
+    add_test(NAME tests_unit COMMAND tests_unit)
+    add_test(NAME tests_openssl COMMAND tests_openssl 200)
+    add_test(NAME tests_cmdline COMMAND tests_cmdline '{"name":""}')
+    add_test(NAME tests_api COMMAND tests_api)
+    add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 2)
+    enable_testing()
+
+else()
+    add_custom_command(
+        OUTPUT    ${MYPROJECT}.bin
+        COMMAND   ${CMAKE_SIZE} ${ELF}
+        COMMAND   ${CMAKE_OBJCOPY} -O binary ${ELF} ${MYPROJECT}.bin
+        DEPENDS   ${ELF}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+        COMMENT "\nGenerating binary"
+    )
+    add_custom_target(binary_file ALL
+        DEPENDS ${MYPROJECT}.bin ${ELF}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+    )
+    add_dependencies(binary_file ${ELF})
+
 endif()
+
+
+#-----------------------------------------------------------------------------
+# Clean 
+
+set(removefiles "bin/*.* lib/*.*")
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${removefiles}")

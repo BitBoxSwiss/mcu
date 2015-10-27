@@ -25,32 +25,51 @@
 */
 
 
-// Provides secp256k1 access in libbitbox.a, as required by the test
-// functions. Then, the secp256k1/ submodule code is left 'as is'.
+#include "drivers/config/conf_usb.h"
+#include "drivers/config/mcu.h"
+#include "sd.h"
+#include "usb.h"
+#include "ecc.h"
+#include "led.h"
+#include "touch.h"
+#include "memory.h"
+#include "systick.h"
+#include "ataes132.h"
+#include "commander.h"
 
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winline"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#endif
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
+void SysTick_Handler(void)
+{
+    systick_update_time();
+}
 
 
-#define USE_ECMULT_STATIC_PRECOMPUTATION 1
-#define ENABLE_MODULE_ECDH 1
-#define USE_BASIC_CONFIG 1
+int main (void)
+{
+    wdt_disable(WDT);
+    irq_initialize_vectors();
+    cpu_irq_enable();
+    sleepmgr_init();
+    sysclk_init();
+    board_init();
+    aes_init();
+    flash_init(FLASH_ACCESS_MODE_128, 6);
+    pmc_enable_periph_clk(ID_PIOA); // Button input
+    usb_suspend_action();
+    udc_start();
+    delay_init(F_CPU);
+    memory_setup(); // One time factory setup
+    systick_init();
+    touch_init();
+    ecc_context_init();
 
-#include "secp256k1/src/basic-config.h"
-#include "secp256k1/src/secp256k1.c"
+    led_off();
+    delay_ms(300);
+    led_on();
+    delay_ms(300);
+    led_off();
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+    while (true) {
+        sleepmgr_enter_sleep();
+    }
+}

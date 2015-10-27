@@ -877,7 +877,7 @@ int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
     uECC_word_t private[uECC_WORDS];
     uECC_word_t tmp[uECC_WORDS];
     uECC_word_t *p2[2] = {private, tmp};
-    uECC_word_t random[uECC_WORDS];
+    uECC_word_t rndm[uECC_WORDS];
     uECC_word_t *initial_Z = 0;
     uECC_word_t tries;
     uECC_word_t carry;
@@ -888,9 +888,9 @@ int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
     // attacks. If the RNG fails every time (eg it was not defined), we continue so that
     // uECC_shared_secret() can still work without an RNG defined.
     for (tries = 0; tries < MAX_TRIES; ++tries) {
-        random_bytes((uint8_t *)random, sizeof(random), 0);
-        if (!vli_isZero(random)) {
-            initial_Z = random;
+        random_bytes((uint8_t *)rndm, sizeof(rndm), 0);
+        if (!vli_isZero(rndm)) {
+            initial_Z = rndm;
             break;
         }
     }

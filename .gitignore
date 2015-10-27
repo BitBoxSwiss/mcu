@@ -1,13 +1,9 @@
 build
-tests*
-!/tests
-!tests_mcu.h
-!*.c
-tests.c
-backup
-*.bak
+version.h
 .DS_Store
 .ycm*
 *.o
 *.swp
 *.swo
+*.bak
+!*.c

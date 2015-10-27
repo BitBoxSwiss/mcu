@@ -169,7 +169,7 @@ void memory_clear(void)
 }
 
 
-static int memory_eeprom(const uint8_t *write_b, uint8_t *read_b, const int32_t addr,
+static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
                          const uint16_t len)
 {
 #ifndef TESTING
@@ -399,7 +399,7 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
 }
 
 
-void memory_write_setup(const uint8_t setup)
+void memory_write_setup(uint8_t setup)
 {
     memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
 }
@@ -410,7 +410,7 @@ uint8_t memory_read_setup(void)
 }
 
 
-void memory_write_unlocked(const uint8_t u)
+void memory_write_unlocked(uint8_t u)
 {
     memory_eeprom(&u, &MEM_unlocked, MEM_UNLOCKED_ADDR, 1);
 }
@@ -421,7 +421,7 @@ uint8_t memory_read_unlocked(void)
 }
 
 
-void memory_write_erased(const uint8_t erased)
+void memory_write_erased(uint8_t erased)
 {
     memory_eeprom(&erased, &MEM_erased, MEM_ERASED_ADDR, 1);
 }

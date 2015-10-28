@@ -33,6 +33,7 @@ addons:
     - valgrind
 
 install:
+    - pip install --user cpp-coveralls 
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         tar xfv contrib/astyle_2.05.1_linux.tar.gz;
         cd astyle/build/gcc && make;
@@ -43,16 +44,16 @@ install:
         brew install gnupg;
       fi
     - if [ "$TEST" = "no" ]; then
-      if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-        wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
-        tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
-        export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
-      fi;
-      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
-        tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
-        export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
-      fi;
+        if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+          wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
+          tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
+          export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
+        fi;
+        if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+          wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
+          tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
+          export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
+        fi;
       fi;
 
 before_script:
@@ -71,3 +72,7 @@ script:
           valgrind --leak-check=full --error-exitcode=1 bin/tests_unit;
         fi;
       fi;
+
+      
+after_success:
+    - coveralls --verbose -i src -x c -e src/secp256k1 -e src/yajl -e src/drivers -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR/build --gcov-options '\-lp'

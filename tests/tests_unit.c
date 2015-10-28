@@ -620,8 +620,7 @@ static void test_pbkdf2_hmac_sha256(void)
 
     strcpy((char *)s, "saltSALTsaltSALTsaltSALTsaltSALTsalt");
     pbkdf2_hmac_sha256((const uint8_t *)"passwordPASSWORDpassword", 3 * 8, s, 9 * 4, 4096, k,
-                       64,
-                       0);
+                       40, 0);
     u_assert_mem_eq(k,
                     utils_hex_to_uint8("348c89dbcbd32b2f32d814b8116e84cf2b17347ebc1800181c4e2a1fb8dd53e1c635518c7dac47e9"),
                     40);

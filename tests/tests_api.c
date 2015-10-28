@@ -615,23 +615,23 @@ static void tests_input(void)
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_MULT_CMD));
+
+#ifndef CONTINUOUS_INTEGRATION
+// YAJL does not free allocated space for these improper JSON strings
+// so skip valgrind checks in travis CI.
     api_send_cmd("\"name\": \"name\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     api_send_cmd("{name\": \"name\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_format_send_cmd(cmd_str(CMD_name), "avoidreset", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
     api_send_cmd("{\"name: \"name\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     api_send_cmd("{\"name\": \"name}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_format_send_cmd(cmd_str(CMD_name), "avoidreset", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"name\"", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
@@ -645,19 +645,14 @@ static void tests_input(void)
     api_send_cmd("{\"name\": \"name\", \"name\": }", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_MULT_CMD));
-
-    api_format_send_cmd(cmd_str(CMD_name), "avoidreset", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_send_cmd("{\"name\": null}", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
     api_send_cmd("{\"name\": \"na\\nme\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"na\\r\\\\ \\/ \\f\\b\\tme\\\"\"}", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+#endif
+
+    api_send_cmd("{\"name\": null}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"na\\u0066me\\ufc00\\u0000\"}", PASSWORD_STAND);

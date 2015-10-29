@@ -44,10 +44,6 @@ const char *const FLAG_CODE[] = { FLAG_TABLE };
 const char *const FLAG_MSG[] = { FLAG_TABLE };
 #undef X
 
-#define X(a, b, c) #a,
-const char *const FLAG_ID[] = { FLAG_TABLE };
-#undef X
-
 const char *cmd_str(int cmd)
 {
     return CMD_STR[cmd];
@@ -70,10 +66,3 @@ const char *flag_msg(int flag)
 {
     return FLAG_MSG[flag];
 }
-
-
-const char *flag_id(int flag)
-{
-    return FLAG_ID[flag];
-}
-

@@ -217,7 +217,6 @@ const char *cmd_str(int cmd);
 const char *attr_str(int attr);
 const char *flag_code(int flag);
 const char *flag_msg(int flag);
-const char *flag_id(int flag);
 
 
 #endif

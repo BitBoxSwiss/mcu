@@ -19,7 +19,6 @@ set(DBB-FIRMWARE-SOURCES
         pbkdf2.c
         random.c
         ripemd160.c
-        uECC.c
         ecc.c
         secp256k1.c
         utils.c
@@ -27,6 +26,13 @@ set(DBB-FIRMWARE-SOURCES
         flags.c
         sha2.c
 )
+
+if(USE_UECC_LIB)
+    set(DBB-FIRMWARE-SOURCES
+        ${DBB-FIRMWARE-SOURCES}
+        uECC.c
+    )
+endif()
 
 set(DBB-HARDWARE-SOURCES
         ataes132.c

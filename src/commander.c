@@ -479,7 +479,7 @@ static void commander_process_seed(yajl_val json_node)
             snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
         } while (sd_load(file, strlens(file), CMD_seed));
 
-        ret = wallet_master_from_mnemonic(NULL, salt);
+        ret = wallet_master_from_mnemonic(NULL, NULL);
         if (ret == DBB_OK) {
             if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != DBB_OK) {
                 memory_erase_seed();

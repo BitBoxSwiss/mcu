@@ -129,29 +129,27 @@ int wallet_master_from_mnemonic(char *mnemo, const char *salt)
     clear_static_variables();
 
     if (mnemo == NULL) {
-        if (random_bytes(rand_data_32, 32, 1) == DBB_ERROR) {
+        if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
             ret = DBB_ERROR_MEM;
             goto exit;
         }
-        mnemo = wallet_mnemonic_from_data(rand_data_32, 32);
-        snprintf(mnemonic, sizeof(mnemonic), "%s", mnemo);
     } else {
         if (strlens(mnemo) > sizeof(mnemonic)) {
             ret = DBB_ERROR;
             goto exit;
         }
         snprintf(mnemonic, sizeof(mnemonic), "%.*s", (int)strlens(mnemo), mnemo);
-    }
 
-    if (wallet_mnemonic_check(mnemonic) == DBB_ERROR) {
-        ret = DBB_ERROR;
-        goto exit;
-    }
+        if (wallet_mnemonic_check(mnemonic) == DBB_ERROR) {
+            ret = DBB_ERROR;
+            goto exit;
+        }
 
-    if (!strlens(salt)) {
-        wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0);
-    } else {
-        wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
+        if (!strlens(salt)) {
+            wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0);
+        } else {
+            wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
+        }
     }
 
     if (hdnode_from_seed(seed, sizeof(seed), &node) == DBB_ERROR) {

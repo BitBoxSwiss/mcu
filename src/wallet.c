@@ -377,39 +377,6 @@ err:
 }
 
 
-char *wallet_mnemonic_from_data(const uint8_t *data, int len)
-{
-    if (len % 4 || len < 16 || len > 32) {
-        return 0;
-    }
-
-    uint8_t bits[32 + 1];
-
-    sha256_Raw(data, len, bits);
-    bits[len] = bits[0];
-    memcpy(bits, data, len);
-
-    int mlen = len * 3 / 4;
-    static char mnemo[24 * 10];
-
-    int i, j;
-    char *p = mnemo;
-    for (i = 0; i < mlen; i++) {
-        int idx = 0;
-        for (j = 0; j < 11; j++) {
-            idx <<= 1;
-            idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;
-        }
-        strcpy(p, wordlist[idx]);
-        p += strlens(wordlist[idx]);
-        *p = (i < mlen - 1) ? ' ' : 0;
-        p++;
-    }
-
-    return mnemo;
-}
-
-
 int wallet_mnemonic_check(const char *mnemo)
 {
     uint32_t i, j, k, ki, bi, n;

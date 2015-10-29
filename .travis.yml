@@ -30,21 +30,25 @@ addons:
     - lib32bz2-1.0
     - lib32ncurses5
     - lib32z1
+    - valgrind
 
 install:
-    - if [ $TRAVIS_OS_NAME == linux ]; then
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         tar xfv contrib/astyle_2.05.1_linux.tar.gz;
         cd astyle/build/gcc && make;
         export PATH=$PATH:$PWD/bin/;
       fi;
-    - if [ $TRAVIS_OS_NAME == osx ]; then brew install gnupg; fi
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        brew install valgrind;
+        brew install gnupg;
+      fi
     - if [ "$TEST" = "no" ]; then
-      if [ $TRAVIS_OS_NAME == linux ]; then
+      if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
         tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
         export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
       fi;
-      if [ $TRAVIS_OS_NAME == osx ]; then
+      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
         wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
         tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
         export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
@@ -60,4 +64,10 @@ before_script:
 script: 
     - mkdir build && cd build
     - cmake .. $ENV -DCONTINUOUS_INTEGRATION=1 && make
-    - if [ "$TEST" = "yes" ]; then make test; fi
+    - if [ "$TEST" = "yes" ]; then
+        make test;
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
+          valgrind --leak-check=full --error-exitcode=1 bin/tests_api;
+          valgrind --leak-check=full --error-exitcode=1 bin/tests_unit;
+        fi;
+      fi;

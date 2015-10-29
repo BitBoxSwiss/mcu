@@ -620,8 +620,7 @@ static void test_pbkdf2_hmac_sha256(void)
 
     strcpy((char *)s, "saltSALTsaltSALTsaltSALTsaltSALTsalt");
     pbkdf2_hmac_sha256((const uint8_t *)"passwordPASSWORDpassword", 3 * 8, s, 9 * 4, 4096, k,
-                       64,
-                       0);
+                       40, 0);
     u_assert_mem_eq(k,
                     utils_hex_to_uint8("348c89dbcbd32b2f32d814b8116e84cf2b17347ebc1800181c4e2a1fb8dd53e1c635518c7dac47e9"),
                     40);
@@ -1100,21 +1099,25 @@ static void test_base64(void)
 
 static void test_buffer_overflow(void)
 {
-    __extension__ char val[] = { [0 ... COMMANDER_REPORT_SIZE + 2] = '1' };
+    __extension__ char val[] = { [0 ... COMMANDER_REPORT_SIZE + 2] = 0 };
 
-    commander_clear_report();
     const char *key[] = {"testing", 0};
     const char *value[] = {val, 0};
     int t[] = {DBB_JSON_STRING, DBB_JSON_NONE};
+
+    commander_clear_report();
+    memset(val, '1', COMMANDER_ARRAY_ELEMENT_MAX + 1);
     commander_fill_json_array(key, value, t, CMD_data);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     commander_clear_report();
+    memset(val, '1', COMMANDER_REPORT_SIZE + 1);
     commander_fill_report("testing", val, DBB_OK);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     uint8_t sig[64] = {0};
     uint8_t pubkey[33] = {0};
+
     commander_clear_report();
     val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(flag_msg(
                 DBB_ERR_IO_REPORT_BUF))] = '\0';

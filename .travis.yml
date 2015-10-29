@@ -75,4 +75,4 @@ script:
 
       
 after_success:
-    - coveralls --verbose -i src -x c -e src/secp256k1 -e src/yajl -e src/drivers -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR/build --gcov-options '\-lp'
+    - coveralls --verbose -i src -x c -e src/secp256k1 -e src/yajl/src -e src/drivers -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR/build --gcov-options '\-lp'

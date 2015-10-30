@@ -50,7 +50,6 @@ void wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincode);
-char *wallet_mnemonic_from_data(const uint8_t *data, int len);
 int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
                              uint8_t s[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total));

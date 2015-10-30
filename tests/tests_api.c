@@ -195,6 +195,8 @@ static void tests_seed_xpub_backup(void)
     char xpub0[112], xpub1[112], *echo, seed_c[512], seed_b[512], back[512];
     char filename[] = "tests_backup.txt";
     char keypath[] = "m/44\'/0\'/";
+    char seed_create[] =
+        "{\"source\":\"create\"}";
     char seed_xpriv[] =
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
@@ -212,15 +214,9 @@ static void tests_seed_xpub_backup(void)
     const char **salt, **cipher, **run, **mnemo;
     static const char *options[] = {
         // run  salt              encrypt       mnemonic
-        "y",    "",               NULL,         NULL,
-        "y",    "",               "no",         NULL,
-        "y",    "",               "yes",        NULL,
         "y",    NULL,             NULL,         NULL,
         "y",    NULL,             "no",         NULL,
         "y",    NULL,             "yes",        NULL,
-        "y",    "Digital Bitbox", NULL,         NULL,
-        "y",    "Digital Bitbox", "no",         NULL,
-        "y",    "Digital Bitbox", "yes",        NULL,
         "y",    NULL,             NULL,         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
         "y",    NULL,             "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
         "y",    "",               "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
@@ -421,6 +417,23 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_eq(xpub0, xpub1);
+
+    // test create seeds differ
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
+    u_assert_str_not_eq(xpub0, xpub1);
+
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
+    u_assert_str_not_eq(xpub0, xpub1);
 }
 
 

@@ -129,29 +129,27 @@ int wallet_master_from_mnemonic(char *mnemo, const char *salt)
     clear_static_variables();
 
     if (mnemo == NULL) {
-        if (random_bytes(rand_data_32, 32, 1) == DBB_ERROR) {
+        if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
             ret = DBB_ERROR_MEM;
             goto exit;
         }
-        mnemo = wallet_mnemonic_from_data(rand_data_32, 32);
-        snprintf(mnemonic, sizeof(mnemonic), "%s", mnemo);
     } else {
         if (strlens(mnemo) > sizeof(mnemonic)) {
             ret = DBB_ERROR;
             goto exit;
         }
         snprintf(mnemonic, sizeof(mnemonic), "%.*s", (int)strlens(mnemo), mnemo);
-    }
 
-    if (wallet_mnemonic_check(mnemonic) == DBB_ERROR) {
-        ret = DBB_ERROR;
-        goto exit;
-    }
+        if (wallet_mnemonic_check(mnemonic) == DBB_ERROR) {
+            ret = DBB_ERROR;
+            goto exit;
+        }
 
-    if (!strlens(salt)) {
-        wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0);
-    } else {
-        wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
+        if (!strlens(salt)) {
+            wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0);
+        } else {
+            wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
+        }
     }
 
     if (hdnode_from_seed(seed, sizeof(seed), &node) == DBB_ERROR) {
@@ -376,39 +374,6 @@ err:
     memset(&node, 0, sizeof(HDNode));
     clear_static_variables();
     return DBB_ERROR;
-}
-
-
-char *wallet_mnemonic_from_data(const uint8_t *data, int len)
-{
-    if (len % 4 || len < 16 || len > 32) {
-        return 0;
-    }
-
-    uint8_t bits[32 + 1];
-
-    sha256_Raw(data, len, bits);
-    bits[len] = bits[0];
-    memcpy(bits, data, len);
-
-    int mlen = len * 3 / 4;
-    static char mnemo[24 * 10];
-
-    int i, j;
-    char *p = mnemo;
-    for (i = 0; i < mlen; i++) {
-        int idx = 0;
-        for (j = 0; j < 11; j++) {
-            idx <<= 1;
-            idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;
-        }
-        strcpy(p, wordlist[idx]);
-        p += strlens(wordlist[idx]);
-        *p = (i < mlen - 1) ? ' ' : 0;
-        p++;
-    }
-
-    return mnemo;
 }
 
 

@@ -33,6 +33,7 @@
 
 #include "commander.h"
 #include "wallet.h"
+#include "random.h"
 #include "base64.h"
 #include "base58.h"
 #include "pbkdf2.h"
@@ -548,6 +549,32 @@ static void test_verify_speed(void)
 
     printf("  Verifying speed: %0.2f sig/s\n",
            100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));
+}
+
+
+static void test_ecdh(void)
+{
+    int i;
+    uint8_t privkey_1[32], privkey_2[32];
+    uint8_t pubkey_1[33], pubkey_2[33];
+    uint8_t ecdh_secret_1[32], ecdh_secret_2[32];
+
+    for (i = 0; i < 100; i++) {
+        memset(ecdh_secret_1, 0, sizeof(ecdh_secret_1));
+        memset(ecdh_secret_2, 0, sizeof(ecdh_secret_2));
+
+        random_bytes(privkey_1, sizeof(privkey_1), 0);
+        random_bytes(privkey_2, sizeof(privkey_2), 0);
+
+        ecc_get_public_key33(privkey_1, pubkey_1);
+        ecc_get_public_key33(privkey_2, pubkey_2);
+
+        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1);
+        u_assert_mem_not_eq(ecdh_secret_1, ecdh_secret_2, 32);
+
+        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2);
+        u_assert_mem_eq(ecdh_secret_1, ecdh_secret_2, 32);
+    }
 }
 
 
@@ -1166,6 +1193,7 @@ int main(void)
 
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);
+    u_run_test(test_ecdh);
     u_run_test(test_bip32_vector_1);
     u_run_test(test_bip32_vector_2);
     u_run_test(test_base58);

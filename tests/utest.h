@@ -152,6 +152,18 @@
   return; }; \
  } while(0); }
 
+#define u_assert_mem_not_eq(R,E,L) {\
+ const void * r_ = (R); \
+ const void * e_ = (E); \
+ size_t l_ = (L); \
+ do { if (!memcmp(r_,e_,l_)) { \
+  printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
+  printf("\tExpect: \t%s\n", utils_uint8_to_hex(e_,l_));\
+  printf("\tReceive:\t%s\n", utils_uint8_to_hex(r_,l_));\
+  U_TESTS_FAIL++;\
+  return; }; \
+ } while(0); }
+
 extern int U_TESTS_RUN;
 extern int U_TESTS_FAIL;
 

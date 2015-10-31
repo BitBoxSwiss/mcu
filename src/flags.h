@@ -45,12 +45,12 @@
 X(seed)           \
 X(sign)           \
 X(password)       \
-X(verifypass)     \
 /* placeholder  */\
 /* do not move  */\
 X(REQUIRE_TOUCH)  \
 /* parent keys  */\
 /*  w/o touch   */\
+X(verifypass)     \
 X(led)            \
 X(xpub)           \
 X(name)           \
@@ -139,8 +139,10 @@ X(VERIFY_SAME,           0, 0)\
 X(VERIFY_DIFFERENT,      0, 0)\
 X(TOUCHED,               0, 0)\
 X(NOT_TOUCHED,           0, 0)\
+X(TOUCHED_ABORT,         0, 0)\
 X(TOUCH_SHORT,           0, 0)\
 X(TOUCH_LONG,            0, 0)\
+X(TOUCH_TIMEOUT,         0, 0)\
 X(KEY_PRESENT,           0, 0)\
 X(KEY_ABSENT,            0, 0)\
 X(RESET,                 0, 0)\

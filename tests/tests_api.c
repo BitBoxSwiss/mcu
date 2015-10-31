@@ -704,11 +704,27 @@ static void tests_password(void)
     api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
+    // Test ECDH verifypass
     char ecdh[] =
         "{\"ecdh\":\"028d3bce812ac027fdea0e4ad98b2549a90bb9aa996396eec6bb1a8ed56e6976b8\"}";
     api_format_send_cmd(cmd_str(CMD_verifypass), ecdh, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_ecdh));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_ciphertext));
+
+    if (!TEST_LIVE_DEVICE) {
+        yajl_val json_node = yajl_tree_parse(utils_read_decrypted_report(), NULL, 0);
+        const char *ciphertext_path[] = { cmd_str(CMD_verifypass), cmd_str(CMD_ciphertext), (const char *) 0 };
+        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
+                                 yajl_t_string));
+        if (ciphertext) {
+            int decrypt_len;
+            char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
+                                            &decrypt_len, PASSWORD_VERIFY);
+            u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
+            free(dec);
+        }
+    }
 }
 
 

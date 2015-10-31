@@ -43,6 +43,7 @@
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max attempts before device reset
 #define VERIFYPASS_FILENAME         "verification.txt"
+#define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define AUTOBACKUP_FILENAME         "autobackup_"
 #define AUTOBACKUP_ENCRYPT          "yes"
 #define AUTOBACKUP_NUM              10

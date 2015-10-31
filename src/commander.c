@@ -650,7 +650,8 @@ static int commander_process_password(const char *message, int msg_len, PASSWORD
 }
 
 
-static int commander_process_ecdh(int cmd, uint8_t *pair_pubkey, uint8_t *out_pubkey)
+static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
+                                  uint8_t *out_pubkey)
 {
     uint8_t rand_privkey[32], ecdh_secret[32], rand_led, ret, i = 0;
 
@@ -774,9 +775,21 @@ static void commander_process_verifypass(yajl_val json_node)
         if (commander_process_ecdh(CMD_verifypass, utils_hex_to_uint8(pair_pubkey),
                                    out_pubkey) == DBB_OK) {
             char msg[256];
-            snprintf(msg, sizeof(msg), "{\"%s\":\"%s\"}", cmd_str(CMD_ecdh),
-                     utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)));
-            commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_JSON_ARRAY);
+            int encrypt_len;
+            char *enc = aes_cbc_b64_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
+                                            strlens(VERIFYPASS_CRYPT_TEST),
+                                            &encrypt_len,
+                                            PASSWORD_VERIFY);
+            if (enc) {
+                snprintf(msg, sizeof(msg), "{\"%s\":\"%s\", \"%s\":\"%s\"}",
+                         cmd_str(CMD_ecdh), utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)),
+                         cmd_str(CMD_ciphertext), enc);
+                commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_JSON_ARRAY);
+                free(enc);
+            } else {
+                commander_clear_report();
+                commander_fill_report(cmd_str(CMD_ecdh), NULL, DBB_ERR_MEM_ENCRYPT);
+            }
         }
         return;
     }

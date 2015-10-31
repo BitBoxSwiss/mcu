@@ -34,6 +34,18 @@ if(USE_UECC_LIB)
     )
 endif()
 
+set(DBB-BOOTLOADER-SOURCES
+        startup.c
+        bootloader.c
+        led.c
+        ecc.c
+        uECC.c
+        sha2.c
+        utils.c
+        touch.c
+        flags.c
+)
+
 set(DBB-HARDWARE-SOURCES
         ataes132.c
         sd.c
@@ -166,7 +178,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Build tests_api
 
-if(BUILD_TESTS)
+if(BUILD_TYPE STREQUAL "test")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")
     include_directories(${DBB-INCLUDES})
     add_library(bitbox
@@ -181,25 +193,42 @@ endif()
 #-----------------------------------------------------------------------------
 # Build embedded firmware
 
-if(NOT BUILD_TESTS)
-    set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/firmware.ld")
+if(NOT BUILD_TYPE STREQUAL "test")
+    
+    if(BUILD_TYPE STREQUAL "firmware")
+        set(SOURCES
+            ${DBB-HARDWARE-SOURCES} 
+            ${DBB-FIRMWARE-SOURCES} 
+            ${YAJL-SOURCES} 
+            ${DRIVER-SOURCES}
+        )
+        set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/firmware.ld")
+    elseif(BUILD_TYPE STREQUAL "bootloader")
+        set(SOURCES
+            ${DBB-HARDWARE-SOURCES} 
+            ${DBB-BOOTLOADER-SOURCES} 
+            ${DRIVER-SOURCES}
+        )
+        set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/bootloader.ld")
+    endif() 
+        
     set(CMAKE_C_LINK_FLAGS "-mthumb -Wl,-Map=\"../bin/${MYPROJECT}.map\" -Wl,--gc-sections -mcpu=cortex-m4 -Wl,--entry=Reset_Handler -Wl,--cref -mthumb -T\"${CMAKE_LINKER_SCRIPT}\"")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")
     include_directories(${DRIVER-INCLUDES})
     include_directories(${DBB-INCLUDES})
-    set(SOURCES
-        ${DBB-HARDWARE-SOURCES} 
-        ${DBB-FIRMWARE-SOURCES} 
-        ${YAJL-SOURCES} 
-        ${DRIVER-SOURCES}
-    )
     add_library(qtouchlib STATIC IMPORTED)
     set_property(TARGET qtouchlib PROPERTY
                 IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/drivers/lib/libsam4s-32qt-k-8rs-gnu.a)
     add_library(mathlib STATIC IMPORTED)
     set_property(TARGET mathlib PROPERTY
                 IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/drivers/lib/libarm_cortexM4l_math.a)
-    add_executable(${ELF} ${SOURCES} main.c)
+    
+    if(BUILD_TYPE STREQUAL "firmware")
+        add_executable(${ELF} ${SOURCES} firmware.c)
+    elseif(BUILD_TYPE STREQUAL "bootloader")
+        add_executable(${ELF} ${SOURCES})
+    endif() 
+    
     target_link_libraries(${ELF} qtouchlib mathlib)
 endif()
 

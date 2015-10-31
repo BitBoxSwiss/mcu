@@ -1,4 +1,4 @@
-message("Loading firmware.cmake")
+message("Loading arm.cmake")
 
 set(CMAKE_SYSTEM_NAME "Generic")
 

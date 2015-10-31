@@ -33,8 +33,8 @@
 
 
 // Device definition 
-#define  USB_DEVICE_VENDOR_ID             USB_VID_ATMEL
-#define  USB_DEVICE_PRODUCT_ID            USB_PID_ATMEL_ASF_HIDGENERIC
+#define  USB_DEVICE_VENDOR_ID             0x03EB
+#define  USB_DEVICE_PRODUCT_ID            0x2402
 #define  USB_DEVICE_MAJOR_VERSION         1
 #define  USB_DEVICE_MINOR_VERSION         0
 #define  USB_DEVICE_POWER                 100// Consumption (mA)
@@ -46,7 +46,11 @@
 //	(USB_CONFIG_ATTR_REMOTE_WAKEUP|USB_CONFIG_ATTR_BUS_POWERED)
 
 // USB Device string definitions (Optional)
-#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox, powered by ATMEL"
+#ifdef BOOTLOADER 
+#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox"
+#else
+#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox Bootloader"
+#endif
 #define  USB_DEVICE_PRODUCT_NAME          "www.digitalbitbox.com"
 #define  USB_DEVICE_SERIAL_NAME           "none"
 
@@ -63,8 +67,14 @@
 #define  UDI_HID_GENERIC_SET_FEATURE(report) usb_hid_set_feature(report)
 
 
+#ifdef BOOTLOADER 
+#define  UDI_HID_REPORT_IN_SIZE             256
+#define  UDI_HID_REPORT_OUT_SIZE            4098
+#define  UDI_HID_REPORT_FEATURE_SIZE        8
+#else
 #define  UDI_HID_REPORT_IN_SIZE             2048
 #define  UDI_HID_REPORT_OUT_SIZE            2048
+#endif
 #define  UDI_HID_REPORT_FEATURE_SIZE        8
 #define  UDI_HID_GENERIC_EP_SIZE            64
 

@@ -24,6 +24,7 @@
 
 */
 
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -31,8 +32,6 @@
 
 #include "utils.h"
 #include "flags.h"
-#include "commander.h"
-#include "yajl/src/api/yajl_tree.h"
 
 
 static uint8_t buffer_hex_to_uint8[TO_UINT8_HEX_BUF_LEN];
@@ -175,6 +174,9 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
 
 
 #ifdef TESTING
+#include "commander.h"
+#include "yajl/src/api/yajl_tree.h"
+
 
 static char PIN_2FA[5] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];

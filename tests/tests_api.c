@@ -578,6 +578,7 @@ static void tests_password(void)
             u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
             free(dec);
         }
+        yajl_tree_free(json_node);
     }
 }
 

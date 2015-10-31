@@ -309,6 +309,8 @@ static void commander_process_reset(yajl_val json_node)
             memory_erase();
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+        } else {
+            commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
         }
         return;
     }
@@ -684,6 +686,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
 
     if (i == 0) {
         // While loop not entered
+        commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
         return DBB_ERROR;
     }
 
@@ -747,6 +750,7 @@ static void commander_process_verifypass(yajl_val json_node)
         if (strcmp(value, attr_str(ATTR_create)) == 0) {
 
             if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
+                commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
                 return;
             }
 
@@ -1334,6 +1338,9 @@ static void commander_parse(char *command)
             }
         } else {
             // Error or not touched
+            if (t != DBB_ERROR) {
+                commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
+            }
             err++;
         }
 

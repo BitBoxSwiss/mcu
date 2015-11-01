@@ -70,10 +70,12 @@ script:
     - cmake .. $ENV -DCONTINUOUS_INTEGRATION=1 && make
     - if [ "$TEST" = "yes" ]; then
         make test;
-        if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
+      fi;
+    - if [ "$TEST" = "yes" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --error-exitcode=1 bin/tests_api;
+      fi;
+    - if [ "$TEST" = "yes" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --error-exitcode=1 bin/tests_unit;
-        fi;
       fi;
 
       

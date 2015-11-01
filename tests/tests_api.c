@@ -393,6 +393,15 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
+    api_format_send_cmd(cmd_str(CMD_bootloader), "", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));

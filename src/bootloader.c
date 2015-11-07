@@ -35,6 +35,7 @@
 #include "flags.h"
 #include "utils.h"
 #include "touch.h"
+#include "version.h"
 #include "bootloader.h"
 
 
@@ -142,6 +143,12 @@ static char *bootloader(const char *command)
     report[0] = command[0]; // OP_CODE
 
     switch (command[0]) {
+
+        case OP_VERSION: {
+            char *r = report;
+            memcpy(r + 2, DIGITAL_BITBOX_VERSION, sizeof(DIGITAL_BITBOX_VERSION));
+            break;
+        }
 
         case OP_ERASE:
             bootloader_erase();

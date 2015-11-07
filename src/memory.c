@@ -63,32 +63,34 @@ __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0
 
 static void memory_mempass(void)
 {
-    uint8_t mempass[88];
+    uint8_t mempass[64];
     memset(mempass, 0, sizeof(mempass));
     // Encrypt data saved to memory using an AES key obfuscated by the
     // compilation time and date, which is used to 'randomly' read bytes
     // (i.e. the AES key) from the MCU code in flash memory.
-    uint8_t *mp = mempass;
-    int r[8] = {0};
-    char c[3] = {0};
-    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);
+    uint8_t i, *mp = mempass;
+    int r[8];
+    char c[3];
+    sscanf(__TIME__, "%d:%d:%d", &r[0], &r[1], &r[2]);//hour:minute:second
     sscanf(__DATE__, "%c%c%c %d ", &c[0], &c[1], &c[2], &r[3]);
-    r[7] = __LINE__ % 1028;
+    r[7] = __LINE__;
     r[4] = c[0];
     r[5] = c[1];
     r[6] = c[2];
+
+    for (i = 0; i < 8; i++) {
+        r[i] += r[i] * r[2] * r[2] * r[2];
+    }
+
 #ifndef TESTING
-    memcpy(mp +  0, (uint32_t *)IFLASH0_ADDR + r[0] * r[0], 8);
-    memcpy(mp +  8, (uint32_t *)IFLASH0_ADDR + r[0] * r[1], 8);
-    memcpy(mp + 16, (uint32_t *)IFLASH0_ADDR + r[0] * r[2], 8);
-    memcpy(mp + 24, (uint32_t *)IFLASH0_ADDR + r[1] * r[1], 8);
-    memcpy(mp + 32, (uint32_t *)IFLASH0_ADDR + r[1] * r[2], 8);
-    memcpy(mp + 40, (uint32_t *)IFLASH0_ADDR + r[2] * r[2], 8);
-    memcpy(mp + 48, (uint32_t *)IFLASH0_ADDR + r[0] * r[3], 8);
-    memcpy(mp + 56, (uint32_t *)IFLASH0_ADDR + r[0] * r[4], 8);
-    memcpy(mp + 64, (uint32_t *)IFLASH0_ADDR + r[0] * r[5], 8);
-    memcpy(mp + 72, (uint32_t *)IFLASH0_ADDR + r[0] * r[6], 8);
-    memcpy(mp + 80, (uint32_t *)IFLASH0_ADDR + r[2] + r[7], 8);
+    memcpy(mp +  0, (uint32_t *)(IFLASH0_ADDR + (r[0] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp +  8, (uint32_t *)(IFLASH0_ADDR + (r[1] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 16, (uint32_t *)(IFLASH0_ADDR + (r[2] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 24, (uint32_t *)(IFLASH0_ADDR + (r[3] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 32, (uint32_t *)(IFLASH0_ADDR + (r[4] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 40, (uint32_t *)(IFLASH0_ADDR + (r[5] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 48, (uint32_t *)(IFLASH0_ADDR + (r[6] % (FLASH_BOOT_LEN - 8))), 8);
+    memcpy(mp + 56, (uint32_t *)(IFLASH0_ADDR + (r[7] % (FLASH_BOOT_LEN - 8))), 8);
 #else
     memcpy(mp, r, sizeof(r));
 #endif

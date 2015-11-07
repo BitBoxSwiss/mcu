@@ -29,6 +29,24 @@
 #define _FLAGS_H_
 
 
+// Flash: 256kB = 512 pages * 512B per page
+#ifndef IFLASH0_ADDR
+#define IFLASH0_ADDR                (0x00400000u)
+#endif
+#ifndef FLASH_USER_SIG_SIZE
+#define FLASH_USER_SIG_SIZE         (512)
+#endif
+#define FLASH_BOOT_LEN              (0x00008000u)
+#define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
+#define FLASH_APP_LEN               (IFLASH0_SIZE - FLASH_BOOT_LEN)
+#define FLASH_APP_PAGE_NUM          (FLASH_APP_LEN / IFLASH0_PAGE_SIZE)
+#define FLASH_BOOT_OP_LEN           (2)// 1 byte op code and 1 byte parameter
+#define FLASH_BOOT_PAGES_PER_CHUNK  (8)
+#define FLASH_BOOT_CHUNK_LEN        (IFLASH0_PAGE_SIZE * FLASH_BOOT_PAGES_PER_CHUNK)
+#define FLASH_BOOT_CHUNK_NUM        (FLASH_APP_LEN / FLASH_BOOT_CHUNK_LEN)// app len should be a multiple of chunk len
+#define FLASH_BOOT_LOCK_BYTE        (FLASH_USER_SIG_SIZE - 1)
+
+
 #define AES_DATA_LEN_MAX 1024// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN 4
 #define SALT_LEN_MAX     256
@@ -45,6 +63,7 @@
 X(seed)           \
 X(sign)           \
 X(password)       \
+X(bootloader)     \
 /* placeholder  */\
 /* do not move  */\
 X(REQUIRE_TOUCH)  \
@@ -101,12 +120,15 @@ X(NUM)             /* keep last */
 #define ATTR_TABLE \
 X(success)        \
 X(error)          \
+X(accept)         \
+X(aborted)        \
 X(yes)            \
 X(transaction)    \
 X(hash)           \
 X(meta)           \
 X(list)           \
 X(lock)           \
+X(unlock)         \
 X(decrypt)        \
 X(encrypt)        \
 X(true)           \
@@ -197,6 +219,8 @@ X(ERR_SD_NUM_FILES,    409, "Too many files to read. The list is truncated.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\
+X(ERR_TOUCH_ABORT,     600, "Aborted by user.")\
+X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
 X(FLAG_NUM,              0, 0)/* keep last */

@@ -68,8 +68,6 @@ void touch_init(void)
 uint8_t touch_button_press(uint8_t touch_type)
 {
     int pushed = DBB_NOT_TOUCHED;
-    int status = DBB_ERROR;
-    char message[128];
     int16_t touch_snks;
     int16_t touch_sns;
     uint16_t exit_time_ms;
@@ -140,17 +138,15 @@ uint8_t touch_button_press(uint8_t touch_type)
     // Reset lower priority
     NVIC_SetPriority(SysTick_IRQn, 15);
     if (pushed == DBB_TOUCHED) {
-        sprintf(message, "accept");
-        status = DBB_OK;
         if (touch_type == DBB_TOUCH_LONG) {
             led_off();
             delay_ms(300);
             led_on();
             delay_ms(300);
         }
+        led_off();
+        return DBB_TOUCHED;
     } else if (pushed == DBB_TOUCHED_ABORT) {
-        sprintf(message, "Aborted by user.");
-        status = DBB_ERROR;
         led_off();
         delay_ms(300);
         led_on();
@@ -159,14 +155,19 @@ uint8_t touch_button_press(uint8_t touch_type)
         delay_ms(100);
         led_on();
         delay_ms(100);
+        led_off();
+        return DBB_ERR_TOUCH_ABORT;
     } else {
+#ifndef BOOTLOADER
+        char message[128];
         snprintf(message, sizeof(message), "Touchbutton timed out. (%d/%d)",
                  qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
                  qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
-        status = DBB_ERROR;
+        commander_fill_report(cmd_str(CMD_touchbutton), message, DBB_ERR_TOUCH_TIMEOUT);
+#endif
+        led_off();
+        return DBB_ERR_TOUCH_TIMEOUT;
     }
-    led_off();
 
-    commander_fill_report(cmd_str(CMD_touchbutton), message, status);
     return pushed;
 }

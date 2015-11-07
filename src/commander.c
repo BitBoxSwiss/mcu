@@ -309,6 +309,8 @@ static void commander_process_reset(yajl_val json_node)
             memory_erase();
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+        } else {
+            commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
         }
         return;
     }
@@ -684,6 +686,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
 
     if (i == 0) {
         // While loop not entered
+        commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
         return DBB_ERROR;
     }
 
@@ -747,6 +750,7 @@ static void commander_process_verifypass(yajl_val json_node)
         if (strcmp(value, attr_str(ATTR_create)) == 0) {
 
             if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
+                commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
                 return;
             }
 
@@ -984,6 +988,53 @@ static void commander_process_led(yajl_val json_node)
 }
 
 
+static void commander_process_bootloader(yajl_val json_node)
+{
+    const char *path[] = { cmd_str(CMD_bootloader), NULL };
+    const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+
+    if (!strlens(value)) {
+        commander_fill_report(cmd_str(CMD_bootloader), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
+    }
+
+#ifdef TESTING
+    commander_fill_report(cmd_str(CMD_bootloader), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
+#else
+    uint8_t sig[FLASH_USER_SIG_SIZE];
+
+    if (flash_read_user_signature((uint32_t *)sig,
+                                  FLASH_USER_SIG_SIZE / sizeof(uint32_t)) != FLASH_RC_OK) {
+        goto err;
+    }
+
+    if (flash_erase_user_signature() != FLASH_RC_OK) {
+        goto err;
+    }
+
+    if (!strncmp(value, attr_str(ATTR_lock), strlens(attr_str(ATTR_lock)))) {
+        sig[FLASH_BOOT_LOCK_BYTE] = 0;
+    } else if (!strncmp(value, attr_str(ATTR_unlock), strlens(attr_str(ATTR_unlock)))) {
+        sig[FLASH_BOOT_LOCK_BYTE] = 0xFF;
+    } else {
+        commander_fill_report(cmd_str(CMD_bootloader), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
+    }
+
+    if (flash_write_user_signature((uint32_t *)sig,
+                                   FLASH_USER_SIG_SIZE / sizeof(uint32_t)) != FLASH_RC_OK) {
+        goto err;
+    }
+
+    commander_fill_report(cmd_str(CMD_bootloader), value, DBB_OK);
+    return;
+
+err:
+    commander_fill_report(cmd_str(CMD_bootloader), NULL, DBB_ERR_MEM_FLASH);
+#endif
+}
+
+
 static int commander_process(int cmd, yajl_val json_node)
 {
     switch (cmd) {
@@ -1041,6 +1092,10 @@ static int commander_process(int cmd, yajl_val json_node)
 
         case CMD_aes256cbc:
             commander_process_aes256cbc(json_node);
+            break;
+
+        case CMD_bootloader:
+            commander_process_bootloader(json_node);
             break;
 
         default: {
@@ -1334,6 +1389,9 @@ static void commander_parse(char *command)
             }
         } else {
             // Error or not touched
+            if (t != DBB_ERROR) {
+                commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
+            }
             err++;
         }
 

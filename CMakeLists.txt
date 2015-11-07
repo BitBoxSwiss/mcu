@@ -6,23 +6,38 @@
 
 cmake_minimum_required(VERSION 2.8.5)
 
-set(MYPROJECT "firmware")
-set(ELF ${MYPROJECT}.elf)
-project(${MYPROJECT} C)
+if(BUILD_TYPE STREQUAL "firmware")
+elseif(BUILD_TYPE STREQUAL "bootloader")
+elseif(BUILD_TYPE STREQUAL "test")
+else()
+    message(FATAL_ERROR "Invalid build type: ${BUILD_TYPE}. Build with:
+    cmake .. -DBUILD_TYPE=type   # 'type' can be 'test', 'firmware', or 'bootloader'
+    ")
+endif()
 
+    
+set(MYPROJECT ${BUILD_TYPE})
+project(${MYPROJECT} C)
 
 #-----------------------------------------------------------------------------
 # Options for building
 
-option(BUILD_TESTS "Build unit tests instead of ARM binary." ON)
+option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." ON)
+option(BUILD_COVERAGE "Compile with test coverage flags." OFF)
+option(BUILD_VALGRIND "Compile with debug symbols." OFF)
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." OFF)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build." OFF)
-option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." ON)
 
 
-if(NOT BUILD_TESTS)
-    set(CMAKE_TOOLCHAIN_FILE firmware.cmake)
+if(NOT BUILD_TYPE STREQUAL "test")
+    set(ELF ${MYPROJECT}.elf)
+    set(CMAKE_TOOLCHAIN_FILE arm.cmake)
     include(${CMAKE_TOOLCHAIN_FILE})
+endif()
+
+if(CONTINUOUS_INTEGRATION AND BUILD_TYPE STREQUAL "test")
+    set(BUILD_COVERAGE "ON")
+    set(BUILD_VALGRIND "ON")
 endif()
 
 
@@ -64,8 +79,12 @@ if(CONTINUOUS_INTEGRATION)
   add_definitions(-DCONTINUOUS_INTEGRATION)
 endif()
 
-if(BUILD_TESTS)
+if(BUILD_TYPE STREQUAL "test")
   add_definitions(-DTESTING)
+endif()
+
+if(BUILD_TYPE STREQUAL "bootloader")
+    add_definitions(-DBOOTLOADER)
 endif()
 
 if(USE_UECC_LIB)
@@ -87,9 +106,11 @@ message(STATUS "Compiler:               ${CMAKE_C_COMPILER}")
 message(STATUS "Linker:                 ${CMAKE_LINKER}")
 message(STATUS "Archiver:               ${CMAKE_AR}")
 message(STATUS "            - Options -")
+message(STATUS "Build type:             ${BUILD_TYPE}")
 message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
-message(STATUS "Testing:                ${BUILD_TESTS}  (make test)")
 message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}  (make doc)")
+message(STATUS "Coverage flags:         ${BUILD_COVERAGE}")
+message(STATUS "Debug symbols:          ${BUILD_VALGRIND}")
 if(USE_UECC_LIB)
     message(STATUS "ECC library:            micro ECC")
 else()
@@ -114,7 +135,7 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 #-----------------------------------------------------------------------------
 # Compiler
 
-if(BUILD_TESTS)
+if(BUILD_VALGRIND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O0 -g")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Os")
@@ -124,7 +145,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Werror -Wstrict-
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
 
-if(BUILD_TESTS)
+if(BUILD_TYPE STREQUAL "test")
     if(APPLE)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
         set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -framework AppKit -framework IOKit")
@@ -132,7 +153,7 @@ if(BUILD_TESTS)
     endif()
 endif()
 
-if(NOT BUILD_TESTS)
+if(NOT BUILD_TYPE STREQUAL "test")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -fdata-sections -fomit-frame-pointer -ffunction-sections -mlong-calls -mcpu=cortex-m4 -pipe -fno-strict-aliasing --param max-inline-insns-single=500 -D__SAM4S4A__ -DNDEBUG -DBOARD=USER_BOARD -DARM_MATH_CM4=true -DUDD_ENABLE -D_QTOUCH_ -Dscanf=iscanf -Dprintf=iprintf")
 endif()
 
@@ -140,7 +161,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Test coverage flags
 
-if(BUILD_TESTS)
+if(BUILD_COVERAGE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
     set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -fprofile-arcs")
 endif()
@@ -179,7 +200,7 @@ message(STATUS "C Flags:          ${CMAKE_C_FLAGS}")
 
 add_subdirectory(src)
 
-if(BUILD_TESTS)
+if(BUILD_TYPE STREQUAL "test")
     add_subdirectory(tests)
     add_test(NAME tests_unit COMMAND tests_unit)
     add_test(NAME tests_openssl COMMAND tests_openssl 200)
@@ -190,10 +211,10 @@ if(BUILD_TESTS)
 
 else()
     add_custom_command(
-        OUTPUT    ${MYPROJECT}.bin
-        COMMAND   ${CMAKE_SIZE} ${ELF}
-        COMMAND   ${CMAKE_OBJCOPY} -O binary ${ELF} ${MYPROJECT}.bin
-        DEPENDS   ${ELF}
+        OUTPUT ${MYPROJECT}.bin
+        COMMAND ${CMAKE_SIZE} ${ELF}
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${ELF} ${MYPROJECT}.bin
+        DEPENDS ${ELF}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
         COMMENT "\nGenerating binary"
     )
@@ -202,6 +223,20 @@ else()
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
     )
     add_dependencies(binary_file ${ELF})
+    
+    if(BUILD_TYPE STREQUAL "bootloader")
+        add_custom_command(
+            OUTPUT ${MYPROJECT}.pad.bin
+            COMMAND python ../../contrib/pad_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+            COMMENT "\nPadding binary"
+        )
+        add_custom_target(padded_file ALL
+            DEPENDS ${MYPROJECT}.pad.bin
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+        )
+        add_dependencies(padded_file binary_file)
+    endif()
 
 endif()
 

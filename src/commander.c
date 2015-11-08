@@ -884,7 +884,7 @@ static void commander_process_device(yajl_val json_node)
         snprintf(msg, sizeof(msg),
                  "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
-                 attr_str(ATTR_version), (const char *)DIGITAL_BITBOX_VERSION,
+                 attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
                  attr_str(ATTR_id), id,
                  attr_str(ATTR_seeded), seeded,

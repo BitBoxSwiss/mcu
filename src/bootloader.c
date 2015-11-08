@@ -35,6 +35,7 @@
 #include "flags.h"
 #include "utils.h"
 #include "touch.h"
+#include "version.h"
 #include "bootloader.h"
 
 
@@ -94,6 +95,8 @@ static void bootloader_write_page(const char *buf, uint8_t chunknum)
 
 static void bootloader_erase(void)
 {
+    bootloader_loading_ready = 0;
+
     if (touch_button_press(DBB_TOUCH_LONG) == DBB_TOUCHED) {
         flash_unlock(FLASH_APP_START, IFLASH0_ADDR + IFLASH0_SIZE, NULL, NULL);
         for (uint32_t i = 0; i < FLASH_APP_PAGE_NUM; i += 8) {
@@ -142,6 +145,12 @@ static char *bootloader(const char *command)
     report[0] = command[0]; // OP_CODE
 
     switch (command[0]) {
+
+        case OP_VERSION: {
+            char *r = report;
+            memcpy(r + 2, DIGITAL_BITBOX_VERSION, sizeof(DIGITAL_BITBOX_VERSION));
+            break;
+        }
 
         case OP_ERASE:
             bootloader_erase();

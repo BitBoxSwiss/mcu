@@ -122,7 +122,7 @@ int memory_setup(void)
         const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
         // Return packet [Count(1) || Return Code (1) || CRC (2)]
         uint8_t ataes_ret[4] = {0};
-        if (aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
+        if (ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
             return DBB_ERROR;
         }
 #endif
@@ -176,7 +176,8 @@ static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
 {
 #ifndef TESTING
     // read current memory
-    if (aes_eeprom(len, addr, read_b, NULL) != DBB_OK) {
+    if (ataes_eeprom(len, addr, read_b, NULL) != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
         return DBB_ERROR;
     }
 #endif
@@ -188,7 +189,8 @@ static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
                 return DBB_OK;
             }
         }
-        if (aes_eeprom(len, addr, read_b, write_b) != DBB_OK) {
+        if (ataes_eeprom(len, addr, read_b, write_b) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
         }
         if (read_b) {

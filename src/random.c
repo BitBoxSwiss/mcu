@@ -60,10 +60,10 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
     while (len > i) {
         if (update_seed) {
-            ret = aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
+            ret = ataes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
         } else {
-            ret = aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
+            ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ret == DBB_OK && ataes_ret[0]) {
             memcpy(buf + i, ataes_ret + 2, (len - i) < 16 ? (len - i) : 16);

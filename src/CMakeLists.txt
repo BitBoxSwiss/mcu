@@ -44,6 +44,8 @@ set(DBB-BOOTLOADER-SOURCES
         utils.c
         touch.c
         flags.c
+        random.c
+        ataes132.c
 )
 
 set(DBB-HARDWARE-SOURCES

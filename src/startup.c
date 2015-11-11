@@ -32,10 +32,24 @@
 #include "usb.h"
 #include "flags.h"
 #include "touch.h"
+#include "random.h"
 #include "systick.h"
+#include "ataes132.h"
 #include "bootloader.h"
 #include "sam4s4a.h"
 #include "core_cm4.h"
+
+
+uint32_t __stack_chk_guard = 0; // updated below
+
+extern void __attribute__((noreturn)) __stack_chk_fail(void);
+void __attribute__((noreturn)) __stack_chk_fail(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(300);
+    }
+}
 
 
 void SysTick_Handler(void)
@@ -94,6 +108,8 @@ int main(void)
     cpu_irq_enable();
     sysclk_init();
     board_init();
+    ataes_init();
+    random_bytes((uint8_t *)&__stack_chk_guard, sizeof(__stack_chk_guard), 0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     flash_enable_security_bit();
     pmc_enable_periph_clk(ID_PIOA);

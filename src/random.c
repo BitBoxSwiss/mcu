@@ -47,6 +47,19 @@ void random_init(void)
 #endif
 
 
+uint32_t random_uint32(uint8_t update_seed)
+{
+    uint32_t rn32;
+    uint8_t rn[4];
+    if (random_bytes(rn, 4, update_seed) != DBB_ERROR) {
+        memcpy(&rn32, rn, 4);
+        return rn32;
+    } else {
+        return 0;
+    }
+}
+
+
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     uint32_t i = 0;

@@ -109,7 +109,7 @@ int main(void)
     sysclk_init();
     board_init();
     ataes_init();
-    random_bytes((uint8_t *)&__stack_chk_guard, sizeof(__stack_chk_guard), 0);
+    __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     flash_enable_security_bit();
     pmc_enable_periph_clk(ID_PIOA);

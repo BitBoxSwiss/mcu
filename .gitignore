@@ -1,5 +1,6 @@
 build
 version.h
+.vagrant
 .DS_Store
 .ycm*
 *.o

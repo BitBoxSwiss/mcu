@@ -23,36 +23,36 @@ ECDSA signatures are performed with either the [bitcoin core secp256k1 library](
 
 
 ## Build Instructions
+
+#### Building test code:
+
 Dependencies:
 
-- [HIDAPI](https://github.com/signal11/hidapi)
-- [GCC ARM cross compiler](https://launchpad.net/gcc-arm-embedded/+download) (Optional, to build the firmware binary)
+- [HIDAPI](https://github.com/signal11/hidapi) (For live testing)
 - Doxygen (Optional, to generate source code documentation)
 - Graphviz (Optional, to generate graphs for the Doxygen documentation)
 
-For OSX:
+Build:
 
-    brew install hidapi
-    brew install doxygen graphviz
---------------
-
-Building code for tests:
-
-    git clone https://github.com/digitalbitbox/mcu
-    mkdir build
-    cd build
+    git clone https://github.com/digitalbitbox/mcu && cd mcu
+    mkdir build && cd build
     cmake .. -DBUILD_TYPE=test
     make
-    make test # optional
+    make test
 
-Building firmware:
+#### Deterministic build of firmware:
 
-    git clone https://github.com/digitalbitbox/mcu
-    mkdir build
-    cd build
-    cmake .. -DBUILD_TYPE=firmware
-    make
+Requires:
 
+- [Vagrant](http://www.vagrantup.com/downloads)
+- [Virtual Box](https://www.virtualbox.org/wiki/Downloads)
+    
+Build:
+
+    git clone https://github.com/digitalbitbox/mcu && cd mcu
+    vagrant up # Creates: build/bin/firmware.bin
+    vagrant halt
+    
 
 ## Contributing
 Please do not use an editor that automatically reformats.

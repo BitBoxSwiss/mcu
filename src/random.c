@@ -26,13 +26,10 @@
 
 
 #include <string.h>
-#include <stdio.h>
-#include <time.h>
 
 #include "random.h"
 #include "memory.h"
 #include "flags.h"
-#include "utils.h"
 #ifndef TESTING
 #include "ataes132.h"
 
@@ -42,6 +39,7 @@ void random_init(void)
     /* pass */
 }
 #else
+#include <time.h>
 void random_init(void)
 {
     srand(time(NULL));
@@ -51,7 +49,6 @@ void random_init(void)
 
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
-    uint8_t *entropy;
     uint32_t i = 0;
 #ifndef TESTING
     const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
@@ -60,10 +57,10 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 
     while (len > i) {
         if (update_seed) {
-            ret = aes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
+            ret = ataes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
             update_seed = 0;
         } else {
-            ret = aes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
+            ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ret == DBB_OK && ataes_ret[0]) {
             memcpy(buf + i, ataes_ret + 2, (len - i) < 16 ? (len - i) : 16);
@@ -80,6 +77,8 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     }
 #endif
 
+#ifndef BOOTLOADER
+    uint8_t *entropy;
     // add ataes independent entropy from factory install
     entropy = memory_report_aeskey(PASSWORD_MEMORY);
     for (i = 0; i < len; i++) {
@@ -91,6 +90,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     for (i = 0; i < len; i++) {
         buf[i] ^= entropy[i % MEM_PAGE_LEN];
     }
+#endif
 
     return DBB_OK;
 }

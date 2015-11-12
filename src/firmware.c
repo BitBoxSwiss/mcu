@@ -24,7 +24,7 @@
 
 */
 
-
+#include <stdint.h>
 #include "drivers/config/conf_usb.h"
 #include "drivers/config/mcu.h"
 #include "sd.h"
@@ -33,9 +33,22 @@
 #include "led.h"
 #include "touch.h"
 #include "memory.h"
+#include "random.h"
 #include "systick.h"
 #include "ataes132.h"
 #include "commander.h"
+
+
+uint32_t __stack_chk_guard = 0; // updated below
+
+extern void __attribute__((noreturn)) __stack_chk_fail(void);
+void __attribute__((noreturn)) __stack_chk_fail(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(300);
+    }
+}
 
 
 void SysTick_Handler(void)
@@ -52,7 +65,8 @@ int main (void)
     sleepmgr_init();
     sysclk_init();
     board_init();
-    aes_init();
+    ataes_init();
+    random_bytes((uint8_t *)&__stack_chk_guard, sizeof(__stack_chk_guard), 0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     pmc_enable_periph_clk(ID_PIOA); // Button input
     usb_suspend_action();

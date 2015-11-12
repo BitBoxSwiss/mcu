@@ -69,7 +69,6 @@ set(VERSION_STRING "${GIT_COMMIT_HASH}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
-set(version_file "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h")
 
 
 #-----------------------------------------------------------------------------
@@ -143,7 +142,7 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Werror -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
 
 if(BUILD_TYPE STREQUAL "test")
     if(APPLE)

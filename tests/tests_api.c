@@ -1236,11 +1236,22 @@ static void run_utests(void)
 }
 
 
+uint32_t __stack_chk_guard;
+
+extern void __attribute__((noreturn)) __stack_chk_fail(void);
+void __attribute__((noreturn)) __stack_chk_fail(void)
+{
+    printf("\n\nError: stack smashing detected!\n\n");
+    abort();
+}
+
+
 int main(void)
 {
     // Test the C code API
     TEST_LIVE_DEVICE = 0;
     random_init();
+    random_bytes((uint8_t *)&__stack_chk_guard, sizeof(__stack_chk_guard), 0);
     ecc_context_init();
     memory_setup();
     printf("\n\nInternal API Result:\n");

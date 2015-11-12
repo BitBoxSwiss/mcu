@@ -1,7 +1,6 @@
 language: c
 sudo: false
 os:
-    - osx
     - linux
 
 env:
@@ -18,13 +17,10 @@ compiler:
 matrix:
     exclude:
         # mcu build uses its own arm compiler, so run with just one travis 'compiler'
-        - compiler: gcc 
+        - compiler: clang 
           env: ENV="-DBUILD_TYPE=firmware -DUSE_UECC_LIB=ON"  TEST=no
-        - compiler: gcc 
+        - compiler: clang 
           env: ENV="-DBUILD_TYPE=bootloader -DUSE_UECC_LIB=ON"  TEST=no
-        # osx gcc compiler seems to default to clang, so skip gcc
-        - compiler: gcc
-          os: osx
     fast_finish:
         - true
 
@@ -37,31 +33,21 @@ addons:
 
 install:
     - pip install --user cpp-coveralls 
-    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-        tar xfv contrib/astyle_2.05.1_linux.tar.gz;
-        cd astyle/build/gcc && make;
-        export PATH=$PATH:$PWD/bin/;
-      fi;
-    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        brew install valgrind;
-        brew install gnupg;
-      fi
+    - cd contrib
+    - tar xfv astyle_2.05.1_linux.tar.gz;
+          cd astyle/build/gcc && make;
+          export PATH=$PATH:$PWD/bin/;
+          cd ../../..; 
     - if [ "$TEST" = "no" ]; then
-        if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
           wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
           tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-linux.tar.bz2;
-          export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
-        fi;
-        if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-          wget https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q3-update/+download/gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
-          tar -xf gcc-arm-none-eabi-4_9-2015q3-20150921-mac.tar.bz2;
-          export PATH=$PWD/gcc-arm-none-eabi-4_9-2015q3/bin:$PATH;
-        fi;
+          cp ../src/drivers/lib/libssp* gcc-arm-none-eabi-4_9-2015q3/lib/gcc/arm-none-eabi/4.9.3/armv7e-m/;
+          export PATH=$PATH:$PWD/gcc-arm-none-eabi-4_9-2015q3/bin;
       fi;
 
 before_script:
     - cd $TRAVIS_BUILD_DIR
-    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=astyle --exclude=src/yajl --exclude=src/secp256k1 --exclude=tests/windows/hidapi --exclude=src/drivers --dry-run -Q | grep "Formatted" ; then exit 1 ; fi;
+    - if astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=contrib --exclude=src/yajl --exclude=src/secp256k1 --exclude=tests/windows/hidapi --exclude=src/drivers --dry-run -Q | grep "Formatted" ; then exit 1 ; fi;
     - gpg --import contrib/contributors_gpg_keys/*
     - if git log --pretty="format:%H   %aN   %s   %G?" f0a012e224fedac87b0393a161d4af1473fea74a..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
 
@@ -69,15 +55,14 @@ script:
     - mkdir build && cd build
     - cmake .. $ENV -DCONTINUOUS_INTEGRATION=1 && make
     - if [ "$TEST" = "yes" ]; then
-        make test;
+          make test;
       fi;
-    - if [ "$TEST" = "yes" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
+    - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --error-exitcode=1 bin/tests_api;
       fi;
-    - if [ "$TEST" = "yes" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then
+    - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --error-exitcode=1 bin/tests_unit;
       fi;
-
       
 after_success:
     - coveralls --verbose -i src -x c --exclude $TRAVIS_BUILD_DIR/src/secp256k1/src --exclude $TRAVIS_BUILD_DIR/src/yajl/src --exclude $TRAVIS_BUILD_DIR/build/src/CMakeFiles/bitbox.dir/yajl/src -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR/build/src/CMakeFiles/bitbox.dir --gcov-options '\-lp'

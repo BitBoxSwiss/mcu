@@ -130,6 +130,7 @@ int wallet_master_from_mnemonic(char *mnemo, const char *salt)
 
     if (mnemo == NULL) {
         if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
+            commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
             ret = DBB_ERROR_MEM;
             goto exit;
         }

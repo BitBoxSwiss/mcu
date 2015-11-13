@@ -912,6 +912,7 @@ static void tests_aes_cbc(void)
     char encrypt[] = "{\"type\":\"encrypt\", \"data\":\"";
     char decrypt[] = "{\"type\":\"decrypt\", \"data\":\"";
     char password[] = "{\"type\":\"password\", \"data\":\"passwordpassword\"}";
+    char verify[] = "{\"type\":\"verify\", \"data\":\"passwordpassword\"}";
     char xpub[] = "{\"type\":\"xpub\", \"data\":\"m/0'\"}";
     char enc[COMMANDER_REPORT_SIZE * 2], dec[COMMANDER_REPORT_SIZE * 2];
     memset(enc, 0, sizeof(enc));
@@ -934,6 +935,21 @@ static void tests_aes_cbc(void)
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_aes256cbc), verify, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    if (!TEST_LIVE_DEVICE) {
+        yajl_val json_node = yajl_tree_parse(utils_read_decrypted_report(), NULL, 0);
+        const char *ciphertext_path[] = { cmd_str(CMD_aes256cbc), (const char *) 0 };
+        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
+                                 yajl_t_string));
+        int dlen;
+        char *d = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
+                                      &dlen, PASSWORD_VERIFY);
+        u_assert_str_eq(d, "passwordpassword");
+        free(d);
+        yajl_tree_free(json_node);
+    }
 
     memcpy(dec, decrypt, strlens(decrypt));
     strcat(dec, "password not set error\"}");

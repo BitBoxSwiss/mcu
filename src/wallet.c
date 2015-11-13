@@ -325,14 +325,14 @@ err:
 }
 
 
-int wallet_sign(const char *message, const char *keypath, int to_hash)
+int wallet_sign(const char *message, const char *keypath)
 {
     uint8_t data[32];
     uint8_t sig[64];
     uint8_t pub_key[33];
     HDNode node;
 
-    if (!to_hash && strlens(message) != (32 * 2)) {
+    if (strlens(message) != (32 * 2)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_HASH_LEN);
         goto err;
@@ -351,16 +351,9 @@ int wallet_sign(const char *message, const char *keypath, int to_hash)
         goto err;
     }
 
-    int ret = 0;
-    if (to_hash) {
-        ret = ecc_sign_double(node.private_key, utils_hex_to_uint8(message), strlens(message) / 2,
-                              sig);
-    } else {
-        memcpy(data, utils_hex_to_uint8(message), 32);
-        ret = ecc_sign_digest(node.private_key, data, sig);
-    }
+    memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (ret) {
+    if (ecc_sign_digest(node.private_key, data, sig)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;
@@ -468,116 +461,6 @@ void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
     saltlen += 8;
     pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlens(mnemo), salt, saltlen,
                        BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
-}
-
-
-int wallet_get_outputs(const char *tx, uint64_t tx_len, char *outputs, int outputs_len)
-{
-    uint64_t j, in_cnt, out_cnt, n_len, id_start, idx = 0;
-    int len;
-
-    idx += 8; // version number
-
-    // Inputs
-    if (tx_len < idx + 16) {
-        return DBB_ERROR;
-    }
-    idx += utils_varint_to_uint64(tx + idx, &in_cnt); // inCount
-    for (j = 0; j < in_cnt; j++) {
-        idx += 64; // prevOutHash
-        idx += 8; // preOutIndex
-        if (tx_len < idx + 16) {
-            return DBB_ERROR;
-        }
-        idx += utils_varint_to_uint64(tx + idx, &n_len); // scriptSigLen
-        idx += n_len * 2; // scriptSig (chars = 2 * bytes)
-        idx += 8; // sequence number
-    }
-
-    // Outputs
-    id_start = idx;
-    if (tx_len < idx + 16) {
-        return DBB_ERROR;
-    }
-    idx += utils_varint_to_uint64(tx + idx, &out_cnt); // outCount
-    for (j = 0; j < out_cnt; j++) {
-        idx += 16; // outValue
-        if (tx_len < idx + 16) {
-            return DBB_ERROR;
-        }
-        idx += utils_varint_to_uint64(tx + idx, &n_len); // outScriptLen
-        idx += n_len * 2; // outScript (chars = 2 * bytes)
-    }
-    len = idx - id_start;
-
-    // Return current outputs
-    memset(outputs, 0, outputs_len);
-    snprintf(outputs, outputs_len, "%.*s", len, tx + id_start);
-    return DBB_OK;
-}
-
-
-int wallet_deserialize_output(char *outputs, const char *keypath)
-{
-    uint64_t j, n_cnt, n_len, idx = 0, outValue;
-    char outval[64], outaddr[256], address[36];
-    int change_addr_present = 0;
-    uint8_t pubkeyhash[20], pub_key33[33];
-    HDNode node;
-
-    if (wallet_seeded() != DBB_OK) {
-        return DBB_ERROR;
-    }
-
-    if (strlens(outputs) < idx + 16) {
-        return DBB_ERROR;
-    }
-    idx += utils_varint_to_uint64(outputs + idx, &n_cnt);
-    for (j = 0; j < n_cnt; j++) {
-        memset(outval, 0, sizeof(outval));
-        strncpy(outval, outputs + idx, 16);
-        utils_reverse_hex(outval, 16);
-        outValue = strtoull(outval, NULL, 16);
-        idx += 16;
-        if (strlens(outputs) < idx + 16) {
-            return DBB_ERROR;
-        }
-        idx += utils_varint_to_uint64(outputs + idx, &n_len);
-
-        memset(outval, 0, sizeof(outval));
-        memset(outaddr, 0, sizeof(outaddr));
-        snprintf(outval, sizeof(outval), "%" PRIu64, outValue);
-        snprintf(outaddr, sizeof(outaddr), "%.*s", (int)n_len * 2, outputs + idx);
-        idx += n_len * 2; // chars = 2 * bytes
-
-        if (strlens(keypath)) {
-            if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                                    memory_chaincode(NULL)) != DBB_OK) {
-                memset(&node, 0, sizeof(HDNode));
-                return DBB_ERROR;
-            }
-            ecc_get_public_key33(node.private_key, pub_key33);
-            wallet_get_pubkeyhash(pub_key33, pubkeyhash);
-            wallet_get_address(pub_key33, 0, address, 36);
-            if (strstr(outaddr, utils_uint8_to_hex(pubkeyhash, 20))) {
-                change_addr_present++;
-                continue;
-            }
-        }
-        const char *key[] = {cmd_str(CMD_value), cmd_str(CMD_script), 0};
-        const char *value[] = {outval, outaddr, 0};
-        int t[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
-        commander_fill_json_array(key, value, t, CMD_sign);
-    }
-    memset(&node, 0, sizeof(HDNode));
-
-    if (change_addr_present || n_cnt == 1) {
-        return DBB_OK;
-    } else {
-        // More than 1 output but a change address is not present.
-        // Consider this an error in order to prevent MITM attacks.
-        return DBB_ERROR;
-    }
 }
 
 

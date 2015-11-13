@@ -44,7 +44,7 @@ int wallet_master_from_xpriv(char *src);
 int wallet_seeded(void);
 int wallet_master_from_mnemonic(char *mnemo, const char *salt);
 int wallet_check_pubkey(const char *pubkeyhash, const char *keypath);
-int wallet_sign(const char *message, const char *keypath, int to_hash);
+int wallet_sign(const char *message, const char *keypath);
 void wallet_report_xpriv(const char *keypath, char *xpub);
 void wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
@@ -53,8 +53,6 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
 int wallet_mnemonic_check(const char *mnemo);
 void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
                              uint8_t s[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total));
-int wallet_get_outputs(const char *tx, uint64_t tx_len, char *outputs, int outputs_len);
-int wallet_deserialize_output(char *outputs, const char *keypath);
 /* Bitcoin formats */
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);

@@ -92,7 +92,6 @@ X(salt)           \
 X(pubkey)         \
 X(checkpub)       \
 X(filename)       \
-X(changekeypath)  \
 X(keypath)        \
 X(address)        \
 X(present)        \
@@ -123,8 +122,6 @@ X(error)          \
 X(accept)         \
 X(aborted)        \
 X(yes)            \
-X(transaction)    \
-X(hash)           \
 X(meta)           \
 X(list)           \
 X(lock)           \

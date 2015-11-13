@@ -595,11 +595,11 @@ static void tests_password(void)
 static void tests_echo_2FA(void)
 {
     char hash_sign[] =
-        "{\"type\":\"meta\", \"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign2[] =
-        "{\"type\":\"meta\", \"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign3[] =
-        "{\"type\":\"meta\", \"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
 
     api_reset_device();
 
@@ -702,10 +702,10 @@ const char hash_2_input_2[] =
 #endif
 
 
-static void tests_sign_meta(void)
+static void tests_sign(void)
 {
     char one_input[] =
-        "{\"type\":\"meta\", \"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
+        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
     char pubkey_1_input[] =
         "02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5";
 
@@ -715,7 +715,7 @@ static void tests_sign_meta(void)
     */
 
     char two_inputs[] =
-        "{\"type\":\"meta\", \"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}";
+        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}";
     char pubkey_2_input_1[] =
         "0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6";
     char pubkey_2_input_2[] =
@@ -729,10 +729,10 @@ static void tests_sign_meta(void)
     */
 
     char overflow[] =
-        "{\"type\":\"meta\", \"meta\":\"_meta_data_\", \"data\": [{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}]}";
+        "{\"meta\":\"_meta_data_\", \"data\": [{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}]}";
 
     char checkpub[] =
-        "{\"type\":\"meta\", \"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"0000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"0000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
     char check_1[] = "\"address\":\"0000000000000000000000000000000000\", \"present\":false";
     char check_2[] = "\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\", \"present\":true";
     char check_sig_1[] =
@@ -743,10 +743,10 @@ static void tests_sign_meta(void)
         "02793907771bab33d3fa7e4d7ee7c355067a623265926c46fc433a83c11dceb29e";
 
     char checkpub_wrong_addr_len[] =
-        "{\"type\":\"meta\", \"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
 
     char checkpub_missing_parameter[] =
-        "{\"type\":\"meta\", \"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"address\":\"1Q5pR8cZPtqyQf3xCVo25n9UDaiTWJZ4DC\"}]}";
 
 
     api_reset_device();
@@ -761,34 +761,31 @@ static void tests_sign_meta(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     // missing parameters
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"type\":\"meta\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_missing_parameter, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"type\":\"meta\", \"data\":[{\"keypath\":\"m/\"}]}",
+                        "{\"data\":[{\"keypath\":\"m/\"}]}",
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"type\":\"meta\", \"data\":[{\"hash\":\"empty\"}]}",
+                        "{\"data\":[{\"hash\":\"empty\"}]}",
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // data is not an array
     api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"type\":\"meta\", \"data\":{\"hash\":\"empty\"}}",
+                        "{\"data\":{\"hash\":\"empty\"}}",
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
 
     // change output after echo (MITM attack)
     char hash_1[] =
-        "{\"type\":\"meta\", \"data\":[{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
+        "{\"data\":[{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
     char hash_2[] =
-        "{\"type\":\"meta\", \"data\":[{\"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
+        "{\"data\":[{\"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_1, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
@@ -902,201 +899,6 @@ static void tests_sign_meta(void)
         u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_1);
-        u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_2);
-    }
-}
-
-
-static void tests_sign(void)
-{
-    char one_input[] =
-        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char two_inputs_1[] =
-        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/0/5\", \"change_keypath\":\"\"}";
-
-    char two_inputs_2[] =
-        "{\"type\":\"transaction\", \"data\":\"01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/8\", \"change_keypath\":\"\"}";
-
-    char missing_keypath[] =
-        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char missing_data[] =
-        "{\"type\":\"transaction\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char missing_outputs[] =
-        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char wrong_type[] =
-        "{\"type\":\"invalid\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char wrong_change_keypath[] =
-        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/\"}";
-
-    char change_output_mitm[] =
-        "{\"type\":\"transaction\", \"data\":\"0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e7af4862e10c88acffffffff0298080000000000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char pubkey_1_input[] =
-        "02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5";
-    char pubkey_2_input_1[] =
-        "0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6";
-    char pubkey_2_input_2[] =
-        "032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec";
-
-    char script_1_input[] = "76a91452922e52d08a2c1f1e4120803e56363fd7a8195188ac";
-    char script_2_inputs[] = "76a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac";
-
-    char type_hash[] =
-        "{\"type\":\"hash\", \"data\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44'/0'/0'/1/7\", \"changekeypath\":\"m/44'/0'/0'/1/8\"}";
-
-    char seed[] =
-        "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}";
-
-
-    api_reset_device();
-
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    // signing before seeded
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_DESERIAL));
-
-    // seed
-    api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    // missing parameters
-    api_format_send_cmd(cmd_str(CMD_sign), missing_data, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), missing_outputs, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_DESERIAL));
-    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), missing_keypath, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), missing_keypath, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-    // wrong type
-    api_format_send_cmd(cmd_str(CMD_sign), wrong_type, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-    // wrong change keypath
-    api_format_send_cmd(cmd_str(CMD_sign), wrong_change_keypath, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_DESERIAL));
-
-    // change output after echo (MITM attack)
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), change_output_mitm, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-
-    // sign using one input
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_value));
-        u_assert_str_has(utils_read_decrypted_report(), "2200");
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_script));
-        u_assert_str_has(utils_read_decrypted_report(), script_1_input);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-    u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-    u_assert_str_has(utils_read_decrypted_report(), pubkey_1_input);
-
-    // sign using two inputs
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_1, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_value));
-        u_assert_str_has(utils_read_decrypted_report(), "200");
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_script));
-        u_assert_str_has(utils_read_decrypted_report(), script_2_inputs);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_1, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-    u_assert_str_has(utils_read_decrypted_report(), hash_2_input_1);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-    u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_1);
-
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_2, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-    u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-    u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_2);
-
-    // sign hash
-    api_format_send_cmd(cmd_str(CMD_sign), type_hash, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), type_hash, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-    u_assert_str_has(utils_read_decrypted_report(), pubkey_1_input);
-
-    // lock to get 2FA PINs
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    // sign using one input
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_value));
-        u_assert_str_has(utils_read_decrypted_report(), "2200");
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_script));
-        u_assert_str_has(utils_read_decrypted_report(), script_1_input);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(utils_read_decrypted_report(), pubkey_1_input);
-    }
-
-    // sign using two inputs
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_1, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_value));
-        u_assert_str_has(utils_read_decrypted_report(), "200");
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_script));
-        u_assert_str_has(utils_read_decrypted_report(), script_2_inputs);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_1, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), hash_2_input_1);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_1);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs_2, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
-        u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_2);
     }
 }
@@ -1219,7 +1021,6 @@ static void run_utests(void)
 {
     u_run_test(tests_echo_2FA);
     u_run_test(tests_aes_cbc);
-    u_run_test(tests_sign_meta);
     u_run_test(tests_sign);
     u_run_test(tests_name);
     u_run_test(tests_password);

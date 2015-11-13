@@ -864,6 +864,7 @@ static void commander_process_aes256cbc(yajl_val json_node)
     const char *type, *data;
     char *crypt;
     int crypt_len;
+    PASSWORD_ID id;
 
     const char *type_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_type), NULL };
     const char *data_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_data), NULL };
@@ -882,7 +883,10 @@ static void commander_process_aes256cbc(yajl_val json_node)
         } else {
             commander_fill_report(cmd_str(CMD_aes256cbc), NULL, ret);
         }
-    } else if (strncmp(type, attr_str(ATTR_xpub), strlens(attr_str(ATTR_xpub))) == 0) {
+        return;
+    }
+
+    if (strncmp(type, attr_str(ATTR_xpub), strlens(attr_str(ATTR_xpub))) == 0) {
         char xpub[112] = {0};
         wallet_report_xpub(data, xpub);
         if (xpub[0]) {
@@ -895,15 +899,24 @@ static void commander_process_aes256cbc(yajl_val json_node)
         } else {
             commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_KEY_MASTER);
         }
+        return;
+    }
+
+    if (strncmp(type, attr_str(ATTR_verify), strlens(attr_str(ATTR_verify))) == 0) {
+        id = PASSWORD_VERIFY;
     } else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == DBB_MEM_ERASED) {
         commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_NO_PASSWORD);
-    } else if (strncmp(type, attr_str(ATTR_encrypt),
-                       strlens(attr_str(ATTR_encrypt))) == 0) {
+        return;
+    } else {
+        id = PASSWORD_CRYPT;
+    }
+
+    if (strncmp(type, attr_str(ATTR_encrypt), strlens(attr_str(ATTR_encrypt))) == 0 ||
+            strncmp(type, attr_str(ATTR_verify), strlens(attr_str(ATTR_verify))) == 0) {
         if (strlens(data) > AES_DATA_LEN_MAX) {
             commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DATA_LEN);
         } else {
-            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len,
-                                        PASSWORD_CRYPT);
+            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len, id);
             if (crypt) {
                 commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
             } else {
@@ -911,19 +924,21 @@ static void commander_process_aes256cbc(yajl_val json_node)
             }
             free(crypt);
         }
-    } else if (strncmp(type, attr_str(ATTR_decrypt),
-                       strlens(attr_str(ATTR_decrypt))) == 0) {
-        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len,
-                                    PASSWORD_CRYPT);
+        return;
+    }
+
+    if (strncmp(type, attr_str(ATTR_decrypt), strlens(attr_str(ATTR_decrypt))) == 0) {
+        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len, id);
         if (crypt) {
             commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
         } else {
             commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DECRYPT);
         }
         free(crypt);
-    } else {
-        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
+
+    commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 

@@ -128,6 +128,7 @@ X(lock)           \
 X(unlock)         \
 X(decrypt)        \
 X(encrypt)        \
+X(verify)         \
 X(true)           \
 X(false)          \
 X(erase)          \

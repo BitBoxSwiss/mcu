@@ -55,35 +55,17 @@ static void tests_seed_xpub_backup(void)
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVm\"}";
-    char mnemo_ok[] =
-        "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}";
-    char mnemo_err[] =
-        "{\"source\": \"ilent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}";
-    char mnemo_extra_word[] =
-        "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble error\"}";
-    char mnemo_long_salt[SALT_LEN_MAX + 2];
-    memset(mnemo_long_salt, 'a', sizeof(mnemo_long_salt));
-    mnemo_long_salt[SALT_LEN_MAX + 1] = '\0';
 
-    const char **salt, **cipher, **run, **mnemo;
+    const char **cipher, **run;
     static const char *options[] = {
-        // run  salt              encrypt       mnemonic
-        "y",    NULL,             NULL,         NULL,
-        "y",    NULL,             "no",         NULL,
-        "y",    NULL,             "yes",        NULL,
-        "y",    NULL,             NULL,         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    NULL,             "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    "",               "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    "Digital Bitbox", "no",         "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    NULL,             "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    "",               "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        "y",    "Digital Bitbox", "yes",        "silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble",
-        NULL,   NULL,             NULL,         NULL,
+        // run  encrypt
+        "y",    NULL,
+        "y",    "no",
+        "y",    "yes",
+        NULL,   NULL,
     };
     run = options;
-    salt = options + 1;
-    cipher = options + 2;
-    mnemo = options + 3;
+    cipher = options + 1;
 
     while (*run) {
         memset(seed_c, 0, sizeof(seed_c));
@@ -91,11 +73,7 @@ static void tests_seed_xpub_backup(void)
         memset(back, 0, sizeof(back));
 
         strcpy(seed_c, "{\"source\":\"");
-        if (*mnemo) {
-            strcat(seed_c, *mnemo);
-        } else {
-            strcat(seed_c, attr_str(ATTR_create));
-        }
+        strcat(seed_c, attr_str(ATTR_create));
         strcat(seed_c, "\"");
 
         strcpy(seed_b, "{\"source\":\"");
@@ -113,14 +91,6 @@ static void tests_seed_xpub_backup(void)
             strcat(back, ",\"encrypt\":\"");
             strcat(back, *cipher);
             strcat(back, "\"");
-        }
-        if (*salt) {
-            strcat(seed_c, ",\"salt\":\"");
-            strcat(seed_c, *salt);
-            strcat(seed_c, "\"");
-            strcat(seed_b, ",\"salt\":\"");
-            strcat(seed_b, *salt);
-            strcat(seed_b, "\"");
         }
 
         strcat(seed_c, "}");
@@ -198,10 +168,8 @@ static void tests_seed_xpub_backup(void)
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), filename);
 
-        run += 4;
-        salt += 4;
-        cipher += 4;
-        mnemo += 4;
+        run += 2;
+        cipher += 2;
     }
 
     api_reset_device();
@@ -209,22 +177,10 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_seed), mnemo_err, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
-
-    api_format_send_cmd(cmd_str(CMD_seed), mnemo_extra_word, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
-
-    memset(seed_c, 0, sizeof(seed_c));
-    sprintf(seed_c, "%s%s%s", "{\"source\":\"create\", \"salt\":\"", mnemo_long_salt, "\"}");
-
-    api_format_send_cmd(cmd_str(CMD_seed), seed_c, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SEED_SALT_LEN));
-
-    api_format_send_cmd(cmd_str(CMD_seed), mnemo_ok, PASSWORD_STAND);
+    // test keypath
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), "\"xpub\":");
 
@@ -253,10 +209,6 @@ static void tests_seed_xpub_backup(void)
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
-
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
@@ -265,10 +217,16 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_seed), seed_xpriv, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
+    u_assert_str_not_eq(xpub0, xpub1);
+
     api_format_send_cmd(cmd_str(CMD_seed), seed_xpriv_wrong_len, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_eq(xpub0, xpub1);
 
@@ -756,7 +714,7 @@ static void tests_sign(void)
 
     // seed
     char seed[] =
-        "{\"source\":\"bronze science bulk conduct fragile genius bone miracle twelve grab maid peace observe illegal exchange space another usage hunt donate feed swarm arrest naive\"}";
+        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\"}";
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -928,8 +886,7 @@ static void tests_aes_cbc(void)
     };
 
     char seed[] =
-        "{\"source\": \"silent answer fury celery kitten amused pudding struggle infant cake jealous ready curve more fame gown leave then client biology unusual lazy potato bubble\"}";
-
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
 
     api_reset_device();
 

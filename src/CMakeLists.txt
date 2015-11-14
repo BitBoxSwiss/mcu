@@ -16,7 +16,6 @@ set(DBB-FIRMWARE-SOURCES
         hmac.c
         led.c
         memory.c
-        pbkdf2.c
         random.c
         ripemd160.c
         ecc.c

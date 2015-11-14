@@ -18,7 +18,7 @@ ECDSA signatures are performed with either the [bitcoin core secp256k1 library](
 
 	Cryptographic: secp256k1, RFC6979, AES-256-CBC, SHA2, HMAC, PBKDF2, RIPEMD160
 	Encoding: Base-64, Base-58-check, JSON
-	Bitcoin: BIP32, BIP39, BIP44
+	Bitcoin: BIP32, BIP44
 
 
 

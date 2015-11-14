@@ -426,13 +426,10 @@ static void commander_process_backup(yajl_val json_node)
 static void commander_process_seed(yajl_val json_node)
 {
     int ret;
-    char *seed_word[MAX_SEED_WORDS] = {NULL};
 
-    const char *salt_path[] = { cmd_str(CMD_seed), cmd_str(CMD_salt), NULL };
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
     const char *decrypt_path[] = { cmd_str(CMD_seed), cmd_str(CMD_decrypt), NULL };
 
-    const char *salt = YAJL_GET_STRING(yajl_tree_get(json_node, salt_path, yajl_t_string));
     const char *source = YAJL_GET_STRING(yajl_tree_get(json_node, source_path,
                                          yajl_t_string));
     const char *decrypt = YAJL_GET_STRING(yajl_tree_get(json_node, decrypt_path,
@@ -445,11 +442,6 @@ static void commander_process_seed(yajl_val json_node)
 
     if (!source) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
-        return;
-    }
-
-    if (strlens(salt) > SALT_LEN_MAX) {
-        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SALT_LEN);
         return;
     }
 
@@ -481,15 +473,13 @@ static void commander_process_seed(yajl_val json_node)
             snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
         } while (sd_load(file, strlens(file), CMD_seed));
 
-        ret = wallet_master_from_mnemonic(NULL, NULL);
+        ret = wallet_generate_master();
         if (ret == DBB_OK) {
             if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != DBB_OK) {
                 memory_erase_seed();
                 goto exit;
             }
         }
-    } else if (wallet_split_seed(seed_word, src) > 1) {
-        ret = wallet_master_from_mnemonic(src, salt);
     } else if (strncmp(src, "xprv", 4) == 0) {
         ret = wallet_master_from_xpriv(src);
     } else {
@@ -510,9 +500,7 @@ static void commander_process_seed(yajl_val json_node)
             }
         }
         if (text) {
-            if (wallet_split_seed(seed_word, text) > 1) {
-                ret = wallet_master_from_mnemonic(text, salt);
-            } else if (strncmp(text, "xprv", 4) == 0) {
+            if (strncmp(text, "xprv", 4) == 0) {
                 ret = wallet_master_from_xpriv(text);
             } else {
                 ret = DBB_ERROR;
@@ -527,9 +515,11 @@ static void commander_process_seed(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_INVALID);
     } else if (ret == DBB_ERROR_MEM) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_MEM_ATAES);
-    } else {
+    } else if (ret == DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_seed), attr_str(ATTR_success), DBB_OK);
+    } else {
+        commander_fill_report(cmd_str(CMD_seed), NULL, ret);
     }
 
 exit:

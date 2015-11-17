@@ -30,6 +30,27 @@ target_link_libraries(tests_cmdline bitbox)
 
 
 #-----------------------------------------------------------------------------
+# Build tests_cmdline_live
+if(NOT CONTINUOUS_INTEGRATION)
+    find_library(HIDAPI_LIBRARY
+        NAMES hidapi hidapi-libusb)
+
+    find_path(HIDAPI_INCLUDE_DIR
+        NAMES hidapi.h
+        PATH_SUFFIXES
+        hidapi)
+
+    if(!HIDAPI_FOUND)
+        message(FATAL_ERROR "hidapi not found.")
+    endif()
+    include_directories(${HIDAPI_INCLUDE_DIR})
+    add_executable(tests_cmdline_live tests_cmdline_live.c)
+    target_link_libraries(tests_cmdline_live bitbox ${HIDAPI_LIBRARY})
+endif()
+
+
+
+#-----------------------------------------------------------------------------
 # Build secp256k1 submodule tests
 add_executable(tests_secp256k1 tests_secp256k1.c)
 target_link_libraries(tests_secp256k1 bitbox)

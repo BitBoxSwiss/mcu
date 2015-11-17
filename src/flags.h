@@ -88,7 +88,6 @@ X(type)           \
 X(hash)           \
 X(data)           \
 X(meta)           \
-X(salt)           \
 X(pubkey)         \
 X(checkpub)       \
 X(filename)       \
@@ -194,7 +193,6 @@ X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.
 X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic encrypted backup of the seed.")\
 X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
 X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\
-X(ERR_SEED_SALT_LEN,   203, "Salt must be less than " STRINGIFY(SALT_LEN_MAX) " characters.")\
 X(ERR_SEED_INVALID,    204, "Invalid seed.")\
 X(ERR_KEY_MASTER,      250, "Master key not present.")\
 X(ERR_KEY_CHILD,       251, "Could not generate key.")\

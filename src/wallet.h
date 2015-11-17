@@ -25,7 +25,6 @@
 */
 
 
-
 #ifndef _WALLET_H_
 #define _WALLET_H_
 
@@ -34,15 +33,11 @@
 #include "bip32.h"
 
 
-#define BIP39_PBKDF2_ROUNDS 2048
-#define MAX_SEED_WORDS      25// 24 mnemonic words + 1 for NULL ending
-
-
 /* BIP32 */
 int wallet_split_seed(char **seed_words, const char *message);
 int wallet_master_from_xpriv(char *src);
 int wallet_seeded(void);
-int wallet_master_from_mnemonic(char *mnemo, const char *salt);
+int wallet_generate_master(void);
 int wallet_check_pubkey(const char *pubkeyhash, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
 void wallet_report_xpriv(const char *keypath, char *xpub);
@@ -50,16 +45,12 @@ void wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincode);
-int wallet_mnemonic_check(const char *mnemo);
-void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
-                             uint8_t s[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total));
 /* Bitcoin formats */
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);
 void wallet_get_address(const uint8_t *pub_key, uint8_t version, char *addr,
                         int addrsize);
 void wallet_get_wif(const uint8_t *priv_key, uint8_t version, char *wif, int wifsize);
-
 
 
 #endif

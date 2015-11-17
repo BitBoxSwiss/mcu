@@ -37,47 +37,14 @@
 #include "wallet.h"
 #include "random.h"
 #include "base58.h"
-#include "pbkdf2.h"
 #include "utils.h"
 #include "flags.h"
 #include "sha2.h"
 #include "ecc.h"
-#include "bip39_english.h"
 
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
-
-static char mnemonic[(BIP39_MAX_WORD_LEN + 1) * MAX_SEED_WORDS + 1];
-static uint8_t seed[64];
-static uint8_t rand_data_32[32];
-
-
-// Avoid leaving secrets in RAM
-static void clear_static_variables(void)
-{
-    memset(seed, 0, sizeof(seed));
-    memset(mnemonic, 0, sizeof(mnemonic));
-    memset(rand_data_32, 0, sizeof(rand_data_32));
-}
-
-
-int wallet_split_seed(char **seed_words, const char *message)
-{
-    int i = 0;
-    static char msg[(BIP39_MAX_WORD_LEN + 1) * MAX_SEED_WORDS + 1];
-
-    memset(msg, 0, sizeof(msg));
-    snprintf(msg, sizeof(msg), "%s", message);
-    seed_words[i] = strtok(msg, " ,");
-    for (i = 0; seed_words[i] != NULL; i++) {
-        if (i + 1 >= MAX_SEED_WORDS) {
-            break;
-        }
-        seed_words[i + 1] = strtok(NULL, " ,");
-    }
-    return i;
-}
 
 
 int wallet_seeded(void)
@@ -99,8 +66,6 @@ int wallet_master_from_xpriv(char *src)
 
     HDNode node;
 
-    clear_static_variables();
-
     int ret = hdnode_deserialize(src, &node);
     if (ret != DBB_OK) {
         goto exit;
@@ -116,41 +81,20 @@ int wallet_master_from_xpriv(char *src)
 
 exit:
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     return ret;
 }
 
 
-int wallet_master_from_mnemonic(char *mnemo, const char *salt)
+int wallet_generate_master(void)
 {
     int ret = DBB_OK;
+    uint8_t seed[64];
     HDNode node;
 
-    clear_static_variables();
-
-    if (mnemo == NULL) {
-        if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
-            commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
-            ret = DBB_ERROR_MEM;
-            goto exit;
-        }
-    } else {
-        if (strlens(mnemo) > sizeof(mnemonic)) {
-            ret = DBB_ERROR;
-            goto exit;
-        }
-        snprintf(mnemonic, sizeof(mnemonic), "%.*s", (int)strlens(mnemo), mnemo);
-
-        if (wallet_mnemonic_check(mnemonic) == DBB_ERROR) {
-            ret = DBB_ERROR;
-            goto exit;
-        }
-
-        if (!strlens(salt)) {
-            wallet_mnemonic_to_seed(mnemonic, NULL, seed, 0);
-        } else {
-            wallet_mnemonic_to_seed(mnemonic, salt, seed, 0);
-        }
+    if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
+        commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
+        ret = DBB_ERROR_MEM;
+        goto exit;
     }
 
     if (hdnode_from_seed(seed, sizeof(seed), &node) == DBB_ERROR) {
@@ -167,8 +111,8 @@ int wallet_master_from_mnemonic(char *mnemo, const char *salt)
     }
 
 exit:
+    memset(seed, 0, sizeof(seed));
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     return ret;
 }
 
@@ -254,7 +198,6 @@ void wallet_report_xpriv(const char *keypath, char *xpriv)
         }
     }
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
 }
 
 
@@ -268,7 +211,6 @@ void wallet_report_xpub(const char *keypath, char *xpub)
         }
     }
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
 }
 
 
@@ -311,7 +253,6 @@ int wallet_check_pubkey(const char *address, const char *keypath)
     wallet_get_address(pub_key, 0, addr, sizeof(addr));
 
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     if (strncmp(address, addr, 36)) {
         return DBB_KEY_ABSENT;
     } else {
@@ -320,7 +261,6 @@ int wallet_check_pubkey(const char *address, const char *keypath)
 
 err:
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     return DBB_ERROR;
 }
 
@@ -361,106 +301,11 @@ int wallet_sign(const char *message, const char *keypath)
 
     ecc_get_public_key33(node.private_key, pub_key);
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     return commander_fill_signature_array(sig, pub_key);
 
 err:
     memset(&node, 0, sizeof(HDNode));
-    clear_static_variables();
     return DBB_ERROR;
-}
-
-
-int wallet_mnemonic_check(const char *mnemo)
-{
-    uint32_t i, j, k, ki, bi, n;
-    int chksum = 0;
-    char *sham[MAX_SEED_WORDS] = {NULL};
-    char current_word[10];
-    uint8_t bits[32 + 1];
-
-    if (!mnemo) {
-        return DBB_ERROR;
-    }
-
-    // check number of words
-    n = wallet_split_seed(sham, mnemo);
-    memset(sham, 0, sizeof(sham));
-
-    if (n != 12 && n != 18 && n != 24) {
-        return DBB_ERROR;
-    }
-
-    memset(bits, 0, sizeof(bits));
-    i = 0;
-    bi = 0;
-    while (mnemo[i]) {
-        j = 0;
-        while (mnemo[i] != ' ' && mnemo[i] != 0) {
-            if (j >= sizeof(current_word)) {
-                return DBB_ERROR;
-            }
-            current_word[j] = mnemo[i];
-            i++;
-            j++;
-        }
-        current_word[j] = 0;
-        if (mnemo[i] != 0) {
-            i++;
-        }
-        k = 0;
-        for (;;) {
-            if (!wordlist[k]) { // word not found
-                return DBB_ERROR;
-            }
-            if (strcmp(current_word, wordlist[k]) == 0) { // word found on index k
-                for (ki = 0; ki < 11; ki++) {
-                    if (k & (1 << (10 - ki))) {
-                        bits[bi / 8] |= 1 << (7 - (bi % 8));
-                    }
-                    bi++;
-                }
-                break;
-            }
-            k++;
-        }
-    }
-    if (bi != n * 11) {
-        return DBB_ERROR;
-    }
-    bits[32] = bits[n * 4 / 3];
-    sha256_Raw(bits, n * 4 / 3, bits);
-    if (n == 12) {
-        chksum = (bits[0] & 0xF0) == (bits[32] & 0xF0); // compare first 4 bits
-    } else if (n == 18) {
-        chksum = (bits[0] & 0xFC) == (bits[32] & 0xFC); // compare first 6 bits
-    } else if (n == 24) {
-        chksum = bits[0] == bits[32]; // compare 8 bits
-    }
-
-    if (!chksum) {
-        return DBB_ERROR;
-    }
-
-    return DBB_OK;
-}
-
-
-void wallet_mnemonic_to_seed(const char *mnemo, const char *passphrase,
-                             uint8_t s[512 / 8],
-                             void (*progress_callback)(uint32_t current, uint32_t total))
-{
-    static uint8_t salt[8 + SALT_LEN_MAX + 4];
-    int saltlen = 0;
-    memset(salt, 0, sizeof(salt));
-    memcpy(salt, "mnemonic", 8);
-    if (passphrase) {
-        saltlen = strlens(passphrase);
-        snprintf((char *)salt + 8, SALT_LEN_MAX, "%s", passphrase);
-    }
-    saltlen += 8;
-    pbkdf2_hmac_sha512((const uint8_t *)mnemo, strlens(mnemo), salt, saltlen,
-                       BIP39_PBKDF2_ROUNDS, s, 512 / 8, progress_callback);
 }
 
 

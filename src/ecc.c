@@ -110,7 +110,7 @@ static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
 {
 
     int public_key_len;
-    secp256k1_ecdsa_signature signature;
+    secp256k1_ecdsa_signature signature, signorm;
     secp256k1_pubkey pubkey;
 
     if (!ctx) {
@@ -135,7 +135,9 @@ static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
         return 1;
     }
 
-    if (!secp256k1_ecdsa_verify(ctx, &signature, (const unsigned char *)hash, &pubkey)) {
+    secp256k1_ecdsa_signature_normalize(ctx, &signorm, &signature);
+
+    if (!secp256k1_ecdsa_verify(ctx, &signorm, (const unsigned char *)hash, &pubkey)) {
         return 1;
     }
 
@@ -196,19 +198,20 @@ static void ecc_get_pubkey(const uint8_t *private_key, uint8_t *public_key,
 
 void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key)
 {
-    ecc_get_pubkey(private_key, public_key, 65, 0);
+    ecc_get_pubkey(private_key, public_key, 65, SECP256K1_EC_UNCOMPRESSED);
 }
 
 
 void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 {
-    ecc_get_pubkey(private_key, public_key, 33, 1);
+    ecc_get_pubkey(private_key, public_key, 33, SECP256K1_EC_COMPRESSED);
 }
 
 
 int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
              uint8_t *ecdh_secret)
 {
+    uint8_t ecdh_secret_compressed[33];
     secp256k1_pubkey pubkey_secp;
 
     if (!rand_privkey || !pair_pubkey) {
@@ -223,9 +226,12 @@ int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
         return 1;
     }
 
-    if (!secp256k1_ecdh(ctx, ecdh_secret, &pubkey_secp, rand_privkey)) {
+    if (!secp256k1_ecdh(ctx, ecdh_secret_compressed, &pubkey_secp, rand_privkey)) {
         return 1;
     }
+
+    sha256_Raw(ecdh_secret_compressed + 1, 32, ecdh_secret);
+    sha256_Raw(ecdh_secret, 32, ecdh_secret);
 
     return 0; // success
 }
@@ -305,9 +311,15 @@ void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
 int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
              uint8_t *ecdh_secret)
 {
-    uint8_t public_key[64];
+    uint8_t public_key[64], ecdh_secret_compressed[33];
     uECC_decompress(pair_pubkey, public_key);
-    return uECC_shared_secret(public_key, rand_privkey, ecdh_secret);
+    if (!uECC_shared_secret(public_key, rand_privkey, ecdh_secret_compressed)) {
+        sha256_Raw(ecdh_secret_compressed + 1, 32, ecdh_secret);
+        sha256_Raw(ecdh_secret, 32, ecdh_secret);
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 

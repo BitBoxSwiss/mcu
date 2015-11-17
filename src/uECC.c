@@ -866,11 +866,15 @@ static bitcount_t smax(bitcount_t a, bitcount_t b)
 }
 
 
+
+#include <stdio.h>
+#include "utils.h"
+
 /* Compute a shared secret given your secret key and someone's public key.
    Returns 0 on success. */
 int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
                        const uint8_t private_key[uECC_BYTES],
-                       uint8_t secret[uECC_BYTES])
+                       uint8_t secret_compressed[uECC_BYTES + 1])
 {
     EccPoint public;
     EccPoint product;
@@ -882,7 +886,7 @@ int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
     uECC_word_t tries;
     uECC_word_t carry;
     uint8_t secret_point[uECC_BYTES * 2];
-    uint8_t secret_compressed[uECC_BYTES + 1];
+    //uint8_t secret_compressed[uECC_BYTES + 1];
 
     // Try to get a random initial Z value to improve protection against side-channel
     // attacks. If the RNG fails every time (eg it was not defined), we continue so that
@@ -910,8 +914,11 @@ int uECC_shared_secret(const uint8_t public_key[uECC_BYTES * 2],
     vli_nativeToBytes(secret_point + uECC_BYTES, product.y);
     uECC_compress(secret_point, secret_compressed);
 
-    sha256_Raw(secret_compressed, uECC_BYTES + 1, secret);
-
+    // NodeJS Crypto ECDH (2FA smartphone pairing) uses the x coordinate
+    // intead of the compressed key as the shared secret. So do not SHA
+    // hash here, return the compressed key, and decide how to hash in the
+    // calling code.
+    //sha256_Raw(secret_compressed, uECC_BYTES + 1, secret);
     return EccPoint_isZero(&product);
 }
 

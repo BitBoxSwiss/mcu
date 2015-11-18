@@ -815,6 +815,7 @@ static void commander_process_device(yajl_val json_node)
         char id[65] = {0};
         char lock[6] = {0};
         char seeded[6] = {0};
+        char sdcard[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_read_unique_id(serial, 4);
@@ -832,14 +833,21 @@ static void commander_process_device(yajl_val json_node)
             strcpy(seeded, attr_str(ATTR_false));
         }
 
+        if (sd_present() == DBB_OK) {
+            strcpy(sdcard, attr_str(ATTR_true));
+        } else {
+            strcpy(sdcard, attr_str(ATTR_false));
+        }
+
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s}",
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
                  attr_str(ATTR_id), id,
                  attr_str(ATTR_seeded), seeded,
-                 attr_str(ATTR_lock), lock);
+                 attr_str(ATTR_lock), lock,
+                 attr_str(ATTR_sdcard), sdcard);
 
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
         return;

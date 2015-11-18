@@ -37,6 +37,7 @@ uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
                  uint8_t replace, int cmd);
 char *sd_load(const char *f, uint16_t f_len, int cmd);
 uint8_t sd_list(int cmd);
+uint8_t sd_present(void);
 uint8_t sd_erase(int cmd);
 uint8_t touch_button_press(uint8_t touch_type);
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);

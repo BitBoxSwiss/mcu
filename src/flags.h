@@ -123,6 +123,7 @@ X(aborted)        \
 X(yes)            \
 X(meta)           \
 X(list)           \
+X(sdcard)         \
 X(lock)           \
 X(unlock)         \
 X(decrypt)        \

@@ -79,6 +79,13 @@ uint8_t sd_list(int cmd)
 }
 
 
+uint8_t sd_present(void)
+{
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
+    return DBB_OK;
+}
+
+
 uint8_t sd_erase(int cmd)
 {
     (void) cmd;

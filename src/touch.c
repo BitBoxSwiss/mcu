@@ -74,11 +74,14 @@ uint8_t touch_button_press(uint8_t touch_type)
 
     if (touch_type != DBB_TOUCH_LONG &&
             touch_type != DBB_TOUCH_SHORT &&
+            touch_type != DBB_TOUCH_REJECT_TIMEOUT &&
             touch_type != DBB_TOUCH_TIMEOUT) {
         return DBB_ERROR;
     }
 
-    led_on();
+    if (touch_type != DBB_TOUCH_REJECT_TIMEOUT) {
+        led_on();
+    }
 
     // Make high priority so that we can timeout
     NVIC_SetPriority(SysTick_IRQn, 0);
@@ -124,6 +127,9 @@ uint8_t touch_button_press(uint8_t touch_type)
                     pushed = DBB_TOUCHED;
                 } else if (touch_type == DBB_TOUCH_SHORT) {
                     pushed = DBB_TOUCHED_ABORT;
+                } else if (touch_type == DBB_TOUCH_REJECT_TIMEOUT) {
+                    pushed = DBB_TOUCHED_ABORT;
+                    break;
                 } else if (touch_type == DBB_TOUCH_TIMEOUT) {
                     // If touched before exit_time_ms for:
                     //     - DBB_TOUCH_TIMEOUT, answer is 'accept'
@@ -137,6 +143,7 @@ uint8_t touch_button_press(uint8_t touch_type)
 
     // Reset lower priority
     NVIC_SetPriority(SysTick_IRQn, 15);
+
     if (pushed == DBB_TOUCHED) {
         if (touch_type == DBB_TOUCH_LONG) {
             led_off();
@@ -158,13 +165,6 @@ uint8_t touch_button_press(uint8_t touch_type)
         led_off();
         return DBB_ERR_TOUCH_ABORT;
     } else {
-#ifndef BOOTLOADER
-        char message[128];
-        snprintf(message, sizeof(message), "Touchbutton timed out. (%d/%d)",
-                 qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL],
-                 qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL]);
-        commander_fill_report(cmd_str(CMD_touchbutton), message, DBB_ERR_TOUCH_TIMEOUT);
-#endif
         led_off();
         return DBB_ERR_TOUCH_TIMEOUT;
     }

@@ -93,13 +93,14 @@ uint8_t touch_short_count = 0;
 
 uint8_t touch_button_press(uint8_t touch_type)
 {
-    if (touch_type == DBB_TOUCH_SHORT) {
+    if (touch_type == DBB_TOUCH_REJECT_TIMEOUT) {
         // Simulate touch sequence for ecdh led blink coding
         if (!touch_short_count) {
             touch_short_count++;
+            return DBB_ERR_TOUCH_TIMEOUT;
         } else {
             touch_short_count = 0;
-            return DBB_TOUCHED_ABORT;
+            return DBB_ERR_TOUCH_ABORT;
         }
     }
     commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU), DBB_OK);

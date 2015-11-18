@@ -197,6 +197,7 @@ void commander_fill_report(const char *cmd, const char *msg, int flag)
 
     if ((strlens(json_report) + 1) >= COMMANDER_REPORT_SIZE) {
         if (!REPORT_BUF_OVERFLOW) {
+            commander_clear_report();
             snprintf(json_report, COMMANDER_REPORT_SIZE,
                      "{\"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}}", attr_str(ATTR_error),
                      flag_msg(DBB_ERR_IO_REPORT_BUF), flag_code(DBB_ERR_IO_REPORT_BUF), cmd);
@@ -619,7 +620,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
     }
 
     // Use a 'second channel' LED blink code to avoid MITM
-    while (touch_button_press(DBB_TOUCH_SHORT) == DBB_TOUCHED) {
+    while (touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
         if (random_bytes(&rand_led, sizeof(rand_led), 0) == DBB_ERROR) {
             commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;

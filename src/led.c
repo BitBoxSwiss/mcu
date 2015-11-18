@@ -78,7 +78,7 @@ void led_toggle(void)
 void led_code(uint8_t *code, uint8_t len)
 {
     uint8_t i, j;
-    delay_ms(1500);
+    delay_ms(500);
     for (i = 0; i < len; i++) {
         for (j = 0; j < code[i]; j++) {
             led_toggle();
@@ -86,6 +86,6 @@ void led_code(uint8_t *code, uint8_t len)
             led_toggle();
             delay_ms(300);
         }
-        delay_ms(1500);
+        delay_ms(500);
     }
 }

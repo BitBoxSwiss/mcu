@@ -256,6 +256,25 @@ err:
 }
 
 
+uint8_t sd_present(void)
+{
+    sd_mmc_init();
+    sd_listing_pos = 0;
+
+    if (CTRL_FAIL == sd_mmc_test_unit_ready(0)) {
+        return DBB_ERROR;
+    }
+
+    memset(&fs, 0, sizeof(FATFS));
+    if (FR_INVALID_DRIVE == f_mount(LUN_ID_SD_MMC_0_MEM, &fs)) {
+        return DBB_ERROR;
+    }
+    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+
+    return DBB_OK;
+}
+
+
 static uint8_t delete_files(char *path)
 {
     int failed = 0;

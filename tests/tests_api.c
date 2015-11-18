@@ -390,6 +390,7 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
@@ -406,6 +407,7 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));

@@ -630,9 +630,8 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         led_code(&rand_led, sizeof(rand_led));
 
         // Xor ECDH secret
-        for (i = 0; i < 32; i++) {
-            ecdh_secret[i] ^= rand_led;
-        }
+        ecdh_secret[i % sizeof(ecdh_secret)] ^= rand_led;
+        i++;
     }
 
     if (i == 0) {

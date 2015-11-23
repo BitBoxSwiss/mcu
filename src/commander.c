@@ -620,7 +620,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
     }
 
     // Use a 'second channel' LED blink code to avoid MITM
-    while (touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
+    do {
         if (random_bytes(&rand_led, sizeof(rand_led), 0) == DBB_ERROR) {
             commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
@@ -633,7 +633,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         // Xor ECDH secret
         ecdh_secret[i % sizeof(ecdh_secret)] ^= rand_led;
         i++;
-    }
+    } while (touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT);
 
     if (i == 0) {
         // While loop not entered

@@ -40,7 +40,7 @@
 #include "core_cm4.h"
 
 
-uint32_t __stack_chk_guard = 0; // updated below
+uint32_t __stack_chk_guard = 0;
 
 extern void __attribute__((noreturn)) __stack_chk_fail(void);
 void __attribute__((noreturn)) __stack_chk_fail(void)
@@ -55,6 +55,15 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
 void SysTick_Handler(void)
 {
     systick_update_time();
+}
+
+
+void HardFault_Handler(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(3000);
+    }
 }
 
 
@@ -99,6 +108,56 @@ static int binary_exec(void *vStart)
 }
 
 
+static uint32_t mpu_region_size(uint32_t size)
+{
+    uint32_t regionSize = 32;
+    uint32_t ret = 4;
+
+    while (ret < 31) {
+        if (size <= regionSize) {
+            break;
+        } else {
+            ret++;
+        }
+        regionSize <<= 1;
+    }
+    return (ret << 1);
+}
+
+
+static void mpu_init(void)
+{
+    int i = 0;
+
+    __disable_irq();
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICER[i] = 0xFFFFFFFF;
+    }
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICPR[i] = 0xFFFFFFFF;
+    }
+    __DSB();
+    __ISB();
+    MPU->CTRL = 0;
+
+    // Configure flash region
+    MPU->RBAR = IFLASH0_ADDR | MPU_REGION_VALID | 0;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    IFLASH0_SIZE) | MPU_REGION_STATE_RW;
+
+    // Configure boot region
+    MPU->RBAR = IFLASH0_ADDR | MPU_REGION_VALID | 1;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    FLASH_BOOT_LEN) | MPU_REGION_STATE_RO;
+
+    SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;
+    MPU->CTRL = 0x1 | MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk;
+    __DSB();
+    __ISB();
+    __enable_irq();
+}
+
+
 int main(void)
 {
     void *app_start_addr = (void *)FLASH_APP_START;
@@ -117,11 +176,12 @@ int main(void)
     systick_init();
     touch_init();
 
-
     if (bootloader_firmware_verified()) {
         if (!bootloader_unlocked()) {
+            mpu_init();
             binary_exec(app_start_addr);
         } else if (touch_button_press(DBB_TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
+            mpu_init();
             binary_exec(app_start_addr);
         }
     } else {
@@ -144,7 +204,7 @@ int main(void)
     }
     led_off();
 
-    while (true) { }
+    while (1) { }
 
     return 0;
 }

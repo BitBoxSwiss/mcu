@@ -39,7 +39,7 @@
 #include "bootloader.h"
 
 
-static char report[UDI_HID_REPORT_IN_SIZE]; // report to send
+static char report[UDI_HID_REPORT_IN_SIZE];
 static uint8_t bootloader_loading_ready = 0;
 
 static const char pubkey_c[] =
@@ -52,7 +52,7 @@ static void bootloader_report_status(BOOT_STATUS i)
 }
 
 
-static void bootloader_write_page(const char *buf, uint8_t chunknum)
+static void bootloader_write_chunk(const char *buf, uint8_t chunknum)
 {
     bootloader_loading_ready = 0;
 
@@ -61,7 +61,7 @@ static void bootloader_write_page(const char *buf, uint8_t chunknum)
         return;
     }
 
-    if (chunknum > FLASH_BOOT_CHUNK_NUM) {
+    if (chunknum > FLASH_BOOT_CHUNK_NUM - 1) {
         bootloader_report_status(OP_STATUS_ERR_LEN);
         return;
     }
@@ -93,10 +93,10 @@ static void bootloader_write_page(const char *buf, uint8_t chunknum)
 }
 
 
-static void bootloader_erase(void)
+static void bootloader_firmware_erase(void)
 {
     bootloader_loading_ready = 0;
-    flash_unlock(FLASH_APP_START, IFLASH0_ADDR + IFLASH0_SIZE, NULL, NULL);
+    flash_unlock(FLASH_APP_START, FLASH_APP_START + FLASH_APP_LEN, NULL, NULL);
     for (uint32_t i = 0; i < FLASH_APP_PAGE_NUM; i += 8) {
         if (flash_erase_page(FLASH_APP_START + IFLASH0_PAGE_SIZE * i,
                              IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
@@ -111,8 +111,8 @@ static void bootloader_erase(void)
 
 uint8_t bootloader_firmware_verified(void)
 {
-    uint8_t verified, hash[32], sig[FLASH_USER_SIG_SIZE];
-    flash_read_user_signature((uint32_t *)sig, FLASH_USER_SIG_SIZE / sizeof(uint32_t));
+    uint8_t verified, hash[32], sig[64];
+    memcpy(sig, (uint8_t *)(FLASH_SIG_START), sizeof(sig));
     sha256_Raw((uint8_t *)(FLASH_APP_START), FLASH_APP_LEN, hash);
     verified = !ecc_verify(utils_hex_to_uint8(pubkey_c), sig, hash, 32); // hashed internally
     if (verified) {
@@ -128,8 +128,8 @@ uint8_t bootloader_firmware_verified(void)
 
 uint8_t bootloader_unlocked(void)
 {
-    uint8_t sig[FLASH_USER_SIG_SIZE];
-    flash_read_user_signature((uint32_t *)sig, FLASH_USER_SIG_SIZE / sizeof(uint32_t));
+    uint8_t sig[FLASH_SIG_LEN];
+    memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
     return sig[FLASH_BOOT_LOCK_BYTE];
 }
 
@@ -148,29 +148,30 @@ static char *bootloader(const char *command)
         }
 
         case OP_ERASE:
-            bootloader_erase();
+            bootloader_firmware_erase();
             break;
 
         case OP_WRITE:
             if (!bootloader_loading_ready) {
                 bootloader_report_status(OP_STATUS_ERR_LOAD_FLAG);
             } else {
-                bootloader_write_page(command + FLASH_BOOT_OP_LEN, command[1]);
+                bootloader_write_chunk(command + FLASH_BOOT_OP_LEN, command[1]);
             }
             break;
 
         case OP_VERIFY: {
-            uint8_t sig[FLASH_USER_SIG_SIZE];
-            memset(sig, 0xFF, FLASH_USER_SIG_SIZE);
+            uint8_t sig[FLASH_SIG_LEN];
+            memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
+            memset(sig, 0xFF, FLASH_SIG_LEN);
             memcpy(sig, utils_hex_to_uint8(command + FLASH_BOOT_OP_LEN), 64);
 
-            if (flash_erase_user_signature() != FLASH_RC_OK) {
+            flash_unlock(FLASH_SIG_START, FLASH_SIG_START + FLASH_SIG_LEN, NULL, NULL);
+            if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
                 bootloader_report_status(OP_STATUS_ERR_ERASE);
                 break;
             }
 
-            if (flash_write_user_signature((uint32_t *)sig,
-                                           FLASH_USER_SIG_SIZE / sizeof(uint32_t)) != FLASH_RC_OK) {
+            if (flash_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
                 bootloader_report_status(OP_STATUS_ERR_WRITE);
                 break;
             }

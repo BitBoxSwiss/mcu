@@ -354,6 +354,9 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_bootloader), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -386,12 +389,12 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_bootlock));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_id));
     u_assert_str_has_not(utils_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
-    u_assert_str_has(utils_read_decrypted_report(), "\"bootlock\":true");
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -404,12 +407,12 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_serial));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_version));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_bootlock));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_name));
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_id));
     u_assert_str_has(utils_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":false");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":false");
-    u_assert_str_has(utils_read_decrypted_report(), "\"bootlock\":true");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));

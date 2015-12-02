@@ -92,7 +92,6 @@ X(pubkey)         \
 X(checkpub)       \
 X(filename)       \
 X(keypath)        \
-X(address)        \
 X(present)        \
 X(decrypt)        \
 X(encrypt)        \
@@ -200,7 +199,7 @@ X(ERR_KEY_MASTER,      250, "Master key not present.")\
 X(ERR_KEY_CHILD,       251, "Could not generate key.")\
 X(ERR_KEY_ECDH,        252, "Could not generate ECDH secret.")\
 X(ERR_KEY_ECDH_LEN,    253, "Incorrect serialized pubkey length. A 33-byte hexadecimal value (66 characters) is expected.")\
-X(ERR_SIGN_ADDR_LEN,   300, "Incorrect address length. A 34 character address is expected.")\
+X(ERR_SIGN_PUBKEY_LEN, 300, "Incorrect pubkey length. A 33-byte hexadecimal value (66 characters) is expected.")\
 X(ERR_SIGN_HASH_LEN,   301, "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected.")\
 X(ERR_SIGN_DESERIAL,   302, "Could not deserialize outputs or wrong change keypath.")\
 X(ERR_SIGN_ECCLIB,     303, "Could not sign.")\

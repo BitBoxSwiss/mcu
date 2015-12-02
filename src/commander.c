@@ -1161,19 +1161,19 @@ static int commander_echo_command(yajl_val json_node)
         memset(json_array, 0, COMMANDER_ARRAY_MAX);
         for (size_t i = 0; i < check->u.array.len; i++) {
             const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
-            const char *address_path[] = { cmd_str(CMD_address), NULL };
+            const char *pubkey_path[] = { cmd_str(CMD_pubkey), NULL };
 
             yajl_val obj = check->u.array.values[i];
             const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
-            const char *address = YAJL_GET_STRING(yajl_tree_get(obj, address_path, yajl_t_string));
+            const char *pubkey = YAJL_GET_STRING(yajl_tree_get(obj, pubkey_path, yajl_t_string));
 
-            if (!address || !keypath) {
+            if (!pubkey || !keypath) {
                 commander_clear_report();
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
                 return DBB_ERROR;
             }
 
-            ret = wallet_check_pubkey(address, keypath);
+            ret = wallet_check_pubkey(pubkey, keypath);
             const char *status;
             if (ret == DBB_KEY_PRESENT) {
                 status = attr_str(ATTR_true);
@@ -1183,8 +1183,8 @@ static int commander_echo_command(yajl_val json_node)
                 return DBB_ERROR;
             }
 
-            const char *key[] = {cmd_str(CMD_address), cmd_str(CMD_present), 0};
-            const char *value[] = {address, status, 0};
+            const char *key[] = {cmd_str(CMD_pubkey), cmd_str(CMD_present), 0};
+            const char *value[] = {pubkey, status, 0};
             int t[] = {DBB_JSON_STRING, DBB_JSON_BOOL, DBB_JSON_NONE};
             commander_fill_json_array(key, value, t, CMD_checkpub);
         }

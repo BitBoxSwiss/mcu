@@ -38,7 +38,7 @@ int wallet_split_seed(char **seed_words, const char *message);
 int wallet_master_from_xpriv(char *src);
 int wallet_seeded(void);
 int wallet_generate_master(void);
-int wallet_check_pubkey(const char *pubkeyhash, const char *keypath);
+int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
 void wallet_report_xpriv(const char *keypath, char *xpub);
 void wallet_report_xpub(const char *keypath, char *xpub);

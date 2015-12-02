@@ -224,15 +224,14 @@ void wallet_report_id(char *id)
 }
 
 
-int wallet_check_pubkey(const char *address, const char *keypath)
+int wallet_check_pubkey(const char *pubkey, const char *keypath)
 {
     uint8_t pub_key[33];
-    char addr[36];
     HDNode node;
 
-    if (strlens(address) != 34) {
+    if (strlens(pubkey) != 66) {
         commander_clear_report();
-        commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_SIGN_ADDR_LEN);
+        commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_SIGN_PUBKEY_LEN);
         goto err;
     }
 
@@ -250,10 +249,9 @@ int wallet_check_pubkey(const char *address, const char *keypath)
     }
 
     ecc_get_public_key33(node.private_key, pub_key);
-    wallet_get_address(pub_key, 0, addr, sizeof(addr));
 
     memset(&node, 0, sizeof(HDNode));
-    if (strncmp(address, addr, 36)) {
+    if (strncmp(pubkey, utils_uint8_to_hex(pub_key, 33), 66)) {
         return DBB_KEY_ABSENT;
     } else {
         return DBB_KEY_PRESENT;

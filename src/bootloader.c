@@ -96,21 +96,16 @@ static void bootloader_write_page(const char *buf, uint8_t chunknum)
 static void bootloader_erase(void)
 {
     bootloader_loading_ready = 0;
-
-    if (touch_button_press(DBB_TOUCH_LONG) == DBB_TOUCHED) {
-        flash_unlock(FLASH_APP_START, IFLASH0_ADDR + IFLASH0_SIZE, NULL, NULL);
-        for (uint32_t i = 0; i < FLASH_APP_PAGE_NUM; i += 8) {
-            if (flash_erase_page(FLASH_APP_START + IFLASH0_PAGE_SIZE * i,
-                                 IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
-                bootloader_report_status(OP_STATUS_ERR_ERASE);
-                return;
-            }
+    flash_unlock(FLASH_APP_START, IFLASH0_ADDR + IFLASH0_SIZE, NULL, NULL);
+    for (uint32_t i = 0; i < FLASH_APP_PAGE_NUM; i += 8) {
+        if (flash_erase_page(FLASH_APP_START + IFLASH0_PAGE_SIZE * i,
+                             IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
+            bootloader_report_status(OP_STATUS_ERR_ERASE);
+            return;
         }
-        bootloader_loading_ready = 1;
-        bootloader_report_status(OP_STATUS_OK);
-    } else {
-        bootloader_report_status(OP_STATUS_ERR_ABORT);
     }
+    bootloader_loading_ready = 1;
+    bootloader_report_status(OP_STATUS_OK);
 }
 
 

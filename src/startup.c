@@ -117,10 +117,11 @@ int main(void)
     systick_init();
     touch_init();
 
+
     if (bootloader_firmware_verified()) {
         if (!bootloader_unlocked()) {
             binary_exec(app_start_addr);
-        } else if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
+        } else if (touch_button_press(DBB_TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
             binary_exec(app_start_addr);
         }
     } else {

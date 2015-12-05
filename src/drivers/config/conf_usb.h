@@ -47,12 +47,13 @@
 
 // USB Device string definitions (Optional)
 #ifdef BOOTLOADER 
-#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox"
-#else
 #define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox Bootloader"
+#define  USB_DEVICE_SERIAL_NAME           "bootloader"
+#else
+#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox"
+#define  USB_DEVICE_SERIAL_NAME           "firmware"
 #endif
 #define  USB_DEVICE_PRODUCT_NAME          "www.digitalbitbox.com"
-#define  USB_DEVICE_SERIAL_NAME           "none"
 
 #define  UDC_VBUS_EVENT(b_vbus_high)
 #define  UDC_SOF_EVENT()                  usb_sof_action()

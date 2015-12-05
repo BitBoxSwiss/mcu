@@ -124,6 +124,7 @@ X(meta)           \
 X(list)           \
 X(sdcard)         \
 X(lock)           \
+X(bootlock)       \
 X(unlock)         \
 X(decrypt)        \
 X(encrypt)        \

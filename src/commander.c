@@ -788,6 +788,14 @@ static void commander_process_xpub(yajl_val json_node)
 }
 
 
+static uint8_t commander_bootloader_unlocked(void)
+{
+    uint8_t sig[FLASH_USER_SIG_SIZE];
+    flash_read_user_signature((uint32_t *)sig, FLASH_USER_SIG_SIZE / sizeof(uint32_t));
+    return sig[FLASH_BOOT_LOCK_BYTE];
+}
+
+
 static void commander_process_device(yajl_val json_node)
 {
     const char *path[] = { cmd_str(CMD_device), NULL };
@@ -816,37 +824,45 @@ static void commander_process_device(yajl_val json_node)
         char lock[6] = {0};
         char seeded[6] = {0};
         char sdcard[6] = {0};
+        char bootlock[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_read_unique_id(serial, 4);
 
         if (!memory_read_unlocked()) {
-            strcpy(lock, attr_str(ATTR_true));
+            snprintf(lock, sizeof(lock), "%s", attr_str(ATTR_true));
         } else {
-            strcpy(lock, attr_str(ATTR_false));
+            snprintf(lock, sizeof(lock), "%s", attr_str(ATTR_false));
         }
 
         if (wallet_seeded() == DBB_OK) {
-            strcpy(seeded, attr_str(ATTR_true));
+            snprintf(seeded, sizeof(seeded), "%s", attr_str(ATTR_true));
             wallet_report_id(id);
         } else {
-            strcpy(seeded, attr_str(ATTR_false));
+            snprintf(seeded, sizeof(seeded), "%s", attr_str(ATTR_false));
+        }
+
+        if (commander_bootloader_unlocked()) {
+            snprintf(bootlock, sizeof(bootlock), "%s", attr_str(ATTR_false));
+        } else {
+            snprintf(bootlock, sizeof(bootlock), "%s", attr_str(ATTR_true));
         }
 
         if (sd_present() == DBB_OK) {
-            strcpy(sdcard, attr_str(ATTR_true));
+            snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
         } else {
-            strcpy(sdcard, attr_str(ATTR_false));
+            snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_false));
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s}",
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
                  attr_str(ATTR_id), id,
                  attr_str(ATTR_seeded), seeded,
                  attr_str(ATTR_lock), lock,
+                 attr_str(ATTR_bootlock), bootlock,
                  attr_str(ATTR_sdcard), sdcard);
 
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);

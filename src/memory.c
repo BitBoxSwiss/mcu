@@ -63,25 +63,14 @@ __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0
 
 static void memory_mempass(void)
 {
-    uint8_t i, mempass[32];
+    uint8_t mempass[32];
     memset(mempass, 0, sizeof(mempass));
     // Encrypt data saved to memory using an AES key obfuscated by the
-    // bootloader bytes and compilation time and date.
-    char t[] = __TIME__;
-    char d[] = __DATE__;
-
+    // bootloader bytes.
 #ifndef TESTING
     sha256_Raw((uint8_t *)(IFLASH0_ADDR), FLASH_BOOT_LEN, mempass);
 #endif
-    for (i = 0; i < sizeof(t) - 1; i++) {
-        mempass[i] ^= t[i];
-    }
-    for (i = 0; i < sizeof(d) - 1; i++) {
-        mempass[i + sizeof(t)] ^= d[i];
-    }
-
     sha256_Raw(mempass, 32, mempass);
-
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
                         PASSWORD_MEMORY);
     memset(mempass, 0, sizeof(mempass));

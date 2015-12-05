@@ -41,6 +41,7 @@ uint8_t sd_present(void);
 uint8_t sd_erase(int cmd);
 uint8_t touch_button_press(uint8_t touch_type);
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
+uint8_t flash_read_user_signature(uint32_t *sig, uint32_t len);
 
 
 #endif

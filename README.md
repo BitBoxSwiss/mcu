@@ -3,6 +3,7 @@ Digital Bitbox Firmware
 
 [![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
 [![Coverage Status](https://coveralls.io/repos/digitalbitbox/mcu/badge.svg?branch=master&service=github)](https://coveralls.io/github/digitalbitbox/mcu?branch=master)
+[![Coverity Scan Build Status](https://img.shields.io/coverity/scan/7041.svg)](https://scan.coverity.com/projects/mcu)
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
 
 **MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**

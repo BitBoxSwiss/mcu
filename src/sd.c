@@ -27,6 +27,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include "sd.h"
 #include "commander.h"
@@ -325,7 +326,8 @@ static uint8_t delete_files(char *path)
                 if (res != FR_OK) {
                     failed++;
                 } else {
-                    DWORD f_ps, fsize = file_object.fsize;
+                    DWORD f_ps, fsize;
+                    fsize = file_object.fsize < ULONG_MAX ? file_object.fsize : ULONG_MAX;
                     for (f_ps = 0; f_ps < fsize; f_ps++) {
                         f_putc(0xAC, &file_object); // overwrite data
                     }

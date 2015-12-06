@@ -423,7 +423,7 @@ uint32_t uart_read(Uart *p_uart, uint8_t *puc_data)
  */
 Pdc *uart_get_pdc_base(Uart *p_uart)
 {
-	Pdc *p_pdc_base;
+	Pdc *p_pdc_base = NULL;
 
 #if (SAM3S || SAM3N || SAM4S || SAM4E || SAM4N || SAM4C || SAMG || SAM4CP || SAM4CM)
 	if (p_uart == UART0)

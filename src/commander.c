@@ -272,10 +272,10 @@ const char *commander_read_array(void)
 
 int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[33])
 {
-    char sig_c[128 + 1];
-    char pub_key_c[66 + 1];
-    strncpy(sig_c, utils_uint8_to_hex(sig, 64), 128 + 1);
-    strncpy(pub_key_c, utils_uint8_to_hex(pubkey, 33), 66 + 1);
+    char sig_c[128 + 1] = {0};
+    char pub_key_c[66 + 1] = {0};
+    snprintf(sig_c, sizeof(sig_c), "%s", utils_uint8_to_hex(sig, 64));
+    snprintf(pub_key_c, sizeof(pub_key_c), "%s", utils_uint8_to_hex(pubkey, 33));
     const char *key[] = {cmd_str(CMD_sig), cmd_str(CMD_pubkey), 0};
     const char *value[] = {sig_c, pub_key_c, 0};
     int type[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
@@ -370,7 +370,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), xpriv, strlens(xpriv), DBB_SD_NO_REPLACE,
+        ret = sd_write(filename, strlens(filename), xpriv, strlen(xpriv), DBB_SD_NO_REPLACE,
                        CMD_backup);
 
         if (ret == DBB_OK) {
@@ -472,7 +472,7 @@ static void commander_process_seed(yajl_val json_node)
             }
             memset(file, 0, sizeof(file));
             snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
-        } while (sd_load(file, strlens(file), CMD_seed));
+        } while (sd_load(file, strlen(file), CMD_seed));
 
         ret = wallet_generate_master();
         if (ret == DBB_OK) {

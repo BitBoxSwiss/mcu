@@ -711,7 +711,7 @@ static bool sdio_cmd52_set_bus_width(void)
 	 * A SDIO Full-Speed alone always supports 4bit
 	 * A SDIO Low-Speed alone can supports 4bit (Optional)
 	 */
-	uint8_t u8_value;
+	uint8_t u8_value = 0;
 
 	// Check 4bit support in 4BLS of "Card Capability" register
 	if (!sdio_cmd52(SDIO_CMD52_READ_FLAG, SDIO_CIA, SDIO_CCCR_CAP,
@@ -743,7 +743,7 @@ static bool sdio_cmd52_set_bus_width(void)
  */
 static bool sdio_cmd52_set_high_speed(void)
 {
-	uint8_t u8_value;
+	uint8_t u8_value = 0;
 
 	// Check CIA.HS
 	if (!sdio_cmd52(SDIO_CMD52_READ_FLAG, SDIO_CIA, SDIO_CCCR_HS, 0, &u8_value)) {

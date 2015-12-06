@@ -616,7 +616,7 @@ uint32_t flash_write(uint32_t ul_address, const void *p_buffer,
 	/* Write all pages */
 	while (ul_size > 0) {
 		/* Copy data in temporary buffer to avoid alignment problems. */
-		writeSize = Min((uint32_t) IFLASH_PAGE_SIZE - us_offset - 1,
+		writeSize = Min((uint32_t) IFLASH_PAGE_SIZE - us_offset,
 				ul_size);
 		compute_address(p_efc, us_page, 0, &ul_page_addr);
 		us_padding = IFLASH_PAGE_SIZE - us_offset - writeSize;

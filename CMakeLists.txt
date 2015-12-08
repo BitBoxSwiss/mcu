@@ -62,10 +62,12 @@ endif()
 find_package(Git)
 if(GIT_FOUND)
     execute_process(COMMAND git "describe" "--tags" OUTPUT_VARIABLE GIT_COMMIT_HASH WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND git "describe" "--tags" "--abbrev=0" OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
     set(GIT_COMMIT_HASH "Git not found.")
 endif()
 set(VERSION_STRING "${GIT_COMMIT_HASH}")
+set(VERSION_STRING_SHORT "${GIT_COMMIT_HASH_SHORT}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)

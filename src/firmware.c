@@ -25,6 +25,7 @@
 */
 
 
+#include <string.h>
 #include <stdint.h>
 #include "drivers/config/conf_usb.h"
 #include "drivers/config/mcu.h"
@@ -32,13 +33,17 @@
 #include "usb.h"
 #include "ecc.h"
 #include "led.h"
+#include "flags.h"
 #include "touch.h"
+#include "wallet.h"
 #include "memory.h"
 #include "random.h"
 #include "systick.h"
 #include "ataes132.h"
 #include "commander.h"
 
+
+uint8_t serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
 
 uint32_t __stack_chk_guard = 0; // updated below
 
@@ -70,13 +75,23 @@ int main (void)
     __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     pmc_enable_periph_clk(ID_PIOA);
-    usb_suspend_action();
-    udc_start();
     delay_init(F_CPU);
     memory_setup();
     systick_init();
     touch_init();
     ecc_context_init();
+
+    memset(serial_number, 0, USB_DEVICE_GET_SERIAL_NAME_LENGTH);
+    if (wallet_seeded() == DBB_OK) {
+        memcpy(serial_number, USB_DEVICE_SERIAL_NAME_SEEDED,
+               strlen(USB_DEVICE_SERIAL_NAME_SEEDED));
+    } else {
+        memcpy(serial_number, USB_DEVICE_SERIAL_NAME_NOT_SEEDED,
+               strlen(USB_DEVICE_SERIAL_NAME_NOT_SEEDED));
+    }
+
+    usb_suspend_action();
+    udc_start();
 
     led_off();
     delay_ms(300);

@@ -51,7 +51,12 @@
 #define  USB_DEVICE_SERIAL_NAME           "bootloader"
 #else
 #define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox"
-#define  USB_DEVICE_SERIAL_NAME           "firmware"
+#define  USB_DEVICE_SERIAL_NAME
+#define  USB_DEVICE_GET_SERIAL_NAME_POINTER serial_number
+#define  USB_DEVICE_GET_SERIAL_NAME_LENGTH  12
+#define  USB_DEVICE_SERIAL_NAME_SEEDED      "firmware"
+#define  USB_DEVICE_SERIAL_NAME_NOT_SEEDED  "clean"
+extern uint8_t serial_number[];
 #endif
 #define  USB_DEVICE_PRODUCT_NAME          "www.digitalbitbox.com"
 

@@ -790,9 +790,13 @@ static void commander_process_xpub(yajl_val json_node)
 
 static uint8_t commander_bootloader_unlocked(void)
 {
-    uint8_t sig[FLASH_USER_SIG_SIZE];
-    flash_read_user_signature((uint32_t *)sig, FLASH_USER_SIG_SIZE / sizeof(uint32_t));
+#ifdef TESTING
+    return 0;
+#else
+    uint8_t sig[FLASH_SIG_LEN];
+    memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
     return sig[FLASH_BOOT_LOCK_BYTE];
+#endif
 }
 
 
@@ -991,16 +995,8 @@ static void commander_process_bootloader(yajl_val json_node)
 #ifdef TESTING
     commander_fill_report(cmd_str(CMD_bootloader), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
 #else
-    uint8_t sig[FLASH_USER_SIG_SIZE];
-
-    if (flash_read_user_signature((uint32_t *)sig,
-                                  FLASH_USER_SIG_SIZE / sizeof(uint32_t)) != FLASH_RC_OK) {
-        goto err;
-    }
-
-    if (flash_erase_user_signature() != FLASH_RC_OK) {
-        goto err;
-    }
+    uint8_t sig[FLASH_SIG_LEN];
+    memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
 
     if (!strncmp(value, attr_str(ATTR_lock), strlens(attr_str(ATTR_lock)))) {
         sig[FLASH_BOOT_LOCK_BYTE] = 0;
@@ -1011,8 +1007,11 @@ static void commander_process_bootloader(yajl_val json_node)
         return;
     }
 
-    if (flash_write_user_signature((uint32_t *)sig,
-                                   FLASH_USER_SIG_SIZE / sizeof(uint32_t)) != FLASH_RC_OK) {
+    if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
+        goto err;
+    }
+
+    if (flash_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
         goto err;
     }
 

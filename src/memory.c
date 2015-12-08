@@ -68,7 +68,7 @@ static void memory_mempass(void)
     // Encrypt data saved to memory using an AES key obfuscated by the
     // bootloader bytes.
 #ifndef TESTING
-    sha256_Raw((uint8_t *)(IFLASH0_ADDR), FLASH_BOOT_LEN, mempass);
+    sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, mempass);
 #endif
     sha256_Raw(mempass, 32, mempass);
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,

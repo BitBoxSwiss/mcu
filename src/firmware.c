@@ -24,6 +24,7 @@
 
 */
 
+
 #include <stdint.h>
 #include "drivers/config/conf_usb.h"
 #include "drivers/config/mcu.h"
@@ -68,11 +69,11 @@ int main (void)
     ataes_init();
     __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
-    pmc_enable_periph_clk(ID_PIOA); // Button input
+    pmc_enable_periph_clk(ID_PIOA);
     usb_suspend_action();
     udc_start();
     delay_init(F_CPU);
-    memory_setup(); // One time factory setup
+    memory_setup();
     systick_init();
     touch_init();
     ecc_context_init();
@@ -83,7 +84,7 @@ int main (void)
     delay_ms(300);
     led_off();
 
-    while (true) {
+    while (1) {
         sleepmgr_enter_sleep();
     }
 }

@@ -33,18 +33,18 @@
 #ifndef IFLASH0_ADDR
 #define IFLASH0_ADDR                (0x00400000u)
 #endif
-#ifndef FLASH_USER_SIG_SIZE
-#define FLASH_USER_SIG_SIZE         (512)
-#endif
+#define FLASH_BOOT_START            (IFLASH0_ADDR)
 #define FLASH_BOOT_LEN              (0x00008000u)
-#define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
-#define FLASH_APP_LEN               (IFLASH0_SIZE - FLASH_BOOT_LEN)
+#define FLASH_SIG_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
+#define FLASH_SIG_LEN               (0x00001000u)// note: min flash erase size is 0x1000 (8 512-Byte pages))
+#define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN + FLASH_SIG_LEN)
+#define FLASH_APP_LEN               (IFLASH0_SIZE - FLASH_BOOT_LEN - FLASH_SIG_LEN)
 #define FLASH_APP_PAGE_NUM          (FLASH_APP_LEN / IFLASH0_PAGE_SIZE)
 #define FLASH_BOOT_OP_LEN           (2)// 1 byte op code and 1 byte parameter
 #define FLASH_BOOT_PAGES_PER_CHUNK  (8)
 #define FLASH_BOOT_CHUNK_LEN        (IFLASH0_PAGE_SIZE * FLASH_BOOT_PAGES_PER_CHUNK)
 #define FLASH_BOOT_CHUNK_NUM        (FLASH_APP_LEN / FLASH_BOOT_CHUNK_LEN)// app len should be a multiple of chunk len
-#define FLASH_BOOT_LOCK_BYTE        (FLASH_USER_SIG_SIZE - 1)
+#define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
 
 
 #define AES_DATA_LEN_MAX 1024// base64 increases size by ~4/3; AES encryption by max 32 char

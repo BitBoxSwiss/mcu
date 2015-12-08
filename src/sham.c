@@ -120,10 +120,3 @@ uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len)
     memset(serial, 1, sizeof(uint32_t) * len);
     return 0; // success
 }
-
-
-uint8_t flash_read_user_signature(uint32_t *sig, uint32_t len)
-{
-    memset(sig, 0, sizeof(uint32_t) * len);
-    return 0;
-}

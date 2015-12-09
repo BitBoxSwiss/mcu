@@ -396,8 +396,7 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
 
-    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -430,8 +429,7 @@ static void tests_device(void)
         u_assert_str_has(utils_read_decrypted_report(), "\"bootlock\":true");
     }
 
-    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_NONE);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    commander_force_reset();
 }
 
 

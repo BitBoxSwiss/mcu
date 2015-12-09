@@ -142,11 +142,9 @@ static void api_format_send_cmd(const char *cmd, const char *val, PASSWORD_ID id
 
 static void api_reset_device(void)
 {
-    if (!TEST_LIVE_DEVICE) {
-        commander_force_reset();
-    } else {
-        api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_NONE);
-    }
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd,
+                        PASSWORD_NONE);// in case not yet set
+    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
 }
 
 

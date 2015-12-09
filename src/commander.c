@@ -456,7 +456,7 @@ static void commander_process_seed(yajl_val json_node)
     src[strlens(source)] = '\0';
 
     if (strcmp(src, attr_str(ATTR_create)) == 0) {
-        if (sd_list(CMD_seed) != DBB_OK) {
+        if (sd_present() != DBB_OK) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
             goto exit;

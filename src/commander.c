@@ -1422,19 +1422,6 @@ static int commander_check_init(const char *encrypted_command)
         return DBB_ERROR;
     }
 
-    if (encrypted_command[0] == '{') {
-        yajl_val json_node = yajl_tree_parse(encrypted_command, NULL, 0);
-        if (json_node && YAJL_IS_OBJECT(json_node)) {
-            const char *path[] = { cmd_str(CMD_reset), NULL };
-            if (yajl_tree_get(json_node, path, yajl_t_string)) {
-                commander_process_reset(json_node);
-                yajl_tree_free(json_node);
-                return DBB_RESET;
-            }
-        }
-        yajl_tree_free(json_node);
-    }
-
     // Force setting a password before processing any other command.
     if (!memory_read_erased()) {
         return DBB_OK;

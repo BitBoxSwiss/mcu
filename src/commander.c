@@ -812,10 +812,14 @@ static void commander_process_device(yajl_val json_node)
 
     if (strcmp(value, attr_str(ATTR_lock)) == 0) {
         if (wallet_seeded() == DBB_OK) {
-            char msg[256];
-            memory_write_unlocked(0);
-            snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
-            commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+            if (touch_button_press(DBB_TOUCH_LONG) == DBB_TOUCHED) {
+                char msg[256];
+                memory_write_unlocked(0);
+                snprintf(msg, sizeof(msg), "{\"%s\":%s}", attr_str(ATTR_lock), attr_str(ATTR_true));
+                commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
+            } else {
+                commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_TOUCH_ABORT);
+            }
         } else {
             commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_KEY_MASTER);
         }

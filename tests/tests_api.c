@@ -429,7 +429,9 @@ static void tests_device(void)
         u_assert_str_has(utils_read_decrypted_report(), "\"bootlock\":true");
     }
 
-    commander_force_reset();
+    if (!TEST_LIVE_DEVICE) {
+        commander_force_reset();
+    }
 }
 
 
@@ -833,7 +835,6 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-
     // sign using one input
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
@@ -845,9 +846,41 @@ static void tests_sign(void)
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
     }
 
+    // skip sending pin
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_CMD));
+
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
+        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
+        u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
+        u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
+        u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
+    }
+
+    // send wrong pin
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0000\"}", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
+
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    if (!TEST_LIVE_DEVICE) {
+        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
+        u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
+        u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
+        u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
+    }
+
+    // send correct pin
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -865,9 +898,13 @@ static void tests_sign(void)
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
+    // send correct pin
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
     if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(utils_read_decrypted_report(), hash_2_input_1);
         u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);
@@ -1008,15 +1045,16 @@ static void tests_aes_cbc(void)
 
 static void run_utests(void)
 {
+    u_run_test(tests_device);
+    u_run_test(tests_input);
+    u_run_test(tests_seed_xpub_backup);
+
     u_run_test(tests_echo_2FA);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_sign);
     u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);
-    u_run_test(tests_device);
-    u_run_test(tests_input);
-    u_run_test(tests_seed_xpub_backup);
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

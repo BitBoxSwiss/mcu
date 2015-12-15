@@ -57,7 +57,8 @@ __extension__ static char json_array[] = {[0 ... COMMANDER_ARRAY_MAX] = 0};
 __extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char new_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char previous_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-
+static char TFA_PIN[5];
+static int TFA_CHECK_PIN = 0;
 
 // Must free() returned value (allocated inside base64() function)
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
@@ -1103,25 +1104,53 @@ static int commander_process(int cmd, yajl_val json_node)
 //  Handle API input (preprocessing) //
 //
 
-static int commander_append_pin(void)
+static int commander_tfa_append_pin(void)
 {
     if (!memory_read_unlocked()) {
         // Create one-time PIN
         uint8_t pin_b[2];
-        char pin_c[5];
+        memset(TFA_PIN, 0, sizeof(TFA_PIN));
         if (random_bytes(pin_b, 2, 0) == DBB_ERROR) {
             commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
         }
-        sprintf(pin_c, "%04d", (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
+#ifdef TESTING
+        pin_b[0] = 1;
+        pin_b[1] = 0;
+#endif
+        snprintf(TFA_PIN, sizeof(TFA_PIN), "%04d",
+                 (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
         // Create 2FA AES key
-        commander_process_password(pin_c, 4, PASSWORD_2FA);
+        commander_process_password(TFA_PIN, 4, PASSWORD_2FA);
 
         // Append PIN to echo
-        commander_fill_report(cmd_str(CMD_pin), pin_c, DBB_OK);
+        commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);
+
+        // Enforce checking for the pin on next sign command
+        TFA_CHECK_PIN = 1;
     }
     return DBB_OK;
+}
+
+
+static int commander_tfa_check_pin(yajl_val json_node)
+{
+    const char *pin_path[] = { cmd_str(CMD_sign), cmd_str(CMD_pin), NULL };
+    const char *pin = YAJL_GET_STRING(yajl_tree_get(json_node, pin_path, yajl_t_string));
+
+    if (!strlens(pin)) {
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_TFA_CMD);
+        return DBB_ERROR;
+    }
+
+    if (strncmp(pin, TFA_PIN, sizeof(TFA_PIN))) {
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_TFA_PIN);
+        return DBB_ERROR;
+    }
+
+    commander_fill_report(cmd_str(CMD_sign), attr_str(ATTR_success), DBB_OK);
+    return DBB_VERIFY_PIN;
 }
 
 
@@ -1214,7 +1243,7 @@ static int commander_echo_command(yajl_val json_node)
     memset(json_report, 0, COMMANDER_REPORT_SIZE);
     commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
 
-    if (commander_append_pin() != DBB_OK) {
+    if (commander_tfa_append_pin() != DBB_OK) {
         return DBB_ERROR;
     }
 
@@ -1239,6 +1268,19 @@ static int commander_echo_command(yajl_val json_node)
 static int commander_touch_button(int found_cmd, yajl_val json_node)
 {
     if (found_cmd == CMD_sign) {
+        if (TFA_CHECK_PIN) {
+            if (commander_tfa_check_pin(json_node) == DBB_VERIFY_PIN) {
+                memset(TFA_PIN, 0, sizeof(TFA_PIN));
+                TFA_CHECK_PIN = 0;
+                return DBB_VERIFY_PIN;
+            } else {
+                memset(previous_command, 0, COMMANDER_REPORT_SIZE);
+                memset(TFA_PIN, 0, sizeof(TFA_PIN));
+                TFA_CHECK_PIN = 0;
+                return DBB_ERROR;
+            }
+        }
+
         int c = commander_echo_command(json_node);
         if (c == DBB_VERIFY_SAME) {
             int t;
@@ -1259,6 +1301,8 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
 
     // Reset if not sign command
     memset(previous_command, 0, COMMANDER_REPORT_SIZE);
+    memset(TFA_PIN, 0, sizeof(TFA_PIN));
+    TFA_CHECK_PIN = 0;
 
     if (found_cmd == CMD_seed && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
         // No touch required if not yet seeded
@@ -1267,7 +1311,7 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
         return (touch_button_press(DBB_TOUCH_LONG));
 
     } else {
-        return DBB_TOUCHED;
+        return DBB_OK;
     }
 }
 
@@ -1302,9 +1346,9 @@ static void commander_parse(char *command)
         memory_access_err_count(DBB_ACCESS_INITIALIZE);
         t = commander_touch_button(found_cmd, json_node);
 
-        if (t == DBB_VERIFY_ECHO) {
+        if (t == DBB_VERIFY_ECHO || t == DBB_VERIFY_PIN) {
             goto exit;
-        } else if (t == DBB_TOUCHED) {
+        } else if (t == DBB_TOUCHED || t == DBB_OK) {
             ret = commander_process(found_cmd, json_node);
             if (ret == DBB_RESET) {
                 goto exit;
@@ -1475,43 +1519,3 @@ char *commander(const char *command)
     return json_report;
 }
 
-
-/*
- *
-
- USB HID INPUT
- |
- |
-commander()
- |
- \_commander_check_init()
-    |--if 'reset' command -> RESET -> RETURN
-    |--if password not set -> RETURN
-    |
- \_commander_decrypt()
-    |--if cannot decrypt input (serves as a password check) or cannot parse JSON
-    |      |-> if too many access errors -> RESET
-    |      |-> RETURN
-    |
-    |
- \_commander_parse()
-    |
-    \_commander_touch_button()
-            |--if sign command
-            |      |--if new transaction -> echo 2FA info -> RETURN
-            |      |--if repeated, wait for user input (touch button)
-            |
-            |--if require touch & not touched -> RETURN
-            |
-    \_commander_process() { do command }
-            |
-      _____/
-    |
-    |--encrypt output report
-  _/
- |
- |
- USB HID OUTPUT
-
-*
-*/

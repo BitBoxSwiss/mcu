@@ -736,6 +736,7 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+
     // missing parameters
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_missing_parameter, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
@@ -832,6 +833,7 @@ static void tests_sign(void)
 
 
     // lock to get 2FA PINs
+    int pin_err_count = 0;
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -848,7 +850,10 @@ static void tests_sign(void)
 
     // skip sending pin
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_CMD));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
+    if (TEST_LIVE_DEVICE) {
+        pin_err_count++;
+    }
 
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
@@ -861,7 +866,7 @@ static void tests_sign(void)
     }
 
     // send wrong pin
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0000\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
 
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
@@ -872,6 +877,8 @@ static void tests_sign(void)
         u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
+    } else {
+        pin_err_count++;
     }
 
     // send correct pin
@@ -885,6 +892,8 @@ static void tests_sign(void)
         u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), pubkey_1_input);
+    } else {
+        pin_err_count++;
     }
 
 
@@ -911,7 +920,26 @@ static void tests_sign(void)
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_1);
         u_assert_str_has(utils_read_decrypted_report(), pubkey_2_input_2);
+    } else {
+        pin_err_count++;
     }
+
+    for (; pin_err_count < COMMANDER_MAX_ATTEMPTS - 1; pin_err_count++) {
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_WARN_RESET));
+    }
+
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_RESET));
+    }
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 }
 
 
@@ -1045,16 +1073,15 @@ static void tests_aes_cbc(void)
 
 static void run_utests(void)
 {
-    u_run_test(tests_device);
-    u_run_test(tests_input);
-    u_run_test(tests_seed_xpub_backup);
-
     u_run_test(tests_echo_2FA);
     u_run_test(tests_aes_cbc);
-    u_run_test(tests_sign);
     u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);
+    u_run_test(tests_sign);
+    u_run_test(tests_device);
+    u_run_test(tests_input);
+    u_run_test(tests_seed_xpub_backup);
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

@@ -1140,16 +1140,13 @@ static int commander_tfa_check_pin(yajl_val json_node)
     const char *pin = YAJL_GET_STRING(yajl_tree_get(json_node, pin_path, yajl_t_string));
 
     if (!strlens(pin)) {
-        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_TFA_CMD);
         return DBB_ERROR;
     }
 
     if (strncmp(pin, TFA_PIN, sizeof(TFA_PIN))) {
-        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_TFA_PIN);
         return DBB_ERROR;
     }
 
-    commander_fill_report(cmd_str(CMD_sign), attr_str(ATTR_success), DBB_OK);
     return DBB_VERIFY_PIN;
 }
 
@@ -1270,13 +1267,20 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
     if (found_cmd == CMD_sign) {
         if (TFA_CHECK_PIN) {
             if (commander_tfa_check_pin(json_node) == DBB_VERIFY_PIN) {
+                memory_pin_err_count(DBB_ACCESS_INITIALIZE);
                 memset(TFA_PIN, 0, sizeof(TFA_PIN));
                 TFA_CHECK_PIN = 0;
+                commander_fill_report(cmd_str(CMD_sign), attr_str(ATTR_success), DBB_OK);
                 return DBB_VERIFY_PIN;
             } else {
+                char msg[256];
                 memset(previous_command, 0, COMMANDER_REPORT_SIZE);
                 memset(TFA_PIN, 0, sizeof(TFA_PIN));
                 TFA_CHECK_PIN = 0;
+                snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_SIGN_TFA_PIN),
+                         COMMANDER_MAX_ATTEMPTS - memory_read_pin_err_count() - 1, flag_msg(DBB_WARN_RESET));
+                commander_fill_report(cmd_str(CMD_sign), msg, DBB_ERR_SIGN_TFA_PIN);
+                memory_pin_err_count(DBB_ACCESS_ITERATE);
                 return DBB_ERROR;
             }
         }

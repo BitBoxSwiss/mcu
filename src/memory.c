@@ -46,7 +46,8 @@
 static uint8_t MEM_unlocked = DEFAULT_unlocked;
 static uint8_t MEM_erased = DEFAULT_erased;
 static uint8_t MEM_setup = DEFAULT_setup;
-static uint16_t MEM_access_err = DEFAULT_access_err;
+static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
+static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
 __extension__ static uint8_t MEM_aeskey_2FA[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -128,7 +129,8 @@ void memory_erase(void)
     memory_name("Digital Bitbox");
     memory_write_erased(DEFAULT_erased);
     memory_write_unlocked(DEFAULT_unlocked);
-    memory_access_err_count(DEFAULT_access_err);
+    memory_access_err_count(DBB_ACCESS_INITIALIZE);
+    memory_pin_err_count(DBB_ACCESS_INITIALIZE);
 }
 
 
@@ -413,7 +415,6 @@ uint8_t memory_read_erased(void)
 }
 
 
-// Initialize or increment non-volatile err counter
 uint16_t memory_access_err_count(const uint8_t access)
 {
     uint16_t err_count = 0xF0F0;
@@ -438,5 +439,32 @@ uint16_t memory_read_access_err_count(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
     return MEM_access_err;
+}
+
+
+uint16_t memory_pin_err_count(const uint8_t access)
+{
+    uint16_t err_count = 0xF0F0;
+    if (access == DBB_ACCESS_ITERATE) {
+        memory_eeprom(NULL, (uint8_t *)&MEM_pin_err, MEM_PIN_ERR_ADDR, 2);
+        err_count = MEM_pin_err + 1;
+    } else if (access == DBB_ACCESS_INITIALIZE) {
+        err_count = 0;
+    } else {
+        err_count = COMMANDER_MAX_ATTEMPTS; // corrupted input
+    }
+
+    // Force reset after too many failed attempts
+    if (err_count >= COMMANDER_MAX_ATTEMPTS) {
+        commander_force_reset();
+    } else {
+        memory_eeprom((uint8_t *)&err_count, (uint8_t *)&MEM_pin_err, MEM_PIN_ERR_ADDR, 2);
+    }
+    return err_count;
+}
+uint16_t memory_read_pin_err_count(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_pin_err, MEM_PIN_ERR_ADDR, 2);
+    return MEM_pin_err;
 }
 

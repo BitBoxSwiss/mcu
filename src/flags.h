@@ -206,7 +206,6 @@ X(ERR_SIGN_HASH_LEN,   301, "Incorrect hash length. A 32-byte hexadecimal value 
 X(ERR_SIGN_DESERIAL,   302, "Could not deserialize outputs or wrong change keypath.")\
 X(ERR_SIGN_ECCLIB,     303, "Could not sign.")\
 X(ERR_SIGN_TFA_PIN,    304, "Incorrect 2FA pin.")\
-X(ERR_SIGN_TFA_CMD,    305, "A 2FA pin was expected.")\
 X(ERR_SD_CARD,         400, "Please insert SD card.")\
 X(ERR_SD_MOUNT,        401, "Could not mount the SD card.")\
 X(ERR_SD_OPEN_FILE,    402, "Could not open a file to write - it may already exist.")\

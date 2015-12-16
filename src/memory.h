@@ -37,7 +37,8 @@
 #define MEM_ERASED_ADDR             0x0000// Zone 0
 #define MEM_SETUP_ADDR              0x0002
 #define MEM_ACCESS_ERR_ADDR         0x0004
-#define MEM_UNLOCKED_ADDR           0x0006
+#define MEM_PIN_ERR_ADDR            0x0006
+#define MEM_UNLOCKED_ADDR           0x0008
 #define MEM_NAME_ADDR               0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR       0x0200// Zone 2
 #define MEM_MASTER_BIP32_CHAIN_ADDR 0x0300// Zone 3
@@ -49,7 +50,6 @@
 #define DEFAULT_unlocked            0xFF
 #define DEFAULT_erased              0xFF
 #define DEFAULT_setup               0xFF
-#define DEFAULT_access_err          DBB_ACCESS_INITIALIZE
 
 
 typedef enum PASSWORD_ID {
@@ -87,6 +87,8 @@ void memory_write_unlocked(uint8_t u);
 
 uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);
+uint16_t memory_pin_err_count(const uint8_t access);
+uint16_t memory_read_pin_err_count(void);
 
 
 #endif  // _MEMORY_H_

@@ -353,10 +353,10 @@ static int commander_process_backup_create(const char *filename, const char *enc
             free(enc);
             return DBB_ERROR;
         }
-        ret = sd_write(filename, strlens(filename), enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
+        ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
 
         if (ret == DBB_OK) {
-            l = sd_load(filename, strlens(filename), CMD_backup);
+            l = sd_load(filename, CMD_backup);
             if (l) {
                 if (memcmp(enc, l, enc_len)) {
                     commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
@@ -371,11 +371,11 @@ static int commander_process_backup_create(const char *filename, const char *enc
         free(enc);
         return ret;
     } else {
-        ret = sd_write(filename, strlens(filename), xpriv, strlen(xpriv), DBB_SD_NO_REPLACE,
+        ret = sd_write(filename, xpriv, strlen(xpriv), DBB_SD_NO_REPLACE,
                        CMD_backup);
 
         if (ret == DBB_OK) {
-            l = sd_load(filename, strlens(filename), CMD_backup);
+            l = sd_load(filename, CMD_backup);
             if (l) {
                 if (memcmp(xpriv, l, strlens(xpriv))) {
                     commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
@@ -394,7 +394,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
 
 static void commander_process_backup(yajl_val json_node)
 {
-    const char *encrypt, *filename, *value;
+    const char *encrypt, *filename, *erase, *value;
 
     if (!memory_read_unlocked()) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_LOCKED);
@@ -411,9 +411,17 @@ static void commander_process_backup(yajl_val json_node)
         }
 
         if (strcmp(value, attr_str(ATTR_erase)) == 0) {
-            sd_erase(CMD_backup);
+            sd_erase(CMD_backup, NULL);
             return;
         }
+    }
+
+    const char *erase_path[] = { cmd_str(CMD_backup), cmd_str(CMD_erase), NULL };
+    erase = YAJL_GET_STRING(yajl_tree_get(json_node, erase_path, yajl_t_string));
+
+    if (erase) {
+        sd_erase(CMD_backup, erase);
+        return;
     }
 
     const char *filename_path[] = { cmd_str(CMD_backup), cmd_str(CMD_filename), NULL };
@@ -472,8 +480,8 @@ static void commander_process_seed(yajl_val json_node)
                 goto exit;
             }
             memset(file, 0, sizeof(file));
-            snprintf(file, sizeof(file), "%s%i.aes", AUTOBACKUP_FILENAME, count++);
-        } while (sd_load(file, strlen(file), CMD_seed));
+            snprintf(file, sizeof(file), "%s%i.bak", AUTOBACKUP_FILENAME, count++);
+        } while (sd_load(file, CMD_seed));
 
         ret = wallet_generate_master();
         if (ret == DBB_OK) {
@@ -485,7 +493,7 @@ static void commander_process_seed(yajl_val json_node)
     } else if (strncmp(src, "xprv", 4) == 0) {
         ret = wallet_master_from_xpriv(src);
     } else {
-        char *text = sd_load(src, strlens(source), CMD_seed);
+        char *text = sd_load(src, CMD_seed);
         if (text &&
                 (decrypt ? !strncmp(decrypt, attr_str(ATTR_yes), 3) : 0)) { // default = do not decrypt
             int dec_len;
@@ -679,11 +687,11 @@ static void commander_process_verifypass(yajl_val json_node)
         if (strcmp(value, attr_str(ATTR_export)) == 0) {
             memcpy(text, utils_uint8_to_hex(memory_report_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
             utils_clear_buffers();
-            int ret = sd_write(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), text, 64 + 1,
+            int ret = sd_write(VERIFYPASS_FILENAME, text, 64 + 1,
                                DBB_SD_REPLACE, CMD_verifypass);
 
             if (ret == DBB_OK) {
-                l = sd_load(VERIFYPASS_FILENAME, sizeof(VERIFYPASS_FILENAME), CMD_verifypass);
+                l = sd_load(VERIFYPASS_FILENAME, CMD_verifypass);
                 if (l) {
                     if (memcmp(text, l, strlens(text))) {
                         commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);

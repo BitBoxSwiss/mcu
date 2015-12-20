@@ -55,6 +55,10 @@ void hmac_sha256(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
     sha256_Update(&ctx, o_key_pad, SHA256_BLOCK_LENGTH);
     sha256_Update(&ctx, buf, SHA256_DIGEST_LENGTH);
     sha256_Final(hmac, &ctx);
+
+    memset(buf, 0, sizeof(buf));
+    memset(o_key_pad, 0, sizeof(o_key_pad));
+    memset(i_key_pad, 0, sizeof(i_key_pad));
 }
 
 void hmac_sha512(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
@@ -86,4 +90,8 @@ void hmac_sha512(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
     sha512_Update(&ctx, o_key_pad, SHA512_BLOCK_LENGTH);
     sha512_Update(&ctx, buf, SHA512_DIGEST_LENGTH);
     sha512_Final(hmac, &ctx);
+
+    memset(buf, 0, sizeof(buf));
+    memset(o_key_pad, 0, sizeof(o_key_pad));
+    memset(i_key_pad, 0, sizeof(i_key_pad));
 }

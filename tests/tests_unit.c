@@ -37,6 +37,7 @@
 #include "base64.h"
 #include "base58.h"
 #include "base64.h"
+#include "pbkdf2.h"
 #include "flags.h"
 #include "bip32.h"
 #include "utils.h"
@@ -467,6 +468,39 @@ static void test_rfc6979(void)
                        "1f4b84c23a86a221d233f2521be018d9318639d5b8bbd6374a8a59232d16ad3d");
 }
 #endif
+
+
+// generated using http://althenia.net/svn/stackoverflow/pbkdf2-test-vectors.py?rev=6
+static void test_pbkdf2(void)
+{
+    uint8_t key[PBKDF2_HMACLEN];
+
+    pbkdf2_hmac_sha512((const uint8_t *)"Digital Bitbox", 14, key, sizeof(key));
+    u_assert_mem_eq(key,
+                    utils_hex_to_uint8("9288a7e3259a0bfb826e5008ffb4109919752bc905b64764e7969a5a8edae970eaa2e4c66535e0df8a251459d83e51af61233a9b87166f4571f17a39c0ddd1e5"),
+                    32);
+
+    pbkdf2_hmac_sha512((const uint8_t *)"password", 8, key, sizeof(key));
+    u_assert_mem_eq(key,
+                    utils_hex_to_uint8("427950427b3c825d16e3c420d6d08c060d34f6d2c7d97acc385a74fe19a0289fad262b524f044a9014ee22b398a0ca17f5af889f356454b2fa678aa56840d653"),
+                    32);
+
+    pbkdf2_hmac_sha512((const uint8_t *)"passwordPASSWORDpassword", 24, key, sizeof(key));
+    u_assert_mem_eq(key,
+                    utils_hex_to_uint8("58a2d64016162fe09fec8d2230f60d9e44f8e8f6cb97cfc0239f58a5bb001b0f02235d12e1f9946895a089b0d2acde1506e185d9cd59034f6e57dbdb626dbea2"),
+                    32);
+
+    pbkdf2_hmac_sha512((const uint8_t *)"pass\0word", 9, key, sizeof(key));
+    u_assert_mem_eq(key,
+                    utils_hex_to_uint8("98fa4a21945c5144b62ab11a78b8bb8295314ee33839370911a653ea0c751fc7fe7afde1076ce24974d5a5ec2d4f3f20642ad6b48e873ab73c861a69656bab0c"),
+                    32);
+
+    pbkdf2_hmac_sha512((const uint8_t *)"{:;}\"'()@#$,./?\\%^&*!<>|~`}", 27, key,
+                       sizeof(key));
+    u_assert_mem_eq(key,
+                    utils_hex_to_uint8("03277346174bced652f3f6c6810c5d4750db208bc6f44a9031e6b737c3ce0942b822c90aad129b541e9e884e4cf337c0d15cbdc5967f1603ef21d1f2f39000bf"),
+                    32);
+}
 
 
 static void test_sign_speed(void)
@@ -964,6 +998,7 @@ int main(void)
     u_run_test(test_ecdh);
     u_run_test(test_bip32_vector_1);
     u_run_test(test_bip32_vector_2);
+    u_run_test(test_pbkdf2);
     u_run_test(test_base58);
     u_run_test(test_base64);
     u_run_test(test_address);

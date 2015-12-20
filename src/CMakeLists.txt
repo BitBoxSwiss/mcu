@@ -11,6 +11,7 @@ set(DBB-FIRMWARE-SOURCES
         aes.c
         base58.c
         base64.c
+        pbkdf2.c
         bip32.c
         commander.c
         hmac.c

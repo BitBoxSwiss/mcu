@@ -46,15 +46,12 @@ static char ROOTDIR[] = "0:/digitalbitbox";
 FATFS fs;
 
 
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
+uint8_t sd_write(const char *fn, const char *t, uint16_t t_len,
                  uint8_t replace, int cmd)
 {
     char file[256];
     memset(file, 0, sizeof(file));
-    memcpy(file, ROOTDIR, strlen(ROOTDIR));
-    strncat(file, "/", 1);
-    strncat(file, f, (f_len < sizeof(file) - strlen(file)) ? f_len : sizeof(file) - strlen(
-                file));
+    snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
 
     char text[512] = {0};
     if (t_len > sizeof(text) - 1) {
@@ -112,15 +109,13 @@ err:
 }
 
 
-char *sd_load(const char *f, uint16_t f_len, int cmd)
+char *sd_load(const char *fn, int cmd)
 {
     FIL file_object;
     char file[256];
     memset(file, 0, sizeof(file));
-    memcpy(file, ROOTDIR, strlen(ROOTDIR));
-    strncat(file, "/", 1);
-    strncat(file, f, (f_len < sizeof(file) - strlen(file)) ? f_len : sizeof(file) - strlen(
-                file));
+    snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
+
 
     static char text[512];
     memset(text, 0, sizeof(text));
@@ -345,7 +340,38 @@ static uint8_t delete_files(char *path)
 }
 
 
-uint8_t sd_erase(int cmd)
+static uint8_t delete_file(const char *fn)
+{
+    int failed = 0;
+    FRESULT res;
+    FIL file_object;
+    char file[256];
+    memset(file, 0, sizeof(file));
+    snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
+
+    res = f_open(&file_object, (char const *)file, FA_OPEN_EXISTING | FA_WRITE);
+    if (res != FR_OK) {
+        failed++;
+    } else {
+        DWORD f_ps, fsize;
+        fsize = file_object.fsize < ULONG_MAX ? file_object.fsize : ULONG_MAX;
+        for (f_ps = 0; f_ps < fsize; f_ps++) {
+            f_putc(0xAC, &file_object); // overwrite data
+        }
+        if (f_close(&file_object) != FR_OK) {
+            failed++;
+        }
+    }
+
+    if (f_unlink(file + 2) != FR_OK) {
+        failed++;
+    }
+
+    return failed;
+}
+
+
+uint8_t sd_erase(int cmd, const char *fn)
 {
     int failed = 0;
     char *path = ROOTDIR;
@@ -366,7 +392,11 @@ uint8_t sd_erase(int cmd)
         return DBB_ERROR;
     }
 
-    failed = delete_files(path);
+    if (strlens(fn)) {
+        failed = delete_file(fn);
+    } else {
+        failed = delete_files(path);
+    }
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL); // Unmount
 

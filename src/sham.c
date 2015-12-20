@@ -30,6 +30,7 @@
 
 #include "sham.h"
 #include "flags.h"
+#include "utils.h"
 #include "commander.h"
 
 
@@ -42,27 +43,27 @@ void delay_ms(int delay)
 }
 
 
-uint8_t sd_write(const char *f, uint16_t f_len, const char *t, uint16_t t_len,
+uint8_t sd_write(const char *fn, const char *t, uint16_t t_len,
                  uint8_t replace, int cmd)
 {
     (void) cmd;
     (void) replace;
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
-    snprintf(sd_filename, sizeof(sd_filename), "%.*s", f_len, f);
+    snprintf(sd_filename, sizeof(sd_filename), "%.*s", (int)strlens(fn), fn);
     snprintf(sd_text, sizeof(sd_text), "%.*s", t_len, t);
     commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_OK;
 }
 
 
-char *sd_load(const char *f, uint16_t f_len, int cmd)
+char *sd_load(const char *fn, int cmd)
 {
     (void) cmd;
     static char text[sizeof(sd_text)];
     memcpy(text, sd_text, sizeof(sd_text));
     commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
-    if (!strncmp(sd_filename, f, f_len)) {
+    if (!strncmp(sd_filename, fn, strlens(fn))) {
         return text;
     }
     return NULL;
@@ -86,9 +87,10 @@ uint8_t sd_present(void)
 }
 
 
-uint8_t sd_erase(int cmd)
+uint8_t sd_erase(int cmd, const char *fn)
 {
     (void) cmd;
+    (void) fn;
     commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));

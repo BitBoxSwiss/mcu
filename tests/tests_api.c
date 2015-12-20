@@ -46,7 +46,7 @@ int U_TESTS_FAIL = 0;
 
 static void tests_seed_xpub_backup(void)
 {
-    char xpub0[112], xpub1[112], *echo, seed_c[512], seed_b[512], back[512];
+    char xpub0[112], xpub1[112], *echo, seed_c[512], seed_b[512], back[512], erase_file[512];
     char filename[] = "tests_backup.txt";
     char keypath[] = "m/44\'/0\'/";
     char seed_create[] =
@@ -72,30 +72,11 @@ static void tests_seed_xpub_backup(void)
         memset(seed_b, 0, sizeof(seed_b));
         memset(back, 0, sizeof(back));
 
-        strcpy(seed_c, "{\"source\":\"");
-        strcat(seed_c, attr_str(ATTR_create));
-        strcat(seed_c, "\"");
-
-        strcpy(seed_b, "{\"source\":\"");
-        strcat(seed_b, filename);
-        strcat(seed_b, "\"");
-
-        strcpy(back, "{\"filename\":\"");
-        strcat(back, filename);
-        strcat(back, "\"");
-
-        if (*cipher) {
-            strcat(seed_b, ",\"decrypt\":\"");
-            strcat(seed_b, *cipher);
-            strcat(seed_b, "\"");
-            strcat(back, ",\"encrypt\":\"");
-            strcat(back, *cipher);
-            strcat(back, "\"");
-        }
-
-        strcat(seed_c, "}");
-        strcat(seed_b, "}");
-        strcat(back, "}");
+        snprintf(seed_c, sizeof(seed_c), "{\"source\":\"%s\"}", attr_str(ATTR_create));
+        snprintf(seed_b, sizeof(seed_b), "{\"source\":\"%s\",\"decrypt\":\"%s\"}", filename,
+                 *cipher);
+        snprintf(back, sizeof(back), "{\"filename\":\"%s\",\"encrypt\":\"%s\"}", filename,
+                 *cipher);
 
         // erase
         api_reset_device();
@@ -246,6 +227,28 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
+
+    // check backup erase single file
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), filename);
+
+    memset(back, 0, sizeof(back));
+    snprintf(back, sizeof(back), "{\"filename\":\"%s\"}", filename);
+
+    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), filename);
+
+    snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
+             filename);
+
+    api_format_send_cmd(cmd_str(CMD_backup), erase_file, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), filename);
 }
 
 
@@ -363,7 +366,7 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
@@ -375,7 +378,7 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_send_cmd("{\"backup\":{\"filename\":\"b.txt\"}}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd("invalid_cmd", "invalid_cmd", PASSWORD_STAND);
@@ -428,6 +431,9 @@ static void tests_device(void)
         api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
         u_assert_str_has(utils_read_decrypted_report(), "\"bootlock\":true");
     }
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     if (!TEST_LIVE_DEVICE) {
         commander_force_reset();

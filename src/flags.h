@@ -97,6 +97,7 @@ X(decrypt)        \
 X(encrypt)        \
 X(script)         \
 X(value)          \
+X(erase)          \
 X(sig)            \
 X(pin)            \
 /* placeholder  */\

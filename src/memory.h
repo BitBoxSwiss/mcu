@@ -31,34 +31,36 @@
 
 #include <stdint.h>
 
-#define MEM_PAGE_LEN                32
+#define MEM_PAGE_LEN      32
 
 // User Zones: 0x0000 to 0x0FFF
-#define MEM_ERASED_ADDR             0x0000// Zone 0
-#define MEM_SETUP_ADDR              0x0002
-#define MEM_ACCESS_ERR_ADDR         0x0004
-#define MEM_PIN_ERR_ADDR            0x0006
-#define MEM_UNLOCKED_ADDR           0x0008
-#define MEM_NAME_ADDR               0x0100// Zone 1
-#define MEM_MASTER_BIP32_ADDR       0x0200// Zone 2
-#define MEM_MASTER_BIP32_CHAIN_ADDR 0x0300// Zone 3
-#define MEM_AESKEY_STAND_ADDR       0x0400// Zone 4
-#define MEM_AESKEY_VERIFY_ADDR      0x0500// Zone 5
-#define MEM_AESKEY_CRYPT_ADDR       0x0600// Zone 6
+#define MEM_ERASED_ADDR                 0x0000// Zone 0
+#define MEM_SETUP_ADDR                  0x0002
+#define MEM_ACCESS_ERR_ADDR             0x0004
+#define MEM_PIN_ERR_ADDR                0x0006
+#define MEM_UNLOCKED_ADDR               0x0008
+#define MEM_NAME_ADDR                   0x0100// Zone 1
+#define MEM_MASTER_BIP32_ADDR           0x0200// Zone 2
+#define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300// Zone 3
+#define MEM_AESKEY_STAND_ADDR           0x0400// Zone 4
+#define MEM_AESKEY_VERIFY_ADDR          0x0500// Zone 5
+#define MEM_AESKEY_CRYPT_ADDR           0x0600// Zone 6
+#define MEM_AESKEY_STAND_STRETCH_ADDR   0x0700// Zone 7
 
 // Default settings
-#define DEFAULT_unlocked            0xFF
-#define DEFAULT_erased              0xFF
-#define DEFAULT_setup               0xFF
+#define DEFAULT_unlocked  0xFF
+#define DEFAULT_erased    0xFF
+#define DEFAULT_setup     0xFF
 
 
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
+    PASSWORD_STAND_STRETCH, /* for backups */
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
     PASSWORD_CRYPT,
-    PASSWORD_2FA,    /* only kept in RAM */
-    PASSWORD_NONE    /* keep last */
+    PASSWORD_2FA,  /* only kept in RAM */
+    PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 
 

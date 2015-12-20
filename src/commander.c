@@ -33,6 +33,7 @@
 #include "commander.h"
 #include "version.h"
 #include "random.h"
+#include "pbkdf2.h"
 #include "base64.h"
 #include "wallet.h"
 #include "utils.h"
@@ -342,7 +343,7 @@ static int commander_process_backup_create(const char *filename, const char *enc
     if (encrypt ? !strncmp(encrypt, attr_str(ATTR_yes), 3) : 0) { // default = do not encrypt
         int enc_len;
         char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
-                                        PASSWORD_STAND);
+                                        PASSWORD_STAND_STRETCH);
         if (!enc) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
             free(enc);
@@ -402,7 +403,7 @@ static void commander_process_backup_check(const char *filename, const char *dec
             (decrypt ? !strncmp(decrypt, attr_str(ATTR_yes), 3) : 0)) { // default = do not decrypt
         int dec_len;
         char *dec = aes_cbc_b64_decrypt((unsigned char *)text, strlens(text), &dec_len,
-                                        PASSWORD_STAND);
+                                        PASSWORD_STAND_STRETCH);
         memset(text, 0, strlens(text));
         if (dec) {
             memcpy(text, dec, dec_len);
@@ -550,7 +551,7 @@ static void commander_process_seed(yajl_val json_node)
                 (decrypt ? !strncmp(decrypt, attr_str(ATTR_yes), 3) : 0)) { // default = do not decrypt
             int dec_len;
             char *dec = aes_cbc_b64_decrypt((unsigned char *)text, strlens(text), &dec_len,
-                                            PASSWORD_STAND);
+                                            PASSWORD_STAND_STRETCH);
             memset(text, 0, strlens(text));
             if (dec) {
                 memcpy(text, dec, dec_len);
@@ -659,7 +660,7 @@ static void commander_process_random(yajl_val json_node)
 }
 
 
-static int commander_process_password(const char *message, int msg_len, PASSWORD_ID id)
+static int commander_process_aes_key(const char *message, int msg_len, PASSWORD_ID id)
 {
     return (memory_write_aeskey(message, msg_len, id));
 }
@@ -703,8 +704,8 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
     }
 
     // Save to eeprom
-    ret = commander_process_password(utils_uint8_to_hex(ecdh_secret, 32), 64,
-                                     PASSWORD_VERIFY);
+    ret = commander_process_aes_key(utils_uint8_to_hex(ecdh_secret, 32), 64,
+                                    PASSWORD_VERIFY);
     if (ret != DBB_OK) {
         commander_fill_report(cmd_str(cmd), NULL, ret);
         return ret;
@@ -770,8 +771,8 @@ static void commander_process_verifypass(yajl_val json_node)
                 commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_MEM_ATAES);
                 return;
             }
-            int ret = commander_process_password(utils_uint8_to_hex(number, sizeof(number)),
-                                                 sizeof(number) * 2, PASSWORD_VERIFY);
+            int ret = commander_process_aes_key(utils_uint8_to_hex(number, sizeof(number)),
+                                                sizeof(number) * 2, PASSWORD_VERIFY);
             if (ret != DBB_OK) {
                 commander_fill_report(cmd_str(CMD_verifypass), NULL, ret);
                 return;
@@ -960,7 +961,7 @@ static void commander_process_aes256cbc(yajl_val json_node)
     }
 
     if (strncmp(type, attr_str(ATTR_password), strlens(attr_str(ATTR_password))) == 0) {
-        int ret = commander_process_password(data, strlens(data), PASSWORD_CRYPT);
+        int ret = commander_process_aes_key(data, strlens(data), PASSWORD_CRYPT);
         if (ret == DBB_OK) {
             commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
         } else {
@@ -973,7 +974,7 @@ static void commander_process_aes256cbc(yajl_val json_node)
         char xpub[112] = {0};
         wallet_report_xpub(data, xpub);
         if (xpub[0]) {
-            int ret = commander_process_password(xpub, 112, PASSWORD_CRYPT);
+            int ret = commander_process_aes_key(xpub, 112, PASSWORD_CRYPT);
             if (ret == DBB_OK) {
                 commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
             } else {
@@ -1089,6 +1090,33 @@ err:
 }
 
 
+static void commander_process_password(yajl_val json_node)
+{
+    int ret;
+    const char *path[] = { cmd_str(CMD_password), NULL };
+    const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+
+    ret = commander_process_aes_key(value, strlens(value), PASSWORD_STAND);
+
+    if (ret != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_password), NULL, ret);
+        return;
+    }
+
+    uint8_t key[PBKDF2_HMACLEN];
+    pbkdf2_hmac_sha512((const uint8_t *)value, strlens(value), key, sizeof(key));
+    ret = commander_process_aes_key(utils_uint8_to_hex(key, sizeof(key)), sizeof(key) * 2,
+                                    PASSWORD_STAND_STRETCH);
+
+    if (ret != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_password), NULL, ret);
+        return;
+    }
+
+    commander_fill_report(cmd_str(CMD_password), attr_str(ATTR_success), DBB_OK);
+}
+
+
 static int commander_process(int cmd, yajl_val json_node)
 {
     switch (cmd) {
@@ -1096,22 +1124,13 @@ static int commander_process(int cmd, yajl_val json_node)
             commander_process_reset(json_node);
             return DBB_RESET;
 
-        case CMD_password: {
-            const char *path[] = { cmd_str(CMD_password), NULL };
-            const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
-            int ret = commander_process_password(value, strlens(value), PASSWORD_STAND);
-            if (ret == DBB_OK) {
-                commander_fill_report(cmd_str(cmd), attr_str(ATTR_success), DBB_OK);
-            } else {
-                commander_fill_report(cmd_str(cmd), NULL, ret);
-            }
+        case CMD_password:
+            commander_process_password(json_node);
             break;
-        }
 
-        case CMD_verifypass: {
+        case CMD_verifypass:
             commander_process_verifypass(json_node);
             break;
-        }
 
         case CMD_led:
             commander_process_led(json_node);
@@ -1182,7 +1201,7 @@ static int commander_tfa_append_pin(void)
                  (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
         // Create 2FA AES key
-        commander_process_password(TFA_PIN, 4, PASSWORD_2FA);
+        commander_process_aes_key(TFA_PIN, 4, PASSWORD_2FA);
 
         // Append PIN to echo
         commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);
@@ -1545,7 +1564,7 @@ static int commander_check_init(const char *encrypted_command)
             const char *path[] = { cmd_str(CMD_password), NULL };
             const char *pw = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
             if (pw) {
-                int ret = commander_process_password(pw, strlens(pw), PASSWORD_STAND);
+                int ret = commander_process_aes_key(pw, strlens(pw), PASSWORD_STAND);
                 if (ret == DBB_OK) {
                     memory_write_erased(0);
                     commander_fill_report(cmd_str(CMD_password), attr_str(ATTR_success), DBB_OK);

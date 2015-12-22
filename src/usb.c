@@ -62,6 +62,10 @@ void usb_process(uint16_t framenumber)
     }
 }
 
+void usb_report_sent(void)
+{
+}
+
 void usb_suspend_action(void)
 {
 }

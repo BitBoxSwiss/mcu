@@ -156,10 +156,6 @@ X(NUM)             /* keep last */
 X(OK,                    0, 0)\
 X(ERROR,                 0, 0)\
 X(ERROR_MEM,             0, 0)\
-X(VERIFY_PIN,            0, 0)\
-X(VERIFY_ECHO,           0, 0)\
-X(VERIFY_SAME,           0, 0)\
-X(VERIFY_DIFFERENT,      0, 0)\
 X(TOUCHED,               0, 0)\
 X(NOT_TOUCHED,           0, 0)\
 X(TOUCHED_ABORT,         0, 0)\

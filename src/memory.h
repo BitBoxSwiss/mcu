@@ -59,7 +59,6 @@ typedef enum PASSWORD_ID {
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
     PASSWORD_CRYPT,
-    PASSWORD_2FA,  /* only kept in RAM */
     PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 

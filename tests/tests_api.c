@@ -647,26 +647,24 @@ static void tests_echo_2FA(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sig));
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_2FA));
-
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sig));
 
     // test hash length
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign3, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign3, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_HASH_LEN));
 
     // test locked
@@ -675,9 +673,28 @@ static void tests_echo_2FA(void)
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
+    }
+
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
+    }
+
+    // correct pin
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
+    if (TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
+    } else {
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sig));
+    }
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
@@ -789,20 +806,6 @@ static void tests_sign(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
 
-    // change output after echo (MITM attack)
-    char hash_1[] =
-        "{\"data\":[{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
-    char hash_2[] =
-        "{\"data\":[{\"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
-
-    api_format_send_cmd(cmd_str(CMD_sign), hash_1, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), hash_2, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
-    u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
-
-
     // check buffer overflow prevention
     api_format_send_cmd(cmd_str(CMD_sign), overflow, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
@@ -820,7 +823,7 @@ static void tests_sign(void)
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -835,7 +838,7 @@ static void tests_sign(void)
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(utils_read_decrypted_report(), hash_2_input_1);
     u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);
@@ -853,11 +856,14 @@ static void tests_sign(void)
         u_assert_str_has(utils_read_decrypted_report(), check_2);
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(utils_read_decrypted_report(), check_sig_1);
     u_assert_str_has(utils_read_decrypted_report(), check_sig_2);
     u_assert_str_has(utils_read_decrypted_report(), check_pubkey);
+
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
 
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
@@ -872,7 +878,6 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
         u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
         u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -886,24 +891,23 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
+    // send wrong pin
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
         u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
         u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pin));
     }
 
-    // send wrong pin
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
 
+    // send correct pin
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
         u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
         u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/7");
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -912,13 +916,9 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
-    // send correct pin
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
     if (!TEST_LIVE_DEVICE) {
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-        api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -932,7 +932,6 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        memory_write_aeskey(api_read_value(CMD_pin), 4, PASSWORD_2FA);
         u_assert_str_has(utils_read_decrypted_report(), "_meta_data_");
         u_assert_str_has(utils_read_decrypted_report(), "m/44'/0'/0'/1/8");
         u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
@@ -942,9 +941,6 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
     if (!TEST_LIVE_DEVICE) {
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-        api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
-        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_2FA));
         u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(utils_read_decrypted_report(), hash_2_input_1);
         u_assert_str_has(utils_read_decrypted_report(), hash_2_input_2);

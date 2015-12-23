@@ -49,7 +49,6 @@ static uint8_t MEM_setup = DEFAULT_setup;
 static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
-__extension__ static uint8_t MEM_aeskey_2FA[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -142,7 +141,6 @@ void memory_clear(void)
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).
     memcpy(MEM_name, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_2FA, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_stand, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_crypt, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_aeskey_verify, MEM_PAGE_ERASE, MEM_PAGE_LEN);
@@ -333,10 +331,6 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
             memcpy(MEM_aeskey_memory, password_b, MEM_PAGE_LEN);
             ret = DBB_OK;
             break;
-        case PASSWORD_2FA:
-            memcpy(MEM_aeskey_2FA, password_b, MEM_PAGE_LEN);
-            ret = DBB_OK;
-            break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
@@ -376,8 +370,6 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
     switch ((int)id) {
         case PASSWORD_MEMORY:
             return MEM_aeskey_memory;
-        case PASSWORD_2FA:
-            return MEM_aeskey_2FA;
         case PASSWORD_STAND:
             return MEM_aeskey_stand;
         case PASSWORD_STAND_STRETCH:

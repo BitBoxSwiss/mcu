@@ -56,10 +56,9 @@ extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 static int REPORT_BUF_OVERFLOW = 0;
 __extension__ static char json_array[] = {[0 ... COMMANDER_ARRAY_MAX] = 0};
 __extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-__extension__ static char new_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-__extension__ static char previous_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
+__extension__ static char sign_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 static char TFA_PIN[5];
-static int TFA_CHECK_PIN = 0;
+static int TFA_VERIFY = 0;
 
 // Must free() returned value (allocated inside base64() function)
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
@@ -1148,9 +1147,6 @@ static int commander_process(int cmd, yajl_val json_node)
             commander_process_backup(json_node);
             break;
 
-        case CMD_sign:
-            return commander_process_sign(json_node);
-
         case CMD_random:
             commander_process_random(json_node);
             break;
@@ -1200,14 +1196,9 @@ static int commander_tfa_append_pin(void)
         snprintf(TFA_PIN, sizeof(TFA_PIN), "%04d",
                  (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
-        // Create 2FA AES key
-        commander_process_aes_key(TFA_PIN, 4, PASSWORD_2FA);
-
         // Append PIN to echo
         commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);
 
-        // Enforce checking for the pin on next sign command
-        TFA_CHECK_PIN = 1;
     }
     return DBB_OK;
 }
@@ -1226,7 +1217,7 @@ static int commander_tfa_check_pin(yajl_val json_node)
         return DBB_ERROR;
     }
 
-    return DBB_VERIFY_PIN;
+    return DBB_OK;
 }
 
 
@@ -1239,13 +1230,6 @@ static int commander_echo_command(yajl_val json_node)
     const char *meta = YAJL_GET_STRING(yajl_tree_get(json_node, meta_path, yajl_t_string));
     yajl_val check = yajl_tree_get(json_node, check_path, yajl_t_array);
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_any);
-
-    if (!memcmp(previous_command, new_command, COMMANDER_REPORT_SIZE)) {
-        return DBB_VERIFY_SAME;
-    }
-    memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-    memcpy(previous_command, new_command, COMMANDER_REPORT_SIZE);
-    commander_clear_report();
 
     if (meta) {
         commander_fill_report(cmd_str(CMD_meta), meta, DBB_OK);
@@ -1337,62 +1321,17 @@ static int commander_echo_command(yajl_val json_node)
     }
     free(encoded_report);
 
-    return DBB_VERIFY_DIFFERENT;
+    return DBB_OK;
 }
 
 
-static int commander_touch_button(int found_cmd, yajl_val json_node)
+static int commander_touch_button(int found_cmd)
 {
-    if (found_cmd == CMD_sign) {
-        if (TFA_CHECK_PIN) {
-            if (commander_tfa_check_pin(json_node) == DBB_VERIFY_PIN) {
-                memory_pin_err_count(DBB_ACCESS_INITIALIZE);
-                memset(TFA_PIN, 0, sizeof(TFA_PIN));
-                TFA_CHECK_PIN = 0;
-                commander_fill_report(cmd_str(CMD_sign), attr_str(ATTR_success), DBB_OK);
-                return DBB_VERIFY_PIN;
-            } else {
-                char msg[256];
-                memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-                memset(TFA_PIN, 0, sizeof(TFA_PIN));
-                TFA_CHECK_PIN = 0;
-                snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_SIGN_TFA_PIN),
-                         COMMANDER_MAX_ATTEMPTS - memory_read_pin_err_count() - 1, flag_msg(DBB_WARN_RESET));
-                commander_fill_report(cmd_str(CMD_sign), msg, DBB_ERR_SIGN_TFA_PIN);
-                memory_pin_err_count(DBB_ACCESS_ITERATE);
-                return DBB_ERROR;
-            }
-        }
-
-        int c = commander_echo_command(json_node);
-        if (c == DBB_VERIFY_SAME) {
-            int t;
-            t = touch_button_press(DBB_TOUCH_LONG);
-            if (t != DBB_TOUCHED) {
-                // Clear previous signing information
-                // to force touch for next sign command.
-                memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-            }
-            return (t);
-        } else if (c == DBB_VERIFY_DIFFERENT) {
-            return DBB_VERIFY_ECHO;
-        } else {
-            memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-            return DBB_ERROR;
-        }
-    }
-
-    // Reset if not sign command
-    memset(previous_command, 0, COMMANDER_REPORT_SIZE);
-    memset(TFA_PIN, 0, sizeof(TFA_PIN));
-    TFA_CHECK_PIN = 0;
-
     if (found_cmd == CMD_seed && !memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)) {
         // No touch required if not yet seeded
         return DBB_TOUCHED;
     } else if (found_cmd < CMD_REQUIRE_TOUCH) {
         return (touch_button_press(DBB_TOUCH_LONG));
-
     } else {
         return DBB_OK;
     }
@@ -1402,15 +1341,12 @@ static int commander_touch_button(int found_cmd, yajl_val json_node)
 static void commander_parse(char *command)
 {
     char *encoded_report;
-    int t, cmd, ret, err, found, found_cmd = 0xFF, encrypt_len;
-
-    memset(new_command, 0, COMMANDER_REPORT_SIZE);
-    snprintf(new_command, COMMANDER_REPORT_SIZE, "%s", command);
+    int status, cmd, ret, found, found_cmd = 0xFF, encrypt_len;
 
     // Extract commands
-    err = 0;
     found = 0;
-    yajl_val value, json_node = yajl_tree_parse(command, NULL, 0);
+    yajl_val value, json_node;
+    json_node = yajl_tree_parse(command, NULL, 0);
     for (cmd = 0; cmd < CMD_NUM; cmd++) {
         const char *path[] = { cmd_str(cmd), (const char *) 0 };
         value = yajl_tree_get(json_node, path, yajl_t_any);
@@ -1427,36 +1363,60 @@ static void commander_parse(char *command)
         commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_MULT_CMD);
     } else {
         memory_access_err_count(DBB_ACCESS_INITIALIZE);
-        t = commander_touch_button(found_cmd, json_node);
 
-        if (t == DBB_VERIFY_ECHO || t == DBB_VERIFY_PIN) {
+        // Signing
+        if (TFA_VERIFY) {
+            TFA_VERIFY = 0;
+            if (!memory_read_unlocked()) {
+                if (commander_tfa_check_pin(json_node) != DBB_OK) {
+                    char msg[256];
+                    memset(TFA_PIN, 0, sizeof(TFA_PIN));
+                    snprintf(msg, sizeof(msg), "%s %i %s",
+                             flag_msg(DBB_ERR_SIGN_TFA_PIN),
+                             COMMANDER_MAX_ATTEMPTS - memory_read_pin_err_count() - 1,
+                             flag_msg(DBB_WARN_RESET));
+                    commander_fill_report(cmd_str(CMD_sign), msg, DBB_ERR_SIGN_TFA_PIN);
+                    memory_pin_err_count(DBB_ACCESS_ITERATE);
+                    memset(sign_command, 0, COMMANDER_REPORT_SIZE);
+                    goto exit;
+                } else {
+                    memory_pin_err_count(DBB_ACCESS_INITIALIZE);
+                    memset(TFA_PIN, 0, sizeof(TFA_PIN));
+                }
+            }
+            if (touch_button_press(DBB_TOUCH_LONG) == DBB_TOUCHED) {
+                yajl_tree_free(json_node);
+                json_node = yajl_tree_parse(sign_command, NULL, 0);
+                commander_process_sign(json_node);
+            } else {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_TOUCH_ABORT);
+            }
+            memset(sign_command, 0, COMMANDER_REPORT_SIZE);
             goto exit;
-        } else if (t == DBB_TOUCHED || t == DBB_OK) {
+        }
+
+        // Verification 'echo' for signing
+        if (found_cmd == CMD_sign) {
+            if (commander_echo_command(json_node) == DBB_OK) {
+                TFA_VERIFY = 1;
+                memset(sign_command, 0, COMMANDER_REPORT_SIZE);
+                snprintf(sign_command, COMMANDER_REPORT_SIZE, "%s", command);
+            }
+            goto exit;
+        }
+
+        // Other commands
+        status = commander_touch_button(found_cmd);
+
+        if (status == DBB_TOUCHED || status == DBB_OK) {
             ret = commander_process(found_cmd, json_node);
             if (ret == DBB_RESET) {
                 goto exit;
-            } else if (ret == DBB_ERROR) {
-                err++;
             }
         } else {
             // Error or not touched
-            if (t != DBB_ERROR) {
+            if (status != DBB_ERROR) {
                 commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
-            }
-            err++;
-        }
-
-        if (found_cmd == CMD_sign && !memory_read_unlocked() && !err) {
-            encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-                                                 strlens(json_report),
-                                                 &encrypt_len,
-                                                 PASSWORD_2FA);
-            commander_clear_report();
-            if (encoded_report) {
-                commander_fill_report(cmd_str(CMD_2FA), encoded_report, DBB_OK);
-                free(encoded_report);
-            } else {
-                commander_fill_report(cmd_str(CMD_2FA), NULL, DBB_ERR_MEM_ENCRYPT);
             }
         }
     }

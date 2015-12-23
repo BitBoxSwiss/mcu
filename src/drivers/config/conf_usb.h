@@ -69,6 +69,7 @@
 #define  UDI_HID_GENERIC_DISABLE_EXT()       usb_disable()
 #define  UDI_HID_GENERIC_REPORT_OUT(ptr)     usb_report(ptr)
 #define  UDI_HID_GENERIC_SET_FEATURE(report) usb_hid_set_feature(report)
+#define  UDI_HID_GENERIC_REPORT_SENT()       usb_report_sent()
 
 
 #ifdef BOOTLOADER 

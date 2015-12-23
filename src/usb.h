@@ -30,6 +30,7 @@
 
 
 void usb_report(const unsigned char *command);
+void usb_report_sent(void);
 void usb_process(uint16_t framenumber);
 bool usb_enable(void);
 void usb_disable(void);

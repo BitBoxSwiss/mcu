@@ -49,7 +49,6 @@
 
 #define AES_DATA_LEN_MAX 1024// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN 4
-#define SALT_LEN_MAX     256
 
 
 #define _STRINGIFY(S) #S
@@ -60,13 +59,12 @@
 #define CMD_TABLE \
 /* parent keys  */\
 /*  with touch  */\
-X(seed)           \
 X(sign)           \
+X(seed)           \
+X(reset)          \
 X(password)       \
 X(bootloader)     \
-/* placeholder  */\
-/* do not move  */\
-X(REQUIRE_TOUCH)  \
+X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
 X(verifypass)     \
@@ -74,14 +72,10 @@ X(led)            \
 X(xpub)           \
 X(name)           \
 X(ecdh)           \
-X(reset)          \
 X(device)         \
 X(random)         \
 X(backup)         \
 X(aes256cbc)      \
-/* placeholder  */\
-/* do not move  */\
-X(END_PARENT)     \
 /*  child keys  */\
 X(source)         \
 X(type)           \
@@ -101,9 +95,6 @@ X(erase)          \
 X(check)          \
 X(sig)            \
 X(pin)            \
-/* placeholder  */\
-/* do not move  */\
-X(END_CHILD)      \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
@@ -161,6 +152,7 @@ X(NOT_TOUCHED,           0, 0)\
 X(TOUCHED_ABORT,         0, 0)\
 X(TOUCH_SHORT,           0, 0) /* brief touch accept; hold 3s reject       */\
 X(TOUCH_LONG,            0, 0) /* brief touch reject; hold 3s accept (led) */\
+X(TOUCH_LONG_BLINK,      0, 0) /* brief touch reject; hold 3s accept (led) */\
 X(TOUCH_TIMEOUT,         0, 0) /* touch accept; 3s timeout reject          */\
 X(TOUCH_REJECT_TIMEOUT,  0, 0) /* touch reject; 3s timeout accept          */\
 X(KEY_PRESENT,           0, 0)\

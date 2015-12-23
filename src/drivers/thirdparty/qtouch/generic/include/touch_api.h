@@ -257,7 +257,7 @@
   * Sensor detect integration (DI) limit.
   * Default value: 4.
   */
-#define DEF_QT_DI                      4u
+#define DEF_QT_DI                      25u
 
 /**
   * Sensor negative drift rate.

@@ -31,6 +31,9 @@
 #include <stdint.h>
 
 #define QTOUCH_TOUCH_TIMEOUT            3000// msec
+#define QTOUCH_TOUCH_TIMEOUT_HARD       30000
+#define QTOUCH_TOUCH_BLINK_ON           3000
+#define QTOUCH_TOUCH_BLINK_OFF          300
 #define QTOUCH_TOUCH_THRESH             15//v0_4   25//v0_3x
 #ifndef TESTING
 #define QTOUCH_TOUCH_CHANNEL            CHANNEL_9

@@ -37,8 +37,6 @@ extern volatile uint16_t systick_current_time_ms;
 
 volatile uint16_t status_flag           = 0u;
 volatile uint16_t burst_flag            = 0u;
-uint16_t qt_holdtime_ms                 = 1000u;
-uint16_t qt_timeout_ms_min              = 1000u;
 
 
 #ifndef TESTING
@@ -71,9 +69,11 @@ uint8_t touch_button_press(uint8_t touch_type)
     int16_t touch_snks;
     int16_t touch_sns;
     uint16_t exit_time_ms;
+    uint16_t qt_led_toggle_ms;
 
     if (touch_type != DBB_TOUCH_LONG &&
             touch_type != DBB_TOUCH_SHORT &&
+            touch_type != DBB_TOUCH_LONG_BLINK &&
             touch_type != DBB_TOUCH_REJECT_TIMEOUT &&
             touch_type != DBB_TOUCH_TIMEOUT) {
         return DBB_ERROR;
@@ -83,14 +83,28 @@ uint8_t touch_button_press(uint8_t touch_type)
         led_on();
     }
 
-    // Make high priority so that we can timeout
-    NVIC_SetPriority(SysTick_IRQn, 0);
+    // Make higher priority so that we can timeout
+    NVIC_SetPriority(SysTick_IRQn, 4);
 
+    qt_led_toggle_ms = QTOUCH_TOUCH_BLINK_OFF;
     systick_current_time_ms = 0;
-    exit_time_ms = systick_current_time_ms + QTOUCH_TOUCH_TIMEOUT;
-    while (systick_current_time_ms < exit_time_ms ||
+    while (systick_current_time_ms < QTOUCH_TOUCH_TIMEOUT ||
             touch_type == DBB_TOUCH_SHORT ||
+            touch_type == DBB_TOUCH_LONG_BLINK ||
             touch_type == DBB_TOUCH_LONG) {
+
+        if (systick_current_time_ms > QTOUCH_TOUCH_TIMEOUT_HARD) {
+            break;
+        }
+
+        if (touch_type == DBB_TOUCH_LONG_BLINK && systick_current_time_ms > qt_led_toggle_ms) {
+            led_off();
+            if (systick_current_time_ms > qt_led_toggle_ms + QTOUCH_TOUCH_BLINK_OFF) {
+                qt_led_toggle_ms += QTOUCH_TOUCH_BLINK_ON + QTOUCH_TOUCH_BLINK_OFF;
+                led_on();
+            }
+        }
+
         do {
             status_flag = qt_measure_sensors(systick_current_time_ms);
             burst_flag = status_flag & QTLIB_BURST_AGAIN;
@@ -114,16 +128,17 @@ uint8_t touch_button_press(uint8_t touch_type)
 
                 if ((touch_snks - touch_sns) < (QTOUCH_TOUCH_THRESH / 2)) {
                     // If released before exit_time_ms for:
+                    //     - DBB_TOUCH_LONG_BLINK, answer is 'reject'
                     //     - DBB_TOUCH_LONG, answer is 'reject'
                     //     - DBB_TOUCH_SHORT, answer is 'accept'
-                    if (touch_type == DBB_TOUCH_LONG) {
+                    if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
                         pushed = DBB_TOUCHED_ABORT;
                         break;
                     } else if (touch_type == DBB_TOUCH_SHORT) {
                         pushed = DBB_TOUCHED;
                         break;
                     }
-                } else if (touch_type == DBB_TOUCH_LONG) {
+                } else if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
                     pushed = DBB_TOUCHED;
                 } else if (touch_type == DBB_TOUCH_SHORT) {
                     pushed = DBB_TOUCHED_ABORT;
@@ -145,7 +160,7 @@ uint8_t touch_button_press(uint8_t touch_type)
     NVIC_SetPriority(SysTick_IRQn, 15);
 
     if (pushed == DBB_TOUCHED) {
-        if (touch_type == DBB_TOUCH_LONG) {
+        if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
             led_off();
             delay_ms(300);
             led_on();
@@ -168,6 +183,4 @@ uint8_t touch_button_press(uint8_t touch_type)
         led_off();
         return DBB_ERR_TOUCH_TIMEOUT;
     }
-
-    return pushed;
 }

@@ -224,6 +224,7 @@ if(NOT BUILD_TYPE STREQUAL "test")
     add_library(mathlib STATIC IMPORTED)
     set_property(TARGET mathlib PROPERTY
                 IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/drivers/lib/libarm_cortexM4l_math.a)
+    link_directories(${CMAKE_SOURCE_DIR}/src/drivers/lib)
     
     if(BUILD_TYPE STREQUAL "firmware")
         add_executable(${ELF} ${SOURCES} firmware.c)

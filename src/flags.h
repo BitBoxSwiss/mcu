@@ -36,7 +36,7 @@
 #define FLASH_BOOT_START            (IFLASH0_ADDR)
 #define FLASH_BOOT_LEN              (0x00008000u)
 #define FLASH_SIG_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
-#define FLASH_SIG_LEN               (0x00001000u)// note: min flash erase size is 0x1000 (8 512-Byte pages))
+#define FLASH_SIG_LEN               (0x00001000u)// note: min flash erase size is 0x1000 (8 512-Byte pages)
 #define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN + FLASH_SIG_LEN)
 #define FLASH_APP_LEN               (IFLASH0_SIZE - FLASH_BOOT_LEN - FLASH_SIG_LEN)
 #define FLASH_APP_PAGE_NUM          (FLASH_APP_LEN / IFLASH0_PAGE_SIZE)

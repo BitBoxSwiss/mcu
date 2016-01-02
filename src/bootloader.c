@@ -42,9 +42,12 @@
 
 static char report[UDI_HID_REPORT_IN_SIZE];
 static uint8_t bootloader_loading_ready = 0;
-
-static const char pubkey_c[] =
-    "02a1137c6bdd497358537df77d1375a741ed75461b706a612a3717d32748e5acf1";
+static const char *pubkeys[] = { // order is important
+    "02a1137c6bdd497358537df77d1375a741ed75461b706a612a3717d32748e5acf1",
+    "0336f8d23499da107a84947e6d7246969bf1c82b7543908dd4d0ac4aa4f349b15d",
+    "028f65d8bb45148082e93f1ad947828d51e387f8c72af35118016d55b2e69dd842",
+    0
+};
 
 
 void _binExec (void *l_code_addr);
@@ -153,18 +156,26 @@ static void bootloader_firmware_erase(void)
 
 static uint8_t bootloader_firmware_verified(void)
 {
-    uint8_t verified, hash[32], sig[64];
-    memcpy(sig, (uint8_t *)(FLASH_SIG_START), sizeof(sig));
+    uint8_t cnt = 0, valid = 0, hash[32], sig[64];
+    const char **pubkey = pubkeys;
+
     sha256_Raw((uint8_t *)(FLASH_APP_START), FLASH_APP_LEN, hash);
-    verified = !ecc_verify(utils_hex_to_uint8(pubkey_c), sig, hash, 32); // hashed internally
-    if (verified) {
-        bootloader_report_status(OP_STATUS_OK);
-    } else {
-        bootloader_report_status(OP_STATUS_ERR);
+    while (*pubkey && valid < BOOT_SIG_M) {
+        memcpy(sig, (uint8_t *)(FLASH_SIG_START + cnt * sizeof(sig)), sizeof(sig));
+        valid += !ecc_verify(utils_hex_to_uint8(*pubkey), sig, hash, 32); // hashed internally
+        pubkey++;
+        cnt++;
     }
+
+    if (valid < BOOT_SIG_M) {
+        bootloader_report_status(OP_STATUS_ERR);
+    } else {
+        bootloader_report_status(OP_STATUS_OK);
+    }
+
     sha256_Raw(hash, 32, hash);
     memcpy(report + 2, utils_uint8_to_hex(hash, 32), 64); // return double hash of app binary
-    return verified;
+    return (valid < BOOT_SIG_M) ? 0 : 1;
 }
 
 
@@ -216,9 +227,17 @@ static char *bootloader(const char *command)
 
         case OP_VERIFY: {
             uint8_t sig[FLASH_SIG_LEN];
-            memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
+            uint8_t cnt = 0;
+            const char **pubkey = pubkeys;
+            while (*pubkey) {
+                pubkey++;
+                cnt++;
+            }
             memset(sig, 0xFF, FLASH_SIG_LEN);
-            memcpy(sig, utils_hex_to_uint8(command + FLASH_BOOT_OP_LEN), 64);
+            memcpy(sig, utils_hex_to_uint8(command + FLASH_BOOT_OP_LEN), cnt * 64);
+
+
+
 
             flash_unlock(FLASH_SIG_START, FLASH_SIG_START + FLASH_SIG_LEN, NULL, NULL);
             if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {

@@ -62,7 +62,7 @@ void HardFault_Handler(void)
 {
     while (1) {
         led_toggle();
-        delay_ms(3000);
+        delay_ms(500);
     }
 }
 

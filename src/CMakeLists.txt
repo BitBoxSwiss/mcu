@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------------
 # CmakeLists.txt for the Digital Bitbox.
-# Copyright (c) 2015 Lucas Betschart, Douglas J. Bakkum
+# Copyright (c) 2015-2016 Lucas Betschart, Douglas J. Bakkum
 # MIT License
 
 

@@ -28,6 +28,10 @@
 #ifndef _SD_H_
 #define _SD_H_
 
+
+#include <stdint.h>
+
+
 uint8_t sd_list(int cmd);
 uint8_t sd_present(void);
 uint8_t sd_erase(int cmd, const char *fn);

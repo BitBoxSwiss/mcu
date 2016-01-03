@@ -75,7 +75,6 @@
 #ifdef BOOTLOADER 
 #define  UDI_HID_REPORT_IN_SIZE             256
 #define  UDI_HID_REPORT_OUT_SIZE            4098
-#define  UDI_HID_REPORT_FEATURE_SIZE        8
 #else
 #define  UDI_HID_REPORT_IN_SIZE             2048
 #define  UDI_HID_REPORT_OUT_SIZE            2048

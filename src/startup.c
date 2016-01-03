@@ -67,47 +67,6 @@ void HardFault_Handler(void)
 }
 
 
-void _binExec (void *l_code_addr);
-void _binExec (void *l_code_addr)
-{
-    __asm__ (
-        "mov   r1, r0        \n"
-        "ldr   r0, [r1, #4]  \n"
-        "ldr   sp, [r1]      \n"
-        "blx   r0"
-    );
-    (void)l_code_addr;
-}
-
-
-static int binary_exec(void *vStart)
-{
-    int i;
-
-    // Should be at least 32 words aligned
-    if ((uint32_t)vStart & 0x7F) {
-        return 1;
-    }
-
-    __disable_irq();
-    for (i = 0; i < 8; i ++) {
-        NVIC->ICER[i] = 0xFFFFFFFF;
-    }
-    for (i = 0; i < 8; i ++) {
-        NVIC->ICPR[i] = 0xFFFFFFFF;
-    }
-    __DSB();
-    __ISB();
-    SCB->VTOR = ((uint32_t)vStart & SCB_VTOR_TBLOFF_Msk);
-    __DSB();
-    __ISB();
-    __enable_irq();
-    _binExec(vStart);
-
-    return 0;
-}
-
-
 static uint32_t mpu_region_size(uint32_t size)
 {
     uint32_t regionSize = 32;
@@ -160,8 +119,6 @@ static void mpu_init(void)
 
 int main(void)
 {
-    void *app_start_addr = (void *)FLASH_APP_START;
-
     wdt_disable(WDT);
     irq_initialize_vectors();
     cpu_irq_enable();
@@ -175,34 +132,8 @@ int main(void)
     delay_init(F_CPU);
     systick_init();
     touch_init();
-
-    if (bootloader_firmware_verified()) {
-        if (!bootloader_unlocked()) {
-            mpu_init();
-            binary_exec(app_start_addr);
-        } else if (touch_button_press(DBB_TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
-            mpu_init();
-            binary_exec(app_start_addr);
-        }
-    } else {
-        for (int i = 0; i < 9; i++) {
-            led_toggle();
-            delay_ms(100);
-            led_toggle();
-            delay_ms(150);
-        }
-        led_off();
-    }
-
-    // App not entered. Start USB API for bootloader
-    usb_suspend_action();
-    udc_start();
-
-    for (int i = 0; i < 6; i++) {
-        led_toggle();
-        delay_ms(100);
-    }
-    led_off();
+    mpu_init();
+    bootloader_jump();
 
     while (1) { }
 

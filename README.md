@@ -51,6 +51,7 @@ Requires:
 Build:
 
     git clone https://github.com/digitalbitbox/mcu && cd mcu
+    vagrant box add ubuntu/trusty32
     vagrant up # Creates: build/bin/firmware.bin
     vagrant halt
     

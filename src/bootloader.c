@@ -195,6 +195,11 @@ static void bootloader_blink(void)
     bootloader_report_status(OP_STATUS_OK);
 }
 
+static void bootloader_reboot(void)
+{
+    NVIC_SystemReset();
+}
+
 
 static char *bootloader(const char *command)
 {
@@ -215,6 +220,10 @@ static char *bootloader(const char *command)
 
         case OP_BLINK:
             bootloader_blink();
+            break;
+
+        case OP_REBOOT:
+            bootloader_reboot();
             break;
 
         case OP_WRITE:

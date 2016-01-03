@@ -30,6 +30,7 @@
 #include "sam4s4a.h"
 #include "conf_usb.h"
 #include "mcu.h"
+#include "led.h"
 #include "ecc.h"
 #include "sha2.h"
 #include "flags.h"
@@ -44,6 +45,47 @@ static uint8_t bootloader_loading_ready = 0;
 
 static const char pubkey_c[] =
     "02a1137c6bdd497358537df77d1375a741ed75461b706a612a3717d32748e5acf1";
+
+
+void _binExec (void *l_code_addr);
+void _binExec (void *l_code_addr)
+{
+    __asm__ (
+        "mov   r1, r0        \n"
+        "ldr   r0, [r1, #4]  \n"
+        "ldr   sp, [r1]      \n"
+        "blx   r0"
+    );
+    (void)l_code_addr;
+}
+
+
+static int binary_exec(void *vStart)
+{
+    int i;
+
+    // Should be at least 32 words aligned
+    if ((uint32_t)vStart & 0x7F) {
+        return 1;
+    }
+
+    __disable_irq();
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICER[i] = 0xFFFFFFFF;
+    }
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICPR[i] = 0xFFFFFFFF;
+    }
+    __DSB();
+    __ISB();
+    SCB->VTOR = ((uint32_t)vStart & SCB_VTOR_TBLOFF_Msk);
+    __DSB();
+    __ISB();
+    __enable_irq();
+    _binExec(vStart);
+
+    return 0;
+}
 
 
 static void bootloader_report_status(BOOT_STATUS i)
@@ -109,7 +151,7 @@ static void bootloader_firmware_erase(void)
 }
 
 
-uint8_t bootloader_firmware_verified(void)
+static uint8_t bootloader_firmware_verified(void)
 {
     uint8_t verified, hash[32], sig[64];
     memcpy(sig, (uint8_t *)(FLASH_SIG_START), sizeof(sig));
@@ -126,11 +168,19 @@ uint8_t bootloader_firmware_verified(void)
 }
 
 
-uint8_t bootloader_unlocked(void)
+static uint8_t bootloader_unlocked(void)
 {
     uint8_t sig[FLASH_SIG_LEN];
     memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
     return sig[FLASH_BOOT_LOCK_BYTE];
+}
+
+
+static void bootloader_blink(void)
+{
+    led_toggle();
+    delay_ms(300);
+    led_toggle();
 }
 
 
@@ -149,6 +199,10 @@ static char *bootloader(const char *command)
 
         case OP_ERASE:
             bootloader_firmware_erase();
+            break;
+
+        case OP_BLINK:
+            bootloader_blink();
             break;
 
         case OP_WRITE:
@@ -187,6 +241,41 @@ static char *bootloader(const char *command)
     }
 
     return report;
+}
+
+
+void bootloader_jump(void)
+{
+    void *app_start_addr = (void *)FLASH_APP_START;
+
+    if (bootloader_firmware_verified()) {
+        if (!bootloader_unlocked()) {
+            binary_exec(app_start_addr);
+            /* no return */
+        }
+        if (touch_button_press(DBB_TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
+            binary_exec(app_start_addr);
+            /* no return */
+        }
+    } else {
+        for (int i = 0; i < 9; i++) {
+            led_toggle();
+            delay_ms(100);
+            led_toggle();
+            delay_ms(150);
+        }
+        led_off();
+    }
+
+    // App not entered. Start USB API to receive boot commands
+    usb_suspend_action();
+    udc_start();
+
+    for (int i = 0; i < 6; i++) {
+        led_toggle();
+        delay_ms(100);
+    }
+    led_off();
 }
 
 

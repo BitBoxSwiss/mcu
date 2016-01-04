@@ -181,6 +181,7 @@ static void bootloader_blink(void)
     led_toggle();
     delay_ms(300);
     led_toggle();
+    bootloader_report_status(OP_STATUS_OK);
 }
 
 

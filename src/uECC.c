@@ -1058,7 +1058,7 @@ int uECC_verify_double(const uint8_t *publicKey, const uint8_t *p_signature,
 }
 
 /* Verify an ECDSA signature.
-   Returns 1 if the signature is valid, 0 if it is invalid. */
+   Returns 0 if the signature is valid, 1 if it is invalid. */
 int uECC_verify_digest(const uint8_t *publicKey,
                        const uint8_t p_hash[uECC_BYTES],
                        const uint8_t p_signature[uECC_BYTES * 2])

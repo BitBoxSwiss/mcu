@@ -42,6 +42,7 @@
 #define MPU_REGION_STATE_RO         (0x06 << 24)
 #define MPU_REGION_STATE_XN         (0x01 << 28)
 
+#define BOOT_SIG_M 2
 
 typedef enum BOOT_OP_CODES {
     OP_WRITE = 'w',/* 0x77 */

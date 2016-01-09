@@ -48,13 +48,13 @@
 
 // USB Device string definitions (Optional)
 #ifdef BOOTLOADER 
-#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox Bootloader"
+#define  USB_DEVICE_PRODUCT_NAME          "bootloader"
 #define  USB_DEVICE_SERIAL_NAME_TYPE      "dbb.bl:"
 #else
-#define  USB_DEVICE_MANUFACTURE_NAME      "Digital Bitbox"
+#define  USB_DEVICE_PRODUCT_NAME          "firmware"
 #define  USB_DEVICE_SERIAL_NAME_TYPE      "dbb.fw:"
 #endif
-#define  USB_DEVICE_PRODUCT_NAME          "www.digitalbitbox.com"
+#define  USB_DEVICE_MANUFACTURE_NAME      "www.shiftdevices.com"
 #define  USB_DEVICE_SERIAL_NAME           USB_DEVICE_SERIAL_NAME_TYPE DIGITAL_BITBOX_VERSION_SHORT
 
 

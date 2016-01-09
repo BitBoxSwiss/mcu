@@ -98,7 +98,7 @@ X(pin)            \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
-X(2FA)            \
+X(TFA)            \
 X(sham)           \
 X(input)          \
 X(ataes)          \
@@ -137,6 +137,7 @@ X(seeded)         \
 X(serial)         \
 X(version)        \
 X(password)       \
+X(TFA)            \
 X(__ERASE__)      \
 X(__FORCE__)      \
 X(NUM)             /* keep last */
@@ -195,7 +196,7 @@ X(ERR_SIGN_PUBKEY_LEN, 300, "Incorrect pubkey length. A 33-byte hexadecimal valu
 X(ERR_SIGN_HASH_LEN,   301, "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected.")\
 X(ERR_SIGN_DESERIAL,   302, "Could not deserialize outputs or wrong change keypath.")\
 X(ERR_SIGN_ECCLIB,     303, "Could not sign.")\
-X(ERR_SIGN_TFA_PIN,    304, "Incorrect 2FA pin.")\
+X(ERR_SIGN_TFA_PIN,    304, "Incorrect TFA pin.")\
 X(ERR_SD_CARD,         400, "Please insert SD card.")\
 X(ERR_SD_MOUNT,        401, "Could not mount the SD card.")\
 X(ERR_SD_OPEN_FILE,    402, "Could not open a file to write - it may already exist.")\

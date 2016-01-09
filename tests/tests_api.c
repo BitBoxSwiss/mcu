@@ -423,6 +423,19 @@ static void tests_device(void)
     u_assert_str_has_not(utils_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(utils_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(utils_read_decrypted_report(), "\"lock\":true");
+    if (!TEST_LIVE_DEVICE) {
+        yajl_val json_node = yajl_tree_parse(utils_read_decrypted_report(), NULL, 0);
+        const char *ciphertext_path[] = { cmd_str(CMD_device), attr_str(ATTR_TFA), (const char *) 0 };
+        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
+                                 yajl_t_string));
+        u_assert_int_eq(!ciphertext, 0);
+        int decrypt_len;
+        char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
+                                        &decrypt_len, PASSWORD_VERIFY);
+        u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
+        free(dec);
+        yajl_tree_free(json_node);
+    }
 
     api_reset_device();
 
@@ -597,7 +610,7 @@ static void tests_password(void)
 }
 
 
-static void tests_echo_2FA(void)
+static void tests_echo_tfa(void)
 {
     char hash_sign[] =
         "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
@@ -869,7 +882,7 @@ static void tests_sign(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
 
 
-    // lock to get 2FA PINs
+    // lock to get TFA PINs
     int pin_err_count = 0;
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -1100,7 +1113,7 @@ static void tests_aes_cbc(void)
 
 static void run_utests(void)
 {
-    u_run_test(tests_echo_2FA);
+    u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);
     u_run_test(tests_password);

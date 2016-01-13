@@ -174,6 +174,7 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
 
 
 #ifdef TESTING
+#include <assert.h>
 #include "commander.h"
 #include "yajl/src/api/yajl_tree.h"
 
@@ -249,8 +250,8 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
                                         &encrypt_len,
                                         enc_id);
         char cmd[COMMANDER_REPORT_SIZE] = {0};
-        memcpy(cmd, enc, encrypt_len < COMMANDER_REPORT_SIZE ? encrypt_len :
-               COMMANDER_REPORT_SIZE);
+        assert(encrypt_len < COMMANDER_REPORT_SIZE);
+        memcpy(cmd, enc, encrypt_len);
         free(enc);
         utils_decrypt_report(commander(cmd));
     }

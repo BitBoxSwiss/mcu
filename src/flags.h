@@ -47,8 +47,23 @@
 #define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
 
 
-#define AES_DATA_LEN_MAX 1024// base64 increases size by ~4/3; AES encryption by max 32 char
-#define PASSWORD_LEN_MIN 4
+#ifndef TESTING
+#include "conf_usb.h"
+#define COMMANDER_REPORT_SIZE       UDI_HID_REPORT_OUT_SIZE
+#else
+#define COMMANDER_REPORT_SIZE       4096
+#endif
+#define COMMANDER_SIG_LEN           219// sig + pubkey + json encoding
+#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
+#define COMMANDER_ARRAY_ELEMENT_MAX 1024
+#define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
+#define VERIFYPASS_FILENAME         "verification.txt"
+#define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
+#define AUTOBACKUP_FILENAME         "autobackup_"
+#define AUTOBACKUP_ENCRYPT          "yes"
+#define AUTOBACKUP_NUM              10
+#define AES_DATA_LEN_MAX            2048// base64 increases size by ~4/3; AES encryption by max 32 char
+#define PASSWORD_LEN_MIN            4
 
 
 #define _STRINGIFY(S) #S

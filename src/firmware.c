@@ -73,7 +73,6 @@ int main (void)
     usb_suspend_action();
     udc_start();
     delay_init(F_CPU);
-    memory_setup();
     systick_init();
     touch_init();
     ecc_context_init();
@@ -83,6 +82,8 @@ int main (void)
     led_on();
     delay_ms(300);
     led_off();
+
+    memory_setup();
 
     while (1) {
         sleepmgr_enter_sleep();

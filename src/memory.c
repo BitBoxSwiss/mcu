@@ -90,67 +90,6 @@ static void memory_create_verifypass(void)
 }
 
 
-// One-time setup on factory install
-int memory_setup(void)
-{
-    if (memory_read_setup()) {
-        memory_erase();
-#ifndef TESTING
-        // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
-        const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
-        // Return packet [Count(1) || Return Code (1) || CRC (2)]
-        uint8_t ataes_ret[4] = {0};
-        if (ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
-            return DBB_ERROR;
-        }
-#endif
-        memory_write_setup(0x00);
-    } else {
-        memory_mempass();
-    }
-    return DBB_OK;
-}
-
-
-void memory_erase_seed(void)
-{
-    memory_chaincode(MEM_PAGE_ERASE);
-    memory_master(MEM_PAGE_ERASE);
-}
-
-
-void memory_erase(void)
-{
-    memory_mempass();
-    memory_create_verifypass();
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND_STRETCH);
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
-    memory_erase_seed();
-    memory_name("Digital Bitbox");
-    memory_write_erased(DEFAULT_erased);
-    memory_write_unlocked(DEFAULT_unlocked);
-    memory_access_err_count(DBB_ACCESS_INITIALIZE);
-    memory_pin_err_count(DBB_ACCESS_INITIALIZE);
-}
-
-
-void memory_clear(void)
-{
-#ifndef TESTING
-    // Zero important variables in RAM on embedded MCU.
-    // Do not clear for testing routines (i.e. not embedded).
-    memcpy(MEM_name, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_stand, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_crypt, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_verify, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_stand_stretch, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-#endif
-}
-
-
 static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
                          const uint16_t len)
 {
@@ -272,6 +211,67 @@ err:
 }
 
 
+int memory_setup(void)
+{
+    if (memory_read_setup()) {
+        // One-time setup on factory install
+        memory_erase();
+#ifndef TESTING
+        // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
+        const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
+        // Return packet [Count(1) || Return Code (1) || CRC (2)]
+        uint8_t ataes_ret[4] = {0};
+        if (ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
+            return DBB_ERROR;
+        }
+#endif
+        memory_write_setup(0x00);
+    } else {
+        memory_mempass();
+        memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_stand_stretch, MEM_AESKEY_STAND_STRETCH_ADDR);
+        memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
+    }
+    return DBB_OK;
+}
+
+
+void memory_erase_seed(void)
+{
+    memory_chaincode(MEM_PAGE_ERASE);
+    memory_master(MEM_PAGE_ERASE);
+}
+
+
+void memory_erase(void)
+{
+    memory_mempass();
+    memory_create_verifypass();
+    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND_STRETCH);
+    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
+    memory_erase_seed();
+    memory_name("Digital Bitbox");
+    memory_write_erased(DEFAULT_erased);
+    memory_write_unlocked(DEFAULT_unlocked);
+    memory_access_err_count(DBB_ACCESS_INITIALIZE);
+    memory_pin_err_count(DBB_ACCESS_INITIALIZE);
+}
+
+
+void memory_clear(void)
+{
+#ifndef TESTING
+    // Zero important variables in RAM on embedded MCU.
+    // Do not clear for testing routines (i.e. not embedded).
+    memcpy(MEM_master_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+#endif
+}
+
+
 uint8_t *memory_name(const char *name)
 {
     uint8_t name_b[MEM_PAGE_LEN] = {0};
@@ -357,13 +357,6 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     }
 }
 
-void memory_load_aeskeys(void)
-{
-    memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
-    memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
-    memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
-    memory_eeprom_crypt(NULL, MEM_aeskey_stand_stretch, MEM_AESKEY_STAND_STRETCH_ADDR);
-}
 
 uint8_t *memory_report_aeskey(PASSWORD_ID id)
 {
@@ -410,9 +403,8 @@ void memory_write_erased(uint8_t erased)
 {
     memory_eeprom(&erased, &MEM_erased, MEM_ERASED_ADDR, 1);
 }
-uint8_t memory_read_erased(void)
+uint8_t memory_report_erased(void)
 {
-    memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
     return MEM_erased;
 }
 

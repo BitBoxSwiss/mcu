@@ -763,8 +763,29 @@ static void tests_sign(void)
       sha256(sha256(hex2byte(raw_tx))) = c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d
     */
 
-    char overflow[] =
-        "{\"meta\":\"_meta_data_\", \"data\": [{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}, {\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/\"}]}";
+    int i;
+    char hashstr[] =
+        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/100203p/45p/0/100\"}";
+    char hashstart[] =
+        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/100203p/45p/0/100\"}], \"data\": [";
+    char maxhashes[COMMANDER_REPORT_SIZE];
+    char hashoverflow[COMMANDER_REPORT_SIZE];
+
+    memset(hashoverflow, 0, sizeof(hashoverflow));
+    memset(maxhashes, 0, sizeof(maxhashes));
+    strcat(maxhashes, hashstart);
+    strcat(maxhashes, hashstr);
+    i = 1;
+    while ((i + 1) * COMMANDER_SIG_LEN < COMMANDER_ARRAY_MAX) {
+        strcat(maxhashes, ",");
+        strcat(maxhashes, hashstr);
+        i++;
+    }
+    strcat(hashoverflow, maxhashes);
+    strcat(hashoverflow, ",");
+    strcat(hashoverflow, hashstr);
+    strcat(hashoverflow, "]}");
+    strcat(maxhashes, "]}");
 
     char checkpub[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
@@ -818,14 +839,19 @@ static void tests_sign(void)
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-
-    // check buffer overflow prevention
-    api_format_send_cmd(cmd_str(CMD_sign), overflow, PASSWORD_STAND);
+    // sign max number of hashes per sign command
+    api_format_send_cmd(cmd_str(CMD_sign), maxhashes, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), overflow, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+    // sign 1 more than max number of hashes per sign command
+    api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+
+    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     // sign using one input
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
@@ -839,7 +865,6 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     u_assert_str_has(utils_read_decrypted_report(), hash_1_input);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_pubkey));
     u_assert_str_has(utils_read_decrypted_report(), pubkey_1_input);
 
     // sign using two inputs

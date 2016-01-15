@@ -253,7 +253,7 @@ int commander_fill_json_array(const char **key, const char **value, int *type, i
     snprintf(p + strlens(json_array), COMMANDER_ARRAY_MAX - strlens(json_array), "%s",
              array_element);
 
-    if ((strlens(json_array) + 1) > COMMANDER_ARRAY_MAX) {
+    if ((strlens(json_array) + 1) >= COMMANDER_ARRAY_MAX) {
         commander_clear_report();
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_IO_REPORT_BUF);
         REPORT_BUF_OVERFLOW = 1;

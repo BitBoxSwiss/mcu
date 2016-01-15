@@ -76,8 +76,8 @@
 #define  UDI_HID_REPORT_IN_SIZE             256
 #define  UDI_HID_REPORT_OUT_SIZE            4098
 #else
-#define  UDI_HID_REPORT_IN_SIZE             2048
-#define  UDI_HID_REPORT_OUT_SIZE            2048
+#define  UDI_HID_REPORT_IN_SIZE             4096
+#define  UDI_HID_REPORT_OUT_SIZE            4096
 #endif
 #define  UDI_HID_REPORT_FEATURE_SIZE        8
 #define  UDI_HID_GENERIC_EP_SIZE            64

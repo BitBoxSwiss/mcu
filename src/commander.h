@@ -31,22 +31,6 @@
 
 #include <stdint.h>
 #include "memory.h"
-#ifndef TESTING
-#include "conf_usb.h"
-
-
-#define COMMANDER_REPORT_SIZE       UDI_HID_REPORT_OUT_SIZE
-#else
-#define COMMANDER_REPORT_SIZE       2048
-#endif
-#define COMMANDER_ARRAY_MAX         COMMANDER_REPORT_SIZE
-#define COMMANDER_ARRAY_ELEMENT_MAX 1024
-#define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
-#define VERIFYPASS_FILENAME         "verification.txt"
-#define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
-#define AUTOBACKUP_FILENAME         "autobackup_"
-#define AUTOBACKUP_ENCRYPT          "yes"
-#define AUTOBACKUP_NUM              10
 
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,

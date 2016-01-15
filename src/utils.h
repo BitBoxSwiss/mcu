@@ -34,7 +34,7 @@
 #include "memory.h"
 
 
-#define TO_UINT8_HEX_BUF_LEN 2048
+#define TO_UINT8_HEX_BUF_LEN COMMANDER_REPORT_SIZE
 #define VARINT_LEN 20
 
 #define strlens(s) (s == NULL ? 0 : strlen(s))

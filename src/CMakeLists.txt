@@ -20,7 +20,6 @@ set(DBB-FIRMWARE-SOURCES
         random.c
         ripemd160.c
         ecc.c
-        secp256k1.c
         utils.c
         wallet.c
         flags.c
@@ -31,6 +30,11 @@ if(USE_UECC_LIB)
     set(DBB-FIRMWARE-SOURCES
         ${DBB-FIRMWARE-SOURCES}
         uECC.c
+    )
+else()
+    set(DBB-FIRMWARE-SOURCES
+        ${DBB-FIRMWARE-SOURCES}
+        secp256k1.c
     )
 endif()
 

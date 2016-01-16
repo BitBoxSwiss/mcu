@@ -48,6 +48,7 @@ typedef enum BOOT_OP_CODES {
     OP_WRITE = 'w',/* 0x77 */
     OP_ERASE = 'e',/* 0x65 */
     OP_BLINK = 'b',/* 0x62 */
+    OP_REBOOT = 'r',/* 0x72 */
     OP_VERIFY = 's',/* 0x73 */
     OP_VERSION = 'v' /* 0x76 */
 } BOOT_OP_CODES;

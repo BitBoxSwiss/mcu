@@ -1174,6 +1174,7 @@ int main(void)
     __stack_chk_guard = random_uint32(0);
     ecc_context_init();
     memory_setup();
+    memory_setup(); // run twice
     printf("\n\nInternal API Result:\n");
     run_utests();
 

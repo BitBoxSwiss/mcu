@@ -1522,7 +1522,7 @@ static int commander_check_init(const char *encrypted_command)
     }
 
     // Force setting a password before processing any other command.
-    if (!memory_read_erased()) {
+    if (!memory_report_erased()) {
         return DBB_OK;
     }
 
@@ -1556,7 +1556,6 @@ static int commander_check_init(const char *encrypted_command)
 //
 char *commander(const char *command)
 {
-    memory_load_aeskeys();
     commander_clear_report();
     if (commander_check_init(command) == DBB_OK) {
         char *command_dec = commander_decrypt(command);
@@ -1565,7 +1564,6 @@ char *commander(const char *command)
             free(command_dec);
         }
     }
-
     memory_clear();
     return json_report;
 }

@@ -70,14 +70,13 @@ void memory_clear(void);
 
 int memory_aeskey_is_erased(PASSWORD_ID id);
 int memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
-void memory_load_aeskeys(void);
 uint8_t *memory_report_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
 
 uint8_t *memory_read_memseed(void);
-uint8_t memory_read_erased(void);
+uint8_t memory_report_erased(void);
 uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
 

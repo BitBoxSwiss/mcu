@@ -44,8 +44,12 @@ static char report[UDI_HID_REPORT_IN_SIZE];
 static uint8_t bootloader_loading_ready = 0;
 static const char *pubkeys[] = { // order is important
     "02a1137c6bdd497358537df77d1375a741ed75461b706a612a3717d32748e5acf1",
-    "0336f8d23499da107a84947e6d7246969bf1c82b7543908dd4d0ac4aa4f349b15d",
-    "028f65d8bb45148082e93f1ad947828d51e387f8c72af35118016d55b2e69dd842",
+    "0256201125b958864de4bb00560a247ad246182866b6fe7ac29d7a12e7718ebb7d",
+    "03d2185d70fb29a36691d8470e65d02adfab2ec00caad91887da23e5ad20a25163",
+    "0263b742d9873405c609814da884324ab0f4c1597a5fd152b388899857f4d041df",
+    "02b95dc22d293376222ef896f74a8436a8b6672e7e416299f3c4e23b49c38ad366",
+    "03ef4c48dc308ace971c025db3edd4bc5d5110e28e14bdd925fffafd4d21002800",
+    "030d8b0b86fca70bfd3a8d842cdb3ff8362c02f455fd092b080f1bb137dfc1d25f",
     0
 };
 
@@ -195,6 +199,7 @@ static void bootloader_blink(void)
     bootloader_report_status(OP_STATUS_OK);
 }
 
+
 static void bootloader_reboot(void)
 {
     NVIC_SystemReset();
@@ -244,9 +249,6 @@ static char *bootloader(const char *command)
             }
             memset(sig, 0xFF, FLASH_SIG_LEN);
             memcpy(sig, utils_hex_to_uint8(command + FLASH_BOOT_OP_LEN), cnt * 64);
-
-
-
 
             flash_unlock(FLASH_SIG_START, FLASH_SIG_START + FLASH_SIG_LEN, NULL, NULL);
             if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {

@@ -49,9 +49,12 @@ static void tests_seed_xpub_backup(void)
     char xpub0[112], xpub1[112], *echo;
     char seed_c[512], seed_b[512], back[512], check[512], erase_file[512];
     char filename[] = "tests_backup.txt";
+    char filename_create[] = "tests_backup_c.txt";
     char keypath[] = "m/44\'/0\'/";
     char seed_create[] =
-        "{\"source\":\"create\"}";
+        "{\"source\":\"create\", \"filename\":\"seed_create.bak\"}";
+    char seed_create_2[] =
+        "{\"source\":\"create\", \"filename\":\"seed_create_2.bak\"}";
     char seed_xpriv[] =
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
@@ -74,7 +77,8 @@ static void tests_seed_xpub_backup(void)
         memset(back, 0, sizeof(back));
         memset(check, 0, sizeof(check));
 
-        snprintf(seed_c, sizeof(seed_c), "{\"source\":\"%s\"}", attr_str(ATTR_create));
+        snprintf(seed_c, sizeof(seed_c), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_create), filename_create);
         snprintf(seed_b, sizeof(seed_b), "{\"source\":\"%s\",\"decrypt\":\"%s\"}", filename,
                  *cipher);
         snprintf(back, sizeof(back), "{\"filename\":\"%s\",\"encrypt\":\"%s\"}", filename,
@@ -111,9 +115,14 @@ static void tests_seed_xpub_backup(void)
             u_assert_str_eq(xpub0, echo);
         }
 
+        // check backup list and erase
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), filename_create);
+
         // backup
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+        u_assert_str_has_not(utils_read_decrypted_report(), filename_create);
         if (TEST_LIVE_DEVICE) {
             u_assert_str_has_not(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_ERASE));
         }
@@ -146,6 +155,7 @@ static void tests_seed_xpub_backup(void)
         // check backup list and erase
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
         u_assert_str_has(utils_read_decrypted_report(), filename);
+        u_assert_str_has_not(utils_read_decrypted_report(), filename_create);
 
         api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
         u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_success));
@@ -155,6 +165,7 @@ static void tests_seed_xpub_backup(void)
 
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), filename);
+        u_assert_str_has_not(utils_read_decrypted_report(), filename_create);
 
         api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_success));
@@ -171,6 +182,9 @@ static void tests_seed_xpub_backup(void)
     // test keypath
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), "seed_create.bak");
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), "\"xpub\":");
@@ -195,6 +209,64 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/-111", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
+
+    // test create seeds differ
+    memset(xpub0, 0, sizeof(xpub0));
+    memset(xpub1, 0, sizeof(xpub1));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
+    u_assert_str_not_eq(xpub0, xpub1);
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), filename);
+
+    snprintf(back, sizeof(back), "{\"filename\":\"%s\"}", filename);
+
+    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(check, sizeof(check), "{\"check\":\"%s\"}", filename);
+
+    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_success));
+
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
+    u_assert_str_not_eq(xpub0, xpub1);
+
+    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    if (TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
+    }
+
+    // test cannot overwrite existing backup file
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_OPEN_FILE));
+
+    // test erase single backup file
+    if (!TEST_LIVE_DEVICE) {
+        // testing buffer gets overwritten by seed command, so reset it
+        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    }
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), filename);
+
+    snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
+             filename);
+
+    api_format_send_cmd(cmd_str(CMD_backup), erase_file, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), filename);
 
     // test xpriv seed
     memset(xpub0, 0, sizeof(xpub0));
@@ -221,59 +293,9 @@ static void tests_seed_xpub_backup(void)
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_eq(xpub0, xpub1);
 
-    // test create seeds differ
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
+    // clean up sd card
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
-    u_assert_str_not_eq(xpub0, xpub1);
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), filename);
-
-    snprintf(back, sizeof(back), "{\"filename\":\"%s\"}", filename);
-
-    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    snprintf(check, sizeof(check), "{\"check\":\"%s\"}", filename);
-
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_success));
-
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
-    u_assert_str_not_eq(xpub0, xpub1);
-
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
-    if (TEST_LIVE_DEVICE) {
-        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
-    }
-
-    // test erase single backup file
-    if (!TEST_LIVE_DEVICE) {
-        // testing buffer gets overwritten by seed command, so reset it
-        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
-        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    }
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), filename);
-
-    snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
-             filename);
-
-    api_format_send_cmd(cmd_str(CMD_backup), erase_file, PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), filename);
 }
 
 
@@ -388,6 +410,13 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), AUTOBACKUP_FILENAME);
+
+    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"filename\":\"c.bak\"}",
+                        PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -397,7 +426,8 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"filename\":\"l.bak\"}",
+                        PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
@@ -634,7 +664,8 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
-    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"filename\":\"c.bak\"}",
+                        PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     // test verifypass
@@ -820,7 +851,7 @@ static void tests_sign(void)
 
     // seed
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\"}";
+        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.bak\"}";
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -1038,7 +1069,7 @@ static void tests_aes_cbc(void)
     };
 
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.bak\"}";
 
     api_reset_device();
 

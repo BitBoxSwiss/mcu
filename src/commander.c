@@ -489,11 +489,14 @@ static void commander_process_seed(yajl_val json_node)
 
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
     const char *decrypt_path[] = { cmd_str(CMD_seed), cmd_str(CMD_decrypt), NULL };
+    const char *filename_path[] = { cmd_str(CMD_seed), cmd_str(CMD_filename), NULL };
 
     const char *source = YAJL_GET_STRING(yajl_tree_get(json_node, source_path,
                                          yajl_t_string));
     const char *decrypt = YAJL_GET_STRING(yajl_tree_get(json_node, decrypt_path,
                                           yajl_t_string));
+    const char *filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path,
+                                           yajl_t_string));
 
     if (!memory_read_unlocked()) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_LOCKED);
@@ -503,6 +506,15 @@ static void commander_process_seed(yajl_val json_node)
     if (!source) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
+    }
+
+    if (filename) {
+        if (sd_load(filename, CMD_seed)) {
+            commander_clear_report();
+            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_OPEN_FILE);
+            return;
+        }
+        commander_clear_report();
     }
 
     char *src = malloc(strlens(source) + 1);
@@ -515,27 +527,32 @@ static void commander_process_seed(yajl_val json_node)
     src[strlens(source)] = '\0';
 
     if (strcmp(src, attr_str(ATTR_create)) == 0) {
+        int flen = strlens(AUTOBACKUP_FILENAME) + 8;
+        char file[flen];
+
         if (sd_present() != DBB_OK) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
             goto exit;
         }
-        int flen = strlens(AUTOBACKUP_FILENAME) + 8;
-        char file[flen];
-        int count = 1;
-        do {
-            if (count > AUTOBACKUP_NUM) {
-                commander_clear_report();
-                commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD_NUM);
-                goto exit;
-            }
-            memset(file, 0, sizeof(file));
-            snprintf(file, sizeof(file), "%s%i.bak", AUTOBACKUP_FILENAME, count++);
-        } while (sd_load(file, CMD_seed));
+
+        if (!filename) {
+            int count = 1;
+            do {
+                if (count > AUTOBACKUP_NUM) {
+                    commander_clear_report();
+                    commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD_NUM);
+                    goto exit;
+                }
+                memset(file, 0, sizeof(file));
+                snprintf(file, sizeof(file), "%s%i.bak", AUTOBACKUP_FILENAME, count++);
+            } while (sd_load(file, CMD_seed));
+            filename = file;
+        }
 
         ret = wallet_generate_master();
         if (ret == DBB_OK) {
-            if (commander_process_backup_create(file, AUTOBACKUP_ENCRYPT) != DBB_OK) {
+            if (commander_process_backup_create(filename, attr_str(ATTR_yes)) != DBB_OK) {
                 memory_erase_seed();
                 goto exit;
             }

@@ -60,8 +60,7 @@
 #define VERIFYPASS_FILENAME         "verification.txt"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define AUTOBACKUP_FILENAME         "autobackup_"
-#define AUTOBACKUP_ENCRYPT          "yes"
-#define AUTOBACKUP_NUM              10
+#define AUTOBACKUP_NUM              50
 #define AES_DATA_LEN_MAX            2048// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
 

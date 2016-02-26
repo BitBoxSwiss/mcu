@@ -26,6 +26,8 @@
 
 
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include "drivers/config/conf_usb.h"
 #include "drivers/config/mcu.h"
 #include "sd.h"
@@ -58,6 +60,8 @@ void SysTick_Handler(void)
 }
 
 
+char usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
+
 int main (void)
 {
     wdt_disable(WDT);
@@ -70,8 +74,6 @@ int main (void)
     __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     pmc_enable_periph_clk(ID_PIOA);
-    usb_suspend_action();
-    udc_start();
     delay_init(F_CPU);
     systick_init();
     touch_init();
@@ -84,6 +86,18 @@ int main (void)
     led_off();
 
     memory_setup();
+
+    memset(usb_serial_number, 0, sizeof(usb_serial_number));
+    snprintf(usb_serial_number, sizeof(usb_serial_number), "%s%s",
+             USB_DEVICE_SERIAL_NAME_TYPE, DIGITAL_BITBOX_VERSION_SHORT);
+
+    if (memory_report_erased()) {
+        usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 2] = '-';
+        usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 1] = '-';
+    }
+
+    usb_suspend_action();
+    udc_start();
 
     while (1) {
         sleepmgr_enter_sleep();

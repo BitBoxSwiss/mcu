@@ -1379,6 +1379,13 @@ static void commander_parse(char *command)
         // Signing
         if (TFA_VERIFY) {
             TFA_VERIFY = 0;
+
+            if (found_cmd != CMD_sign) {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
+                memset(sign_command, 0, COMMANDER_REPORT_SIZE);
+                goto exit;
+            }
+
             if (!memory_read_unlocked()) {
                 if (commander_tfa_check_pin(json_node) != DBB_OK) {
                     char msg[256];

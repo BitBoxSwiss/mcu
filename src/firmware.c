@@ -79,25 +79,23 @@ int main (void)
     touch_init();
     ecc_context_init();
 
-    led_off();
-    delay_ms(300);
-    led_on();
-    delay_ms(300);
-    led_off();
-
-    memory_setup();
-
     memset(usb_serial_number, 0, sizeof(usb_serial_number));
     snprintf(usb_serial_number, sizeof(usb_serial_number), "%s%s",
              USB_DEVICE_SERIAL_NAME_TYPE, DIGITAL_BITBOX_VERSION_SHORT);
 
-    if (memory_report_erased()) {
+    if (memory_read_erased()) {
         usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 2] = '-';
         usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 1] = '-';
     }
 
     usb_suspend_action();
     udc_start();
+
+    led_on();
+    delay_ms(300);
+    led_off();
+
+    memory_setup();
 
     while (1) {
         sleepmgr_enter_sleep();

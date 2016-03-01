@@ -76,6 +76,7 @@ uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
 
 uint8_t *memory_read_memseed(void);
+uint8_t memory_read_erased(void);
 uint8_t memory_report_erased(void);
 uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);

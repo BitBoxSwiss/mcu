@@ -403,6 +403,11 @@ void memory_write_erased(uint8_t erased)
 {
     memory_eeprom(&erased, &MEM_erased, MEM_ERASED_ADDR, 1);
 }
+uint8_t memory_read_erased(void)
+{
+    memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
+    return MEM_erased;
+}
 uint8_t memory_report_erased(void)
 {
     return MEM_erased;

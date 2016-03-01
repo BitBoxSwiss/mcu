@@ -1557,6 +1557,14 @@ static int commander_check_init(const char *encrypted_command)
             const char *pw = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
             if (pw) {
                 int ret = commander_process_aes_key(pw, strlens(pw), PASSWORD_STAND);
+
+                if (ret == DBB_OK) {
+                    uint8_t key[PBKDF2_HMACLEN];
+                    pbkdf2_hmac_sha512((const uint8_t *)pw, strlens(pw), key, sizeof(key));
+                    ret = commander_process_aes_key(utils_uint8_to_hex(key, sizeof(key)), sizeof(key) * 2,
+                                                    PASSWORD_STAND_STRETCH);
+                }
+
                 if (ret == DBB_OK) {
                     memory_write_erased(0);
                     commander_fill_report(cmd_str(CMD_password), attr_str(ATTR_success), DBB_OK);

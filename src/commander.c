@@ -325,7 +325,7 @@ static void commander_process_name(yajl_val json_node)
 }
 
 
-static int commander_process_backup_create(const char *filename, const char *encrypt)
+static int commander_process_backup_check(const char *filename, const char *decrypt)
 {
     char xpriv[112] = {0};
     wallet_report_xpriv("m/", xpriv);
@@ -333,66 +333,6 @@ static int commander_process_backup_create(const char *filename, const char *enc
     if (!strlens(xpriv)) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
         return DBB_ERROR;
-    }
-
-    int ret;
-    char *l;
-    if (encrypt ? !strncmp(encrypt, attr_str(ATTR_yes), 3) : 0) { // default = do not encrypt
-        int enc_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
-                                        PASSWORD_STAND_STRETCH);
-        if (!enc) {
-            commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
-            free(enc);
-            return DBB_ERROR;
-        }
-        ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
-
-        if (ret == DBB_OK) {
-            l = sd_load(filename, CMD_backup);
-            if (l) {
-                if (memcmp(enc, l, enc_len)) {
-                    commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
-                    ret = DBB_ERROR;
-                } else {
-                    commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
-                }
-                memset(l, 0, strlens(l));
-            }
-        }
-
-        free(enc);
-        return ret;
-    } else {
-        ret = sd_write(filename, xpriv, strlen(xpriv), DBB_SD_NO_REPLACE,
-                       CMD_backup);
-
-        if (ret == DBB_OK) {
-            l = sd_load(filename, CMD_backup);
-            if (l) {
-                if (memcmp(xpriv, l, strlens(xpriv))) {
-                    commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_CORRUPT_FILE);
-                    ret = DBB_ERROR;
-                } else {
-                    commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
-                }
-                memset(l, 0, strlens(l));
-            }
-        }
-
-        return ret;
-    }
-}
-
-
-static void commander_process_backup_check(const char *filename, const char *decrypt)
-{
-    char xpriv[112] = {0};
-    wallet_report_xpriv("m/", xpriv);
-
-    if (!strlens(xpriv)) {
-        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
-        return;
     }
 
     char *text = sd_load(filename, CMD_backup);
@@ -408,22 +348,59 @@ static void commander_process_backup_check(const char *filename, const char *dec
             free(dec);
         } else {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_DECRYPT);
-            return;
+            return DBB_ERROR;
         }
     }
 
     if (text) {
         if (strncmp(text, xpriv, sizeof(xpriv)) == 0) {
             commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
+            memset(text, 0, strlens(text));
+            return DBB_OK;
         } else {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
+            memset(text, 0, strlens(text));
+            return DBB_ERROR;
         }
-        memset(text, 0, strlens(text));
     } else {
         /* error reported in sd_load() */
+        return DBB_ERROR;
+    }
+}
+
+
+static int commander_process_backup_create(const char *filename, const char *encrypt)
+{
+    char xpriv[112] = {0};
+    wallet_report_xpriv("m/", xpriv);
+
+    if (!strlens(xpriv)) {
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
+        return DBB_ERROR;
     }
 
-    return;
+    int ret;
+    if (encrypt ? !strncmp(encrypt, attr_str(ATTR_yes), 3) : 0) { // default = do not encrypt
+        int enc_len;
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
+                                        PASSWORD_STAND_STRETCH);
+        if (!enc) {
+            commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
+            free(enc);
+            return DBB_ERROR;
+        }
+        ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
+        free(enc);
+    } else {
+        ret = sd_write(filename, xpriv, strlen(xpriv), DBB_SD_NO_REPLACE, CMD_backup);
+    }
+
+    if (ret != DBB_OK) {
+        /* error reported in sd_write() */
+        return ret;
+    }
+
+    return commander_process_backup_check(filename, encrypt);
 }
 
 

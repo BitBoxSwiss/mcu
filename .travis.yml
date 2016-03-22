@@ -4,11 +4,11 @@ os:
     - linux
 
 env:
-    - ENV="-DBUILD_TYPE=test -DUSE_UECC_LIB=ON"   TEST=yes
-    - ENV="-DBUILD_TYPE=test -DUSE_UECC_LIB=OFF"  TEST=yes
-    - ENV="-DBUILD_TYPE=firmware -DUSE_UECC_LIB=ON"  TEST=no
-    - ENV="-DBUILD_TYPE=bootloader -DUSE_UECC_LIB=ON"  TEST=no
-#    - ENV="-DBUILD_TYPE=firmware -DUSE_UECC_LIB=OFF" TEST=no # secp lib too big at the moment
+    - ENV="-DBUILD_TYPE=test -DUSE_UECC_LIB=ON"       TEST=yes
+    - ENV="-DBUILD_TYPE=test -DUSE_UECC_LIB=OFF"      TEST=yes
+    - ENV="-DBUILD_TYPE=bootloader -DUSE_UECC_LIB=ON" TEST=no # use the smaller ecc lib
+    - ENV="-DBUILD_TYPE=firmware -DUSE_UECC_LIB=OFF"  TEST=no
+#    - ENV="-DBUILD_TYPE=firmware -DUSE_UECC_LIB=ON"  TEST=no
 
 compiler:
     - clang

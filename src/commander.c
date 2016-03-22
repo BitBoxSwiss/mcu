@@ -1375,9 +1375,7 @@ static void commander_parse(char *command)
             TFA_VERIFY = 0;
 
             if (found_cmd != CMD_sign) {
-                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
-                memset(sign_command, 0, COMMANDER_REPORT_SIZE);
-                goto exit;
+                goto other;
             }
 
             if (!memory_read_unlocked()) {
@@ -1419,6 +1417,7 @@ static void commander_parse(char *command)
             goto exit;
         }
 
+    other:
         // Other commands
         status = commander_touch_button(found_cmd);
         if (status == DBB_TOUCHED || status == DBB_OK) {

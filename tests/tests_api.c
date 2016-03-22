@@ -698,7 +698,7 @@ static void tests_echo_tfa(void)
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
 
     api_format_send_cmd(cmd_str(CMD_device), "info", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));

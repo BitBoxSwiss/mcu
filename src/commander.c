@@ -1522,6 +1522,25 @@ static int commander_check_init(const char *encrypted_command)
         return DBB_ERROR;
     }
 
+    // Pong whether or not password is set
+    if (encrypted_command[0] == '{') {
+        yajl_val json_node = yajl_tree_parse(encrypted_command, NULL, 0);
+        if (json_node && YAJL_IS_OBJECT(json_node)) {
+            const char *path[] = { cmd_str(CMD_ping), NULL };
+            const char *ping = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+            if (ping) {
+                if (memory_report_erased()) {
+                    commander_fill_report(cmd_str(CMD_ping), attr_str(ATTR_false), DBB_OK);
+                } else {
+                    commander_fill_report(cmd_str(CMD_ping), attr_str(ATTR_password), DBB_OK);
+                }
+                yajl_tree_free(json_node);
+                return DBB_ERROR;
+            }
+        }
+        yajl_tree_free(json_node);
+    }
+
     // Force setting a password before processing any other command.
     if (!memory_report_erased()) {
         return DBB_OK;

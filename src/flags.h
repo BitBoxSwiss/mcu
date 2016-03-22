@@ -90,6 +90,7 @@ X(device)         \
 X(random)         \
 X(backup)         \
 X(aes256cbc)      \
+X(ping)           \
 /*  child keys  */\
 X(source)         \
 X(type)           \

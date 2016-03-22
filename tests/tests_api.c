@@ -364,8 +364,14 @@ static void tests_device(void)
 {
     api_reset_device();
 
+    api_format_send_cmd(cmd_str(CMD_ping), "", PASSWORD_NONE);
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_false));
+
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_ping), "", PASSWORD_NONE);
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_password));
 
     api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_toggle), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));

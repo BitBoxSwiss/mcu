@@ -22,7 +22,11 @@ project(${MYPROJECT} C)
 #-----------------------------------------------------------------------------
 # Options for building
 
+if(BUILD_TYPE STREQUAL "bootloader")
 option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." ON)
+else()
+option(USE_UECC_LIB "Use micro ECC instead bitcoin's secp256k1 library." OFF)
+endif()
 option(BUILD_COVERAGE "Compile with test coverage flags." OFF)
 option(BUILD_VALGRIND "Compile with debug symbols." OFF)
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." OFF)
@@ -90,6 +94,8 @@ endif()
 
 if(USE_UECC_LIB)
     add_definitions(-DECC_USE_UECC_LIB)
+else()
+    add_definitions(-DSECP256K1_BUILD=1)
 endif()
 
 

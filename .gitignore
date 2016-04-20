@@ -1,4 +1,5 @@
 build
+build-vagrant
 version.h
 .vagrant
 .DS_Store

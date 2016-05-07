@@ -61,7 +61,8 @@
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define AUTOBACKUP_FILENAME         "autobackup_"
 #define AUTOBACKUP_NUM              50
-#define AES_DATA_LEN_MAX            2048// base64 increases size by ~4/3; AES encryption by max 32 char
+#define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE / 2)
+#define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE / 2)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
 
 
@@ -118,6 +119,7 @@ X(sham)           \
 X(input)          \
 X(ataes)          \
 X(touchbutton)    \
+X(warning)        \
 X(NUM)             /* keep last */
 
 
@@ -231,6 +233,7 @@ X(ERR_TOUCH_ABORT,     600, "Aborted by user.")\
 X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
+X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncated.")\
 X(FLAG_NUM,              0, 0)/* keep last */
 
 

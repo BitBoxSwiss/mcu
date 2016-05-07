@@ -51,10 +51,16 @@ uint8_t sd_write(const char *fn, const char *t, uint16_t t_len,
                  uint8_t replace, int cmd)
 {
     char file[256];
+    char text[512] = {0};
+
+    if (utils_limit_alphanumeric_hyphen_underscore_period(fn) != DBB_OK) {
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_BAD_CHAR);
+        goto err;
+    }
+
     memset(file, 0, sizeof(file));
     snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
 
-    char text[512] = {0};
     if (t_len > sizeof(text) - 1) {
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_LEN);
         goto err;
@@ -114,11 +120,15 @@ char *sd_load(const char *fn, int cmd)
 {
     FIL file_object;
     char file[256];
+    static char text[512];
+
+    if (utils_limit_alphanumeric_hyphen_underscore_period(fn) != DBB_OK) {
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_BAD_CHAR);
+        goto err;
+    }
+
     memset(file, 0, sizeof(file));
     snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
-
-
-    static char text[512];
     memset(text, 0, sizeof(text));
 
     sd_mmc_init();
@@ -394,6 +404,11 @@ uint8_t sd_erase(int cmd, const char *fn)
     }
 
     if (strlens(fn)) {
+        if (utils_limit_alphanumeric_hyphen_underscore_period(fn) != DBB_OK) {
+            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_BAD_CHAR);
+            f_mount(LUN_ID_SD_MMC_0_MEM, NULL); // Unmount
+            return DBB_ERROR;
+        }
         failed = delete_file(fn);
     } else {
         failed = delete_files(path);

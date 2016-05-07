@@ -45,6 +45,25 @@ void utils_clear_buffers(void)
 }
 
 
+uint8_t utils_limit_alphanumeric_hyphen_underscore_period(const char *str)
+{
+    static char characters[] =
+        ".-_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    size_t i;
+
+    if (!strlens(str)) {
+        return DBB_ERROR;
+    }
+
+    for (i = 0 ; i < strlens(str); i++) {
+        if (!strchr(characters, str[i])) {
+            return DBB_ERROR;
+        }
+    }
+    return DBB_OK;
+}
+
+
 uint8_t *utils_hex_to_uint8(const char *str)
 {
     if (strlens(str) > TO_UINT8_HEX_BUF_LEN) {

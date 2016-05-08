@@ -383,6 +383,7 @@ static void tests_random(void)
 
     api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
 
     memcpy(number0, api_read_value(CMD_random), sizeof(number0));
 

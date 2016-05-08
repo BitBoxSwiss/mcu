@@ -647,6 +647,10 @@ static void commander_process_random(yajl_val json_node)
     int update_seed;
     uint8_t number[16];
 
+    int encrypt_len;
+    char *encoded_report;
+    char echo_number[32 + 13 + 1];
+
     const char *path[] = { cmd_str(CMD_random), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
@@ -671,6 +675,20 @@ static void commander_process_random(yajl_val json_node)
 
     commander_fill_report(cmd_str(CMD_random), utils_uint8_to_hex(number, sizeof(number)),
                           DBB_OK);
+
+    snprintf(echo_number, sizeof(echo_number), "{\"random\":\"%s\"}",
+             utils_uint8_to_hex(number, sizeof(number)));
+    encoded_report = aes_cbc_b64_encrypt((unsigned char *)echo_number,
+                                         strlens(echo_number),
+                                         &encrypt_len,
+                                         PASSWORD_VERIFY);
+    if (encoded_report) {
+        commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
+        free(encoded_report);
+    } else {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ENCRYPT);
+    }
 }
 
 

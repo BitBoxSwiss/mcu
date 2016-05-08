@@ -486,12 +486,17 @@ static void commander_process_seed(yajl_val json_node)
     }
 
     if (filename) {
+        commander_clear_report();
+
+        if (utils_limit_alphanumeric_hyphen_underscore_period(filename) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_BAD_CHAR);
+            return;
+        }
+
         if (sd_load(filename, CMD_seed)) {
-            commander_clear_report();
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_OPEN_FILE);
             return;
         }
-        commander_clear_report();
     }
 
     char *src = malloc(strlens(source) + 1);

@@ -8,4 +8,5 @@ version.h
 *.swp
 *.swo
 *.bak
+*.bin
 !*.c

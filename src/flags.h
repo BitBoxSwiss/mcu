@@ -223,6 +223,7 @@ X(ERR_SD_READ_FILE,    407, "Could not read the file.")\
 X(ERR_SD_ERASE,        408, "May not have erased all files (or no file present).")\
 X(ERR_SD_NUM_FILES,    409, "Too many files to read. The list is truncated.")\
 X(ERR_SD_NO_MATCH,     410, "Backup file does not match wallet.")\
+X(ERR_SD_BAD_CHAR,     411, "Filenames limited to alphanumeric values, hyphens, and underscores.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\

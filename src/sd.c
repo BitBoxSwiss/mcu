@@ -184,7 +184,7 @@ uint8_t sd_list(int cmd)
     fno.lfsize = sizeof(c_lfn);
 #endif
 
-    char files[1028] = {0};
+    char files[SD_FILEBUF_LEN_MAX] = {0};
     size_t f_len = 0;
     uint32_t pos = 1;
 
@@ -232,8 +232,9 @@ uint8_t sd_list(int cmd)
             f_len += strlen(pc_fn) + strlens(",\"\"");
             if (f_len + 1 >= sizeof(files)) {
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_NUM_FILES);
-                goto err;
+                commander_fill_report(cmd_str(CMD_warning), flag_msg(DBB_WARN_SD_NUM_FILES), DBB_OK);
+                strcat(files, "\"]");
+                goto exit;
             }
 
             if (pos >= sd_listing_pos) {
@@ -250,6 +251,7 @@ uint8_t sd_list(int cmd)
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_OPEN_DIR);
     }
 
+exit:
     commander_fill_report(cmd_str(cmd), files, DBB_JSON_ARRAY);
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);

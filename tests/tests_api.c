@@ -182,7 +182,9 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    // test keypath
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -197,6 +199,37 @@ static void tests_seed_xpub_backup(void)
         u_assert_str_has_not(utils_read_decrypted_report(), "../seed_create_bad.bak");
     }
 
+    // test sd list overflow
+    if (TEST_LIVE_DEVICE) {
+        char long_backup_name[SD_FILEBUF_LEN_MAX / 8];
+        char lbn[SD_FILEBUF_LEN_MAX / 8];
+        size_t i;
+
+        memset(long_backup_name, '-', sizeof(long_backup_name));
+
+        for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
+            snprintf(lbn, sizeof(lbn), "%lu%s", i, long_backup_name);
+            snprintf(back, sizeof(back), "{\"filename\":\"%s\"}", lbn);
+            api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+            u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+            api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+            u_assert_str_has_not(utils_read_decrypted_report(), cmd_str(CMD_warning));
+        }
+
+        snprintf(lbn, sizeof(lbn), "%lu%s", i, long_backup_name);
+        snprintf(back, sizeof(back), "{\"filename\":\"%s\"}", lbn);
+        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+        u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_warning));
+
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    }
+
+    // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), "\"xpub\":");
 

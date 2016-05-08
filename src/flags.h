@@ -111,6 +111,7 @@ X(script)         \
 X(value)          \
 X(erase)          \
 X(check)          \
+X(key)            \
 X(sig)            \
 X(pin)            \
 /*  reply keys  */\
@@ -131,7 +132,6 @@ X(success)        \
 X(error)          \
 X(accept)         \
 X(aborted)        \
-X(yes)            \
 X(meta)           \
 X(list)           \
 X(sdcard)         \
@@ -228,6 +228,7 @@ X(ERR_SD_ERASE,        408, "May not have erased all files (or no file present).
 X(ERR_SD_NUM_FILES,    409, "Too many files to read. The list is truncated.")\
 X(ERR_SD_NO_MATCH,     410, "Backup file does not match wallet.")\
 X(ERR_SD_BAD_CHAR,     411, "Filenames limited to alphanumeric values, hyphens, and underscores.")\
+X(ERR_SD_KEY,          412, "Please provide an encryption key.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\

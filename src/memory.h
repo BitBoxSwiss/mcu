@@ -45,7 +45,6 @@
 #define MEM_AESKEY_STAND_ADDR           0x0400// Zone 4
 #define MEM_AESKEY_VERIFY_ADDR          0x0500// Zone 5
 #define MEM_AESKEY_CRYPT_ADDR           0x0600// Zone 6
-#define MEM_AESKEY_STAND_STRETCH_ADDR   0x0700// Zone 7
 
 // Default settings
 #define DEFAULT_unlocked  0xFF
@@ -55,7 +54,7 @@
 
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
-    PASSWORD_STAND_STRETCH, /* for backups */
+    PASSWORD_STRETCH, /* for backups */
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
     PASSWORD_CRYPT,

@@ -61,9 +61,9 @@ static void tests_seed_xpub_backup(void)
     char seed_create_bad[] =
         "{\"source\":\"create\", \"filename\":\"../seed_create_bad.bak\", \"key\":\"password\"}";
     char seed_xpriv[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"key\":\"password\"}";
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVm\", \"key\":\"password\"}";
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVm\"}";
 
     snprintf(seed_c, sizeof(seed_c),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"%s\"}", attr_str(ATTR_create),
@@ -928,7 +928,7 @@ static void tests_sign(void)
 
     // seed
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.bak\", \"key\":\"password\"}";
+        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.bak\"}";
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -1146,7 +1146,7 @@ static void tests_aes_cbc(void)
     };
 
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.bak\", \"key\":\"password\"}";
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.bak\"}";
 
     api_reset_device();
 
@@ -1252,7 +1252,6 @@ static void tests_aes_cbc(void)
 
 static void run_utests(void)
 {
-    u_run_test(tests_seed_xpub_backup);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);
@@ -1261,6 +1260,7 @@ static void run_utests(void)
     u_run_test(tests_sign);
     u_run_test(tests_device);
     u_run_test(tests_input);
+    u_run_test(tests_seed_xpub_backup);
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

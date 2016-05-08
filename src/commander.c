@@ -524,17 +524,6 @@ static void commander_process_seed(yajl_val json_node)
         }
     }
 
-    if (strlens(key)) {
-        ret = commander_process_aes_key_stretch(key, strlens(key), PASSWORD_STRETCH);
-        if (ret != DBB_OK) {
-            commander_fill_report(cmd_str(CMD_seed), NULL, ret);
-            return;
-        }
-    } else {
-        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
-        return;
-    }
-
     char *src = malloc(strlens(source) + 1);
     if (!src) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_MEM);
@@ -543,6 +532,19 @@ static void commander_process_seed(yajl_val json_node)
 
     memcpy(src, source, strlens(source));
     src[strlens(source)] = '\0';
+
+    if (strlens(key)) {
+        ret = commander_process_aes_key_stretch(key, strlens(key), PASSWORD_STRETCH);
+        if (ret != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_seed), NULL, ret);
+            goto exit;
+        }
+    } else {
+        if (strncmp(src, "xprv", 4) != 0) { // require key except for xpriv mode
+            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
+            goto exit;
+        }
+    }
 
     if (strcmp(src, attr_str(ATTR_create)) == 0) {
         int flen = strlens(AUTOBACKUP_FILENAME) + 8;

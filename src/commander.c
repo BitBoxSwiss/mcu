@@ -57,7 +57,7 @@ static int REPORT_BUF_OVERFLOW = 0;
 __extension__ static char json_array[] = {[0 ... COMMANDER_ARRAY_MAX] = 0};
 __extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char sign_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-static char TFA_PIN[5];
+static char TFA_PIN[VERIFYPASS_LOCK_CODE_LEN * 2 + 1];
 static int TFA_VERIFY = 0;
 
 // Must free() returned value (allocated inside base64() function)
@@ -1230,18 +1230,19 @@ static int commander_tfa_append_pin(void)
 {
     if (!memory_read_unlocked()) {
         // Create one-time PIN
-        uint8_t pin_b[2];
+        uint8_t pin_b[VERIFYPASS_LOCK_CODE_LEN];
         memset(TFA_PIN, 0, sizeof(TFA_PIN));
-        if (random_bytes(pin_b, 2, 0) == DBB_ERROR) {
+        if (random_bytes(pin_b, VERIFYPASS_LOCK_CODE_LEN, 0) == DBB_ERROR) {
             commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
         }
+
 #ifdef TESTING
-        pin_b[0] = 1;
-        pin_b[1] = 0;
+        snprintf(TFA_PIN, sizeof(TFA_PIN), "0001");
+#else
+        snprintf(TFA_PIN, sizeof(TFA_PIN), "%s",
+                 utils_uint8_to_hex(pin_b, VERIFYPASS_LOCK_CODE_LEN));
 #endif
-        snprintf(TFA_PIN, sizeof(TFA_PIN), "%04d",
-                 (pin_b[1] * 256 + pin_b[0]) % 10000); // 0 to 9999
 
         // Append PIN to echo
         commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);

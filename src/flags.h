@@ -59,6 +59,7 @@
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define VERIFYPASS_FILENAME         "verification.txt"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
+#define VERIFYPASS_LOCK_CODE_LEN    16// bytes
 #define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
 #define AUTOBACKUP_FILENAME         "autobackup_"
 #define AUTOBACKUP_NUM              50

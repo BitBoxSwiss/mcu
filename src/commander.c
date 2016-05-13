@@ -353,7 +353,7 @@ static int commander_process_backup_check(const char *filename, const char *decr
     }
 
     if (text) {
-        if (strncmp(text, xpriv, sizeof(xpriv)) == 0) {
+        if (strncmp(text, xpriv, strlens(xpriv)) == 0) {
             commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
             memset(text, 0, strlens(text));
             return DBB_OK;
@@ -372,6 +372,9 @@ static int commander_process_backup_check(const char *filename, const char *decr
 static int commander_process_backup_create(const char *filename, const char *encrypt)
 {
     char xpriv[112] = {0};
+    char *name = (char *)memory_name("");
+    char xpriv_name[sizeof(xpriv) + MEM_PAGE_LEN + 1];// add 1 for '-'
+
     wallet_report_xpriv("m/", xpriv);
 
     if (!strlens(xpriv)) {
@@ -379,21 +382,26 @@ static int commander_process_backup_create(const char *filename, const char *enc
         return DBB_ERROR;
     }
 
+    snprintf(xpriv_name, sizeof(xpriv_name), "%s-%s", xpriv, name);
+
     int ret;
     if (encrypt ? !strncmp(encrypt, attr_str(ATTR_yes), 3) : 0) { // default = do not encrypt
         int enc_len;
-        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv, strlens(xpriv), &enc_len,
-                                        PASSWORD_STAND_STRETCH);
-        if (!enc) {
+        char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv_name, strlens(xpriv_name),
+                                        &enc_len, PASSWORD_STAND_STRETCH);
+        if (enc) {
+            ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
+        } else {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
-            free(enc);
-            return DBB_ERROR;
+            ret = DBB_ERROR;
         }
-        ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
         free(enc);
     } else {
-        ret = sd_write(filename, xpriv, strlen(xpriv), DBB_SD_NO_REPLACE, CMD_backup);
+        ret = sd_write(filename, xpriv_name, strlen(xpriv_name), DBB_SD_NO_REPLACE, CMD_backup);
     }
+
+    memset(xpriv, 0, sizeof(xpriv));
+    memset(xpriv_name, 0, sizeof(xpriv_name));
 
     if (ret != DBB_OK) {
         /* error reported in sd_write() */
@@ -560,7 +568,17 @@ static void commander_process_seed(yajl_val json_node)
         }
         if (text) {
             if (strncmp(text, "xprv", 4) == 0) {
-                ret = wallet_master_from_xpriv(text);
+                char xpriv[112];
+                snprintf(xpriv, sizeof(xpriv), "%s", text);
+                ret = wallet_master_from_xpriv(xpriv);
+
+                if (strlens(text) > strlens(xpriv)) {
+                    memory_name(text + sizeof(xpriv));
+                } else {
+                    /* for backup compatibility, no error if name not in backup file */
+                }
+
+                memset(xpriv, 0, sizeof(xpriv));
             } else {
                 ret = DBB_ERROR;
             }

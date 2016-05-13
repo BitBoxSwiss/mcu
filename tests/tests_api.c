@@ -62,6 +62,7 @@ static void tests_seed_xpub_backup(void)
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVm\"}";
+    char name0[] = "name0";
 
     const char **cipher, **run;
     static const char *options[] = {
@@ -94,6 +95,11 @@ static void tests_seed_xpub_backup(void)
 
         api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        // rename
+        api_format_send_cmd(cmd_str(CMD_name), name0, PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+        u_assert_str_eq(name0, api_read_value(CMD_name));
 
         memset(xpub0, 0, sizeof(xpub0));
         memset(xpub1, 0, sizeof(xpub1));
@@ -133,15 +139,22 @@ static void tests_seed_xpub_backup(void)
         api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-        // erase
+        // erase device
         api_reset_device();
 
         api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-        // load backup default
+        // check has default name
+        api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+        u_assert_str_eq(DEVICE_DEFAULT_NAME, api_read_value(CMD_name));
+
+        // load backup
         api_format_send_cmd(cmd_str(CMD_seed), seed_b, PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+        u_assert_str_eq(name0, api_read_value(CMD_name));
 
         api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
         u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));

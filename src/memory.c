@@ -253,7 +253,7 @@ void memory_erase(void)
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND_STRETCH);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_seed();
-    memory_name("Digital Bitbox");
+    memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
     memory_write_unlocked(DEFAULT_unlocked);
     memory_access_err_count(DBB_ACCESS_INITIALIZE);

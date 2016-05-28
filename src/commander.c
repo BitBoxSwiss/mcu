@@ -518,7 +518,7 @@ static void commander_process_seed(yajl_val json_node)
             return;
         }
 
-        if (sd_load(filename, CMD_seed)) {
+        if (sd_file_exists(filename) == DBB_OK) {
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_OPEN_FILE);
             return;
         }
@@ -550,7 +550,7 @@ static void commander_process_seed(yajl_val json_node)
         int flen = strlens(AUTOBACKUP_FILENAME) + 8;
         char file[flen];
 
-        if (sd_present() != DBB_OK) {
+        if (sd_card_inserted() != DBB_OK) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
             goto exit;
@@ -565,8 +565,8 @@ static void commander_process_seed(yajl_val json_node)
                     goto exit;
                 }
                 memset(file, 0, sizeof(file));
-                snprintf(file, sizeof(file), "%s%i.bak", AUTOBACKUP_FILENAME, count++);
-            } while (sd_load(file, CMD_seed));
+                snprintf(file, sizeof(file), "%s%i.pdf", AUTOBACKUP_FILENAME, count++);
+            } while (sd_file_exists(file) == DBB_OK);
             filename = file;
         }
 
@@ -973,7 +973,7 @@ static void commander_process_device(yajl_val json_node)
             snprintf(bootlock, sizeof(bootlock), "%s", attr_str(ATTR_true));
         }
 
-        if (sd_present() == DBB_OK) {
+        if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
         } else {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_false));

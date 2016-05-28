@@ -33,11 +33,12 @@
 
 
 void delay_ms(int delay);
+char *sd_load(const char *f, int cmd);
 uint8_t sd_write(const char *f, const char *t, uint16_t t_len,
                  uint8_t replace, int cmd);
-char *sd_load(const char *f, int cmd);
 uint8_t sd_list(int cmd);
-uint8_t sd_present(void);
+uint8_t sd_card_inserted(void);
+uint8_t sd_file_exists(const char *fn);
 uint8_t sd_erase(int cmd, const char *fn);
 uint8_t touch_button_press(uint8_t touch_type);
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);

@@ -38,6 +38,8 @@
 void led_on(void);
 void led_off(void);
 void led_toggle(void);
+void led_blink(void);
+void led_abort(void);
 void led_code(uint8_t *code, uint8_t len);
 
 

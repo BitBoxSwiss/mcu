@@ -144,6 +144,7 @@ X(verify)         \
 X(true)           \
 X(false)          \
 X(erase)          \
+X(abort)          \
 X(toggle)         \
 X(pseudo)         \
 X(create)         \

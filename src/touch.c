@@ -163,21 +163,12 @@ uint8_t touch_button_press(uint8_t touch_type)
         if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
             led_off();
             delay_ms(300);
-            led_on();
-            delay_ms(300);
+            led_blink();
         }
         led_off();
         return DBB_TOUCHED;
     } else if (pushed == DBB_TOUCHED_ABORT) {
-        led_off();
-        delay_ms(300);
-        led_on();
-        delay_ms(100);
-        led_off();
-        delay_ms(100);
-        led_on();
-        delay_ms(100);
-        led_off();
+        led_abort();
         return DBB_ERR_TOUCH_ABORT;
     } else {
         led_off();

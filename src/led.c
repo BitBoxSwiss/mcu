@@ -75,6 +75,27 @@ void led_toggle(void)
 }
 
 
+void led_blink(void)
+{
+    led_on();
+    delay_ms(300);
+    led_off();
+}
+
+
+void led_abort(void)
+{
+    led_off();
+    delay_ms(300);
+    led_on();
+    delay_ms(100);
+    led_off();
+    delay_ms(100);
+    led_on();
+    delay_ms(100);
+    led_off();
+}
+
 void led_code(uint8_t *code, uint8_t len)
 {
     uint8_t i, j;

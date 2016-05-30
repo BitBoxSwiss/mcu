@@ -145,7 +145,7 @@ X(true)           \
 X(false)          \
 X(erase)          \
 X(abort)          \
-X(toggle)         \
+X(blink)          \
 X(pseudo)         \
 X(create)         \
 X(export)         \

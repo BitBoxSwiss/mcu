@@ -431,8 +431,13 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_ping), "", PASSWORD_NONE);
     u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_password));
 
-    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_toggle), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_success));
+
+    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_abort), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(utils_read_decrypted_report(), attr_str(ATTR_success));
 
     api_format_send_cmd(cmd_str(CMD_led), "invalid_cmd", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));

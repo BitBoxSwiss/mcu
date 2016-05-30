@@ -283,6 +283,18 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
     return commander_fill_json_array(key, value, type, CMD_sign);
 }
 
+int commander_fill_recoverable_signature_array(const uint8_t sig[65], const uint8_t pubkey[65])
+{
+	char sig_c[130 + 1] = {0};
+	char pub_key_c[128 + 1] = {0};
+	snprintf(sig_c, sizeof(sig_c), "%s", utils_uint8_to_hex(sig, 65));
+	snprintf(pub_key_c, sizeof(pub_key_c), "%s", utils_uint8_to_hex(&pubkey[1], 64));
+	const char *key[] = {cmd_str(CMD_sig), cmd_str(CMD_pubkey), 0};
+	const char *value[] = {sig_c, pub_key_c, 0};
+	int type[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
+	return commander_fill_json_array(key, value, type, CMD_sign);
+}
+
 
 //
 //  Command processing  //
@@ -635,6 +647,10 @@ exit:
 
 static int commander_process_sign(yajl_val json_node)
 {
+	const char *recoverable_path[] = { cmd_str(CMD_sign), "recoverable", NULL };
+	const char *recoverable_value = YAJL_GET_STRING(yajl_tree_get(json_node, recoverable_path, yajl_t_string));
+	int recoverable = (0 == strcmp(recoverable_value, "yes"));
+	
     size_t i;
     int ret;
     const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
@@ -659,7 +675,7 @@ static int commander_process_sign(yajl_val json_node)
             return DBB_ERROR;
         }
 
-        ret = wallet_sign(hash, keypath);
+        ret = recoverable ? wallet_sign_recoverable(hash, keypath) : wallet_sign(hash, keypath);
         if (ret != DBB_OK) {
             return ret;
         };

@@ -95,7 +95,8 @@ endif()
 if(USE_UECC_LIB)
     add_definitions(-DECC_USE_UECC_LIB)
 else()
-    add_definitions(-DSECP256K1_BUILD=1)
+    # add_definitions(-DSECP256K1_BUILD=1)
+    add_definitions(-DENABLE_MODULE_RECOVERY)
 endif()
 
 

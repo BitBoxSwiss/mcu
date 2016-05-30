@@ -1121,6 +1121,57 @@ static void tests_sign(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 }
 
+static void tests_sign_recoverable_api(void)
+{
+	// m/44'/0'/0'/1/7
+	char command[] = "{\"recoverable\":\"yes\", \"type\": \"meta\", \"meta\" : \"OriginalTranction\", \"data\" : [ { \"hash\" : \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\", \"keypath\" : \"m/44'/60'/0'/0'/0\" } ], \"checkpub\" : [] }";
+	
+	// Reset and seed device
+	api_reset_device();
+	
+	api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+	u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+	
+	// seed
+	char seed[] =
+	"{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\"}";
+	api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
+	u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+	
+	// first get public key which we'll compare to after recovery and signature verification
+//	"{\"xpub\":\"" + _keyPath + "\"}"
+	api_format_send_cmd(cmd_str(CMD_xpub), "m/44'/60'/0'/0'/0", PASSWORD_STAND);
+	u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+	u_assert_str_has(utils_read_decrypted_report(), "xpub6H6bcsTDcTChHZYrTEZLUCxcPhD9cU5emUf2BP32M2hdyf157G6k6MTBYrYwQudwDB2fDWec5qFY799JUQqMdgi5nvYwJK5TAaiAz7yhyL8");
+	
+	api_format_send_cmd(cmd_str(CMD_sign), command, PASSWORD_STAND);
+	u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+	
+	api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+	u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+	// signature
+	char expected_signature[131] = "5582ed262db59e47d4f35f35432e465f911f5ceda3fdc12f4ad6ff7f5d2104777aa522f24101bf7b336338d097e019bfedff636a1d6ab95ba6d73820349ff49e01";
+	u_assert_str_has(utils_read_decrypted_report(), expected_signature);
+	
+	char expected_publickey[129] = "751a90b67a9970fd59ef34689332ec4e6c4d0daeeb98d8bafc5d15985ea25da0311e0906c9bfcddf22f32801929a8ff59d1a6a7ec5f73447f399985409af5489";
+	u_assert_str_has(utils_read_decrypted_report(), expected_publickey);
+	
+	// manually recover public key from signature and verify match
+	uint8_t sig[65];
+	memcpy(sig,
+		   utils_hex_to_uint8(expected_signature),
+		   65);
+	uint8_t hash[32];
+	memcpy(hash,
+		   utils_hex_to_uint8("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+		   32);
+	uint8_t public_key[64];
+	int res = ecc_recover(sig, hash, public_key);
+	u_assert_int_eq(res, 0);
+	u_assert_mem_eq(utils_hex_to_uint8(expected_publickey), public_key, 64);
+	
+}
+
 
 // test vectors generated from Python 2.7 code using aes, base64, and hashlib imports
 static void tests_aes_cbc(void)

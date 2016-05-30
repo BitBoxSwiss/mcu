@@ -59,9 +59,12 @@
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define VERIFYPASS_FILENAME         "verification.txt"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
+#define VERIFYPASS_LOCK_CODE_LEN    16// bytes
+#define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
 #define AUTOBACKUP_FILENAME         "autobackup_"
 #define AUTOBACKUP_NUM              50
-#define AES_DATA_LEN_MAX            2048// base64 increases size by ~4/3; AES encryption by max 32 char
+#define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE / 2)
+#define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE / 2)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
 
 
@@ -108,6 +111,7 @@ X(script)         \
 X(value)          \
 X(erase)          \
 X(check)          \
+X(key)            \
 X(sig)            \
 X(pin)            \
 /*  reply keys  */\
@@ -118,6 +122,7 @@ X(sham)           \
 X(input)          \
 X(ataes)          \
 X(touchbutton)    \
+X(warning)        \
 X(NUM)             /* keep last */
 
 
@@ -127,7 +132,6 @@ X(success)        \
 X(error)          \
 X(accept)         \
 X(aborted)        \
-X(yes)            \
 X(meta)           \
 X(list)           \
 X(sdcard)         \
@@ -140,6 +144,7 @@ X(verify)         \
 X(true)           \
 X(false)          \
 X(erase)          \
+X(abort)          \
 X(toggle)         \
 X(pseudo)         \
 X(create)         \
@@ -223,6 +228,8 @@ X(ERR_SD_READ_FILE,    407, "Could not read the file.")\
 X(ERR_SD_ERASE,        408, "May not have erased all files (or no file present).")\
 X(ERR_SD_NUM_FILES,    409, "Too many files to read. The list is truncated.")\
 X(ERR_SD_NO_MATCH,     410, "Backup file does not match wallet.")\
+X(ERR_SD_BAD_CHAR,     411, "Filenames limited to alphanumeric values, hyphens, and underscores.")\
+X(ERR_SD_KEY,          412, "Please provide an encryption key.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\
@@ -230,6 +237,7 @@ X(ERR_TOUCH_ABORT,     600, "Aborted by user.")\
 X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
+X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncated.")\
 X(FLAG_NUM,              0, 0)/* keep last */
 
 

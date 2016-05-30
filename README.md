@@ -8,7 +8,7 @@ Digital Bitbox Firmware
 
 **MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 
-All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is described in the [API](https://digitalbitbox.com/api.html). 
+All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is described in the [API](https://digitalbitbox.com/api.html).
 
 The code can be compiled and tested locally without the need for a device. See the `tests_cmdline.c` code for a simple example and the `tests_api.c` code to test the full API. The `tests_api.c` code will also test a live device if one is plugged into a USB slot. This requires installation of the [hidapi library](http://www.signal11.us/oss/hidapi/) for USB communication, a micro SD card in the device, and a number of touch button presses to permit `erase` and `sign` commands. WARNING: data on the device and micro SD card will be **lost** when running `tests_api.c`.
 
@@ -47,12 +47,12 @@ Requires:
 
 - [Vagrant](http://www.vagrantup.com/downloads)
 - [Virtual Box](https://www.virtualbox.org/wiki/Downloads)
-    
+
 Build:
 
     git clone https://github.com/digitalbitbox/mcu && cd mcu
     vagrant box add ubuntu/trusty32
-    vagrant up # Creates: build/bin/firmware.bin
+    vagrant up # Creates: build-vagrant/bin/firmware.bin
     vagrant halt
     
 
@@ -75,5 +75,3 @@ All commits must be signed with PGP. To set Git to auto-sign your commits:
     git config --global commit.gpgsign true
 
 The PGP public keys of the contributors can be found in contrib/contributors_gpg_keys. Please add your PGP key with your first pull request.
-
-

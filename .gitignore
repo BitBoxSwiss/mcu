@@ -1,4 +1,5 @@
 build
+build-vagrant
 version.h
 .vagrant
 .DS_Store
@@ -7,4 +8,5 @@ version.h
 *.swp
 *.swo
 *.bak
+*.bin
 !*.c

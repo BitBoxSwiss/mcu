@@ -332,9 +332,8 @@ int wallet_sign_recoverable(const char *message, const char *keypath)
         goto err;
     }
 
+    memset(sig, 0xFF, 65);
     memcpy(data, utils_hex_to_uint8(message), 32);
-
-	memset(sig, 0xFF, 65);
     if (ecc_sign_digest_recoverable(node.private_key, data, sig)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);

@@ -1104,12 +1104,12 @@ static void commander_process_led(yajl_val json_node)
         return;
     }
 
-    if (!strncmp(value, attr_str(ATTR_toggle), strlens(attr_str(ATTR_toggle)))) {
+    if (!strncmp(value, attr_str(ATTR_blink), strlens(attr_str(ATTR_blink)))) {
         led_blink();
-        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_toggle), DBB_OK);
+        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
     } else if (!strncmp(value, attr_str(ATTR_abort), strlens(attr_str(ATTR_abort)))) {
         led_abort();
-        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_abort), DBB_OK);
+        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
     } else {
         commander_fill_report(cmd_str(CMD_led), NULL, DBB_ERR_IO_INVALID_CMD);
     }

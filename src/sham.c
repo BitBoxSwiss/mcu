@@ -80,10 +80,21 @@ uint8_t sd_list(int cmd)
 }
 
 
-uint8_t sd_present(void)
+uint8_t sd_card_inserted(void)
 {
     commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_OK;
+}
+
+
+uint8_t sd_file_exists(const char *fn)
+{
+    (void) fn;
+    commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
+    if (!strncmp(sd_filename, fn, strlens(fn))) {
+        return DBB_OK;
+    }
+    return DBB_ERROR;
 }
 
 

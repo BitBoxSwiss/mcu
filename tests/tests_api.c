@@ -55,11 +55,11 @@ static void tests_seed_xpub_backup(void)
     char filename_bad[] = "tests_backup_bad<.txt";
     char keypath[] = "m/44\'/0\'/";
     char seed_create[] =
-        "{\"source\":\"create\", \"filename\":\"seed_create.bak\", \"key\":\"password\"}";
+        "{\"source\":\"create\", \"filename\":\"seed_create.pdf\", \"key\":\"password\"}";
     char seed_create_2[] =
-        "{\"source\":\"create\", \"filename\":\"seed_create_2.bak\", \"key\":\"password\"}";
+        "{\"source\":\"create\", \"filename\":\"seed_create_2.pdf\", \"key\":\"password\"}";
     char seed_create_bad[] =
-        "{\"source\":\"create\", \"filename\":\"../seed_create_bad.bak\", \"key\":\"password\"}";
+        "{\"source\":\"create\", \"filename\":\"../seed_create_bad.pdf\", \"key\":\"password\"}";
     char seed_xpriv[] =
         "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
     char seed_xpriv_wrong_len[] =
@@ -187,14 +187,14 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), "seed_create.bak");
+    u_assert_str_has(utils_read_decrypted_report(), "seed_create.pdf");
 
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_seed), seed_create_bad, PASSWORD_STAND);
         u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-        u_assert_str_has_not(utils_read_decrypted_report(), "../seed_create_bad.bak");
+        u_assert_str_has_not(utils_read_decrypted_report(), "../seed_create_bad.pdf");
     }
 
     // test sd list overflow
@@ -488,7 +488,7 @@ static void tests_device(void)
     u_assert_str_has(utils_read_decrypted_report(), AUTOBACKUP_FILENAME);
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"c.bak\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
@@ -502,7 +502,7 @@ static void tests_device(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"l.bak\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"l.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
@@ -741,7 +741,7 @@ static void tests_echo_tfa(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"c.bak\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     // test verifypass
@@ -928,7 +928,7 @@ static void tests_sign(void)
 
     // seed
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.bak\"}";
+        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.pdf\"}";
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -1146,7 +1146,7 @@ static void tests_aes_cbc(void)
     };
 
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.bak\"}";
+        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.pdf\"}";
 
     api_reset_device();
 

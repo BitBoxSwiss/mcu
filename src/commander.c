@@ -384,6 +384,7 @@ static int commander_process_backup_check(const char *filename)
 static int commander_process_backup_create(const char *filename)
 {
     int ret;
+    char xpub[112] = {0};
     char xpriv[112] = {0};
     char *name = (char *)memory_name("");
     char xpriv_name[sizeof(xpriv) + MEM_PAGE_LEN + 1];// add 1 for '-'
@@ -395,13 +396,15 @@ static int commander_process_backup_create(const char *filename)
         return DBB_ERROR;
     }
 
+    wallet_report_xpub("m/", xpub);
+
     snprintf(xpriv_name, sizeof(xpriv_name), "%s-%s", xpriv, name);
 
     int enc_len;
     char *enc = aes_cbc_b64_encrypt((unsigned char *)xpriv_name, strlens(xpriv_name),
                                     &enc_len, PASSWORD_STRETCH);
     if (enc) {
-        ret = sd_write(filename, enc, enc_len, DBB_SD_NO_REPLACE, CMD_backup);
+        ret = sd_write(filename, enc, xpub, DBB_SD_NO_REPLACE, CMD_backup);
     } else {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_MEM_ENCRYPT);
         ret = DBB_ERROR;
@@ -794,7 +797,7 @@ static void commander_process_verifypass(yajl_val json_node)
         if (strcmp(value, attr_str(ATTR_export)) == 0) {
             memcpy(text, utils_uint8_to_hex(memory_report_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
             utils_clear_buffers();
-            int ret = sd_write(VERIFYPASS_FILENAME, text, 64 + 1,
+            int ret = sd_write(VERIFYPASS_FILENAME, text, NULL,
                                DBB_SD_REPLACE, CMD_verifypass);
 
             if (ret == DBB_OK) {

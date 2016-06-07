@@ -47,7 +47,7 @@ static char ROOTDIR[] = "0:/digitalbitbox";
 FATFS fs;
 
 
-uint8_t sd_write(const char *fn, const char *backup, uint16_t t_len, uint8_t replace,
+uint8_t sd_write(const char *fn, const char *backup, const char *xpub, uint8_t replace,
                  int cmd)
 {
     char file[256];
@@ -93,8 +93,13 @@ uint8_t sd_write(const char *fn, const char *backup, uint16_t t_len, uint8_t rep
         int len_1, len_2, len_3, len_4, len_total, len_xref, stream_len;
         unsigned long n = 0;
 
-        stream_len = t_len + (t_len / (SD_PDF_LINE_BUF_SIZE / 2)) * strlens(
-                         SD_PDF_TEXT_CONTINUE) + strlens(SD_PDF_TEXT_START) + strlens(SD_PDF_TEXT_END);
+        stream_len = strlens(backup) +
+                     (strlens(backup) / (SD_PDF_LINE_BUF_SIZE / 2)) * strlens(SD_PDF_TEXT_CONTINUE) +
+                     strlens(SD_PDF_TEXT_START) +
+                     strlens(SD_PDF_TEXT_END_1) +
+                     strlens(xpub) +
+                     (strlens(xpub) / (SD_PDF_LINE_BUF_SIZE / 2)) * strlens(SD_PDF_TEXT_CONTINUE) +
+                     strlens(SD_PDF_TEXT_END_2);
 
         len_1 = f_printf(&file_object, SD_PDF_HEAD);
         len_2 = f_printf(&file_object, SD_PDF_1_0);
@@ -116,7 +121,22 @@ uint8_t sd_write(const char *fn, const char *backup, uint16_t t_len, uint8_t rep
             }
         }
         len_xref += n;
-        len_xref += f_printf(&file_object, SD_PDF_TEXT_END);
+        len_xref += f_printf(&file_object, SD_PDF_TEXT_END_1);
+
+        n = 0;
+        while (n < strlens(xpub)) {
+            if (EOF == f_putc(xpub[n], &file_object)) {
+                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                f_close(&file_object);
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                goto err;
+            }
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2) == 0) {
+                len_xref += f_printf(&file_object, SD_PDF_TEXT_CONTINUE);
+            }
+        }
+        len_xref += n;
+        len_xref += f_printf(&file_object, SD_PDF_TEXT_END_2);
         len_xref += f_printf(&file_object, SD_PDF_4_0_END);
 
         snprintf(buffer, sizeof(buffer), SD_PDF_END,

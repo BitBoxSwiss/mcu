@@ -34,8 +34,8 @@
 
 void delay_ms(int delay);
 char *sd_load(const char *f, int cmd);
-uint8_t sd_write(const char *f, const char *t, uint16_t t_len,
-                 uint8_t replace, int cmd);
+uint8_t sd_write(const char *f, const char *t, const char *xpub, uint8_t replace,
+                 int cmd);
 uint8_t sd_list(int cmd);
 uint8_t sd_card_inserted(void);
 uint8_t sd_file_exists(const char *fn);

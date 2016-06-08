@@ -33,7 +33,7 @@
 
 
 #define SD_PDF_LINE_BUF_SIZE 64
-#define SD_PDF_HEAD "%%PDF-1.1\n%%\xDB\xDC\xDD\xDE\xDF\n"
+#define SD_PDF_HEAD "%%PDF-1.1\n"//%%\xDB\xDC\xDD\xDE\xDF\n"// uncomment the high-bit ascii characters if storing binary data
 #define SD_PDF_1_0  "1 0 obj\n<</Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n"
 #define SD_PDF_2_0  "2 0 obj\n<</Type /Pages\n/Kids [3 0 R]\n/Count 1\n/MediaBox [0 0 595 842]\n>>\nendobj\n"
 #define SD_PDF_3_0  "3 0 obj\n<</Type /Page\n/Parent 2 0 R\n/Resources\n<</Font\n<</F1\n<</Type /Font\n/BaseFont /Helvetica\n/Subtype /Type1\n>>\n>>\n>>\n/Contents 4 0 R\n>>\nendobj\n"

@@ -158,11 +158,11 @@ uint8_t sd_write(const char *fn, const char *backup, const char *xpub, uint8_t r
 
     f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-    memset(file, 0, sizeof(file));
+    utils_zero(file, sizeof(file));
     return DBB_OK;
 
 err:
-    memset(file, 0, sizeof(file));
+    utils_zero(file, sizeof(file));
     return DBB_ERROR;
 }
 
@@ -238,11 +238,11 @@ char *sd_load(const char *fn, int cmd)
 
     f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-    memset(file, 0, sizeof(file));
+    utils_zero(file, sizeof(file));
     return text;
 
 err:
-    memset(file, 0, sizeof(file));
+    utils_zero(file, sizeof(file));
     return NULL;
 }
 
@@ -328,11 +328,11 @@ exit:
     commander_fill_report(cmd_str(cmd), files, DBB_JSON_ARRAY);
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-    memset(files, 0, sizeof(files));
+    utils_zero(files, sizeof(files));
     return DBB_OK;
 
 err:
-    memset(files, 0, sizeof(files));
+    utils_zero(files, sizeof(files));
     return DBB_ERROR;
 
 }
@@ -369,7 +369,7 @@ uint8_t sd_file_exists(const char *fn)
     sd_listing_pos = 0;
 
     if (CTRL_FAIL == sd_mmc_test_unit_ready(0)) {
-        memset(file, 0, sizeof(file));
+        utils_zero(file, sizeof(file));
         return DBB_ERR_SD_CARD;
     }
 
@@ -377,7 +377,7 @@ uint8_t sd_file_exists(const char *fn)
     memset(&fs, 0, sizeof(FATFS));
     res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
     if (FR_INVALID_DRIVE == res) {
-        memset(file, 0, sizeof(file));
+        utils_zero(file, sizeof(file));
         return DBB_ERR_SD_MOUNT;
     }
 
@@ -385,12 +385,12 @@ uint8_t sd_file_exists(const char *fn)
     if (res == FR_OK) {
         f_close(&file_object);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-        memset(file, 0, sizeof(file));
+        utils_zero(file, sizeof(file));
         return DBB_OK;
     }
 
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-    memset(file, 0, sizeof(file));
+    utils_zero(file, sizeof(file));
     return DBB_ERROR;
 }
 

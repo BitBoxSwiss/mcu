@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include "base58.h"
+#include "utils.h"
 #include "sha2.h"
 
 static const int8_t b58digits_map[] = {
@@ -79,12 +80,12 @@ static int b58tobin(void *bin, size_t *binszp, const char *b58)
         }
         if (c) {
             // Output number too big (carry to the next int32)
-            memset(outi, 0, outisz * sizeof(*outi));
+            utils_zero(outi, outisz * sizeof(*outi));
             return false;
         }
         if (outi[0] & zeromask) {
             // Output number too big (last int32 filled too far)
-            memset(outi, 0, outisz * sizeof(*outi));
+            utils_zero(outi, outisz * sizeof(*outi));
             return false;
         }
     }
@@ -119,7 +120,7 @@ static int b58tobin(void *bin, size_t *binszp, const char *b58)
     }
     *binszp += zerocount;
 
-    memset(outi, 0, outisz * sizeof(*outi));
+    utils_zero(outi, outisz * sizeof(*outi));
     return true;
 }
 
@@ -177,7 +178,7 @@ static int b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
 
     if (*b58sz <= zcount + size - j) {
         *b58sz = zcount + size - j + 1;
-        memset(buf, 0, size);
+        utils_zero(buf, size);
         return false;
     }
 
@@ -190,7 +191,7 @@ static int b58enc(char *b58, size_t *b58sz, const void *data, size_t binsz)
     b58[i] = '\0';
     *b58sz = i + 1;
 
-    memset(buf, 0, size);
+    utils_zero(buf, size);
     return true;
 }
 
@@ -211,7 +212,7 @@ int base58_encode_check(const uint8_t *data, int datalen, char *str, int strsize
     } else {
         ret = res;
     }
-    memset(buf, 0, sizeof(buf));
+    utils_zero(buf, sizeof(buf));
     return ret;
 }
 
@@ -234,6 +235,6 @@ int base58_decode_check(const char *str, uint8_t *data, int datalen)
         memcpy(data, d, datalen);
         ret = datalen;
     }
-    memset(d, 0, sizeof(d));
+    utils_zero(d, sizeof(d));
     return ret;
 }

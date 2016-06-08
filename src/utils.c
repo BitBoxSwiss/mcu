@@ -38,6 +38,14 @@ static uint8_t buffer_hex_to_uint8[TO_UINT8_HEX_BUF_LEN];
 static char buffer_uint8_to_hex[TO_UINT8_HEX_BUF_LEN];
 
 
+volatile void *utils_zero(volatile void *dst, size_t len)
+{
+    volatile char *buf;
+    for (buf = (volatile char *)dst;  len;  buf[--len] = 0);
+    return dst;
+}
+
+
 void utils_clear_buffers(void)
 {
     memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);

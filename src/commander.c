@@ -85,7 +85,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     // Make a random initialization vector
     if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == DBB_ERROR) {
         commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
-        memset(inpad, 0, inpadlen);
+        utils_zero(inpad, inpadlen);
         return NULL;
     }
     memcpy(enc_cat, iv, N_BLOCK);
@@ -99,7 +99,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     char *b64;
     b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
     *out_b64len = b64len;
-    memset(inpad, 0, inpadlen);
+    utils_zero(inpad, inpadlen);
     return b64;
 }
 
@@ -135,18 +135,18 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     // Strip PKCS7 padding
     int padlen = dec_pad[ub64len - N_BLOCK - 1];
     if (ub64len - N_BLOCK - padlen <= 0) {
-        memset(dec_pad, 0, sizeof(dec_pad));
+        utils_zero(dec_pad, sizeof(dec_pad));
         return NULL;
     }
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec) {
-        memset(dec_pad, 0, sizeof(dec_pad));
+        utils_zero(dec_pad, sizeof(dec_pad));
         return NULL;
     }
     memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
     dec[ub64len - N_BLOCK - padlen] = '\0';
     *decrypt_len = ub64len - N_BLOCK - padlen + 1;
-    memset(dec_pad, 0, sizeof(dec_pad));
+    utils_zero(dec_pad, sizeof(dec_pad));
     return dec;
 }
 
@@ -358,7 +358,7 @@ static int commander_process_backup_check(const char *filename)
         memset(text, 0, strlens(text));
         if (dec) {
             memcpy(text, dec, dec_len);
-            memset(dec, 0, dec_len);
+            utils_zero(dec, dec_len);
             free(dec);
         } else {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_DECRYPT);
@@ -367,11 +367,11 @@ static int commander_process_backup_check(const char *filename)
 
         if (strncmp(text, xpriv, strlens(xpriv)) == 0) {
             commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
-            memset(text, 0, strlens(text));
+            utils_zero(text, strlens(text));
             return DBB_OK;
         } else {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
-            memset(text, 0, strlens(text));
+            utils_zero(text, strlens(text));
             return DBB_ERROR;
         }
     } else {
@@ -411,8 +411,8 @@ static int commander_process_backup_create(const char *filename)
     }
     free(enc);
 
-    memset(xpriv, 0, sizeof(xpriv));
-    memset(xpriv_name, 0, sizeof(xpriv_name));
+    utils_zero(xpriv, sizeof(xpriv));
+    utils_zero(xpriv_name, sizeof(xpriv_name));
 
     if (ret != DBB_OK) {
         /* error reported in sd_write() */
@@ -591,7 +591,7 @@ static void commander_process_seed(yajl_val json_node)
             memset(text, 0, strlens(text));
             if (dec) {
                 memcpy(text, dec, dec_len);
-                memset(dec, 0, dec_len);
+                utils_zero(dec, dec_len);
                 free(dec);
             } else {
                 commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_DECRYPT);
@@ -609,11 +609,11 @@ static void commander_process_seed(yajl_val json_node)
                     /* for backup compatibility, no error if name not in backup file */
                 }
 
-                memset(xpriv, 0, sizeof(xpriv));
+                utils_zero(xpriv, sizeof(xpriv));
             } else {
                 ret = DBB_ERROR;
             }
-            memset(text, 0, strlens(text));
+            utils_zero(text, strlens(text));
         } else {
             ret = DBB_ERROR;
         }
@@ -631,7 +631,7 @@ static void commander_process_seed(yajl_val json_node)
     }
 
 exit:
-    memset(src, 0, strlens(source));
+    utils_zero(src, strlens(source));
     free(src);
 }
 
@@ -769,8 +769,8 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
     }
 
     ecc_get_public_key33(rand_privkey, out_pubkey);
-    memset(rand_privkey, 0, sizeof(rand_privkey));
-    memset(ecdh_secret, 0, sizeof(ecdh_secret));
+    utils_zero(rand_privkey, sizeof(rand_privkey));
+    utils_zero(ecdh_secret, sizeof(ecdh_secret));
     utils_clear_buffers();
     return DBB_OK;
 }
@@ -808,10 +808,10 @@ static void commander_process_verifypass(yajl_val json_node)
                     } else {
                         commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
                     }
-                    memset(l, 0, strlens(l));
+                    utils_zero(l, strlens(l));
                 }
             }
-            memset(text, 0, sizeof(text));
+            utils_zero(text, sizeof(text));
             return;
         }
     }

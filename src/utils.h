@@ -40,6 +40,7 @@
 #define strlens(s) (s == NULL ? 0 : strlen(s))
 
 
+volatile void *utils_zero(volatile void *dst, size_t len);
 void utils_clear_buffers(void);
 uint8_t utils_limit_alphanumeric_hyphen_underscore_period(const char *str);
 uint8_t *utils_hex_to_uint8(const char *str);

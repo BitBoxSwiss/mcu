@@ -23,6 +23,7 @@
 
 
 #include <string.h>
+#include "utils.h"
 #include "hmac.h"
 #include "sha2.h"
 
@@ -56,9 +57,9 @@ void hmac_sha256(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
     sha256_Update(&ctx, buf, SHA256_DIGEST_LENGTH);
     sha256_Final(hmac, &ctx);
 
-    memset(buf, 0, sizeof(buf));
-    memset(o_key_pad, 0, sizeof(o_key_pad));
-    memset(i_key_pad, 0, sizeof(i_key_pad));
+    utils_zero(buf, sizeof(buf));
+    utils_zero(o_key_pad, sizeof(o_key_pad));
+    utils_zero(i_key_pad, sizeof(i_key_pad));
 }
 
 void hmac_sha512(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
@@ -91,7 +92,7 @@ void hmac_sha512(const uint8_t *key, const uint32_t keylen, const uint8_t *msg,
     sha512_Update(&ctx, buf, SHA512_DIGEST_LENGTH);
     sha512_Final(hmac, &ctx);
 
-    memset(buf, 0, sizeof(buf));
-    memset(o_key_pad, 0, sizeof(o_key_pad));
-    memset(i_key_pad, 0, sizeof(i_key_pad));
+    utils_zero(buf, sizeof(buf));
+    utils_zero(o_key_pad, sizeof(o_key_pad));
+    utils_zero(i_key_pad, sizeof(i_key_pad));
 }

@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2013-2014 Tomas Dzetkulic
  * Copyright (c) 2013-2014 Pavol Rusnak
- * Copyright (c) 2015-2016 Douglas J. Bakkumk
+ * Copyright (c) 2015-2016 Douglas J. Bakkum
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,7 @@
 #include "ripemd160.h"
 #include "base58.h"
 #include "bip32.h"
+#include "utils.h"
 #include "flags.h"
 #include "sha2.h"
 #include "hmac.h"
@@ -65,13 +66,13 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
     memcpy(out->private_key, I, 32);
 
     if (!ecc_isValid(out->private_key)) {
-        memset(I, 0, sizeof(I));
+        utils_zero(I, sizeof(I));
         return DBB_ERROR;
     }
 
     memcpy(out->chain_code, I + 32, 32);
     hdnode_fill_public_key(out);
-    memset(I, 0, sizeof(I));
+    utils_zero(I, sizeof(I));
     return DBB_OK;
 }
 
@@ -105,14 +106,14 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
     memcpy(z, inout->private_key, 32);
 
     if (!ecc_isValid(z)) {
-        memset(data, 0, sizeof(data));
-        memset(I, 0, sizeof(I));
+        utils_zero(data, sizeof(data));
+        utils_zero(I, sizeof(I));
         return DBB_ERROR;
     }
 
     if (!ecc_generate_private_key(inout->private_key, p, z)) {
-        memset(data, 0, sizeof(data));
-        memset(I, 0, sizeof(I));
+        utils_zero(data, sizeof(data));
+        utils_zero(I, sizeof(I));
         return DBB_ERROR;
     }
 
@@ -121,8 +122,8 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
     hdnode_fill_public_key(inout);
 
-    memset(data, 0, sizeof(data));
-    memset(I, 0, sizeof(I));
+    utils_zero(data, sizeof(data));
+    utils_zero(I, sizeof(I));
     return DBB_OK;
 }
 

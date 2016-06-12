@@ -74,7 +74,7 @@ static void memory_mempass(void)
     sha256_Raw(mempass, 32, mempass);
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
                         PASSWORD_MEMORY);
-    memset(mempass, 0, sizeof(mempass));
+    utils_zero(mempass, sizeof(mempass));
     utils_clear_buffers();
 }
 
@@ -85,7 +85,7 @@ static void memory_create_verifypass(void)
     random_bytes(number, sizeof(number), 0);
     memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
                         PASSWORD_VERIFY);
-    memset(number, 0, sizeof(number));
+    utils_zero(number, sizeof(number));
     utils_clear_buffers();
 }
 
@@ -200,7 +200,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         goto err;
     }
     memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
-    memset(dec, 0, dec_len);
+    utils_zero(dec, dec_len);
     free(dec);
 
     utils_clear_buffers();
@@ -349,7 +349,7 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         }
     }
 
-    memset(password_b, 0, MEM_PAGE_LEN);
+    utils_zero(password_b, MEM_PAGE_LEN);
     if (ret == DBB_OK) {
         return DBB_OK;
     } else {

@@ -80,7 +80,7 @@ int wallet_master_from_xpriv(char *src)
     }
 
 exit:
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
     return ret;
 }
 
@@ -111,8 +111,8 @@ int wallet_generate_master(void)
     }
 
 exit:
-    memset(seed, 0, sizeof(seed));
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(seed, sizeof(seed));
+    utils_zero(&node, sizeof(HDNode));
     return ret;
 }
 
@@ -197,7 +197,7 @@ void wallet_report_xpriv(const char *keypath, char *xpriv)
             hdnode_serialize_private(&node, xpriv, 112);
         }
     }
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
 }
 
 
@@ -210,7 +210,7 @@ void wallet_report_xpub(const char *keypath, char *xpub)
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
 }
 
 
@@ -250,7 +250,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
 
     ecc_get_public_key33(node.private_key, pub_key);
 
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
     if (strncmp(pubkey, utils_uint8_to_hex(pub_key, 33), 66)) {
         return DBB_KEY_ABSENT;
     } else {
@@ -258,7 +258,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
     }
 
 err:
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
     return DBB_ERROR;
 }
 
@@ -298,11 +298,11 @@ int wallet_sign(const char *message, const char *keypath)
     }
 
     ecc_get_public_key33(node.private_key, pub_key);
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
     return commander_fill_signature_array(sig, pub_key);
 
 err:
-    memset(&node, 0, sizeof(HDNode));
+    utils_zero(&node, sizeof(HDNode));
     return DBB_ERROR;
 }
 

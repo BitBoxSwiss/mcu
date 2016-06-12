@@ -64,6 +64,6 @@ void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keyl
             memcpy(key + PBKDF2_HMACLEN * (i - 1), f, PBKDF2_HMACLEN);
         }
     }
-    memset(f, 0, sizeof(f));
-    memset(g, 0, sizeof(g));
+    utils_zero(f, sizeof(f));
+    utils_zero(g, sizeof(g));
 }

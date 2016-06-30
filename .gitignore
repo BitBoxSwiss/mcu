@@ -5,6 +5,7 @@ version.h
 .DS_Store
 .ycm*
 *.o
+*.pyc
 *.swp
 *.swo
 *.bak

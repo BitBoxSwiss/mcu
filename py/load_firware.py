@@ -1,27 +1,22 @@
 #!/usr/bin/env python
 
 # The Digital Bitbox must be in bootloader mode to use this script:
-#   1- Unlock the bootloader using firware_command.py to send '{"bootloader":"unlock"}' 
+#   1- Unlock the bootloader using send_command.py to send '{"bootloader":"unlock"}' 
 #   2- Hold the touch button 3 seconds to permit unlocking.
-#   3- Replug the device, and breifly touch the touch button within 3 seconds. 
+#   3- Replug the device, and briefly touch the touch button within 3 seconds. 
 #      The LED will flash a few times quickly when entering bootloader mode.
 # 
 # Firmware signatures are valid for deterministically built firware releases (refer to the github readme for building).
 # Invalid firmware cannot be run.
 #
-# After loading new firmware, re-lock the bootloader using firware_command.py to send '{"bootloader":"lock"}' 
+# After loading new firmware, re-lock the bootloader using send_command.py to send '{"bootloader":"lock"}' 
 
 
-import time
 import sys
-import json
-import base64
-import aes # slowaes
-import hid # hidapi (requires cython)
-import hashlib
 import binascii
 import ecdsa
 from ecdsa.curves import SECP256k1
+from dbb_utils import *
 
 
 if len(sys.argv) is not 3:
@@ -61,70 +56,13 @@ else:
     print '\n\nError: invalid firmware version ({}). Use the form \'vX.X.X\'\n\n'.format(version)
     sys.exit()
 
-
 test_key = 'e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11'
-
-applen = 225280 #229376 # flash size minus bootloader length
-chunksize = 8*512
-
-boot_buf_size_send = 4098
-boot_buf_size_reply = 256
-
-
-EncodeAES = lambda secret, s: base64.b64encode(aes.encryptData(secret,s))
-DecodeAES = lambda secret, e: aes.decryptData(secret, base64.b64decode(e))
-
-b64  = lambda i: base64.b64encode(i)
-ub64 = lambda i: base64.b64decode(i)
-
-
-def sha256(x):
-    return hashlib.sha256(x).digest()
-
-
-def Hash(x):
-    if type(x) is unicode: x=x.encode('utf-8')
-    return sha256(sha256(x))
-
 
 def sign(privkey, message):
     private_key = ecdsa.SigningKey.from_secret_exponent( privkey, curve = SECP256k1 )
     public_key = private_key.get_verifying_key()
     signature = private_key.sign_digest_deterministic( (message), hashfunc=hashlib.sha256, sigencode = ecdsa.util.sigencode_string )
     return binascii.hexlify(signature)
-
-
-def sendPlainBoot(msg):
-    print "\nSending: {}".format(msg)
-    dbb.write('\0' + bytearray(msg) + '\0'*(boot_buf_size_send-len(msg))) 
-    reply = []
-    while len(reply) < boot_buf_size_reply:    
-        reply = reply + dbb.read(boot_buf_size_reply)
-    reply = str(bytearray(reply)).rstrip(' \t\r\n\0')
-    print "Reply:   {} {}\n\n".format(reply[:2], reply[2:])
-    return reply[1]
-
-def sendChunk(chunknum, data):
-    b = bytearray(b"\x77\x00")
-    b[1] = chunknum % 0xFF
-    b.extend(data)
-    dbb.write('\0' + b + '\xFF'*(boot_buf_size_send-len(b))) 
-    reply = []
-    while len(reply) < boot_buf_size_reply:    
-        reply = reply + dbb.read(boot_buf_size_reply)
-    reply = str(bytearray(reply)).rstrip(' \t\r\n\0')
-    print "Loaded: {}  Code: {}".format(chunknum, reply)
-
-
-def sendBin(filename):    
-    with open(filename, "rb") as f:
-        cnt = 0
-        while True:     
-            data = f.read(chunksize)
-            if data == "":
-                break
-            sendChunk(cnt, data)
-            cnt += 1
 
 
 def verifyBin(filename):    
@@ -144,13 +82,8 @@ def verifyBin(filename):
 
 # ----------------------------------------------------------------------------------
 try:
-    print "\nOpening device"
-    dbb = hid.device()
-    dbb.open(0x03eb, 0x2402) # 
-    print "\tManufacturer: %s" % dbb.get_manufacturer_string()
-    print "\tProduct: %s" % dbb.get_product_string()
-    print "\tSerial No: %s\n\n" % dbb.get_serial_number_string()
 
+    openHid()
 
     sig = verifyBin(fn)
     
@@ -169,9 +102,8 @@ except IOError, ex:
     print ex
 except (KeyboardInterrupt, SystemExit):
     print "Exiting code"
-# ----------------------------------------------------------------------------------
 
-print "Closing device"
+
 dbb.close()
 
 

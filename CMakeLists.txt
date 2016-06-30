@@ -236,7 +236,7 @@ else()
     if(BUILD_TYPE STREQUAL "bootloader")
         add_custom_command(
             OUTPUT ${MYPROJECT}.pad.bin
-            COMMAND python ../../contrib/pad_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin
+            COMMAND python ../../py/pad_boot_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
             COMMENT "\nPadding binary"
         )

@@ -43,16 +43,15 @@ void delay_ms(int delay)
 }
 
 
-uint8_t sd_write(const char *fn, const char *t, const char *xpub, uint8_t replace,
+uint8_t sd_write(const char *fn, const char *t, const char *name, uint8_t replace,
                  int cmd)
 {
-    (void) xpub;
     (void) replace;
     (void) cmd;
     memset(sd_filename, 0, sizeof(sd_filename));
     memset(sd_text, 0, sizeof(sd_text));
     snprintf(sd_filename, sizeof(sd_filename), "%.*s", (int)strlens(fn), fn);
-    snprintf(sd_text, sizeof(sd_text), "%.*s", (int)strlens(t), t);
+    snprintf(sd_text, sizeof(sd_text), "%.*s%c%s", (int)strlens(t), t, BACKUP_DELIM, name);
     commander_fill_report(cmd_str(CMD_sham), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_OK;
 }

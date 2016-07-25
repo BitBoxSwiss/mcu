@@ -32,25 +32,26 @@
 #include "sha2.h"
 
 
-void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keylen)
+void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, const char *salt, uint8_t *key,
+                        int keylen)
 {
     uint32_t i, j, k;
     uint8_t f[PBKDF2_HMACLEN], g[PBKDF2_HMACLEN];
     uint32_t blocks = keylen / PBKDF2_HMACLEN;
-
-    static uint8_t salt[PBKDF2_SALTLEN + 4];
-    memset(salt, 0, sizeof(salt));
-    memcpy(salt, PBKDF2_SALT, strlens(PBKDF2_SALT));
+    int saltlen = strlens(salt);
+    uint8_t salt_pbkdf2[saltlen + 4];
+    memset(salt_pbkdf2, 0, sizeof(salt_pbkdf2));
+    memcpy(salt_pbkdf2, salt, saltlen);
 
     if (keylen & (PBKDF2_HMACLEN - 1)) {
         blocks++;
     }
     for (i = 1; i <= blocks; i++) {
-        salt[PBKDF2_SALTLEN    ] = (i >> 24) & 0xFF;
-        salt[PBKDF2_SALTLEN + 1] = (i >> 16) & 0xFF;
-        salt[PBKDF2_SALTLEN + 2] = (i >> 8) & 0xFF;
-        salt[PBKDF2_SALTLEN + 3] = i & 0xFF;
-        hmac_sha512(pass, passlen, salt, PBKDF2_SALTLEN + 4, g);
+        salt_pbkdf2[saltlen    ] = (i >> 24) & 0xFF;
+        salt_pbkdf2[saltlen + 1] = (i >> 16) & 0xFF;
+        salt_pbkdf2[saltlen + 2] = (i >> 8) & 0xFF;
+        salt_pbkdf2[saltlen + 3] = i & 0xFF;
+        hmac_sha512(pass, passlen, salt_pbkdf2, saltlen + 4, g);
         memcpy(f, g, PBKDF2_HMACLEN);
         for (j = 1; j < PBKDF2_ROUNDS; j++) {
             hmac_sha512(pass, passlen, g, PBKDF2_HMACLEN, g);

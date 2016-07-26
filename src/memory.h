@@ -45,6 +45,8 @@
 #define MEM_AESKEY_STAND_ADDR           0x0400// Zone 4
 #define MEM_AESKEY_VERIFY_ADDR          0x0500// Zone 5
 #define MEM_AESKEY_CRYPT_ADDR           0x0600// Zone 6
+#define MEM_AESKEY_RESET_ADDR           0x0700// Zone 7
+
 
 // Default settings
 #define DEFAULT_unlocked  0xFF
@@ -54,6 +56,7 @@
 
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
+    PASSWORD_RESET,
     PASSWORD_STRETCH, /* for backups */
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
@@ -65,6 +68,7 @@ typedef enum PASSWORD_ID {
 int memory_setup(void);
 void memory_erase(void);
 void memory_erase_seed(void);
+void memory_erase_password_reset(void);
 void memory_clear(void);
 
 int memory_aeskey_is_erased(PASSWORD_ID id);

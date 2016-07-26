@@ -1161,16 +1161,23 @@ err:
 }
 
 
-static void commander_process_password(yajl_val json_node)
+static void commander_process_password(yajl_val json_node, int cmd, PASSWORD_ID id)
 {
     int ret;
-    const char *path[] = { cmd_str(CMD_password), NULL };
+    const char *path[] = { cmd_str(cmd), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
-    ret = commander_process_aes_key(value, strlens(value), PASSWORD_STAND);
+    ret = commander_process_aes_key(value, strlens(value), id);
+
+    if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_RESET),
+                MEM_PAGE_LEN)) {
+        memory_erase_password_reset();
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_IO_PW_COLLIDE);
+        return;
+    }
 
     if (ret != DBB_OK) {
-        commander_fill_report(cmd_str(CMD_password), NULL, ret);
+        commander_fill_report(cmd_str(cmd), NULL, ret);
         return;
     }
 
@@ -1185,8 +1192,12 @@ static int commander_process(int cmd, yajl_val json_node)
             commander_process_reset(json_node);
             return DBB_RESET;
 
+        case CMD_set_reset_password:
+            commander_process_password(json_node, cmd, PASSWORD_RESET);
+            break;
+
         case CMD_password:
-            commander_process_password(json_node);
+            commander_process_password(json_node, cmd, PASSWORD_STAND);
             break;
 
         case CMD_verifypass:
@@ -1516,17 +1527,10 @@ static char *commander_decrypt(const char *encrypted_command)
                                   &command_len,
                                   PASSWORD_STAND);
 
-    err_count = memory_read_access_err_count(); // Reads over TWI introduce additional
-    err_iter = memory_read_access_err_count();  // temporal jitter in code execution.
+    err_count = memory_read_access_err_count();     // Reads over TWI introduce additional
+    err_iter = memory_read_access_err_count() + 1;  // temporal jitter in code execution.
 
-    if (command == NULL) {
-        char msg[256];
-        err++;
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_DECRYPT),
-                 COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_DECRYPT);
-        err_iter = memory_access_err_count(DBB_ACCESS_ITERATE);
-    } else {
+    if (strlens(command)) {
         yajl_val json_node = yajl_tree_parse(command, NULL, 0);
         if (json_node && YAJL_IS_OBJECT(json_node)) {
             json_object_len = json_node->u.object.len;
@@ -1534,9 +1538,38 @@ static char *commander_decrypt(const char *encrypted_command)
         yajl_tree_free(json_node);
     }
 
-    if (!json_object_len && err == 0) {
-        char msg[256];
+    if (!strlens(command)) {
         err++;
+    } else if (!json_object_len) {
+        err++;
+    } else {
+        err_iter--;
+    }
+
+    if (!json_object_len || !strlens(command) || err) {
+        if (strlens(command)) {
+            free(command);
+        }
+
+        // Check if device reset requested
+        command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
+                                      strlens(encrypted_command),
+                                      &command_len,
+                                      PASSWORD_RESET);
+        if (strlens(command)) {
+            yajl_val json_node = yajl_tree_parse(command, NULL, 0);
+            if (json_node && YAJL_IS_OBJECT(json_node)) {
+                commander_force_reset();
+                yajl_tree_free(json_node);
+                free(command);
+                return NULL;
+            }
+            yajl_tree_free(json_node);
+            free(command);
+        }
+
+        // Incorrect input
+        char msg[256];
         snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_JSON_PARSE),
                  COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
         commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_JSON_PARSE);
@@ -1547,7 +1580,6 @@ static char *commander_decrypt(const char *encrypted_command)
         return command;
     }
 
-    free(command);
     if (err_iter - err_count == err) {
         return NULL;
     }

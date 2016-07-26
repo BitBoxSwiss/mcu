@@ -615,7 +615,7 @@ static void tests_input(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_DECRYPT));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
@@ -666,7 +666,7 @@ static void tests_input(void)
     int i;
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {
         api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_DECRYPT));
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
         u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_WARN_RESET));
     }
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
@@ -681,6 +681,9 @@ static void tests_password(void)
     api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_NONE);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 
+    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
+
     api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_NONE);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
@@ -691,7 +694,7 @@ static void tests_password(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_DECRYPT));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
@@ -718,6 +721,48 @@ static void tests_password(void)
         }
         yajl_tree_free(json_node);
     }
+
+    // Test reset password
+    if (TEST_LIVE_DEVICE) {
+        api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_RESET);
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    }
+
+    api_format_send_cmd(cmd_str(CMD_set_reset_password), reset_pwd, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_set_reset_password), "123", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
+
+    api_format_send_cmd(cmd_str(CMD_password), reset_pwd, PASSWORD_STAND);
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
+    }
+    memory_write_aeskey(reset_pwd, strlens(reset_pwd), PASSWORD_STAND);
+
+    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_STAND);
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+    }
+    memory_write_aeskey(tests_pwd, strlens(tests_pwd), PASSWORD_STAND);
+
+    api_format_send_cmd(cmd_str(CMD_set_reset_password), tests_pwd, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
+
+    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_set_reset_password), reset_pwd, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_RESET);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_RESET));
+
+    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 }
 
 
@@ -1302,7 +1347,8 @@ int main(void)
     // Requires the hidapi library to be installed:
     //     http://www.signal11.us/oss/hidapi/
     TEST_LIVE_DEVICE = 1;
-    memory_write_aeskey(tests_pwd, 4, PASSWORD_STAND);
+    memory_write_aeskey(tests_pwd, strlens(tests_pwd), PASSWORD_STAND);
+    memory_write_aeskey(reset_pwd, strlens(reset_pwd), PASSWORD_RESET);
     if (api_hid_init() == DBB_ERROR) {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
     } else {

@@ -38,6 +38,7 @@
 
 
 static const char tests_pwd[] = "0000";
+static const char reset_pwd[] = "reset";
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
 static int TEST_LIVE_DEVICE = 0;
 
@@ -90,11 +91,10 @@ static void api_hid_send(const char *cmd)
 }
 
 
-static void api_hid_send_encrypt(const char *cmd)
+static void api_hid_send_encrypt(const char *cmd, PASSWORD_ID id)
 {
     int enc_len;
-    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len,
-                                    PASSWORD_STAND);
+    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len, id);
     api_hid_send_len(enc, enc_len);
     free(enc);
 }
@@ -115,7 +115,7 @@ static void api_send_cmd(const char *command, PASSWORD_ID id)
         api_hid_send(command);
         api_hid_read();
     } else {
-        api_hid_send_encrypt(command);
+        api_hid_send_encrypt(command, id);
         api_hid_read();
     }
 #endif

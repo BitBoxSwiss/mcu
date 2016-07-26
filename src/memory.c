@@ -50,6 +50,7 @@ static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_memory[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -229,6 +230,7 @@ int memory_setup(void)
     } else {
         memory_mempass();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
@@ -248,6 +250,7 @@ void memory_erase(void)
 {
     memory_mempass();
     memory_create_verifypass();
+    memory_erase_password_reset();
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STRETCH);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
@@ -257,6 +260,15 @@ void memory_erase(void)
     memory_write_unlocked(DEFAULT_unlocked);
     memory_access_err_count(DBB_ACCESS_INITIALIZE);
     memory_pin_err_count(DBB_ACCESS_INITIALIZE);
+}
+
+
+void memory_erase_password_reset(void)
+{
+    uint8_t number[16] = {0};
+    random_bytes(number, sizeof(number), 0);
+    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
+                        PASSWORD_RESET);
 }
 
 
@@ -334,6 +346,9 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
+        case PASSWORD_RESET:
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
+            break;
         case PASSWORD_STRETCH:
             memcpy(MEM_aeskey_stretch, password_b, MEM_PAGE_LEN);
             ret = DBB_OK;
@@ -365,6 +380,8 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
             return MEM_aeskey_memory;
         case PASSWORD_STAND:
             return MEM_aeskey_stand;
+        case PASSWORD_RESET:
+            return MEM_aeskey_reset;
         case PASSWORD_STRETCH:
             return MEM_aeskey_stretch;
         case PASSWORD_CRYPT:

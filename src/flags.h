@@ -81,6 +81,7 @@ X(seed)           \
 X(reset)          \
 X(password)       \
 X(bootloader)     \
+X(set_reset_password)\
 X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
@@ -204,6 +205,7 @@ X(ERR_IO_DECRYPT,      108, "Could not decrypt.")\
 X(ERR_IO_JSON_PARSE,   109, "JSON parse error.")\
 X(ERR_IO_RESET,        110, "Too many failed access attempts. Device reset.")\
 X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.")\
+X(ERR_IO_PW_COLLIDE,   113, "Device password matches reset password. Disabling reset password.")\
 X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic encrypted backup of the seed.")\
 X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
 X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\

@@ -37,6 +37,7 @@
 #ifndef ECC_USE_UECC_LIB
 #include "secp256k1/include/secp256k1.h"
 #include "secp256k1/include/secp256k1_ecdh.h"
+#include "secp256k1/include/secp256k1_recovery.h"
 
 
 static secp256k1_context *ctx = NULL;
@@ -79,6 +80,25 @@ int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *si
             sig[i] = signature.data[32 - i - 1];
             sig[i + 32] = signature.data[64 - i - 1];
         }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int ecc_sign_digest_recoverable(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
+{
+    secp256k1_ecdsa_recoverable_signature signature;
+
+    if (!ctx) {
+        ecc_context_init();
+    }
+
+    if (secp256k1_ecdsa_sign_recoverable(ctx, &signature, (const unsigned char *)data,
+                             (const unsigned char *)private_key, secp256k1_nonce_function_rfc6979, NULL)) {
+		int recid = 0xFF;
+		secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig, &recid, &signature);
+		sig[64] = recid;
         return 0;
     } else {
         return 1;
@@ -151,6 +171,31 @@ int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
     return ecc_verify_digest(public_key, hash, signature);
+}
+
+int ecc_recover(const uint8_t* sig, const uint8_t* hash, uint8_t* public_key)
+{
+    secp256k1_ecdsa_recoverable_signature signature;
+	secp256k1_pubkey pubkey;
+	uint8_t public_key65[65];
+
+    if (!ctx) {
+        ecc_context_init();
+    }
+
+	secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &signature, sig, sig[64]);
+    if (!secp256k1_ecdsa_recover(ctx, &pubkey, &signature, hash))
+        return 1;
+	
+	size_t len = 65;
+	if (!secp256k1_ec_pubkey_serialize(ctx, public_key65, &len, &pubkey,
+									   SECP256K1_EC_UNCOMPRESSED))
+		return 1;
+
+	for (unsigned i = 0; i < 64; i++)
+		public_key[i] = public_key65[i + 1];
+
+    return 0; // success
 }
 
 
@@ -258,6 +303,11 @@ void ecc_context_destroy(void)
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
 {
     return uECC_sign_digest(private_key, data, sig);
+}
+
+int ecc_sign_digest_recoverable(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
+{
+    return uECC_sign_digest_recoverable(private_key, data, sig);
 }
 
 

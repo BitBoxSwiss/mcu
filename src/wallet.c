@@ -306,6 +306,49 @@ err:
     return DBB_ERROR;
 }
 
+int wallet_sign_recoverable(const char *message, const char *keypath)
+{
+    uint8_t data[32];
+    uint8_t sig[65];
+    uint8_t pub_key[65];
+    HDNode node;
+
+    if (strlens(message) != (32 * 2)) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_HASH_LEN);
+        goto err;
+    }
+
+    if (wallet_seeded() != DBB_OK) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_MASTER);
+        goto err;
+    }
+
+    if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                            memory_chaincode(NULL)) != DBB_OK) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_CHILD);
+        goto err;
+    }
+
+    memset(sig, 0xFF, 65);
+    memcpy(data, utils_hex_to_uint8(message), 32);
+    if (ecc_sign_digest_recoverable(node.private_key, data, sig)) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
+        goto err;
+    }
+
+    ecc_get_public_key65(node.private_key, pub_key);
+    memset(&node, 0, sizeof(HDNode));
+    return commander_fill_recoverable_signature_array(sig, pub_key);
+
+err:
+    memset(&node, 0, sizeof(HDNode));
+    return DBB_ERROR;
+}
+
 
 // -- bitcoin formats -- //
 // from: github.com/trezor/trezor-crypto

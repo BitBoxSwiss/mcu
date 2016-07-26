@@ -502,6 +502,83 @@ static void test_pbkdf2(void)
                     32);
 }
 
+static void test_create_public_key(void)
+{
+	uint8_t priv_key[32], public_key[65];
+	
+	memcpy(priv_key,
+		   utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
+		   32);
+	ecc_get_public_key65(priv_key, public_key);
+	
+}
+
+static void test_sign_recoverable(void)
+{
+	/* Sign and recover using raw private key */
+	uint8_t priv_key[32];
+    memcpy(priv_key,
+           utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
+           32);
+	uint8_t public_key[65];
+	ecc_get_public_key65(priv_key, public_key);
+	
+	uint8_t hash[32];
+	memcpy(hash,
+		   utils_hex_to_uint8("2df40ca70e639d89528a6b670d9d48d9165fdc0febc0974056bdce192b8e16a3"),
+		   32);
+	
+	uint8_t sig[65];
+	int res;
+    res = ecc_sign_digest_recoverable(priv_key, hash, sig);
+    u_assert_int_eq(res, 0);
+
+	// perform recovery
+	uint8_t recovered_public_key[64];
+	ecc_recover(sig, hash, recovered_public_key);
+
+	// test recovered public key == public key
+	uint8_t expected_public_key[64];
+	memcpy(expected_public_key, utils_hex_to_uint8("4054fd18aeb277aeedea01d3f3986ff4e5be18092a04339dcf4e524e2c0a09746c7083ed2097011b1223a17a644e81f59aa3de22dac119fd980b36a8ff29a244"), 64);
+	u_assert_mem_eq(&public_key[1], expected_public_key, 64);
+	u_assert_mem_eq(recovered_public_key, &public_key[1], 64);
+	
+	
+	/* Sign and recover using HD key path used in tests_api.c ( m/44'/60'/0'/0'/0 ) */
+	HDNode node;
+	const char recover_unit_test_xpub[] = "xpub6H6bcsTDcTChHZYrTEZLUCxcPhD9cU5emUf2BP32M2hdyf157G6k6MTBYrYwQudwDB2fDWec5qFY799JUQqMdgi5nvYwJK5TAaiAz7yhyL8";
+	int r = hdnode_deserialize(recover_unit_test_xpub, &node);
+	uint8_t expected_public_key33[33];
+	memcpy(expected_public_key33, utils_hex_to_uint8("03751a90b67a9970fd59ef34689332ec4e6c4d0daeeb98d8bafc5d15985ea25da0"), 33);
+	u_assert_int_eq(r, DBB_OK);
+	u_assert_mem_eq(node.public_key, expected_public_key33, 33);
+
+	HDNode seededNode;
+	char seed[112] = "xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3";
+	hdnode_deserialize(seed, &seededNode);
+
+	char path1[] = "m/44'/60'/0'/0'/0";
+	HDNode child;
+	wallet_generate_key(&child, path1, seededNode.private_key, seededNode.chain_code);
+	uint8_t expected_pubkey33[33];
+	memcpy(expected_pubkey33,
+		   utils_hex_to_uint8("03751a90b67a9970fd59ef34689332ec4e6c4d0daeeb98d8bafc5d15985ea25da0"),
+		   33);
+	u_assert_mem_eq(child.public_key, &expected_pubkey33, 33);
+	
+	memcpy(hash,
+		   utils_hex_to_uint8("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+		   32);
+	memset(sig, 0xFF, 65);
+	res = ecc_sign_digest_recoverable(child.private_key, hash, sig);
+	u_assert_int_eq(res, 0);
+	u_assert_mem_eq(sig, utils_hex_to_uint8("5582ed262db59e47d4f35f35432e465f911f5ceda3fdc12f4ad6ff7f5d2104777aa522f24101bf7b336338d097e019bfedff636a1d6ab95ba6d73820349ff49e01"), 65);
+	
+	memset(&recovered_public_key, 0, 64);
+	res = ecc_recover(sig, hash, recovered_public_key);
+	u_assert_int_eq(res, 0);
+	u_assert_mem_eq(recovered_public_key, utils_hex_to_uint8("751a90b67a9970fd59ef34689332ec4e6c4d0daeeb98d8bafc5d15985ea25da0311e0906c9bfcddf22f32801929a8ff59d1a6a7ec5f73447f399985409af5489"), 64);
+}
 
 static void test_sign_speed(void)
 {
@@ -993,6 +1070,7 @@ int main(void)
 {
     ecc_context_init();
 
+	u_run_test(test_sign_recoverable);
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);
     u_run_test(test_ecdh);

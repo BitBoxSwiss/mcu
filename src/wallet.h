@@ -40,6 +40,7 @@ int wallet_seeded(void);
 int wallet_generate_master(void);
 int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
+int wallet_sign_recoverable(const char *message, const char *keypath); // ethereum support
 void wallet_report_xpriv(const char *keypath, char *xpub);
 void wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);

@@ -54,7 +54,7 @@ __extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0x
 __extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_memory[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_stretch[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_name[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
@@ -241,6 +241,7 @@ int memory_setup(void)
 
 void memory_erase_seed(void)
 {
+    memory_master_entropy(MEM_PAGE_ERASE);
     memory_chaincode(MEM_PAGE_ERASE);
     memory_master(MEM_PAGE_ERASE);
 }
@@ -252,7 +253,6 @@ void memory_erase(void)
     memory_create_verifypass();
     memory_erase_password_reset();
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STRETCH);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_seed();
     memory_name(DEVICE_DEFAULT_NAME);
@@ -279,7 +279,7 @@ void memory_clear(void)
     // Do not clear for testing routines (i.e. not embedded).
     memcpy(MEM_master_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_aeskey_stretch, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_entropy, MEM_PAGE_ERASE, MEM_PAGE_LEN);
 #endif
 }
 
@@ -294,6 +294,13 @@ uint8_t *memory_name(const char *name)
         memory_eeprom(NULL, MEM_name, MEM_NAME_ADDR, MEM_PAGE_LEN);
     }
     return MEM_name;
+}
+
+
+uint8_t *memory_master_entropy(const uint8_t *master_entropy)
+{
+    memory_eeprom_crypt(master_entropy, MEM_master_entropy, MEM_MASTER_ENTROPY_ADDR);
+    return MEM_master_entropy;
 }
 
 
@@ -349,10 +356,6 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_RESET:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
             break;
-        case PASSWORD_STRETCH:
-            memcpy(MEM_aeskey_stretch, password_b, MEM_PAGE_LEN);
-            ret = DBB_OK;
-            break;
         case PASSWORD_CRYPT:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
             break;
@@ -382,8 +385,6 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
             return MEM_aeskey_stand;
         case PASSWORD_RESET:
             return MEM_aeskey_reset;
-        case PASSWORD_STRETCH:
-            return MEM_aeskey_stretch;
         case PASSWORD_CRYPT:
             return MEM_aeskey_crypt;
         case PASSWORD_VERIFY:

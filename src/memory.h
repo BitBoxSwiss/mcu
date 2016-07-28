@@ -46,6 +46,7 @@
 #define MEM_AESKEY_VERIFY_ADDR          0x0500// Zone 5
 #define MEM_AESKEY_CRYPT_ADDR           0x0600// Zone 6
 #define MEM_AESKEY_RESET_ADDR           0x0700// Zone 7
+#define MEM_MASTER_ENTROPY_ADDR         0x0800// Zone 8
 
 
 // Default settings
@@ -57,7 +58,6 @@
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
     PASSWORD_RESET,
-    PASSWORD_STRETCH, /* for backups */
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
     PASSWORD_CRYPT,
@@ -77,6 +77,7 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
+uint8_t *memory_master_entropy(const uint8_t *master_entropy);
 
 uint8_t *memory_read_memseed(void);
 uint8_t memory_read_erased(void);

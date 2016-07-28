@@ -35,16 +35,18 @@
 
 /* BIP32 */
 int wallet_split_seed(char **seed_words, const char *message);
-int wallet_master_from_xpriv(char *src);
 int wallet_seeded(void);
-int wallet_generate_master(void);
+int wallet_generate_master(const char *passphrase, const char *entropy_in);
 int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
-void wallet_report_xpriv(const char *keypath, char *xpub);
 void wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincode);
+
+/* BIP39 */
+int wallet_generate_node(const char *passphrase, const char *entropy, HDNode *node);
+
 /* Bitcoin formats */
 void wallet_get_pubkeyhash(const uint8_t *pub_key, uint8_t *pubkeyhash);
 void wallet_get_address_raw(const uint8_t *pub_key, uint8_t version, uint8_t *addr_raw);

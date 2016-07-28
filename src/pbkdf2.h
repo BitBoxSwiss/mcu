@@ -32,13 +32,12 @@
 #include <stdint.h>
 
 
-#define PBKDF2_SALT     "Digital Bitbox"
-#define PBKDF2_SALTLEN  14
 #define PBKDF2_ROUNDS   2048
 #define PBKDF2_HMACLEN  64
 
 
-void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keylen);
+void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, const char *salt, uint8_t *key,
+                        int keylen);
 
 
 #endif

@@ -61,11 +61,11 @@
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
 #define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
-#define AUTOBACKUP_FILENAME         "autobackup_"
-#define AUTOBACKUP_NUM              50
 #define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE / 2)
 #define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE / 2)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
+#define BACKUP_DELIM                '-'
+#define BACKUP_DELIM_S              "-"
 
 
 #define _STRINGIFY(S) #S
@@ -97,6 +97,8 @@ X(aes256cbc)      \
 X(ping)           \
 /*  child keys  */\
 X(source)         \
+X(entropy)        \
+X(raw)            \
 X(type)           \
 X(hash)           \
 X(data)           \
@@ -149,6 +151,7 @@ X(abort)          \
 X(blink)          \
 X(pseudo)         \
 X(create)         \
+X(backup)         \
 X(export)         \
 X(xpub)           \
 X(id)             \
@@ -205,7 +208,7 @@ X(ERR_IO_DECRYPT,      108, "Could not decrypt.")\
 X(ERR_IO_JSON_PARSE,   109, "JSON parse error.")\
 X(ERR_IO_RESET,        110, "Too many failed access attempts. Device reset.")\
 X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.")\
-X(ERR_IO_PW_COLLIDE,   113, "Device password matches reset password. Disabling reset password.")\
+X(ERR_IO_PW_COLLIDE,   112, "Device password matches reset password. Disabling reset password.")\
 X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic encrypted backup of the seed.")\
 X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
 X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\

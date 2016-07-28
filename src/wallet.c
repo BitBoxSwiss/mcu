@@ -37,6 +37,7 @@
 #include "wallet.h"
 #include "random.h"
 #include "base58.h"
+#include "pbkdf2.h"
 #include "utils.h"
 #include "flags.h"
 #include "sha2.h"
@@ -58,52 +59,39 @@ int wallet_seeded(void)
 }
 
 
-int wallet_master_from_xpriv(char *src)
+static void wallet_report_xpriv(const char *keypath, char *xpriv)
 {
-    if (strlens(src) != 112 - 1) {
-        return DBB_ERROR;
-    }
-
     HDNode node;
-
-    int ret = hdnode_deserialize(src, &node);
-    if (ret != DBB_OK) {
-        goto exit;
+    if (wallet_seeded() == DBB_OK) {
+        if (wallet_generate_key(&node, keypath, memory_master(NULL),
+                                memory_chaincode(NULL)) == DBB_OK) {
+            hdnode_serialize_private(&node, xpriv, 112);
+        }
     }
-
-    memory_master(node.private_key);
-    memory_chaincode(node.chain_code);
-
-    ret = wallet_seeded();
-    if (ret != DBB_OK) {
-        ret = DBB_ERROR_MEM;
-    }
-
-exit:
     utils_zero(&node, sizeof(HDNode));
-    return ret;
 }
 
 
-int wallet_generate_master(void)
+int wallet_generate_master(const char *passphrase, const char *entropy_in)
 {
     int ret = DBB_OK;
-    uint8_t seed[64];
+    uint8_t entropy[MEM_PAGE_LEN];
     HDNode node;
 
-    if (random_bytes(seed, sizeof(seed), 1) == DBB_ERROR) {
-        commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
-        ret = DBB_ERROR_MEM;
+    if (strlens(entropy_in) != MEM_PAGE_LEN * 2) {
+        return DBB_ERROR;
+    }
+
+    ret = wallet_generate_node(passphrase, entropy_in, &node);
+    if (ret != DBB_OK) {
         goto exit;
     }
 
-    if (hdnode_from_seed(seed, sizeof(seed), &node) == DBB_ERROR) {
-        ret = DBB_ERROR;
-        goto exit;
-    }
+    memcpy(entropy, utils_hex_to_uint8(entropy_in), sizeof(entropy));
 
     memory_master(node.private_key);
     memory_chaincode(node.chain_code);
+    memory_master_entropy(entropy);
 
     ret = wallet_seeded();
     if (ret != DBB_OK) {
@@ -111,8 +99,8 @@ int wallet_generate_master(void)
     }
 
 exit:
-    utils_zero(seed, sizeof(seed));
     utils_zero(&node, sizeof(HDNode));
+    utils_zero(entropy, sizeof(entropy));
     return ret;
 }
 
@@ -188,16 +176,24 @@ err:
 }
 
 
-void wallet_report_xpriv(const char *keypath, char *xpriv)
+int wallet_generate_node(const char *passphrase, const char *entropy, HDNode *node)
 {
-    HDNode node;
-    if (wallet_seeded() == DBB_OK) {
-        if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                                memory_chaincode(NULL)) == DBB_OK) {
-            hdnode_serialize_private(&node, xpriv, 112);
-        }
+    int ret;
+    uint8_t seed[PBKDF2_HMACLEN];
+    char salt[8 + strlens(passphrase) + 1];
+    snprintf(salt, sizeof(salt), "%s%s", "mnemonic", passphrase);
+    pbkdf2_hmac_sha512((const uint8_t *)entropy, strlens(entropy), salt, seed,
+                       sizeof(seed));
+
+    if (hdnode_from_seed(seed, sizeof(seed), node) == DBB_ERROR) {
+        ret = DBB_ERROR;
+    } else {
+        ret = DBB_OK;
     }
-    utils_zero(&node, sizeof(HDNode));
+
+    utils_zero(seed, sizeof(seed));
+    utils_zero(salt, sizeof(salt));
+    return ret;
 }
 
 

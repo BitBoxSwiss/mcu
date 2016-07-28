@@ -360,8 +360,8 @@ static int commander_process_backup_check(const char *key, const char *filename)
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
                 ret = DBB_ERROR;
-            } else if (memcmp(node.private_key, memory_master(NULL), MEM_PAGE_LEN) ||
-                       memcmp(node.chain_code, memory_chaincode(NULL), MEM_PAGE_LEN)) {
+            } else if (memcmp(node.private_key, wallet_get_master(), MEM_PAGE_LEN) ||
+                       memcmp(node.chain_code, wallet_get_chaincode(), MEM_PAGE_LEN)) {
                 commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
                 ret = DBB_ERROR;
             } else {
@@ -416,7 +416,7 @@ static void commander_process_backup(yajl_val json_node)
 {
     const char *filename, *key, *check, *erase, *value;
 
-    if (!memory_read_unlocked()) {
+    if (wallet_is_locked()) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
@@ -491,7 +491,7 @@ static void commander_process_seed(yajl_val json_node)
     const char *filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path,
                                            yajl_t_string));
 
-    if (!memory_read_unlocked()) {
+    if (wallet_is_locked()) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
@@ -759,7 +759,7 @@ static void commander_process_verifypass(yajl_val json_node)
     const char *pair_pubkey = YAJL_GET_STRING(yajl_tree_get(json_node, pair_pubkey_path,
                               yajl_t_string));
 
-    if (!memory_read_unlocked()) {
+    if (wallet_is_locked()) {
         commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
@@ -928,7 +928,7 @@ static void commander_process_device(yajl_val json_node)
 
         flash_read_unique_id(serial, 4);
 
-        if (!memory_read_unlocked()) {
+        if (wallet_is_locked()) {
             snprintf(lock, sizeof(lock), "%s", attr_str(ATTR_true));
         } else {
             snprintf(lock, sizeof(lock), "%s", attr_str(ATTR_false));
@@ -1138,17 +1138,26 @@ static void commander_process_password(yajl_val json_node, int cmd, PASSWORD_ID 
     const char *path[] = { cmd_str(cmd), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
 
+    if (wallet_is_locked() && id == PASSWORD_HIDDEN) {
+        commander_fill_report(cmd_str(CMD_password), NULL, DBB_ERR_IO_LOCKED);
+        return;
+    }
+
+    if (wallet_is_hidden() && id == PASSWORD_STAND) {
+        id = PASSWORD_HIDDEN;
+    }
+
     ret = commander_process_aes_key(value, strlens(value), id);
 
-    if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_RESET),
+    if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_HIDDEN),
                 MEM_PAGE_LEN)) {
-        memory_erase_password_reset();
-        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_IO_PW_COLLIDE);
+        memory_erase_hidden_password();
+        commander_fill_report(cmd_str(CMD_password), NULL, DBB_ERR_IO_PW_COLLIDE);
         return;
     }
 
     if (ret != DBB_OK) {
-        commander_fill_report(cmd_str(cmd), NULL, ret);
+        commander_fill_report(cmd_str(CMD_password), NULL, ret);
         return;
     }
 
@@ -1163,8 +1172,8 @@ static int commander_process(int cmd, yajl_val json_node)
             commander_process_reset(json_node);
             return DBB_RESET;
 
-        case CMD_set_reset_password:
-            commander_process_password(json_node, cmd, PASSWORD_RESET);
+        case CMD_hidden_password:
+            commander_process_password(json_node, cmd, PASSWORD_HIDDEN);
             break;
 
         case CMD_password:
@@ -1225,7 +1234,7 @@ static int commander_process(int cmd, yajl_val json_node)
 
 static int commander_tfa_append_pin(void)
 {
-    if (!memory_read_unlocked()) {
+    if (wallet_is_locked()) {
         // Create one-time PIN
         uint8_t pin_b[VERIFYPASS_LOCK_CODE_LEN];
         memset(TFA_PIN, 0, sizeof(TFA_PIN));
@@ -1417,7 +1426,7 @@ static void commander_parse(char *command)
                 goto other;
             }
 
-            if (!memory_read_unlocked()) {
+            if (wallet_is_locked()) {
                 if (commander_tfa_check_pin(json_node) != DBB_OK) {
                     char msg[256];
                     memset(TFA_PIN, 0, sizeof(TFA_PIN));
@@ -1471,7 +1480,7 @@ static void commander_parse(char *command)
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlens(json_report),
                                          &encrypt_len,
-                                         PASSWORD_STAND);
+                                         wallet_is_hidden() ? PASSWORD_HIDDEN : PASSWORD_STAND);
     commander_clear_report();
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_ciphertext), encoded_report, DBB_OK);
@@ -1492,6 +1501,8 @@ static char *commander_decrypt(const char *encrypted_command)
     int command_len = 0, err = 0;
     uint16_t err_count = 0, err_iter = 0;
     size_t json_object_len = 0;
+
+    wallet_set_hidden(0);
 
     command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                   strlens(encrypted_command),
@@ -1522,18 +1533,17 @@ static char *commander_decrypt(const char *encrypted_command)
             free(command);
         }
 
-        // Check if device reset requested
+        // Check if hidden wallet is requested
         command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                       strlens(encrypted_command),
                                       &command_len,
-                                      PASSWORD_RESET);
+                                      PASSWORD_HIDDEN);
         if (strlens(command)) {
             yajl_val json_node = yajl_tree_parse(command, NULL, 0);
             if (json_node && YAJL_IS_OBJECT(json_node)) {
-                commander_force_reset();
+                wallet_set_hidden(1);
                 yajl_tree_free(json_node);
-                free(command);
-                return NULL;
+                return command;
             }
             yajl_tree_free(json_node);
             free(command);

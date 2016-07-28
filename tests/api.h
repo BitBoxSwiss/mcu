@@ -38,7 +38,7 @@
 
 
 static const char tests_pwd[] = "0000";
-static const char reset_pwd[] = "reset";
+static const char hidden_pwd[] = "hide";
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
 static int TEST_LIVE_DEVICE = 0;
 
@@ -60,7 +60,7 @@ static int api_hid_init(void)
 }
 
 
-static void api_hid_read(void)
+static void api_hid_read(PASSWORD_ID id)
 {
     int res, cnt = 0;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
@@ -72,7 +72,7 @@ static void api_hid_read(void)
         }
         cnt += res;
     }
-    utils_decrypt_report((char *)HID_REPORT);
+    utils_decrypt_report((char *)HID_REPORT, id);
     //printf("received:  >>%s<<\n", utils_read_decrypted_report());
 }
 
@@ -113,10 +113,10 @@ static void api_send_cmd(const char *command, PASSWORD_ID id)
 #ifndef CONTINUOUS_INTEGRATION
     else if (id == PASSWORD_NONE) {
         api_hid_send(command);
-        api_hid_read();
+        api_hid_read(id);
     } else {
         api_hid_send_encrypt(command, id);
-        api_hid_read();
+        api_hid_read(id);
     }
 #endif
 }

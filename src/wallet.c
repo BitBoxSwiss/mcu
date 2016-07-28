@@ -48,6 +48,47 @@ extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
 
 
+static uint8_t HIDDEN = 0;
+
+
+void wallet_set_hidden(int hide)
+{
+    HIDDEN = hide;
+}
+
+
+int wallet_is_hidden(void)
+{
+    return HIDDEN;
+}
+
+
+int wallet_is_locked(void)
+{
+    return HIDDEN || !memory_read_unlocked();
+}
+
+
+uint8_t *wallet_get_master(void)
+{
+    if (HIDDEN) {
+        return memory_chaincode(NULL);
+    } else {
+        return memory_master(NULL);
+    }
+}
+
+
+uint8_t *wallet_get_chaincode(void)
+{
+    if (HIDDEN) {
+        return memory_master(NULL);
+    } else {
+        return memory_chaincode(NULL);
+    }
+}
+
+
 int wallet_seeded(void)
 {
     if (!memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)  ||
@@ -63,8 +104,8 @@ static void wallet_report_xpriv(const char *keypath, char *xpriv)
 {
     HDNode node;
     if (wallet_seeded() == DBB_OK) {
-        if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                                memory_chaincode(NULL)) == DBB_OK) {
+        if (wallet_generate_key(&node, keypath, wallet_get_master(),
+                                wallet_get_chaincode()) == DBB_OK) {
             hdnode_serialize_private(&node, xpriv, 112);
         }
     }
@@ -201,8 +242,8 @@ void wallet_report_xpub(const char *keypath, char *xpub)
 {
     HDNode node;
     if (wallet_seeded() == DBB_OK) {
-        if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                                memory_chaincode(NULL)) == DBB_OK) {
+        if (wallet_generate_key(&node, keypath, wallet_get_master(),
+                                wallet_get_chaincode()) == DBB_OK) {
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
@@ -237,8 +278,8 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
         goto err;
     }
 
-    if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                            memory_chaincode(NULL)) != DBB_OK) {
+    if (wallet_generate_key(&node, keypath, wallet_get_master(),
+                            wallet_get_chaincode()) != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_KEY_CHILD);
         goto err;
@@ -278,8 +319,8 @@ int wallet_sign(const char *message, const char *keypath)
         goto err;
     }
 
-    if (wallet_generate_key(&node, keypath, memory_master(NULL),
-                            memory_chaincode(NULL)) != DBB_OK) {
+    if (wallet_generate_key(&node, keypath, wallet_get_master(),
+                            wallet_get_chaincode()) != DBB_OK) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_CHILD);
         goto err;

@@ -57,7 +57,7 @@
 
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
-    PASSWORD_RESET,
+    PASSWORD_HIDDEN,
     PASSWORD_VERIFY,
     PASSWORD_MEMORY,
     PASSWORD_CRYPT,
@@ -68,7 +68,7 @@ typedef enum PASSWORD_ID {
 int memory_setup(void);
 void memory_erase(void);
 void memory_erase_seed(void);
-void memory_erase_password_reset(void);
+void memory_erase_hidden_password(void);
 void memory_clear(void);
 
 int memory_aeskey_is_erased(PASSWORD_ID id);

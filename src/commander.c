@@ -37,6 +37,7 @@
 #include "wallet.h"
 #include "utils.h"
 #include "flags.h"
+#include "sha2.h"
 #include "aes.h"
 #include "led.h"
 #include "ecc.h"
@@ -476,12 +477,17 @@ static void commander_process_seed(yajl_val json_node)
     int ret;
 
     const char *key_path[] = { cmd_str(CMD_seed), cmd_str(CMD_key), NULL };
+    const char *raw_path[] = { cmd_str(CMD_seed), cmd_str(CMD_raw), NULL };
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
+    const char *entropy_path[] = { cmd_str(CMD_seed), cmd_str(CMD_entropy), NULL };
     const char *filename_path[] = { cmd_str(CMD_seed), cmd_str(CMD_filename), NULL };
 
     const char *key = YAJL_GET_STRING(yajl_tree_get(json_node, key_path, yajl_t_string));
+    const char *raw = YAJL_GET_STRING(yajl_tree_get(json_node, raw_path, yajl_t_string));
     const char *source = YAJL_GET_STRING(yajl_tree_get(json_node, source_path,
                                          yajl_t_string));
+    const char *entropy = YAJL_GET_STRING(yajl_tree_get(json_node, entropy_path,
+                                          yajl_t_string));
     const char *filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path,
                                            yajl_t_string));
 
@@ -490,101 +496,102 @@ static void commander_process_seed(yajl_val json_node)
         return;
     }
 
-    if (!source) {
+    if (!strlens(source) || !strlens(filename)) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
 
-    if (filename) {
-        commander_clear_report();
+    if (!strlens(key)) {
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
+        return;
+    }
 
-        if (utils_limit_alphanumeric_hyphen_underscore_period(filename) != DBB_OK) {
-            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_BAD_CHAR);
-            return;
-        }
+    if (sd_card_inserted() != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
+        return;
+    }
+
+    if (utils_limit_alphanumeric_hyphen_underscore_period(filename) != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_BAD_CHAR);
+        return;
+    }
+
+    if (strcmp(source, attr_str(ATTR_create)) == 0) {
+        // Generate a new wallet, optionally with entropy entered via USB
+        uint8_t i, add_entropy, number[MEM_PAGE_LEN], entropy_b[MEM_PAGE_LEN];
+        char entropy_c[MEM_PAGE_LEN * 2 + 1];
+
+        memset(entropy_b, 0, sizeof(entropy_b));
 
         if (sd_file_exists(filename) == DBB_OK) {
             commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_OPEN_FILE);
             return;
         }
-    }
 
-    char *src = malloc(strlens(source) + 1);
-    if (!src) {
-        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_MEM);
-        return;
-    }
-
-    memcpy(src, source, strlens(source));
-    src[strlens(source)] = '\0';
-
-    if (!strlens(key) && strncmp(src, "xprv", 4) != 0) { // require key except for xpriv mode
-        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
-        goto exit;
-    }
-
-    if (strcmp(src, attr_str(ATTR_create)) == 0) {
-        int flen = strlens(AUTOBACKUP_FILENAME) + 8;
-        char file[flen];
-
-        if (sd_card_inserted() != DBB_OK) {
-            commander_clear_report();
-            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD);
-            goto exit;
+        if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
+            commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_MEM_ATAES);
+            return;
         }
 
-        if (!filename) {
-            int count = 1;
-            do {
-                if (count > AUTOBACKUP_NUM) {
-                    commander_clear_report();
-                    commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SD_NUM);
-                    goto exit;
-                }
-                memset(file, 0, sizeof(file));
-                snprintf(file, sizeof(file), "%s%i.pdf", AUTOBACKUP_FILENAME, count++);
-            } while (sd_file_exists(file) == DBB_OK);
-            filename = file;
+        if (strlens(entropy)) {
+            if (strlens(entropy) == MEM_PAGE_LEN * 2 && utils_is_hex(entropy)) {
+                // Allows recover from a Digital Bitbox backup text entered via USB
+                memcpy(entropy_b, utils_hex_to_uint8(entropy), sizeof(entropy_b));
+            }
+            sha256_Raw((const uint8_t *)entropy, strlens(entropy), entropy_b);
         }
 
-        ret = wallet_generate_master(key, NULL);
+        // add extra entropy from device unless raw is set
+        add_entropy = 1;
+        if (strlens(entropy) && strlens(raw)) {
+            if (!strcmp(raw, attr_str(ATTR_true))) {
+                add_entropy = 0;
+            }
+        }
 
+        if (add_entropy) {
+            for (i = 0; i < MEM_PAGE_LEN; i++) {
+                entropy_b[i] ^= number[i];
+            }
+        }
+
+        snprintf(entropy_c, sizeof(entropy_c), "%s", utils_uint8_to_hex(entropy_b,
+                 sizeof(entropy_b)));
+        ret = wallet_generate_master(key, entropy_c);
         if (ret == DBB_OK) {
             if (commander_process_backup_create(key, filename) != DBB_OK) {
                 memory_erase_seed();
-                goto exit;
+                return;
             }
         }
-    } else if (strncmp(src, "xprv", 4) == 0) {
-        /* keep for unit testing */
-        ret = wallet_master_from_xpriv(src);
-    } else {
-        uint8_t backup[MEM_PAGE_LEN];
-        char *backup_hex = sd_load(src, CMD_seed);
 
-        if (strlens(backup_hex)) {
-            char *name = strchr(backup_hex, BACKUP_DELIM);
+        utils_zero(entropy_b, sizeof(entropy_b));
+        utils_zero(entropy_c, sizeof(entropy_c));
+    } else if (strcmp(source, attr_str(ATTR_backup)) == 0) {
+        char entropy_c[MEM_PAGE_LEN * 2 + 1];
+        char *backup_hex = sd_load(filename, CMD_seed);
+        char *name = strchr(backup_hex, BACKUP_DELIM);
 
-            if (strlens(backup_hex) < MEM_PAGE_LEN * 2) {
-                commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
-                ret = DBB_ERROR;
-            }
-
-            memcpy(backup, utils_hex_to_uint8(backup_hex), sizeof(backup));
-
-            ret = wallet_generate_master(key, backup);
+        if (strlens(backup_hex) < MEM_PAGE_LEN * 2) {
+            ret = DBB_ERROR;
+        } else if (strlens(name) ? (name != MEM_PAGE_LEN * 2 + backup_hex) : 0) {
+            ret = DBB_ERROR;
+        } else if (!strlens(name) ? (strlens(backup_hex) != MEM_PAGE_LEN * 2) : 0) {
+            ret = DBB_ERROR;
+        } else {
             if (strlens(name) > 1) {
                 memory_name(name + 1);
-            } else {
-                /* no error if name not in backup file */
             }
 
-            utils_zero(backup, sizeof(backup));
-        } else {
-            /* error reported in sd_load() */
-            ret = DBB_ERROR;
+            snprintf(entropy_c, sizeof(entropy_c), "%s", backup_hex);
+            ret = wallet_generate_master(key, entropy_c);
         }
+
         utils_zero(backup_hex, strlens(backup_hex));
+        utils_zero(entropy_c, sizeof(entropy_c));
+    } else {
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
     if (ret == DBB_ERROR) {
@@ -597,10 +604,6 @@ static void commander_process_seed(yajl_val json_node)
     } else {
         commander_fill_report(cmd_str(CMD_seed), NULL, ret);
     }
-
-exit:
-    utils_zero(src, strlens(source));
-    free(src);
 }
 
 

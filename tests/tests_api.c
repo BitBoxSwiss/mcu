@@ -49,8 +49,9 @@ static void tests_seed_xpub_backup(void)
     char name0[] = "name0";
     char key[] = "password";
     char xpub0[112], xpub1[112], *echo;
-    char seed_c[512], seed_b[512], back[512], check[512], erase_file[512];
+    char seed_usb[512], seed_c[512], seed_b[512], back[512], check[512], erase_file[512];
     char filename[] = "tests_backup.txt";
+    char filename2[] = "tests_backup2.txt";
     char filename_create[] = "tests_backup_c.txt";
     char filename_bad[] = "tests_backup_bad<.txt";
     char keypath[] = "m/44\'/0\'/";
@@ -60,17 +61,19 @@ static void tests_seed_xpub_backup(void)
         "{\"source\":\"create\", \"filename\":\"seed_create_2.pdf\", \"key\":\"password\"}";
     char seed_create_bad[] =
         "{\"source\":\"create\", \"filename\":\"../seed_create_bad.pdf\", \"key\":\"password\"}";
-    char seed_xpriv[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\"}";
-    char seed_xpriv_wrong_len[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVm\"}";
+    char seed_entropy[] = "entropy9s21ZrQkmL8hdy";
 
     snprintf(seed_c, sizeof(seed_c),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"%s\"}", attr_str(ATTR_create),
              filename_create, key);
-    snprintf(seed_b, sizeof(seed_b), "{\"source\":\"%s\",\"key\":\"%s\"}", filename, key);
+    snprintf(seed_b, sizeof(seed_b),
+             "{\"source\":\"backup\",\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
     snprintf(back, sizeof(back), "{\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
     snprintf(check, sizeof(check), "{\"check\":\"%s\",\"key\":\"%s\"}", filename, key);
+    snprintf(seed_usb, sizeof(seed_usb),
+             "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
+             seed_entropy, filename, key);
+
 
     // erase
     api_reset_device();
@@ -167,11 +170,6 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_success));
-
-
-
-
-
 
 
 
@@ -325,7 +323,8 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), filename);
 
-    // test xpriv seed
+
+    // test seed via USB
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
 
@@ -334,7 +333,11 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_xpriv, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+    // seed with extra entropy from device
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
@@ -342,13 +345,31 @@ static void tests_seed_xpub_backup(void)
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_xpriv_wrong_len, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
+    // seed with extra entropy from device
+    snprintf(seed_usb, sizeof(seed_usb),
+             "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
+             seed_entropy, filename2, key);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, PASSWORD_STAND);
+    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
+    // verify xpubs not same
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
-    u_assert_str_eq(xpub0, xpub1);
+    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
+    u_assert_str_not_eq(xpub0, xpub1);
+
+    // load backup
+    if (TEST_LIVE_DEVICE) {
+        api_format_send_cmd(cmd_str(CMD_seed), seed_b, PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+
+        // verify xpub matches
+        api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+        u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
+        memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
+        u_assert_str_eq(xpub0, xpub1);
+    }
+
 
     // clean up sd card
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
@@ -448,8 +469,21 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_seed), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\",\"filename\":\"junk\"}",
+                        PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
+
+    api_format_send_cmd(cmd_str(CMD_seed),
+                        "{\"source\":\"create\",\"key\":\"\",\"filename\":\"junk\"}", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
+
+    api_format_send_cmd(cmd_str(CMD_seed),
+                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"\"}", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    api_format_send_cmd(cmd_str(CMD_seed),
+                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"&^;:\"}", PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
@@ -484,13 +518,6 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"key\":\"password\"}",
-                        PASSWORD_STAND);
-    u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), AUTOBACKUP_FILENAME);
 
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
@@ -886,18 +913,18 @@ static void tests_echo_tfa(void)
 
 #ifdef ECC_USE_UECC_LIB
 const char hash_1_input[] =
-    "41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812acedefc98a7d87f1379efb84dc684ab947dc4e583d2c3e1d50f372012b3d8c95e";
+    "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f";
 const char hash_2_input_1[] =
-    "031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd72716134e49cbe288c46f90da19bd1552c406e64425169520d433113a78b480ca3c5d340";
+    "e26c9b19c927d7e6e374d7f1734dd0a4e1ee266a164b2f282d95a0d07dbf04f0486594e9d853cbfab1cc556e76e8212d2db6c871c8c775876525d20acc478439";
 const char hash_2_input_2[] =
-    "d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bcf16b256cfd77768df1bbce20333904c5e93873cee26ac446afdd62a5394b73ad";
+    "529e01807f073dd80a0c9c2b3cc9130a06b88c033577ccc426a383eaadac5b7201923aef70ded7509adfa6282fcb6ff9f0fba16f87c82d5c9810c3da3029cc7d";
 #else
 const char hash_1_input[] =
-    "41fa23804d6fe53c296a5ac93a2e21719f9c6f20b2645d04d047150087cd812a31210367582780ec861047b2397b546a3ce9f762dc84be66b09b3e7a1c5d77e3";
+    "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
 const char hash_2_input_1[] =
-    "031145194147dada762c77ff85fd5cb493f56596de20f235c35507cd727161341b6341d773b906f25e642eaad3bf919a785d7394a2056f28184716802c706e01";
+    "e26c9b19c927d7e6e374d7f1734dd0a4e1ee266a164b2f282d95a0d07dbf04f0486594e9d853cbfab1cc556e76e8212d2db6c871c8c775876525d20acc478439";
 const char hash_2_input_2[] =
-    "d4464e76d679b062ec867c7ebb961fc27cab810ccd6198bd993acef5a84273bc0e94da93028889720e4431dfccc6fb38d1766917ccdddbf50ff4fbe796eacd94";
+    "529e01807f073dd80a0c9c2b3cc9130a06b88c033577ccc426a383eaadac5b7201923aef70ded7509adfa6282fcb6ff9f0fba16f87c82d5c9810c3da3029cc7d";
 #endif
 
 
@@ -906,26 +933,14 @@ static void tests_sign(void)
     char one_input[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
     char pubkey_1_input[] =
-        "02721be181276eebdc4dd29dce180afa7c6a8199fb5f4c09f2e03b8e4193f22ce5";
-
-    /*
-      raw_tx = 0100000001e4b8a097d6d5cd351f69d9099e277b8a1c39a219991a4e5f9f86805faf649899010000001976a91488e6399fab42b2ea637da283dd87e70f4862e10c88acffffffff0298080000000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acb83d0000000000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788ac0000000001000000
-      sha256(sha256(hex2byte(raw_tx))) = c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a
-    */
+        "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154";
 
     char two_inputs[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}";
     char pubkey_2_input_1[] =
-        "0367d99d26d908bc11adaf05e1c18072b67e825f27dfadd504b013bafaa0f364a6";
+        "035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704";
     char pubkey_2_input_2[] =
-        "032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec";
-    /*
-      raw_tx = 01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f000000001976a91452922e52d08a2c1f1e4120803e56363fd7a8195188acffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0100000000ffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000
-      sha256(sha256(hex2byte(raw_tx))) = 3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790
-
-      raw_tx = 01000000029ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f0000000000ffffffff9ecf1f09baed314ee1cc37ee2236dca5f71f7dddc83a2a1b6358e739ac68c43f010000001976a914fd342347278e14013d17d53ed3c4aa7bf27eceb788acffffffff01c8000000000000001976a914584495bb22f4cb66cd47f2255cbc7178c6f3caeb88ac0000000001000000
-      sha256(sha256(hex2byte(raw_tx))) = c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d
-    */
+        "03cc673784d8dfe97ded72c91ebb1b87a52761e4be20f6229e56fd61fdf28ae3f2";
 
     int i;
     char hashstr[] =
@@ -952,23 +967,28 @@ static void tests_sign(void)
     strcat(maxhashes, "]}");
 
     char checkpub[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
     char check_1[] =
         "\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"present\":false";
     char check_2[] =
-        "\"pubkey\":\"032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec\", \"present\":true";
+        "\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"present\":true";
+#ifdef ECC_USE_UECC_LIB
     char check_sig_1[] =
-        "72b2aa04281c7c2d79cb6e08168865fcd492d4d2d36acb3e46a185368c9ee00c1cbae958a8092a3689088d05ec5c0f58db65612f7bf4b34b0a9b3a34af9ad8be";
+        "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9";
+#else
+    char check_sig_1[] =
+        "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba6db1ae33539aafdbe9a44cfd2ffe8b2677c946d9d0bc5bb155425165d2021158";
+#endif
     char check_sig_2[] =
-        "1ce2c6e97a86399417a782b9fc7b926b7d58e309adf49e86380ebc02fd3823ad2fa595eb18178f062c2cba1d252992622c5bde536de4b09e52976a0eeedeac01";
+        "3323b353e9974ab1eb452eca19e1dc4dad0556dba668089c8c1214ca09b58ad12c82da6671a65f9b3803c1fe7a14f35d885caebce701f972641748738275782b";
     char check_pubkey[] =
-        "02793907771bab33d3fa7e4d7ee7c355067a623265926c46fc433a83c11dceb29e";
+        "02df86355b162c942b89e297c1e919f40943834d448b0b6b4538556e805ea4e18c";
 
     char checkpub_wrong_addr_len[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
 
     char checkpub_missing_parameter[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"032ab901fe42a05e970e6d5c701b4d7a6db33b0fa7daaaa709ebe755daf9dfe0ec\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\"}]}";
 
 
     api_reset_device();
@@ -978,7 +998,7 @@ static void tests_sign(void)
 
     // seed
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K3URucR3Zd2rRJBGGQsNFEo3Ld3JtTeUAQARegm573eJiNsAjGsyAj3h9roseS7GA7Y3dcub1pLpQD3eud2XzkoCoFpYBLF3\", \"filename\":\"s.pdf\"}";
+        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_rawH13ucR3\", \"raw\":\"true\", \"filename\":\"s.pdf\"}";
     api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -1196,7 +1216,7 @@ static void tests_aes_cbc(void)
     };
 
     char seed[] =
-        "{\"source\":\"xprv9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"filename\":\"x.pdf\"}";
+        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_raw9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"raw\":\"true\", \"filename\":\"x.pdf\"}";
 
     api_reset_device();
 

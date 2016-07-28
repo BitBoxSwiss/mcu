@@ -61,8 +61,6 @@
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
 #define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
-#define AUTOBACKUP_FILENAME         "autobackup_"
-#define AUTOBACKUP_NUM              50
 #define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE / 2)
 #define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE / 2)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
@@ -99,6 +97,8 @@ X(aes256cbc)      \
 X(ping)           \
 /*  child keys  */\
 X(source)         \
+X(entropy)        \
+X(raw)            \
 X(type)           \
 X(hash)           \
 X(data)           \
@@ -151,6 +151,7 @@ X(abort)          \
 X(blink)          \
 X(pseudo)         \
 X(create)         \
+X(backup)         \
 X(export)         \
 X(xpub)           \
 X(id)             \

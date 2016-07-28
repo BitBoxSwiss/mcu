@@ -59,33 +59,6 @@ int wallet_seeded(void)
 }
 
 
-int wallet_master_from_xpriv(char *src)
-{
-    if (strlens(src) != 112 - 1) {
-        return DBB_ERROR;
-    }
-
-    HDNode node;
-
-    int ret = hdnode_deserialize(src, &node);
-    if (ret != DBB_OK) {
-        goto exit;
-    }
-
-    memory_master(node.private_key);
-    memory_chaincode(node.chain_code);
-
-    ret = wallet_seeded();
-    if (ret != DBB_OK) {
-        ret = DBB_ERROR_MEM;
-    }
-
-exit:
-    utils_zero(&node, sizeof(HDNode));
-    return ret;
-}
-
-
 static void wallet_report_xpriv(const char *keypath, char *xpriv)
 {
     HDNode node;
@@ -99,32 +72,26 @@ static void wallet_report_xpriv(const char *keypath, char *xpriv)
 }
 
 
-int wallet_generate_master(const char *passphrase, const uint8_t *entropy_in)
+int wallet_generate_master(const char *passphrase, const char *entropy_in)
 {
     int ret = DBB_OK;
-    char entropy[64 + 1];
-    uint8_t number[32];
+    uint8_t entropy[MEM_PAGE_LEN];
     HDNode node;
 
-    if (entropy_in) {
-        memcpy(number, entropy_in, sizeof(number));
-    } else {
-        if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
-            commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
-            ret = DBB_ERROR_MEM;
-            goto exit;
-        }
+    if (strlens(entropy_in) != MEM_PAGE_LEN * 2) {
+        return DBB_ERROR;
     }
 
-    snprintf(entropy, sizeof(entropy), "%s", utils_uint8_to_hex(number, sizeof(number)));
-    ret = wallet_generate_node(passphrase, entropy, &node);
+    ret = wallet_generate_node(passphrase, entropy_in, &node);
     if (ret != DBB_OK) {
         goto exit;
     }
 
+    memcpy(entropy, utils_hex_to_uint8(entropy_in), sizeof(entropy));
+
     memory_master(node.private_key);
     memory_chaincode(node.chain_code);
-    memory_master_entropy(number);
+    memory_master_entropy(entropy);
 
     ret = wallet_seeded();
     if (ret != DBB_OK) {
@@ -133,7 +100,6 @@ int wallet_generate_master(const char *passphrase, const uint8_t *entropy_in)
 
 exit:
     utils_zero(&node, sizeof(HDNode));
-    utils_zero(number, sizeof(number));
     utils_zero(entropy, sizeof(entropy));
     return ret;
 }

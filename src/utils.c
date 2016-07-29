@@ -233,7 +233,7 @@ const char *utils_read_decrypted_report(void)
 }
 
 
-void utils_decrypt_report(const char *report)
+void utils_decrypt_report(const char *report, PASSWORD_ID dec_id)
 {
     int decrypt_len;
     char *dec;
@@ -256,7 +256,7 @@ void utils_decrypt_report(const char *report)
         const char *echo = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path, yajl_t_string));
         if (ciphertext) {
             dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                      &decrypt_len, PASSWORD_STAND);
+                                      &decrypt_len, dec_id);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 goto exit;
@@ -288,7 +288,7 @@ exit:
 void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
 {
     if (enc_id == PASSWORD_NONE) {
-        utils_decrypt_report(commander(command));
+        utils_decrypt_report(commander(command), enc_id);
     } else {
         int encrypt_len;
         char *enc = aes_cbc_b64_encrypt((const unsigned char *)command, strlens(command),
@@ -298,7 +298,7 @@ void utils_send_cmd(const char *command, PASSWORD_ID enc_id)
         assert(encrypt_len < COMMANDER_REPORT_SIZE);
         memcpy(cmd, enc, encrypt_len);
         free(enc);
-        utils_decrypt_report(commander(cmd));
+        utils_decrypt_report(commander(cmd), enc_id);
     }
 }
 

@@ -34,6 +34,11 @@
 
 
 /* BIP32 */
+void wallet_set_hidden(int hide);
+int wallet_is_hidden(void);
+int wallet_is_locked(void);
+uint8_t *wallet_get_master(void);
+uint8_t *wallet_get_chaincode(void);
 int wallet_split_seed(char **seed_words, const char *message);
 int wallet_seeded(void);
 int wallet_generate_master(const char *passphrase, const char *entropy_in);

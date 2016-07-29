@@ -81,7 +81,7 @@ X(seed)           \
 X(reset)          \
 X(password)       \
 X(bootloader)     \
-X(set_reset_password)\
+X(hidden_password)\
 X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\

@@ -251,7 +251,7 @@ void memory_erase(void)
 {
     memory_mempass();
     memory_create_verifypass();
-    memory_erase_password_reset();
+    memory_erase_hidden_password();
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_seed();
@@ -263,12 +263,12 @@ void memory_erase(void)
 }
 
 
-void memory_erase_password_reset(void)
+void memory_erase_hidden_password(void)
 {
     uint8_t number[16] = {0};
     random_bytes(number, sizeof(number), 0);
     memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
-                        PASSWORD_RESET);
+                        PASSWORD_HIDDEN);
 }
 
 
@@ -353,7 +353,7 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
-        case PASSWORD_RESET:
+        case PASSWORD_HIDDEN:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
             break;
         case PASSWORD_CRYPT:
@@ -383,7 +383,7 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
             return MEM_aeskey_memory;
         case PASSWORD_STAND:
             return MEM_aeskey_stand;
-        case PASSWORD_RESET:
+        case PASSWORD_HIDDEN:
             return MEM_aeskey_reset;
         case PASSWORD_CRYPT:
             return MEM_aeskey_crypt;

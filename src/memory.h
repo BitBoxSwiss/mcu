@@ -34,19 +34,21 @@
 #define MEM_PAGE_LEN      32
 
 // User Zones: 0x0000 to 0x0FFF
+// Do NOT change address locations.
+// Otherwise problems will occur after a firmware update.
 #define MEM_ERASED_ADDR                 0x0000// Zone 0
 #define MEM_SETUP_ADDR                  0x0002
 #define MEM_ACCESS_ERR_ADDR             0x0004
 #define MEM_PIN_ERR_ADDR                0x0006
 #define MEM_UNLOCKED_ADDR               0x0008
 #define MEM_NAME_ADDR                   0x0100// Zone 1
-#define MEM_MASTER_BIP32_ADDR           0x0200// Zone 2
-#define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300// Zone 3
-#define MEM_AESKEY_STAND_ADDR           0x0400// Zone 4
-#define MEM_AESKEY_VERIFY_ADDR          0x0500// Zone 5
-#define MEM_AESKEY_CRYPT_ADDR           0x0600// Zone 6
-#define MEM_AESKEY_RESET_ADDR           0x0700// Zone 7
-#define MEM_MASTER_ENTROPY_ADDR         0x0800// Zone 8
+#define MEM_MASTER_BIP32_ADDR           0x0200
+#define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
+#define MEM_AESKEY_STAND_ADDR           0x0400
+#define MEM_AESKEY_VERIFY_ADDR          0x0500
+#define MEM_AESKEY_CRYPT_ADDR           0x0600
+#define MEM_AESKEY_HIDDEN_ADDR          0x0800// Zone 7 reserved
+#define MEM_MASTER_ENTROPY_ADDR         0x0900
 
 
 // Default settings

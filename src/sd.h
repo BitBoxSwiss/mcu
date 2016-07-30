@@ -40,7 +40,7 @@
 #define SD_PDF_4_0_HEAD   "4 0 obj\n<< /Length %i >>\nstream\n"
 #define SD_PDF_BACKUP_START "<20 2020202020> Tj"
 #define SD_PDF_BACKUP_END   "<2020202020 20> Tj"
-#define SD_PDF_TEXT_0     "BT\n/F1 12 Tf\n50 700 Td\n(Wallet seed:) Tj\n" SD_PDF_BACKUP_START "\n0 -24 Td\n("
+#define SD_PDF_TEXT_0     "BT\n/F1 12 Tf\n50 700 Td\n(Wallet backup:) Tj\n" SD_PDF_BACKUP_START "\n0 -24 Td\n("
 #define SD_PDF_TEXT_CONT  ") Tj\n0 -16 Td\n("
 #define SD_PDF_TEXT_1     ") Tj\n0 -16 Td\n%%(" BACKUP_DELIM_S
 #define SD_PDF_TEXT_2     ") Tj\n" SD_PDF_BACKUP_END "\n0 -48 Td\n(Wallet name: "

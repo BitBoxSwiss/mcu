@@ -230,7 +230,7 @@ int memory_setup(void)
     } else {
         memory_mempass();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
@@ -354,7 +354,7 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
         case PASSWORD_HIDDEN:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_RESET_ADDR);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
             break;
         case PASSWORD_CRYPT:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);

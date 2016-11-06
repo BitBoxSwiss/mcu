@@ -182,7 +182,7 @@ static cmpresult_t uECC_vli_cmp_unsafe(const uECC_word_t *left,
 #include "asm_avr.inc"
 #endif
 
-#if default_RNG_defined
+#if defined(default_RNG_defined) && default_RNG_defined
 static uECC_RNG_Function g_rng_function = &default_RNG;
 #else
 static uECC_RNG_Function g_rng_function = 0;
@@ -208,7 +208,7 @@ int uECC_curve_public_key_size(uECC_Curve curve)
     return 2 * curve->num_bytes;
 }
 
-#if !asm_clear
+#if !defined(asm_clear) || !asm_clear
 uECC_VLI_API void uECC_vli_clear(uECC_word_t *vli, wordcount_t num_words)
 {
     wordcount_t i;
@@ -270,7 +270,7 @@ uECC_VLI_API bitcount_t uECC_vli_numBits(const uECC_word_t *vli,
 }
 
 /* Sets dest = src. */
-#if !asm_set
+#if !defined(asm_set) || !asm_set
 uECC_VLI_API void uECC_vli_set(uECC_word_t *dest, const uECC_word_t *src,
                                wordcount_t num_words)
 {
@@ -311,10 +311,12 @@ uECC_VLI_API uECC_word_t uECC_vli_equal(const uECC_word_t *left,
     return (diff == 0);
 }
 
+#if !defined(asm_sub) || !asm_sub
 uECC_VLI_API uECC_word_t uECC_vli_sub(uECC_word_t *result,
                                       const uECC_word_t *left,
                                       const uECC_word_t *right,
                                       wordcount_t num_words);
+#endif /* !asm_sub */
 
 /* Returns sign of left - right, in constant time. */
 uECC_VLI_API cmpresult_t uECC_vli_cmp(const uECC_word_t *left,
@@ -328,7 +330,7 @@ uECC_VLI_API cmpresult_t uECC_vli_cmp(const uECC_word_t *left,
 }
 
 /* Computes vli = vli >> 1. */
-#if !asm_rshift1
+#if !defined(asm_rshift1) || !asm_rshift1
 uECC_VLI_API void uECC_vli_rshift1(uECC_word_t *vli, wordcount_t num_words)
 {
     uECC_word_t *end = vli;
@@ -344,7 +346,7 @@ uECC_VLI_API void uECC_vli_rshift1(uECC_word_t *vli, wordcount_t num_words)
 #endif /* !asm_rshift1 */
 
 /* Computes result = left + right, returning carry. Can modify in place. */
-#if !asm_add
+#if !defined(asm_add) || !asm_add
 uECC_VLI_API uECC_word_t uECC_vli_add(uECC_word_t *result,
                                       const uECC_word_t *left,
                                       const uECC_word_t *right,
@@ -364,7 +366,7 @@ uECC_VLI_API uECC_word_t uECC_vli_add(uECC_word_t *result,
 #endif /* !asm_add */
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
-#if !asm_sub
+#if !defined(asm_sub) || !asm_sub
 uECC_VLI_API uECC_word_t uECC_vli_sub(uECC_word_t *result,
                                       const uECC_word_t *left,
                                       const uECC_word_t *right,
@@ -383,7 +385,7 @@ uECC_VLI_API uECC_word_t uECC_vli_sub(uECC_word_t *result,
 }
 #endif /* !asm_sub */
 
-#if !asm_mult || (uECC_SQUARE_FUNC && !asm_square) || \
+#if !defined(asm_mult) || !asm_mult || (uECC_SQUARE_FUNC && !asm_square) || \
     (uECC_SUPPORTS_secp256k1 && (uECC_OPTIMIZATION_LEVEL > 0) && \
         ((uECC_WORD_SIZE == 1) || (uECC_WORD_SIZE == 8)))
 static void muladd(uECC_word_t a,
@@ -428,7 +430,7 @@ static void muladd(uECC_word_t a,
 }
 #endif /* muladd needed */
 
-#if !asm_mult
+#if !defined(asm_mult) || !asm_mult
 uECC_VLI_API void uECC_vli_mult(uECC_word_t *result,
                                 const uECC_word_t *left,
                                 const uECC_word_t *right,
@@ -464,7 +466,7 @@ uECC_VLI_API void uECC_vli_mult(uECC_word_t *result,
 
 #if uECC_SQUARE_FUNC
 
-#if !asm_square
+#if !defined(asm_square) || !asm_square
 static void mul2add(uECC_word_t a,
                     uECC_word_t b,
                     uECC_word_t *r0,
@@ -596,7 +598,7 @@ uECC_VLI_API void uECC_vli_mmod(uECC_word_t *result,
     uECC_word_t mod_multiple[2 * uECC_MAX_WORDS];
     uECC_word_t tmp[2 * uECC_MAX_WORDS];
     uECC_word_t *v[2] = {tmp, product};
-    uECC_word_t index;
+    uECC_word_t idx;
 
     /* Shift mod so its highest set bit is at the maximum position. */
     bitcount_t shift = (num_words * 2 * uECC_WORD_BITS) - uECC_vli_numBits(mod, num_words);
@@ -605,30 +607,30 @@ uECC_VLI_API void uECC_vli_mmod(uECC_word_t *result,
     uECC_word_t carry = 0;
     uECC_vli_clear(mod_multiple, word_shift);
     if (bit_shift > 0) {
-        for (index = 0; index < (uECC_word_t)num_words; ++index) {
-            mod_multiple[word_shift + index] = (mod[index] << bit_shift) | carry;
-            carry = mod[index] >> (uECC_WORD_BITS - bit_shift);
+        for (idx = 0; idx < (uECC_word_t)num_words; ++idx) {
+            mod_multiple[word_shift + idx] = (mod[idx] << bit_shift) | carry;
+            carry = mod[idx] >> (uECC_WORD_BITS - bit_shift);
         }
     } else {
         uECC_vli_set(mod_multiple + word_shift, mod, num_words);
     }
 
-    for (index = 1; shift >= 0; --shift) {
+    for (idx = 1; shift >= 0; --shift) {
         uECC_word_t borrow = 0;
         wordcount_t i;
         for (i = 0; i < num_words * 2; ++i) {
-            uECC_word_t diff = v[index][i] - mod_multiple[i] - borrow;
-            if (diff != v[index][i]) {
-                borrow = (diff > v[index][i]);
+            uECC_word_t diff = v[idx][i] - mod_multiple[i] - borrow;
+            if (diff != v[idx][i]) {
+                borrow = (diff > v[idx][i]);
             }
-            v[1 - index][i] = diff;
+            v[1 - idx][i] = diff;
         }
-        index = !(index ^ borrow); /* Swap the index if there was no borrow */
+        idx = !(idx ^ borrow); /* Swap the index if there was no borrow */
         uECC_vli_rshift1(mod_multiple, num_words);
         mod_multiple[num_words - 1] |= mod_multiple[num_words] << (uECC_WORD_BITS - 1);
         uECC_vli_rshift1(mod_multiple + num_words, num_words);
     }
-    uECC_vli_set(result, v[index], num_words);
+    uECC_vli_set(result, v[idx], num_words);
 }
 
 /* Computes result = (left * right) % mod. */
@@ -1168,7 +1170,7 @@ void uECC_decompress(const uint8_t *compressed, uint8_t *public_key, uECC_Curve 
 }
 #endif /* uECC_SUPPORT_COMPRESSED_POINT */
 
-int uECC_valid_point(const uECC_word_t *point, uECC_Curve curve)
+static int uECC_valid_point(const uECC_word_t *point, uECC_Curve curve)
 {
     uECC_word_t tmp1[uECC_MAX_WORDS];
     uECC_word_t tmp2[uECC_MAX_WORDS];
@@ -1385,7 +1387,7 @@ int uECC_sign(const uint8_t *private_key,
 
 /* Compute an HMAC using K as a key (as in RFC 6979). Note that K is always
    the same size as the hash result size. */
-static void HMAC_init(const uECC_HashContext *hash_context, const uint8_t *K)
+static void HMAC_init(uECC_HashContext *hash_context, const uint8_t *K)
 {
     uint8_t *pad = hash_context->tmp + 2 * hash_context->result_size;
     unsigned i;
@@ -1400,14 +1402,14 @@ static void HMAC_init(const uECC_HashContext *hash_context, const uint8_t *K)
     hash_context->update_hash(hash_context, pad, hash_context->block_size);
 }
 
-static void HMAC_update(const uECC_HashContext *hash_context,
+static void HMAC_update(uECC_HashContext *hash_context,
                         const uint8_t *message,
                         unsigned message_size)
 {
     hash_context->update_hash(hash_context, message, message_size);
 }
 
-static void HMAC_finish(const uECC_HashContext *hash_context,
+static void HMAC_finish(uECC_HashContext *hash_context,
                         const uint8_t *K,
                         uint8_t *result)
 {
@@ -1429,7 +1431,7 @@ static void HMAC_finish(const uECC_HashContext *hash_context,
 }
 
 /* V = HMAC_K(V) */
-static void update_V(const uECC_HashContext *hash_context, uint8_t *K, uint8_t *V)
+static void update_V(uECC_HashContext *hash_context, uint8_t *K, uint8_t *V)
 {
     HMAC_init(hash_context, K);
     HMAC_update(hash_context, V, hash_context->result_size);
@@ -1445,7 +1447,7 @@ static void update_V(const uECC_HashContext *hash_context, uint8_t *K, uint8_t *
 int uECC_sign_deterministic(const uint8_t *private_key,
                             const uint8_t *message_hash,
                             unsigned hash_size,
-                            const uECC_HashContext *hash_context,
+                            uECC_HashContext *hash_context,
                             uint8_t *signature,
                             uECC_Curve curve)
 {
@@ -1607,11 +1609,11 @@ int uECC_verify(const uint8_t *public_key,
     z[0] = 1;
 
     for (i = num_bits - 2; i >= 0; --i) {
-        uECC_word_t index;
+        uECC_word_t idx;
         curve->double_jacobian(rx, ry, z, curve);
 
-        index = (!!uECC_vli_testBit(u1, i)) | ((!!uECC_vli_testBit(u2, i)) << 1);
-        point = points[index];
+        idx = (!!uECC_vli_testBit(u1, i)) | ((!!uECC_vli_testBit(u2, i)) << 1);
+        point = points[idx];
         if (point) {
             uECC_vli_set(tx, point, num_words);
             uECC_vli_set(ty, point + num_words, num_words);

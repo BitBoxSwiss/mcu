@@ -4,7 +4,7 @@
 #define _UECC_VLI_H_
 
 #include "uECC.h"
-#include "types.h"
+#include "uECC_types.h"
 
 /* Functions for raw large-integer manipulation. These are only available
    if uECC.c is compiled with uECC_ENABLE_VLI_API defined to 1. */

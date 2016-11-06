@@ -53,6 +53,8 @@ uECC_VLI_API uECC_word_t uECC_vli_add(uECC_word_t *result,
   #else /* ARM */
     uint32_t jump = (uECC_MAX_WORDS - num_words) * 4 * 4;
   #endif
+#else
+    (void) num_words;
 #endif
     uint32_t carry;
     uint32_t left_word;
@@ -107,6 +109,8 @@ uECC_VLI_API uECC_word_t uECC_vli_sub(uECC_word_t *result,
   #else /* ARM */
     uint32_t jump = (uECC_MAX_WORDS - num_words) * 4 * 4;
   #endif
+#else
+    (void) num_words;
 #endif
     uint32_t carry;
     uint32_t left_word;

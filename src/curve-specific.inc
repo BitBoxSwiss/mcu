@@ -771,7 +771,7 @@ static const struct uECC_Curve_t curve_secp256r1 = {
 uECC_Curve uECC_secp256r1(void) { return &curve_secp256r1; }
 
 
-#if (uECC_OPTIMIZATION_LEVEL > 0 && !asm_mmod_fast_secp256r1)
+#if (uECC_OPTIMIZATION_LEVEL > 0 && (!defined(asm_mmod_fast_secp256r1) || !asm_mmod_fast_secp256r1))
 /* Computes result = product % curve_p
    from http://www.nsa.gov/ia/_files/nist-routines.pdf */
 #if uECC_WORD_SIZE == 1
@@ -1152,7 +1152,7 @@ static void x_side_secp256k1(uECC_word_t *result, const uECC_word_t *x, uECC_Cur
     uECC_vli_modAdd(result, result, curve->b, curve->p, num_words_secp256k1); /* r = x^3 + b */
 }
 
-#if (uECC_OPTIMIZATION_LEVEL > 0 && !asm_mmod_fast_secp256k1)
+#if (uECC_OPTIMIZATION_LEVEL > 0 && (!defined(asm_mmod_fast_secp256k1) || !asm_mmod_fast_secp256k1))
 static void omega_mult_secp256k1(uECC_word_t *result, const uECC_word_t *right);
 static void vli_mmod_fast_secp256k1(uECC_word_t *result, uECC_word_t *product) {
     uECC_word_t tmp[2 * num_words_secp256k1];

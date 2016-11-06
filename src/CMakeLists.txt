@@ -165,6 +165,8 @@ set(DRIVER-INCLUDES
 )
 
 set(DBB-INCLUDES
+        .
+        asm
         secp256k1
         secp256k1/src
         secp256k1/include

@@ -61,11 +61,7 @@
 #define uECC_WORD_SIZE 4
 #endif
 
-#if defined(__SIZEOF_INT128__) || (defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__ * 100 + __clang_minor__) >= 302))
-#define SUPPORTS_INT128 1
-#else
 #define SUPPORTS_INT128 0
-#endif
 
 typedef int8_t wordcount_t;
 typedef int16_t bitcount_t;

@@ -1,5 +1,6 @@
 /* Copyright 2014, Kenneth MacKay. Licensed under the BSD 2-clause license. */
 
+#include <string.h>
 #include "uECC.h"
 #include "uECC_vli.h"
 
@@ -1451,6 +1452,29 @@ int uECC_sign_deterministic(const uint8_t *private_key,
                             uint8_t *signature,
                             uECC_Curve curve)
 {
+
+    uint8_t *secret = hash_context->tmp;
+    uECC_word_t _secret[uECC_MAX_WORDS];
+
+    uECC_generate_k_rfc6979(secret, private_key,
+                            message_hash, hash_size,
+                            hash_context, curve);
+
+    uECC_vli_bytesToNative(_secret, secret, curve->num_bytes);
+
+    if (uECC_sign_with_k(private_key, message_hash, hash_size, _secret, signature, curve)) {
+        return 1;
+    }
+    return 0;
+}
+
+int uECC_generate_k_rfc6979(uint8_t *secret,
+                            const uint8_t *private_key,
+                            const uint8_t *message_hash,
+                            unsigned hash_size,
+                            uECC_HashContext *hash_context,
+                            uECC_Curve curve)
+{
     uint8_t *K = hash_context->tmp;
     uint8_t *V = K + hash_context->result_size;
     wordcount_t num_bytes = curve->num_bytes;
@@ -1503,7 +1527,11 @@ int uECC_sign_deterministic(const uint8_t *private_key,
                 mask >> ((bitcount_t)(num_n_words * uECC_WORD_SIZE * 8 - num_n_bits));
         }
 
-        if (uECC_sign_with_k(private_key, message_hash, hash_size, T, signature, curve)) {
+        memcpy(secret, (uint8_t *)T, sizeof(T));
+
+        /* Make sure 0 < k < curve_n */
+        if (!uECC_vli_isZero(T, curve->num_words) &&
+                uECC_vli_cmp(curve->n, T, BITS_TO_WORDS(curve->num_n_bits)) == 1) {
             return 1;
         }
 
@@ -1718,3 +1746,43 @@ void uECC_point_mult(uECC_word_t *result,
 }
 
 #endif /* uECC_ENABLE_VLI_API */
+
+void uECC_generate_private_key(uint8_t *private_child, const uint8_t *private_master,
+                               const uint8_t *z, uECC_Curve curve)
+{
+#if uECC_VLI_NATIVE_LITTLE_ENDIAN
+    uECC_word_t *_private_child = (uECC_word_t *)private_child;
+    uECC_word_t *_private_master = (uECC_word_t *)private_master;
+    uECC_word_t *_z = (uECC_word_t *)z;
+#else
+    uECC_word_t _private_child[uECC_MAX_WORDS];
+    uECC_word_t _private_master[uECC_MAX_WORDS];
+    uECC_word_t _z[uECC_MAX_WORDS];
+
+    uECC_vli_bytesToNative(_private_master, private_master,
+                           BITS_TO_BYTES(curve->num_n_bits));
+    uECC_vli_bytesToNative(_z, z, BITS_TO_BYTES(curve->num_n_bits));
+#endif
+
+    wordcount_t num_n_words = BITS_TO_WORDS(curve->num_n_bits);
+    uECC_vli_modAdd(_private_child, _private_master, _z, curve->n,
+                    num_n_words);
+
+#if uECC_VLI_NATIVE_LITTLE_ENDIAN == 0
+    uECC_vli_nativeToBytes(private_child, BITS_TO_BYTES(curve->num_n_bits), _private_child);
+#endif
+}
+
+int uECC_isValid(uint8_t *private_key, uECC_Curve curve)
+{
+#if uECC_VLI_NATIVE_LITTLE_ENDIAN
+    uECC_word_t *_private = (uECC_word_t *)private_key;
+#else
+    uECC_word_t _private[uECC_MAX_WORDS];
+    uECC_vli_bytesToNative(_private, private_key, BITS_TO_BYTES(curve->num_n_bits));
+#endif
+
+    return (!uECC_vli_isZero(_private, BITS_TO_WORDS(curve->num_n_bits)) &&
+            uECC_vli_cmp(curve->n, _private, BITS_TO_WORDS(curve->num_n_bits)) == 1);
+}
+

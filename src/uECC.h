@@ -4,6 +4,7 @@
 #define _UECC_H_
 
 #include <stdint.h>
+#include "sha2.h"
 
 /* Platform selection options.
 If uECC_PLATFORM is not defined, the code will try to guess it based on compiler macros.
@@ -51,13 +52,13 @@ to be word aligned on architectures that do not support unaligned accesses. */
 
 /* Curve support selection. Set to 0 to remove that curve. */
 #ifndef uECC_SUPPORTS_secp160r1
-#define uECC_SUPPORTS_secp160r1 1
+#define uECC_SUPPORTS_secp160r1 0
 #endif
 #ifndef uECC_SUPPORTS_secp192r1
-#define uECC_SUPPORTS_secp192r1 1
+#define uECC_SUPPORTS_secp192r1 0
 #endif
 #ifndef uECC_SUPPORTS_secp224r1
-#define uECC_SUPPORTS_secp224r1 1
+#define uECC_SUPPORTS_secp224r1 0
 #endif
 #ifndef uECC_SUPPORTS_secp256r1
 #define uECC_SUPPORTS_secp256r1 1
@@ -297,6 +298,7 @@ void finish_SHA256(uECC_HashContext *base, uint8_t *hash_result) {
     uECC_sign_deterministic(key, message_hash, &ctx.uECC, signature);
 }
 */
+
 typedef struct uECC_HashContext {
     void (*init_hash)(struct uECC_HashContext *context);
     void (*update_hash)(struct uECC_HashContext *context,
@@ -307,6 +309,31 @@ typedef struct uECC_HashContext {
     unsigned result_size; /* Hash function result size in bytes, eg 32 for SHA-256. */
     uint8_t *tmp; /* Must point to a buffer of at least (2 * result_size + block_size) bytes. */
 } uECC_HashContext;
+
+typedef struct SHA256_HashContext {
+    uECC_HashContext uECC;
+    SHA256_CTX ctx;
+} SHA256_HashContext;
+
+static inline void init_SHA256(uECC_HashContext *base)
+{
+    SHA256_HashContext *context = (SHA256_HashContext *)base;
+    sha256_Init(&context->ctx);
+}
+
+static inline void update_SHA256(uECC_HashContext *base,
+                                 const uint8_t *message,
+                                 unsigned message_size)
+{
+    SHA256_HashContext *context = (SHA256_HashContext *)base;
+    sha256_Update(&context->ctx, message, message_size);
+}
+
+static inline void finish_SHA256(uECC_HashContext *base, uint8_t *hash_result)
+{
+    SHA256_HashContext *context = (SHA256_HashContext *)base;
+    sha256_Final(hash_result, &context->ctx);
+}
 
 /* uECC_sign_deterministic() function.
 Generate an ECDSA signature for a given hash value, using a deterministic algorithm
@@ -336,6 +363,21 @@ int uECC_sign_deterministic(const uint8_t *private_key,
                             uint8_t *signature,
                             uECC_Curve curve);
 
+/* uECC_generate_k_rfc6979() function
+Generate an ECDSA signature for a given hash value, using a deterministic algorithm
+(see RFC 6979). You do not need to set the RNG using uECC_set_rng() before calling
+this function; however, if the RNG is defined it will improve resistance to side-channel
+attacks.
+
+Returns 1 if k could be generated, 0 if not.
+*/
+int uECC_generate_k_rfc6979(uint8_t *secret,
+                            const uint8_t *private_key,
+                            const uint8_t *message_hash,
+                            unsigned hash_size,
+                            uECC_HashContext *hash_context,
+                            uECC_Curve curve);
+
 /* uECC_verify() function.
 Verify an ECDSA signature.
 
@@ -355,6 +397,24 @@ int uECC_verify(const uint8_t *public_key,
                 unsigned hash_size,
                 const uint8_t *signature,
                 uECC_Curve curve);
+
+/* uECC_generate_private_key() function
+Get a child private key:
+child = (master + z) % order
+*/
+void uECC_generate_private_key(uint8_t *private_child,
+                               const uint8_t *private_master,
+                               const uint8_t *z,
+                               uECC_Curve curve);
+
+/* uECC_isValid() function
+Check if the private key is not equal to 0 and less than the order.
+
+Returns 1 if the private key is valid, 0 if it is invalid.
+*/
+int uECC_isValid(uint8_t *private_key,
+                 uECC_Curve curve);
+
 
 #ifdef __cplusplus
 } /* end of extern "C" */

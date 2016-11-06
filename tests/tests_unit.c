@@ -441,16 +441,20 @@ static void test_bip32_vector_2(void)
 #ifdef ECC_USE_UECC_LIB
 #define test_deterministic(KEY, MSG, K) do { \
     sha256_Raw((const uint8_t *)MSG, strlen(MSG), buf); \
-    res = uECC_generate_k_rfc6979_test(k, utils_hex_to_uint8(KEY), buf); \
-    u_assert_int_eq(res, 0); \
+    res = uECC_generate_k_rfc6979(k, utils_hex_to_uint8(KEY), buf, 32, &ctx.uECC, uECC_secp256k1()); \
+    u_assert_int_eq(res, 1); \
     u_assert_mem_eq(k, utils_hex_to_uint8(K), 32); \
 } while (0)
+
 
 static void test_rfc6979(void)
 {
     int res;
     uint8_t buf[32];
     uint8_t k[32];
+    uint8_t tmp[32 + 32 + 64];
+
+    SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
 
     test_deterministic("cca9fbcc1b41e5a95d369eaa6ddcff73b61a4efaa279cfc6567e8daa39cbaf50",
                        "sample", "2df40ca70e639d89528a6b670d9d48d9165fdc0febc0974056bdce192b8e16a3");
@@ -601,6 +605,7 @@ static void test_ecdh(void)
 
         random_bytes(privkey_1, sizeof(privkey_1), 0);
         random_bytes(privkey_2, sizeof(privkey_2), 0);
+        u_assert_mem_not_eq(privkey_1, privkey_2, 32);
 
         ecc_get_public_key33(privkey_1, pubkey_1);
         ecc_get_public_key33(privkey_2, pubkey_2);
@@ -995,6 +1000,7 @@ static void test_utils(void)
 int main(void)
 {
     ecc_context_init();
+    random_init();
 
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);

@@ -94,6 +94,7 @@ endif()
 
 if(USE_UECC_LIB)
     add_definitions(-DECC_USE_UECC_LIB)
+    add_definitions(-DuECC_OPTIMIZATION_LEVEL=4) # match to compiler optimization level
 else()
     add_definitions(-DSECP256K1_BUILD=1)
 endif()

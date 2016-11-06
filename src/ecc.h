@@ -32,6 +32,16 @@
 #include <stdint.h>
 
 
+#ifdef ECC_USE_UECC_LIB
+typedef enum ecc_curve_id {
+    ECC_SECP256k1,
+    ECC_SECP256r1,
+} ecc_curve_id;
+
+void ecc_set_curve(ecc_curve_id curve);
+int ecc_sig_to_der(const uint8_t *sig, uint8_t *der);
+#endif
+
 void ecc_context_init(void);
 void ecc_context_destroy(void);
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig);

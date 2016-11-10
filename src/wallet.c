@@ -35,7 +35,6 @@
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
-#include "random.h"
 #include "base58.h"
 #include "pbkdf2.h"
 #include "utils.h"

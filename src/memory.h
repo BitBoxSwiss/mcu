@@ -41,6 +41,7 @@
 #define MEM_ACCESS_ERR_ADDR             0x0004
 #define MEM_PIN_ERR_ADDR                0x0006
 #define MEM_UNLOCKED_ADDR               0x0008
+#define MEM_U2F_COUNT_ADDR              0x0010
 #define MEM_NAME_ADDR                   0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR           0x0200
 #define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
@@ -52,6 +53,7 @@
 
 
 // Default settings
+#define DEFAULT_u2f_count 0xFFFFFFFF
 #define DEFAULT_unlocked  0xFF
 #define DEFAULT_erased    0xFF
 #define DEFAULT_setup     0xFF
@@ -80,6 +82,7 @@ uint8_t *memory_name(const char *name);
 uint8_t *memory_master(const uint8_t *master_priv_key);
 uint8_t *memory_chaincode(const uint8_t *chain_code);
 uint8_t *memory_master_entropy(const uint8_t *master_entropy);
+uint8_t *memory_master_u2f(void);
 
 uint8_t *memory_read_memseed(void);
 uint8_t memory_read_erased(void);
@@ -96,6 +99,9 @@ uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);
 uint16_t memory_pin_err_count(const uint8_t access);
 uint16_t memory_read_pin_err_count(void);
+
+uint32_t memory_u2f_count_iter(void);
+uint32_t memory_u2f_count_read(void);
 
 
 #endif  // _MEMORY_H_

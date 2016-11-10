@@ -47,12 +47,7 @@
 #define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
 
 
-#ifndef TESTING
-#include "conf_usb.h"
-#define COMMANDER_REPORT_SIZE       UDI_HID_REPORT_OUT_SIZE
-#else
 #define COMMANDER_REPORT_SIZE       4096
-#endif
 #define COMMANDER_SIG_LEN           219// sig + pubkey + json encoding
 #define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024

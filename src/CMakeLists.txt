@@ -58,6 +58,7 @@ set(DBB-HARDWARE-SOURCES
         systick.c
         touch.c
         usb.c
+        u2f_device.c
 )
 
 set(DBB-TEST-SOURCES

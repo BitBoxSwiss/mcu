@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2016 Douglas J. Bakkum, Shift Devices AG
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -25,36 +25,17 @@
 */
 
 
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef __U2F_DEVICE_H__
+#define __U2F_DEVICE_H__
 
 
 #include <stdint.h>
-#include <stddef.h>
-#include "memory.h"
+#include <stdbool.h>
+#include "usb.h"
 
 
-#define TO_UINT8_HEX_BUF_LEN COMMANDER_REPORT_SIZE
-#define VARINT_LEN 20
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
-#define strlens(s) (s == NULL ? 0 : strlen(s))
-
-
-volatile void *utils_zero(volatile void *dst, size_t len);
-void utils_clear_buffers(void);
-uint8_t utils_is_hex(const char *str);
-uint8_t utils_limit_alphanumeric_hyphen_underscore_period(const char *str);
-uint8_t *utils_hex_to_uint8(const char *str);
-char *utils_uint8_to_hex(const uint8_t *bin, size_t l);
-void utils_reverse_hex(char *h, int len);
-void utils_uint64_to_varint(char *vi, int *l, uint64_t i);
-int utils_varint_to_uint64(const char *vi, uint64_t *i);
-#ifdef TESTING
-const char *utils_read_decrypted_report(void);
-void utils_decrypt_report(const char *report, PASSWORD_ID dec_id);
-void utils_send_cmd(const char *instruction, PASSWORD_ID enc_id);
-void utils_send_print_cmd(const char *command, PASSWORD_ID enc_id);
-#endif
+void u2f_device_run(const USB_FRAME *f);
+void u2f_device_timeout(void);
 
 
 #endif

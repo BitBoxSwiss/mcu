@@ -34,6 +34,7 @@
 #include "random.h"
 #include "utils.h"
 #include "flags.h"
+#include "hmac.h"
 #include "sha2.h"
 #ifndef TESTING
 #include "ataes132.h"
@@ -46,6 +47,7 @@
 static uint8_t MEM_unlocked = DEFAULT_unlocked;
 static uint8_t MEM_erased = DEFAULT_erased;
 static uint8_t MEM_setup = DEFAULT_setup;
+static uint32_t MEM_u2f_count = DEFAULT_u2f_count;
 static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
@@ -216,7 +218,7 @@ int memory_setup(void)
 {
     if (memory_read_setup()) {
         // One-time setup on factory install
-        memory_erase();
+        memory_erase();// FIXME -- should be after locking config memory !?
 #ifndef TESTING
         // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
         const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
@@ -226,6 +228,8 @@ int memory_setup(void)
             return DBB_ERROR;
         }
 #endif
+        uint32_t c = 0x00000000;
+        memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
         memory_write_setup(0x00);
     } else {
         memory_mempass();
@@ -234,6 +238,7 @@ int memory_setup(void)
         memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
+        memory_u2f_count_read();
     }
     return DBB_OK;
 }
@@ -297,13 +302,6 @@ uint8_t *memory_name(const char *name)
 }
 
 
-uint8_t *memory_master_entropy(const uint8_t *master_entropy)
-{
-    memory_eeprom_crypt(master_entropy, MEM_master_entropy, MEM_MASTER_ENTROPY_ADDR);
-    return MEM_master_entropy;
-}
-
-
 uint8_t *memory_master(const uint8_t *master)
 {
     memory_eeprom_crypt(master, MEM_master, MEM_MASTER_BIP32_ADDR);
@@ -315,6 +313,22 @@ uint8_t *memory_chaincode(const uint8_t *chain)
 {
     memory_eeprom_crypt(chain, MEM_master_chain, MEM_MASTER_BIP32_CHAIN_ADDR);
     return MEM_master_chain;
+}
+
+
+uint8_t *memory_master_entropy(const uint8_t *master_entropy)
+{
+    memory_eeprom_crypt(master_entropy, MEM_master_entropy, MEM_MASTER_ENTROPY_ADDR);
+    return MEM_master_entropy;
+}
+
+
+uint8_t *memory_master_u2f(void)
+{
+    static uint8_t hmac[SHA256_DIGEST_LENGTH];
+    const uint8_t salt[] = {'U', '2', 'F', 's', 'a', 'l', 't'};
+    hmac_sha256(salt, sizeof(salt), memory_chaincode(NULL), 32, hmac);
+    return hmac;
 }
 
 
@@ -485,3 +499,18 @@ uint16_t memory_read_pin_err_count(void)
     return MEM_pin_err;
 }
 
+
+
+uint32_t memory_u2f_count_iter(void)
+{
+    uint32_t c;
+    memory_u2f_count_read();
+    c = MEM_u2f_count + 1;
+    memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
+    return MEM_u2f_count;
+}
+uint32_t memory_u2f_count_read(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
+    return MEM_u2f_count;
+}

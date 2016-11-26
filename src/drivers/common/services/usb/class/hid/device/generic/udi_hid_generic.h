@@ -81,8 +81,9 @@ typedef struct {
 
 //! Report descriptor for HID generic
 typedef struct {
-// db //////////////	uint8_t array[53];
-	uint8_t array[55];
+    //uint8_t array[53];// original value
+	//uint8_t array[55];// digital bitbox
+	uint8_t array[47];// u2f
 } udi_hid_generic_report_desc_t;
 
 

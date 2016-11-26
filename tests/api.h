@@ -46,9 +46,142 @@ static int TEST_LIVE_DEVICE = 0;
 #ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/
 #include <hidapi.h>
+#include "u2f/u2f_hid.h"
+#include "u2f/u2f.h"
+#include "usb.h"
+
+
+#define HWW_CID 0xff000000
+
 
 static hid_device *HID_HANDLE;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
+
+
+static int api_hid_send_frame(USB_FRAME *f)
+{
+    int res;
+    uint8_t d[sizeof(USB_FRAME) + 1];
+    memset(d, 0, sizeof(d));
+    d[0] = 0;  // un-numbered report
+    f->cid = htonl(f->cid);  // cid is in network order on the wire
+    memcpy(d + 1, f, sizeof(USB_FRAME));
+    f->cid = ntohl(f->cid);
+    res = hid_write(HID_HANDLE, d, sizeof(d));
+
+    if (res == sizeof(d)) {
+        return 0;
+    }
+    return 1;
+}
+
+
+static int api_hid_send_frames(uint32_t cid, uint8_t cmd, const void *data, size_t size)
+{
+    USB_FRAME frame;
+    int res;
+    size_t frameLen;
+    uint8_t seq = 0;
+    const uint8_t *pData = (const uint8_t *) data;
+
+    frame.cid = cid;
+    frame.init.cmd = TYPE_INIT | cmd;
+    frame.init.bcnth = (size >> 8) & 255;
+    frame.init.bcntl = (size & 255);
+
+    frameLen = MIN(size, sizeof(frame.init.data));
+    memset(frame.init.data, 0xEE, sizeof(frame.init.data));
+    memcpy(frame.init.data, pData, frameLen);
+
+    do {
+        res = api_hid_send_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+        size -= frameLen;
+        pData += frameLen;
+
+        frame.cont.seq = seq++;
+        frameLen = MIN(size, sizeof(frame.cont.data));
+        memset(frame.cont.data, 0xEE, sizeof(frame.cont.data));
+        memcpy(frame.cont.data, pData, frameLen);
+    } while (size);
+
+    return 0;
+}
+
+
+static int api_hid_read_frame(USB_FRAME *r)
+{
+
+    memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
+    int res = hid_read(HID_HANDLE, (uint8_t *) r, sizeof(USB_FRAME));
+    if (res == sizeof(USB_FRAME)) {
+        r->cid = ntohl(r->cid);
+        return 0;
+    }
+    return 1;
+}
+
+
+static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
+{
+    USB_FRAME frame;
+    int res, result;
+    size_t totalLen, frameLen;
+    uint8_t seq = 0;
+    uint8_t *pData = (uint8_t *) data;
+
+    (void) cmd;
+
+    do {
+        res = api_hid_read_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+    } while (frame.cid != cid || FRAME_TYPE(frame) != TYPE_INIT);
+
+    if (frame.init.cmd == U2FHID_ERROR) {
+        return -frame.init.data[0];
+    }
+
+    totalLen = MIN(max, MSG_LEN(frame));
+    frameLen = MIN(sizeof(frame.init.data), totalLen);
+
+    result = totalLen;
+
+    memcpy(pData, frame.init.data, frameLen);
+    totalLen -= frameLen;
+    pData += frameLen;
+
+    while (totalLen) {
+        res = api_hid_read_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+        if (frame.cid != cid) {
+            continue;
+        }
+        if (FRAME_TYPE(frame) != TYPE_CONT) {
+            return -ERR_INVALID_SEQ;
+        }
+        if (FRAME_SEQ(frame) != seq++) {
+            return -ERR_INVALID_SEQ;
+        }
+
+        frameLen = MIN(sizeof(frame.cont.data), totalLen);
+
+        memcpy(pData, frame.cont.data, frameLen);
+        totalLen -= frameLen;
+        pData += frameLen;
+    }
+
+    return result;
+}
+
 
 static int api_hid_init(void)
 {
@@ -62,15 +195,11 @@ static int api_hid_init(void)
 
 static void api_hid_read(PASSWORD_ID id)
 {
-    int res, cnt = 0;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    while (cnt < HID_REPORT_SIZE) {
-        res = hid_read(HID_HANDLE, HID_REPORT + cnt, HID_REPORT_SIZE);
-        if (res < 0) {
-            printf("ERROR: Unable to read report.\n");
-            return;
-        }
-        cnt += res;
+    int res = api_hid_read_frames(HWW_CID, HWW_COMMAND, HID_REPORT, HID_REPORT_SIZE);
+    if (res < 0) {
+        printf("ERROR: Unable to read report.\n");
+        return;
     }
     utils_decrypt_report((char *)HID_REPORT, id);
     //printf("received:  >>%s<<\n", utils_read_decrypted_report());
@@ -79,9 +208,7 @@ static void api_hid_read(PASSWORD_ID id)
 
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
-    memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    memcpy(HID_REPORT, cmd, cmdlen );
-    hid_write(HID_HANDLE, (unsigned char *)HID_REPORT, HID_REPORT_SIZE);
+    api_hid_send_frames(HWW_CID, HWW_COMMAND, cmd, cmdlen);
 }
 
 

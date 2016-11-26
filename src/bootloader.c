@@ -310,8 +310,9 @@ void bootloader_jump(void)
 }
 
 
-char *commander(const char *command)
+char *commander(const char *command)// FIXME -- need to be renamed
 {
-    return bootloader(command);
+    usb_reply(bootloader(command));
+    return NULL;
 }
 

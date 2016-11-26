@@ -31,6 +31,7 @@
 
 #include "compiler.h"
 #include "../../version.h"
+#include "../../usb.h"
 
 
 // Device definition 
@@ -80,8 +81,8 @@ extern char usb_serial_number[];
 #define  UDI_HID_REPORT_IN_SIZE             256
 #define  UDI_HID_REPORT_OUT_SIZE            4098
 #else
-#define  UDI_HID_REPORT_IN_SIZE             4096
-#define  UDI_HID_REPORT_OUT_SIZE            4096
+#define  UDI_HID_REPORT_IN_SIZE             USB_REPORT_SIZE
+#define  UDI_HID_REPORT_OUT_SIZE            USB_REPORT_SIZE
 #endif
 #define  UDI_HID_REPORT_FEATURE_SIZE        8
 #define  UDI_HID_GENERIC_EP_SIZE            64
@@ -89,7 +90,6 @@ extern char usb_serial_number[];
 
 // Keep these includes at the end of the file
 #include "udi_hid_generic_conf.h"
-#include "../../usb.h"
 
 
 #endif // _CONF_USB_H_

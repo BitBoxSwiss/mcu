@@ -28,11 +28,13 @@
 #include <string.h>
 
 #include "conf_usb.h"
-#include "commander.h"
 #include "utils.h"
 #include "mcu.h"
 #include "usb.h"
 #include "u2f_device.h"
+#ifdef BOOTLOADER
+#include "bootloader.h"
+#endif
 
 
 #define USB_QUEUE_NUM_PACKETS 128
@@ -46,7 +48,11 @@ static bool usb_b_enable = false;
 
 void usb_report(const unsigned char *command)
 {
+#ifdef BOOTLOADER
+    bootloader_command((const char *)command);
+#else
     u2f_device_run((const USB_FRAME *)command);
+#endif
 }
 
 

@@ -206,7 +206,7 @@ static void bootloader_reboot(void)
 }
 
 
-static char *bootloader(const char *command)
+void bootloader_command(const char *command)
 {
     memset(report, 0, sizeof(report));
     report[0] = command[0]; // OP_CODE
@@ -271,7 +271,7 @@ static char *bootloader(const char *command)
             break;
     }
 
-    return report;
+    usb_reply((uint8_t *)report);
 }
 
 
@@ -308,11 +308,3 @@ void bootloader_jump(void)
     }
     led_off();
 }
-
-
-char *commander(const char *command)// FIXME -- need to be renamed
-{
-    usb_reply(bootloader(command));
-    return NULL;
-}
-

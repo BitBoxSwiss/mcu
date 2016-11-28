@@ -14,6 +14,6 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", run: "always", privileged: false, inline: <<-SHELL
     mkdir -p /vagrant/build-vagrant
     cd /vagrant/build-vagrant
-    rm -rf * && cmake .. -DBUILD_TYPE=firmware && make
+    rm -rf * && cmake .. -DBUILD_TYPE=firmware -DUSE_UECC_LIB=ON && make
   SHELL
 end

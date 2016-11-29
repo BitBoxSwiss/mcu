@@ -1392,6 +1392,20 @@ static int commander_touch_button(int found_cmd)
 }
 
 
+static void commander_access_err(uint8_t err_msg, uint16_t err_count)
+{
+    char msg[256];
+    uint8_t warn_msg = (err_count < COMMANDER_TOUCH_ATTEMPTS) ? DBB_WARN_RESET :
+                       DBB_WARN_RESET_TOUCH;
+    snprintf(msg, sizeof(msg), "%s %i %s",
+             flag_msg(err_msg),
+             COMMANDER_MAX_ATTEMPTS - err_count,
+             flag_msg(warn_msg));
+
+    commander_fill_report(cmd_str(CMD_input), msg, err_msg);
+}
+
+
 static void commander_parse(char *command)
 {
     char *encoded_report;
@@ -1428,13 +1442,8 @@ static void commander_parse(char *command)
 
             if (wallet_is_locked()) {
                 if (commander_tfa_check_pin(json_node) != DBB_OK) {
-                    char msg[256];
                     memset(TFA_PIN, 0, sizeof(TFA_PIN));
-                    snprintf(msg, sizeof(msg), "%s %i %s",
-                             flag_msg(DBB_ERR_SIGN_TFA_PIN),
-                             COMMANDER_MAX_ATTEMPTS - memory_read_pin_err_count() - 1,
-                             flag_msg(DBB_WARN_RESET));
-                    commander_fill_report(cmd_str(CMD_sign), msg, DBB_ERR_SIGN_TFA_PIN);
+                    commander_access_err(DBB_ERR_SIGN_TFA_PIN, memory_read_pin_err_count() + 1);
                     memory_pin_err_count(DBB_ACCESS_ITERATE);
                     memset(sign_command, 0, COMMANDER_REPORT_SIZE);
                     goto exit;
@@ -1550,11 +1559,8 @@ static char *commander_decrypt(const char *encrypted_command)
         }
 
         // Incorrect input
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_JSON_PARSE),
-                 COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_JSON_PARSE);
         err_iter = memory_access_err_count(DBB_ACCESS_ITERATE);
+        commander_access_err(DBB_ERR_IO_JSON_PARSE, err_iter);
     }
 
     if (err_iter - err_count == 0 && err == 0) {
@@ -1573,21 +1579,21 @@ static char *commander_decrypt(const char *encrypted_command)
 
 static int commander_check_init(const char *encrypted_command)
 {
+    if (memory_read_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
+        int status = touch_button_press(DBB_TOUCH_LONG);
+        if (status != DBB_TOUCHED) {
+            commander_fill_report(cmd_str(CMD_input), NULL, status);
+            return DBB_ERROR;
+        }
+    }
+
     if (!encrypted_command) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
-                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
-                 flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        commander_access_err(DBB_ERR_IO_NO_INPUT, memory_access_err_count(DBB_ACCESS_ITERATE));
         return DBB_ERROR;
     }
 
     if (!strlens(encrypted_command)) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
-                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
-                 flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        commander_access_err(DBB_ERR_IO_NO_INPUT, memory_access_err_count(DBB_ACCESS_ITERATE));
         return DBB_ERROR;
     }
 

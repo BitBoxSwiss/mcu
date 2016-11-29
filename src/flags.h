@@ -52,6 +52,7 @@
 #define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
+#define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
 #define VERIFYPASS_FILENAME         "verification.txt"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
@@ -238,6 +239,7 @@ X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
 X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncated.")\
+X(WARN_RESET_TOUCH,    903, "attempts remain before the device is reset. The next login requires holding the touch button.")\
 X(FLAG_NUM,              0, 0)/* keep last */
 
 

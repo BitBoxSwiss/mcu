@@ -25,18 +25,6 @@
 */
 
 
-// TODO
-//      -- U2F independent of wallet seed:
-//         generate u2f seed at startup, store in eeprom.
-//         need to add seed to backup pdf.
-//         need API command to reset u2f master.
-//         do not erase counter from memory - uint32 has >4 billion values (272 years to fill if login 1x / sec)
-//
-//      -- need to prevent browser from erasing device (if FIDO and BTC will both be enabled)
-//         for last 5 attempts at login, require touch button to proceed
-//
-
-
 #include <string.h>
 
 #include "bip32.h"
@@ -50,6 +38,7 @@
 #include "utils.h"
 #include "memory.h"
 #include "random.h"
+#include "version.h"
 #include "systick.h"
 #include "commander.h"
 

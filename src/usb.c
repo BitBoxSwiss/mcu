@@ -27,14 +27,16 @@
 
 #include <string.h>
 
+#ifndef TESTING
 #include "conf_usb.h"
-#include "utils.h"
 #include "mcu.h"
-#include "usb.h"
-#include "u2f_device.h"
 #ifdef BOOTLOADER
 #include "bootloader.h"
 #endif
+#endif
+#include "utils.h"
+#include "usb.h"
+#include "u2f_device.h"
 
 
 #define USB_QUEUE_NUM_PACKETS 128
@@ -43,7 +45,6 @@
 static uint8_t usb_reply_queue_packets[USB_QUEUE_NUM_PACKETS][USB_REPORT_SIZE];
 static uint32_t usb_reply_queue_index_start = 0;
 static uint32_t usb_reply_queue_index_end = 0;
-static bool usb_b_enable = false;
 
 
 void usb_report(const unsigned char *command)
@@ -65,14 +66,16 @@ void usb_report_sent(void)
 void usb_reply(uint8_t *report)
 {
     if (report) {
+#ifndef TESTING
         if (udi_hid_generic_send_report_in(report)) {
             return;
         }
+#endif
     }
 }
 
 
-static uint8_t *usb_reply_queue_read(void)
+uint8_t *usb_reply_queue_read(void)
 {
     uint32_t p = usb_reply_queue_index_start;
     if (p == usb_reply_queue_index_end) {
@@ -135,13 +138,18 @@ void usb_reply_queue_load_msg(const uint8_t cmd, const uint8_t *data, const uint
 
 void usb_reply_queue_send(void)
 {
+#ifndef TESTING
     static uint8_t *data;
     data = usb_reply_queue_read();
     if (data) {
         usb_reply(data);
     }
+#endif
 }
 
+
+#ifndef TESTING
+static bool usb_b_enable = false;
 
 // Periodically called every 1(?) msec
 // Can run timed locked processes here
@@ -204,4 +212,5 @@ void usb_hid_set_feature(uint8_t *report)
         usb_suspend_action();
     }
 }
+#endif
 

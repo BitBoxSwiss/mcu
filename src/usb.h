@@ -72,6 +72,7 @@ void usb_reply_queue_add(const USB_FRAME *frame);
 void usb_reply_queue_load_msg(const uint8_t cmd, const uint8_t *data, const uint32_t len,
                               const uint32_t cid);
 void usb_reply_queue_send(void);
+uint8_t *usb_reply_queue_read(void);
 void usb_process(uint16_t framenumber);
 bool usb_enable(void);
 void usb_disable(void);

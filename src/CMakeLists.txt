@@ -24,6 +24,8 @@ set(DBB-FIRMWARE-SOURCES
         wallet.c
         flags.c
         sha2.c
+        u2f_device.c
+        usb.c
 )
 
 if(USE_UECC_LIB)
@@ -50,6 +52,8 @@ set(DBB-BOOTLOADER-SOURCES
         flags.c
         random.c
         ataes132.c
+        u2f_device.c
+        usb.c
 )
 
 set(DBB-HARDWARE-SOURCES
@@ -57,8 +61,6 @@ set(DBB-HARDWARE-SOURCES
         sd.c
         systick.c
         touch.c
-        usb.c
-        u2f_device.c
 )
 
 set(DBB-TEST-SOURCES

@@ -34,27 +34,16 @@
 #include "utils.h"
 
 
-int main(int argc, char *argv[])
+static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup)
 {
     uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000],
             hash[32], msg_len = 0, *p;
     uint32_t i, j, p_len = 0;
-    SHA256_CTX sha256;
-    EC_GROUP *ecgroup;
     int cnt = 0, err = 0;
 
-    random_init();
-    ecc_context_init();
-    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-
-    unsigned long max_iterations = -1;
-    if (argc == 2) {
-        sscanf(argv[1], "%lu", &max_iterations);
-    } else if (argc > 2) {
-        puts("Zero or one command-line arguments only, exiting....");
-    }
+    SHA256_CTX sha256;
     unsigned long iterations = 0;
-    while (argc == 1 || iterations < max_iterations) {
+    while (iterations < max_iterations) {
 
         // random message len between 1 and 256
         random_bytes(msg, 1 , 0);
@@ -142,7 +131,44 @@ int main(int argc, char *argv[])
         printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
     }
 
+    return err;
+}
+
+
+int main(int argc, char *argv[])
+{
+    EC_GROUP *ecgroup;
+    int err = 0;
+
+    random_init();
+    ecc_context_init();
+
+    unsigned long max_iterations = 1000;
+    if (argc == 2) {
+        sscanf(argv[1], "%lu", &max_iterations);
+    } else if (argc > 2) {
+        puts("Zero or one command-line arguments only, exiting....");
+    }
+
+#ifdef ECC_USE_UECC_LIB
+    printf("\nTesting curve secp256k1\n");
+    ecc_set_curve(ECC_SECP256k1);
+    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    err += run_test(max_iterations, ecgroup);
     EC_GROUP_free(ecgroup);
+
+    printf("\nTesting curve secp256r1\n");
+    ecc_set_curve(ECC_SECP256r1);
+    ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    err += run_test(max_iterations, ecgroup);
+    EC_GROUP_free(ecgroup);
+#else
+    // secp256k1 library does not have secp256r1 functionality
+    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    err += run_test(max_iterations, ecgroup);
+    EC_GROUP_free(ecgroup);
+#endif
+
     ecc_context_destroy();
     return err;
 }

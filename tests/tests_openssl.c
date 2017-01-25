@@ -170,5 +170,8 @@ int main(int argc, char *argv[])
 #endif
 
     ecc_context_destroy();
+#ifdef ECC_USE_SECP256K1_LIB
+    bitcoin_ecc.ecc_context_destroy();
+#endif
     return err;
 }

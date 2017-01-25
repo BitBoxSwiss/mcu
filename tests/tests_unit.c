@@ -438,7 +438,6 @@ static void test_bip32_vector_2(void)
 }
 
 
-#ifdef ECC_USE_UECC_LIB
 #define test_deterministic(KEY, MSG, K) do { \
     sha256_Raw((const uint8_t *)MSG, strlen(MSG), buf); \
     res = uECC_generate_k_rfc6979(k, utils_hex_to_uint8(KEY), buf, 32, &ctx.uECC, uECC_secp256k1()); \
@@ -471,7 +470,6 @@ static void test_rfc6979(void)
                        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!",
                        "1f4b84c23a86a221d233f2521be018d9318639d5b8bbd6374a8a59232d16ad3d");
 }
-#endif
 
 
 // generated using http://althenia.net/svn/stackoverflow/pbkdf2-test-vectors.py?rev=6
@@ -1015,10 +1013,8 @@ int main(void)
     u_run_test(test_aes_cbc);
     u_run_test(test_buffer_overflow);
     u_run_test(test_utils);
-#ifdef ECC_USE_UECC_LIB
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);
-#endif
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
@@ -1027,5 +1023,8 @@ int main(void)
     }
 
     ecc_context_destroy();
+#ifdef ECC_USE_SECP256K1_LIB
+    bitcoin_ecc.ecc_context_destroy();
+#endif
     return U_TESTS_FAIL;
 }

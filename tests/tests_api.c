@@ -1418,6 +1418,9 @@ int main(void)
     random_init();
     __stack_chk_guard = random_uint32(0);
     ecc_context_init();
+#ifdef ECC_USE_SECP256K1_LIB
+    bitcoin_ecc.ecc_context_init();
+#endif
     memory_setup();
     memory_setup(); // run twice
     printf("\n\nInternal API Result:\n");
@@ -1439,5 +1442,8 @@ int main(void)
 #endif
 
     ecc_context_destroy();
+#ifdef ECC_USE_SECP256K1_LIB
+    bitcoin_ecc.ecc_context_destroy();
+#endif
     return U_TESTS_FAIL;
 }

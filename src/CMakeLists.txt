@@ -20,6 +20,7 @@ set(DBB-FIRMWARE-SOURCES
         random.c
         ripemd160.c
         ecc.c
+        uECC.c
         utils.c
         wallet.c
         flags.c
@@ -28,14 +29,10 @@ set(DBB-FIRMWARE-SOURCES
         usb.c
 )
 
-if(USE_UECC_LIB)
+if(USE_SECP256K1_LIB)
     set(DBB-FIRMWARE-SOURCES
         ${DBB-FIRMWARE-SOURCES}
-        uECC.c
-    )
-else()
-    set(DBB-FIRMWARE-SOURCES
-        ${DBB-FIRMWARE-SOURCES}
+        ecc_bitcoin.c
         secp256k1.c
     )
 endif()

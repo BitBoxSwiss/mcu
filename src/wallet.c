@@ -284,7 +284,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
         goto err;
     }
 
-    ecc_get_public_key33(node.private_key, pub_key);
+    bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key);
 
     utils_zero(&node, sizeof(HDNode));
     if (strncmp(pubkey, utils_uint8_to_hex(pub_key, 33), 66)) {
@@ -327,13 +327,13 @@ int wallet_sign(const char *message, const char *keypath)
 
     memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (ecc_sign_digest(node.private_key, data, sig)) {
+    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;
     }
 
-    ecc_get_public_key33(node.private_key, pub_key);
+    bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key);
     utils_zero(&node, sizeof(HDNode));
     return commander_fill_signature_array(sig, pub_key);
 

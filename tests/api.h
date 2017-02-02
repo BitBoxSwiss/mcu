@@ -117,6 +117,21 @@ exit:
 }
 
 
+// Initialize a frame with len random payload, or data.
+static void api_create_u2f_frame(USB_FRAME *f, uint32_t cid, uint8_t cmd, size_t len,
+                                 const void *data)
+{
+    memset(f, 0, sizeof(USB_FRAME));
+    f->cid = cid;
+    f->init.cmd = cmd | TYPE_INIT;
+    f->init.bcnth = (uint8_t) (len >> 8);
+    f->init.bcntl = (uint8_t) len;
+    for (size_t i = 0; i < MIN(len, sizeof(f->init.data)); ++i) {
+        f->init.data[i] = data ? ((const uint8_t *)data)[i] : (random_uint32(0) & 255);
+    }
+}
+
+
 static int api_hid_send_frame(USB_FRAME *f)
 {
     int res = 0;
@@ -252,10 +267,10 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
             continue;
         }
         if (FRAME_TYPE(frame) != TYPE_CONT) {
-            return -ERR_INVALID_SEQ;
+            return -U2F_ERR_INVALID_SEQ;
         }
         if (FRAME_SEQ(frame) != seq++) {
-            return -ERR_INVALID_SEQ;
+            return -U2F_ERR_INVALID_SEQ;
         }
 
         frameLen = MIN(sizeof(frame.cont.data), totalLen);

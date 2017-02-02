@@ -924,6 +924,7 @@ static void commander_process_device(yajl_val json_node)
         char seeded[6] = {0};
         char sdcard[6] = {0};
         char bootlock[6] = {0};
+        char u2f_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_read_unique_id(serial, 4);
@@ -947,6 +948,14 @@ static void commander_process_device(yajl_val json_node)
             snprintf(bootlock, sizeof(bootlock), "%s", attr_str(ATTR_true));
         }
 
+        uint32_t ext_flags = memory_report_ext_flags();
+        if (ext_flags & MEM_EXT_FLAG_U2F) {
+            // Bit is set == disabled because default EEPROM space is 0xFF
+            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_false));
+        } else {
+            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_true));
+        }
+
         if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
         } else {
@@ -965,7 +974,7 @@ static void commander_process_device(yajl_val json_node)
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":\"%s\"}",
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":\"%s\", \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
@@ -974,7 +983,8 @@ static void commander_process_device(yajl_val json_node)
                  attr_str(ATTR_lock), lock,
                  attr_str(ATTR_bootlock), bootlock,
                  attr_str(ATTR_sdcard), sdcard,
-                 attr_str(ATTR_TFA), tfa);
+                 attr_str(ATTR_TFA), tfa,
+                 attr_str(ATTR_U2F), u2f_enabled);
 
         free(tfa);
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
@@ -1086,6 +1096,44 @@ static void commander_process_led(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
     } else {
         commander_fill_report(cmd_str(CMD_led), NULL, DBB_ERR_IO_INVALID_CMD);
+    }
+}
+
+
+static void commander_process_feature_set(yajl_val json_node)
+{
+    const char *path[] = { cmd_str(CMD_feature_set), NULL };
+    yajl_val data = yajl_tree_get(json_node, path, yajl_t_any);
+
+    if (!YAJL_IS_OBJECT(data) || data->u.object.len <= 0) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
+    } else {
+        int flags_set = 0;
+        const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
+        yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
+        // Check if u2f exists.
+        // At the moment, only allow a single element.
+        // TODO: better way to throw an error in case of
+        //       invalid features
+        if (u2f && data->u.object.len == 1) {
+            uint32_t flags = memory_report_ext_flags();
+            if (YAJL_IS_TRUE(u2f)) {
+                // Unset the bit == U2F enabled
+                flags &= ~(MEM_EXT_FLAG_U2F);
+            } else {
+                flags |= MEM_EXT_FLAG_U2F;
+            }
+            memory_write_ext_flags(flags);
+            flags_set++;
+        }
+
+        if (flags_set <= 0) {
+            commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
+            return;
+        }
+        commander_fill_report(cmd_str(CMD_feature_set), attr_str(ATTR_success), DBB_OK);
     }
 }
 
@@ -1218,6 +1266,10 @@ static int commander_process(int cmd, yajl_val json_node)
 
         case CMD_bootloader:
             commander_process_bootloader(json_node);
+            break;
+
+        case CMD_feature_set:
+            commander_process_feature_set(json_node);
             break;
 
         default: {

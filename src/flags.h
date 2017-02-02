@@ -91,6 +91,7 @@ X(random)         \
 X(backup)         \
 X(aes256cbc)      \
 X(ping)           \
+X(feature_set)    \
 /*  child keys  */\
 X(source)         \
 X(entropy)        \
@@ -113,6 +114,7 @@ X(check)          \
 X(key)            \
 X(sig)            \
 X(pin)            \
+X(U2F)            \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
@@ -158,6 +160,7 @@ X(serial)         \
 X(version)        \
 X(password)       \
 X(TFA)            \
+X(U2F)            \
 X(__ERASE__)      \
 X(__FORCE__)      \
 X(NUM)             /* keep last */

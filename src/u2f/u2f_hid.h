@@ -103,16 +103,16 @@ typedef struct {
 
 // Low-level error codes. Return as negatives.
 
-#define ERR_NONE                0x00    // No error
-#define ERR_INVALID_CMD         0x01    // Invalid command
-#define ERR_INVALID_PAR         0x02    // Invalid parameter
-#define ERR_INVALID_LEN         0x03    // Invalid message length
-#define ERR_INVALID_SEQ         0x04    // Invalid message sequencing
-#define ERR_MSG_TIMEOUT         0x05    // Message has timed out
-#define ERR_CHANNEL_BUSY        0x06    // Channel busy
-#define ERR_LOCK_REQUIRED       0x0a    // Command requires channel lock
-#define ERR_INVALID_CID         0x0b    // Command not allowed on this cid
-#define ERR_OTHER               0x7f    // Other unspecified error
+#define U2F_ERR_NONE                0x00    // No error
+#define U2F_ERR_INVALID_CMD         0x01    // Invalid command
+#define U2F_ERR_INVALID_PAR         0x02    // Invalid parameter
+#define U2F_ERR_INVALID_LEN         0x03    // Invalid message length
+#define U2F_ERR_INVALID_SEQ         0x04    // Invalid message sequencing
+#define U2F_ERR_MSG_TIMEOUT         0x05    // Message has timed out
+#define U2F_ERR_CHANNEL_BUSY        0x06    // Channel busy
+#define U2F_ERR_LOCK_REQUIRED       0x0a    // Command requires channel lock
+#define U2F_ERR_INVALID_CID         0x0b    // Command not allowed on this cid
+#define U2F_ERR_OTHER               0x7f    // Other unspecified error
 
 #ifdef __cplusplus
 }

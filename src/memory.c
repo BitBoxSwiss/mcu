@@ -47,6 +47,7 @@
 static uint8_t MEM_unlocked = DEFAULT_unlocked;
 static uint8_t MEM_erased = DEFAULT_erased;
 static uint8_t MEM_setup = DEFAULT_setup;
+static uint32_t MEM_ext_flags = DEFAULT_ext_flags;
 static uint32_t MEM_u2f_count = DEFAULT_u2f_count;
 static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
@@ -239,6 +240,7 @@ int memory_setup(void)
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
         memory_u2f_count_read();
+        memory_read_ext_flags();
     }
     return DBB_OK;
 }
@@ -263,6 +265,7 @@ void memory_erase(void)
     memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
     memory_write_unlocked(DEFAULT_unlocked);
+    memory_write_ext_flags(DEFAULT_ext_flags);
     memory_access_err_count(DBB_ACCESS_INITIALIZE);
     memory_pin_err_count(DBB_ACCESS_INITIALIZE);
 }
@@ -500,7 +503,6 @@ uint16_t memory_read_pin_err_count(void)
 }
 
 
-
 uint32_t memory_u2f_count_iter(void)
 {
     uint32_t c;
@@ -513,4 +515,19 @@ uint32_t memory_u2f_count_read(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
     return MEM_u2f_count;
+}
+
+
+void memory_write_ext_flags(uint32_t flags)
+{
+    memory_eeprom((uint8_t *)&flags, (uint8_t *)&MEM_ext_flags, MEM_EXT_FLAGS_ADDR, 4);
+}
+uint32_t memory_read_ext_flags(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_ext_flags, MEM_EXT_FLAGS_ADDR, 4);
+    return MEM_ext_flags;
+}
+uint32_t memory_report_ext_flags(void)
+{
+    return MEM_ext_flags;
 }

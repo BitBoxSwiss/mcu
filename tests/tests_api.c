@@ -439,6 +439,84 @@ static void tests_name(void)
 }
 
 
+static void tests_u2f(void)
+{
+    USB_FRAME f, r;
+    uint32_t cid = 5;
+    api_create_u2f_frame(&f, cid, U2FHID_WINK, 0, NULL);
+
+    api_reset_device();
+
+    // U2F command should abort due to not seeded
+    api_hid_send_frame(&f);
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
+    u_assert_int_eq(r.init.bcntl, 1);
+    u_assert_int_eq(r.init.data[0], U2F_ERR_CHANNEL_BUSY);
+    u_assert_int_eq(r.cid, cid);
+
+    // Seed
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+
+    api_format_send_cmd(cmd_str(CMD_seed),
+                        "{\"source\":\"create\", \"filename\":\"u.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    // U2F command runs
+    api_hid_send_frame(&f);
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_WINK);
+    u_assert_int_eq(r.init.bcntl, 0);
+
+    // Disable U2F
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
+
+    // U2F command should abort
+    api_hid_send_frame(&f);
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
+    u_assert_int_eq(r.init.bcntl, 1);
+    u_assert_int_eq(r.init.data[0], U2F_ERR_CHANNEL_BUSY);
+
+    // Enable U2F
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+
+    // U2F command runs
+    api_hid_send_frame(&f);
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_WINK);
+    u_assert_int_eq(r.init.bcntl, 0);
+
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"Foo\":false}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false, \"Foo\":false}",
+                        PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+}
+
+
 static void tests_device(void)
 {
     api_reset_device();
@@ -561,6 +639,7 @@ static void tests_device(void)
     u_assert_str_has_not(api_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(api_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(api_read_decrypted_report(), "\"lock\":true");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
     if (!TEST_LIVE_DEVICE) {
         yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
         const char *ciphertext_path[] = { cmd_str(CMD_device), attr_str(ATTR_TFA), (const char *) 0 };
@@ -574,6 +653,8 @@ static void tests_device(void)
         free(dec);
         yajl_tree_free(json_node);
     }
+
+
 
     api_reset_device();
 
@@ -591,6 +672,7 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(api_read_decrypted_report(), "\"seeded\":false");
     u_assert_str_has(api_read_decrypted_report(), "\"lock\":false");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1371,6 +1453,7 @@ static void tests_aes_cbc(void)
 
 static void run_utests(void)
 {
+    u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);

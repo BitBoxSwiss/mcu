@@ -25,7 +25,6 @@
 */
 
 
-
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
@@ -41,7 +40,8 @@
 #define MEM_ACCESS_ERR_ADDR             0x0004
 #define MEM_PIN_ERR_ADDR                0x0006
 #define MEM_UNLOCKED_ADDR               0x0008
-#define MEM_U2F_COUNT_ADDR              0x0010
+#define MEM_EXT_FLAGS_ADDR              0x000A// (uint32_t) 32 possible extension flags
+#define MEM_U2F_COUNT_ADDR              0x0010// (uint32_t)
 #define MEM_NAME_ADDR                   0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR           0x0200
 #define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
@@ -52,11 +52,16 @@
 #define MEM_MASTER_ENTROPY_ADDR         0x0900
 
 
+// Extension flags
+#define MEM_EXT_FLAG_U2F  0x00000001// Flag to enable or disabled U2F
+
+
 // Default settings
-#define DEFAULT_u2f_count 0xFFFFFFFF
 #define DEFAULT_unlocked  0xFF
 #define DEFAULT_erased    0xFF
 #define DEFAULT_setup     0xFF
+#define DEFAULT_u2f_count 0xFFFFFFFF
+#define DEFAULT_ext_flags (0xFFFFFFFF & ~MEM_EXT_FLAG_U2F)// Enable U2F by default
 
 
 typedef enum PASSWORD_ID {
@@ -89,11 +94,14 @@ uint8_t memory_read_erased(void);
 uint8_t memory_report_erased(void);
 uint8_t memory_read_setup(void);
 uint8_t memory_read_unlocked(void);
+uint32_t memory_read_ext_flags(void);
+uint32_t memory_report_ext_flags(void);
 
 void memory_write_memseed(const uint8_t *s);
 void memory_write_erased(uint8_t erase);
 void memory_write_setup(uint8_t setup);
 void memory_write_unlocked(uint8_t u);
+void memory_write_ext_flags(uint32_t flags);
 
 uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);

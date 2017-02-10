@@ -89,8 +89,13 @@ int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *si
 {
     uint8_t tmp[32 + 32 + 64];
     SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
-    return !uECC_sign_deterministic(private_key, data, SHA256_DIGEST_LENGTH, &ctx.uECC, sig,
-                                    ecc_curve_from_id(curve));
+    if (uECC_sign_deterministic(private_key, data, SHA256_DIGEST_LENGTH, &ctx.uECC, sig,
+                                ecc_curve_from_id(curve))) {
+        uECC_normalize_signature(sig, ecc_curve_from_id(curve));
+        return 0;
+    } else {
+        return 1; // error
+    }
 }
 
 
@@ -131,6 +136,8 @@ static int ecc_read_pubkey(const uint8_t *publicKey, uint8_t *public_key_64,
 static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
                              const uint8_t *sig, ecc_curve_id curve)
 {
+    // Do not force normalization of the signature. Otherwise will break bootloader
+    // verification of previous firmware blobs.
     return uECC_verify(public_key, hash, SHA256_DIGEST_LENGTH, sig, ecc_curve_from_id(curve));
 }
 

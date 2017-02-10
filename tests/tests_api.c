@@ -966,21 +966,13 @@ static void tests_echo_tfa(void)
 }
 
 
-#ifndef ECC_USE_SECP256K1_LIB
-const char hash_1_input[] =
-    "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f";
-const char hash_2_input_1[] =
-    "e26c9b19c927d7e6e374d7f1734dd0a4e1ee266a164b2f282d95a0d07dbf04f0486594e9d853cbfab1cc556e76e8212d2db6c871c8c775876525d20acc478439";
-const char hash_2_input_2[] =
-    "529e01807f073dd80a0c9c2b3cc9130a06b88c033577ccc426a383eaadac5b7201923aef70ded7509adfa6282fcb6ff9f0fba16f87c82d5c9810c3da3029cc7d";
-#else
+// hash_1_input is normalized (low-S). The non-normalized value is "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
 const char hash_1_input[] =
     "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
 const char hash_2_input_1[] =
     "e26c9b19c927d7e6e374d7f1734dd0a4e1ee266a164b2f282d95a0d07dbf04f0486594e9d853cbfab1cc556e76e8212d2db6c871c8c775876525d20acc478439";
 const char hash_2_input_2[] =
     "529e01807f073dd80a0c9c2b3cc9130a06b88c033577ccc426a383eaadac5b7201923aef70ded7509adfa6282fcb6ff9f0fba16f87c82d5c9810c3da3029cc7d";
-#endif
 
 
 static void tests_sign(void)
@@ -1027,13 +1019,9 @@ static void tests_sign(void)
         "\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"present\":false";
     char check_2[] =
         "\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"present\":true";
-#ifndef ECC_USE_SECP256K1_LIB
-    char check_sig_1[] =
-        "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9";
-#else
+    // check_sig_1 is normalized (low-S). The non-normalized value is "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9"
     char check_sig_1[] =
         "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba6db1ae33539aafdbe9a44cfd2ffe8b2677c946d9d0bc5bb155425165d2021158";
-#endif
     char check_sig_2[] =
         "3323b353e9974ab1eb452eca19e1dc4dad0556dba668089c8c1214ca09b58ad12c82da6671a65f9b3803c1fe7a14f35d885caebce701f972641748738275782b";
     char check_pubkey[] =

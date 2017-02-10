@@ -50,7 +50,9 @@ to be word aligned on architectures that do not support unaligned accesses. */
 #define uECC_VLI_NATIVE_LITTLE_ENDIAN 0
 #endif
 
-/* Curve support selection. Set to 0 to remove that curve. */
+/* Curve support selection. Set to 0 to remove that curve.
+If enable another curve, must add `half_n` (half the order n) constant to curve-specific.inc file.
+`half_n` is used for normalizing the signature (lower-S) according to bitcoin best practices. */
 #ifndef uECC_SUPPORTS_secp160r1
 #define uECC_SUPPORTS_secp160r1 0
 #endif
@@ -362,6 +364,17 @@ int uECC_sign_deterministic(const uint8_t *private_key,
                             uECC_HashContext *hash_context,
                             uint8_t *signature,
                             uECC_Curve curve);
+
+/* uECC_normalize_signature() function.
+Convert a signature to a normalized lower-S form. Refer to
+https://github.com/bitcoin-core/secp256k1/blob/master/include/secp256k1.h for
+the rationale.
+
+Returns 1 if the signature gets normalized, 0 if it already was lower-S form.
+*/
+int uECC_normalize_signature(uint8_t *signature,
+                             uECC_Curve curve);
+
 
 /* uECC_generate_k_rfc6979() function
 Generate an ECDSA signature for a given hash value, using a deterministic algorithm

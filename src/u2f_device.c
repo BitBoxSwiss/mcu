@@ -203,7 +203,8 @@ static void u2f_device_register(const USB_APDU *a)
         memcpy(sig_base.keyHandle, &resp->keyHandleCertSig, U2F_KEYHANDLE_LEN);
         memcpy(sig_base.pubKey, &resp->pubKey, U2F_EC_POINT_SIZE);
 
-        if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig, ECC_SECP256r1)) {
+        if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig,
+                     ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
             return;
         }

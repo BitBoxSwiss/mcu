@@ -41,7 +41,6 @@ set(DBB-BOOTLOADER-SOURCES
         startup.c
         bootloader.c
         led.c
-        ecc.c
         uECC.c
         sha2.c
         utils.c

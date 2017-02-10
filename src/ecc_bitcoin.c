@@ -59,8 +59,10 @@ int libsecp256k1_ecc_generate_private_key(uint8_t *private_child,
         const uint8_t *private_master,
         const uint8_t *z, ecc_curve_id curve);
 int libsecp256k1_ecc_isValid(uint8_t *private_key, ecc_curve_id curve);
-void libsecp256k1_ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve);
-void libsecp256k1_ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve);
+void libsecp256k1_ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key,
+                                       ecc_curve_id curve);
+void libsecp256k1_ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key,
+                                       ecc_curve_id curve);
 int libsecp256k1_ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
                           uint8_t *ecdh_secret, ecc_curve_id curve);
 
@@ -246,14 +248,16 @@ static void libsecp256k1_ecc_get_pubkey(const uint8_t *private_key, uint8_t *pub
 }
 
 
-void libsecp256k1_ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve)
+void libsecp256k1_ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key,
+                                       ecc_curve_id curve)
 {
     (void)(curve);
     libsecp256k1_ecc_get_pubkey(private_key, public_key, 65, SECP256K1_EC_UNCOMPRESSED);
 }
 
 
-void libsecp256k1_ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve)
+void libsecp256k1_ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key,
+                                       ecc_curve_id curve)
 {
     (void)(curve);
     libsecp256k1_ecc_get_pubkey(private_key, public_key, 33, SECP256K1_EC_COMPRESSED);

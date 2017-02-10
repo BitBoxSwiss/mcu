@@ -84,7 +84,8 @@ static uECC_Curve ecc_curve_from_id(ecc_curve_id curve)
     return uECC_secp256k1();
 }
 
-int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig, ecc_curve_id curve)
+int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
+                    ecc_curve_id curve)
 {
     uint8_t tmp[32 + 32 + 64];
     SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
@@ -112,13 +113,13 @@ int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_
 }
 
 
-static int ecc_read_pubkey(const uint8_t *publicKey, uint8_t *public_key_64, ecc_curve_id curve)
+static int ecc_read_pubkey(const uint8_t *publicKey, uint8_t *public_key_64,
+                           ecc_curve_id curve)
 {
     if (publicKey[0] == 0x04) {
         memcpy(public_key_64, publicKey + 1, 64);
         return 1;
-    }
-    else if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
+    } else if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
         uECC_decompress(publicKey, public_key_64, ecc_curve_from_id(curve));
         return 1;
     }
@@ -159,7 +160,8 @@ int ecc_isValid(uint8_t *private_key, ecc_curve_id curve)
 }
 
 
-void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve)
+void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key,
+                          ecc_curve_id curve)
 {
     uint8_t *p = public_key;
     p[0] = 0x04;
@@ -167,7 +169,8 @@ void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key, ecc_c
 }
 
 
-void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key, ecc_curve_id curve)
+void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key,
+                          ecc_curve_id curve)
 {
     uint8_t public_key_long[64];
     uECC_compute_public_key(private_key, public_key_long, ecc_curve_from_id(curve));

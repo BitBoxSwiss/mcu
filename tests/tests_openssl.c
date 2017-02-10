@@ -153,20 +153,16 @@ int main(int argc, char *argv[])
         puts("Zero or one command-line arguments only, exiting....");
     }
 
-#ifdef ECC_USE_UECC_LIB
     printf("\nTesting curve secp256k1\n");
     ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
     err += run_test(max_iterations, ecgroup, ECC_SECP256k1);
     EC_GROUP_free(ecgroup);
 
+#ifndef ECC_USE_SECP256K1_LIB
+    // secp256k1 library does not have secp256r1 functionality
     printf("\nTesting curve secp256r1\n");
     ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
     err += run_test(max_iterations, ecgroup, ECC_SECP256r1);
-    EC_GROUP_free(ecgroup);
-#else
-    // secp256k1 library does not have secp256r1 functionality
-    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    err += run_test(max_iterations, ecgroup, ECC_SECP256k1);
     EC_GROUP_free(ecgroup);
 #endif
 

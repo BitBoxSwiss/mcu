@@ -966,7 +966,7 @@ static void tests_echo_tfa(void)
 }
 
 
-#ifdef ECC_USE_UECC_LIB
+#ifndef ECC_USE_SECP256K1_LIB
 const char hash_1_input[] =
     "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f";
 const char hash_2_input_1[] =
@@ -1027,7 +1027,7 @@ static void tests_sign(void)
         "\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"present\":false";
     char check_2[] =
         "\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"present\":true";
-#ifdef ECC_USE_UECC_LIB
+#ifndef ECC_USE_SECP256K1_LIB
     char check_sig_1[] =
         "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9";
 #else

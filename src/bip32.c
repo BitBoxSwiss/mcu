@@ -65,7 +65,7 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, HDNode *out)
     hmac_sha512((const uint8_t *)"Bitcoin seed", 12, seed, seed_len, I);
     memcpy(out->private_key, I, 32);
 
-    if (!bitcoin_ecc.ecc_isValid(out->private_key)) {
+    if (!bitcoin_ecc.ecc_isValid(out->private_key, ECC_SECP256k1)) {
         utils_zero(I, sizeof(I));
         return DBB_ERROR;
     }
@@ -105,13 +105,13 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
     memcpy(z, inout->private_key, 32);
 
-    if (!bitcoin_ecc.ecc_isValid(z)) {
+    if (!bitcoin_ecc.ecc_isValid(z, ECC_SECP256k1)) {
         utils_zero(data, sizeof(data));
         utils_zero(I, sizeof(I));
         return DBB_ERROR;
     }
 
-    if (!bitcoin_ecc.ecc_generate_private_key(inout->private_key, p, z)) {
+    if (!bitcoin_ecc.ecc_generate_private_key(inout->private_key, p, z, ECC_SECP256k1)) {
         utils_zero(data, sizeof(data));
         utils_zero(I, sizeof(I));
         return DBB_ERROR;
@@ -130,7 +130,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
 void hdnode_fill_public_key(HDNode *node)
 {
-    bitcoin_ecc.ecc_get_public_key33(node->private_key, node->public_key);
+    bitcoin_ecc.ecc_get_public_key33(node->private_key, node->public_key, ECC_SECP256k1);
 }
 
 

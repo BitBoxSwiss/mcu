@@ -166,7 +166,7 @@ static uint8_t bootloader_firmware_verified(void)
     sha256_Raw((uint8_t *)(FLASH_APP_START), FLASH_APP_LEN, hash);
     while (*pubkey && valid < BOOT_SIG_M) {
         memcpy(sig, (uint8_t *)(FLASH_SIG_START + cnt * sizeof(sig)), sizeof(sig));
-        valid += !ecc_verify(utils_hex_to_uint8(*pubkey), sig, hash, 32); // hashed internally
+        valid += !ecc_verify(utils_hex_to_uint8(*pubkey), sig, hash, 32, uECC_secp256r1()); // hashed internally
         pubkey++;
         cnt++;
     }

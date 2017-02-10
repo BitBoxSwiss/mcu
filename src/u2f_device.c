@@ -149,7 +149,7 @@ static void u2f_keyhandle_gen(const uint8_t *appId, uint8_t *nonce, uint8_t *pri
         hmac_sha256(hash, SHA256_DIGEST_LENGTH, nonce, U2F_NONCE_LENGTH, privkey);
         hmac_sha256(hash, SHA256_DIGEST_LENGTH, privkey, U2F_EC_KEY_SIZE, mac);
 
-        if (ecc_isValid(privkey)) {
+        if (ecc_isValid(privkey, ECC_SECP256r1)) {
             break;
         }
 
@@ -187,7 +187,7 @@ static void u2f_device_register(const USB_APDU *a)
 
         u2f_keyhandle_gen(req->appId, nonce, privkey, mac);
 
-        ecc_get_public_key65(privkey, (uint8_t *)&resp->pubKey);
+        ecc_get_public_key65(privkey, (uint8_t *)&resp->pubKey, ECC_SECP256r1);
 
         resp->registerId = U2F_REGISTER_ID;
         resp->keyHandleLen = U2F_KEYHANDLE_LEN;
@@ -203,7 +203,7 @@ static void u2f_device_register(const USB_APDU *a)
         memcpy(sig_base.keyHandle, &resp->keyHandleCertSig, U2F_KEYHANDLE_LEN);
         memcpy(sig_base.pubKey, &resp->pubKey, U2F_EC_POINT_SIZE);
 
-        if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig)) {
+        if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig, ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
             return;
         }
@@ -283,7 +283,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
         memcpy(sig_base.ctr, resp->ctr, 4);
         memcpy(sig_base.chal, req->chal, U2F_CHAL_SIZE);
 
-        if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig)) {
+        if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig, ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
             return;
         }
@@ -429,7 +429,6 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
             u2f_device_wink(reader->buf, reader->len);
             break;
         case HWW_COMMAND:
-            ecc_set_curve(ECC_SECP256k1);
             reader->buf[MIN(reader->len,
                             sizeof(reader->buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
             char *report = commander((const char *)reader->buf);
@@ -478,8 +477,6 @@ static void u2f_device_cmd_init(const USB_FRAME *f)
 
 void u2f_device_run(const USB_FRAME *f)
 {
-    ecc_set_curve(ECC_SECP256r1);
-
     if ((f->type & TYPE_MASK) == TYPE_INIT) {
 
         if (f->init.cmd == U2FHID_INIT) {

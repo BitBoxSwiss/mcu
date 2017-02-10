@@ -523,7 +523,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -531,7 +531,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -562,9 +562,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -579,9 +579,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -605,13 +605,13 @@ static void test_ecdh(void)
         random_bytes(privkey_2, sizeof(privkey_2), 0);
         u_assert_mem_not_eq(privkey_1, privkey_2, 32);
 
-        ecc_get_public_key33(privkey_1, pubkey_1);
-        ecc_get_public_key33(privkey_2, pubkey_2);
+        ecc_get_public_key33(privkey_1, pubkey_1, ECC_SECP256k1);
+        ecc_get_public_key33(privkey_2, pubkey_2, ECC_SECP256k1);
 
-        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1);
+        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1, ECC_SECP256k1);
         u_assert_mem_not_eq(ecdh_secret_1, ecdh_secret_2, 32);
 
-        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2);
+        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2, ECC_SECP256k1);
         u_assert_mem_eq(ecdh_secret_1, ecdh_secret_2, 32);
     }
 }

@@ -78,24 +78,24 @@ static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup, ecc_curve_i
             }
         }
 
-        if (ecc_sign(priv_key, msg, msg_len, sig, curve)) {
+        if (bitcoin_ecc.ecc_sign(priv_key, msg, msg_len, sig, curve)) {
             printf("signing failed\n");
             err++;
             break;
         }
 
         // generate public key from private key
-        ecc_get_public_key33(priv_key, pub_key33, curve);
-        ecc_get_public_key65(priv_key, pub_key65, curve);
+        bitcoin_ecc.ecc_get_public_key33(priv_key, pub_key33, curve);
+        bitcoin_ecc.ecc_get_public_key65(priv_key, pub_key65, curve);
 
 
         // verify the message signature
-        if (ecc_verify(pub_key65, sig, msg, msg_len, curve)) {
+        if (bitcoin_ecc.ecc_verify(pub_key65, sig, msg, msg_len, curve)) {
             printf("verification failed (pub_key_len = 65)\n");
             err++;
             break;
         }
-        if (ecc_verify(pub_key33, sig, msg, msg_len, curve)) {
+        if (bitcoin_ecc.ecc_verify(pub_key33, sig, msg, msg_len, curve)) {
             printf("verification failed (pub_key_len = 33)\n");
             err++;
             break;
@@ -141,10 +141,7 @@ int main(int argc, char *argv[])
     int err = 0;
 
     random_init();
-    ecc_context_init();
-#ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();
-#endif
 
     unsigned long max_iterations = 1000;
     if (argc == 2) {
@@ -166,9 +163,6 @@ int main(int argc, char *argv[])
     EC_GROUP_free(ecgroup);
 #endif
 
-    ecc_context_destroy();
-#ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_destroy();
-#endif
     return err;
 }

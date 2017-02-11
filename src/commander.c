@@ -1499,7 +1499,6 @@ static void commander_parse(char *command)
     }
 
 exit:
-    yajl_tree_free(value);
     yajl_tree_free(json_node);
 }
 

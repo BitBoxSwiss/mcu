@@ -364,8 +364,8 @@ static const char *api_read_value(int cmd)
     yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
     if (json_node && YAJL_IS_OBJECT(json_node)) {
         const char *path[] = { cmd_str(cmd), NULL };
-        yajl_val v = yajl_tree_get(json_node, path, yajl_t_string);
-        snprintf(value, sizeof(value), "%s", v->u.string);
+        const char *v = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+        snprintf(value, sizeof(value), "%s", v);
     }
 
     yajl_tree_free(json_node);

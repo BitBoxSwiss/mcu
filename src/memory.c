@@ -83,17 +83,6 @@ static void memory_mempass(void)
 }
 
 
-static void memory_create_verifypass(void)
-{
-    uint8_t number[16] = {0};
-    random_bytes(number, sizeof(number), 0);
-    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
-                        PASSWORD_VERIFY);
-    utils_zero(number, sizeof(number));
-    utils_clear_buffers();
-}
-
-
 static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
                          const uint16_t len)
 {
@@ -257,10 +246,10 @@ void memory_erase_seed(void)
 void memory_erase(void)
 {
     memory_mempass();
-    memory_create_verifypass();
-    memory_erase_hidden_password();
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_random_password(PASSWORD_VERIFY);
+    memory_random_password(PASSWORD_HIDDEN);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
+    memory_random_password(PASSWORD_STAND);
     memory_erase_seed();
     memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
@@ -271,12 +260,13 @@ void memory_erase(void)
 }
 
 
-void memory_erase_hidden_password(void)
+void memory_random_password(PASSWORD_ID id)
 {
     uint8_t number[16] = {0};
     random_bytes(number, sizeof(number), 0);
-    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
-                        PASSWORD_HIDDEN);
+    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, id);
+    utils_zero(number, sizeof(number));
+    utils_clear_buffers();
 }
 
 

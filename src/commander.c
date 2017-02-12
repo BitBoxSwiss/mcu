@@ -1199,7 +1199,7 @@ static void commander_process_password(yajl_val json_node, int cmd, PASSWORD_ID 
 
     if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_HIDDEN),
                 MEM_PAGE_LEN)) {
-        memory_erase_hidden_password();
+        memory_random_password(PASSWORD_HIDDEN);
         commander_fill_report(cmd_str(CMD_password), NULL, DBB_ERR_IO_PW_COLLIDE);
         return;
     }

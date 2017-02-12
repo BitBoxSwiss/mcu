@@ -290,7 +290,7 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
 
 void commander_force_reset(void)
 {
-    memory_erase();
+    memory_reset_hww();
     commander_clear_report();
     commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_RESET);
 }
@@ -311,7 +311,7 @@ static void commander_process_reset(yajl_val json_node)
         return;
     }
 
-    memory_erase();
+    memory_reset_hww();
     commander_clear_report();
     commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
 }
@@ -350,7 +350,7 @@ static int commander_process_backup_check(const char *key, const char *filename)
         if (!memcmp(backup, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
             ret = DBB_ERROR;
-        } else if (memcmp(backup, memory_master_entropy(NULL), MEM_PAGE_LEN)) {
+        } else if (memcmp(backup, memory_master_hww_entropy(NULL), MEM_PAGE_LEN)) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
             ret = DBB_ERROR;
         } else {
@@ -388,7 +388,7 @@ static int commander_process_backup_create(const char *key, const char *filename
     char backup_hex[MEM_PAGE_LEN * 2 + 1];
     char *name = (char *)memory_name("");
 
-    memcpy(backup, memory_master_entropy(NULL), MEM_PAGE_LEN);
+    memcpy(backup, memory_master_hww_entropy(NULL), MEM_PAGE_LEN);
 
     if (!memcmp(backup, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
@@ -560,7 +560,7 @@ static void commander_process_seed(yajl_val json_node)
         ret = wallet_generate_master(key, entropy_c);
         if (ret == DBB_OK) {
             if (commander_process_backup_create(key, filename) != DBB_OK) {
-                memory_erase_seed();
+                memory_erase_hww_seed();
                 return;
             }
         }

@@ -146,7 +146,7 @@ static void u2f_keyhandle_gen(const uint8_t *appId, uint8_t *nonce, uint8_t *pri
 {
     uint8_t hash[SHA256_DIGEST_LENGTH];
     for (;;) {
-        hmac_sha256(appId, U2F_APPID_SIZE, memory_master_u2f(), 32, hash);
+        hmac_sha256(appId, U2F_APPID_SIZE, memory_report_master_u2f(), 32, hash);
         hmac_sha256(hash, SHA256_DIGEST_LENGTH, nonce, U2F_NONCE_LENGTH, privkey);
         hmac_sha256(hash, SHA256_DIGEST_LENGTH, privkey, U2F_EC_KEY_SIZE, mac);
 

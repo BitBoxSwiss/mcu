@@ -71,9 +71,9 @@ int wallet_is_locked(void)
 uint8_t *wallet_get_master(void)
 {
     if (HIDDEN) {
-        return memory_chaincode(NULL);
+        return memory_master_hww_chaincode(NULL);
     } else {
-        return memory_master(NULL);
+        return memory_master_hww(NULL);
     }
 }
 
@@ -81,17 +81,17 @@ uint8_t *wallet_get_master(void)
 uint8_t *wallet_get_chaincode(void)
 {
     if (HIDDEN) {
-        return memory_master(NULL);
+        return memory_master_hww(NULL);
     } else {
-        return memory_chaincode(NULL);
+        return memory_master_hww_chaincode(NULL);
     }
 }
 
 
 int wallet_seeded(void)
 {
-    if (!memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)  ||
-            !memcmp(memory_chaincode(NULL), MEM_PAGE_ERASE, 32)) {
+    if (!memcmp(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
+            !memcmp(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32)) {
         return DBB_ERROR;
     } else {
         return DBB_OK;
@@ -129,9 +129,10 @@ int wallet_generate_master(const char *passphrase, const char *entropy_in)
 
     memcpy(entropy, utils_hex_to_uint8(entropy_in), sizeof(entropy));
 
-    memory_master(node.private_key);
-    memory_chaincode(node.chain_code);
-    memory_master_entropy(entropy);
+    memory_master_hww(node.private_key);
+    memory_master_hww_chaincode(node.chain_code);
+    memory_master_hww_entropy(entropy);
+    memory_master_u2f(node.chain_code);// TODO - make independent of hww seed
 
     ret = wallet_seeded();
     if (ret != DBB_OK) {

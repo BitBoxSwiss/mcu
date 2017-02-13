@@ -89,7 +89,7 @@ typedef struct {
     uint8_t cmd;
 } U2F_ReadBuffer;
 
-static U2F_ReadBuffer *reader;
+static U2F_ReadBuffer reader;
 
 
 static uint32_t next_cid(void)
@@ -303,9 +303,9 @@ static void u2f_device_authenticate(const USB_APDU *a)
 
 static void u2f_device_reset_state(void)
 {
-    reader->cmd = 0;
-    reader->len = 0;
-    reader->seq = 255;
+    reader.cmd = 0;
+    reader.len = 0;
+    reader.seq = 255;
     u2f_state_continue = false;
 }
 
@@ -412,34 +412,34 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 {
     (void) f;
 
-    if ((reader->buf_ptr - reader->buf) < (signed)reader->len) {
+    if ((reader.buf_ptr - reader.buf) < (signed)reader.len) {
         // Need more data
         return;
     }
 
     u2f_state_continue = false;
 
-    if ( reader->cmd < U2FHID_VENDOR_FIRST &&
-            ((memory_report_ext_flags() & MEM_EXT_FLAG_U2F) || (wallet_seeded() != DBB_OK)) ) {
-        // Abort U2F commands if the U2F bit is set (==U2F disabled) or the wallet is not seeded.
+    if ( reader.cmd < U2FHID_VENDOR_FIRST &&
+            (memory_report_ext_flags() & MEM_EXT_FLAG_U2F) ) {
+        // Abort U2F commands if the U2F bit is set (==U2F disabled).
         // Vendor specific commands are passed through.
         u2f_send_err_hid(cid, U2F_ERR_CHANNEL_BUSY);
     } else {
         // Received all data
-        switch (reader->cmd) {
+        switch (reader.cmd) {
             case U2FHID_PING:
-                u2f_device_ping(reader->buf, reader->len);
+                u2f_device_ping(reader.buf, reader.len);
                 break;
             case U2FHID_MSG:
-                u2f_device_msg((USB_APDU *)reader->buf, reader->len);
+                u2f_device_msg((USB_APDU *)reader.buf, reader.len);
                 break;
             case U2FHID_WINK:
-                u2f_device_wink(reader->buf, reader->len);
+                u2f_device_wink(reader.buf, reader.len);
                 break;
             case HWW_COMMAND:
-                reader->buf[MIN(reader->len,
-                                sizeof(reader->buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
-                char *report = commander((const char *)reader->buf);
+                reader.buf[MIN(reader.len,
+                               sizeof(reader.buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
+                char *report = commander((const char *)reader.buf);
                 usb_reply_queue_load_msg(HWW_COMMAND, (const uint8_t *)report, strlens(report), cid);
                 break;
             default:
@@ -450,32 +450,30 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 
     // Finished
     u2f_device_reset_state();
-    reader = 0;
+    memset(&reader, 0, sizeof(reader));
     cid = 0;
 }
 
 
 static void u2f_device_cmd_init(const USB_FRAME *f)
 {
-    static U2F_ReadBuffer readbuffer;
-
     if (f->cid == CID_BROADCAST || f->cid == 0) {
         u2f_send_err_hid(f->cid, U2F_ERR_INVALID_CID);
         return;
     }
 
-    if ((unsigned)MSG_LEN(*f) > sizeof(reader->buf)) {
+    if ((unsigned)MSG_LEN(*f) > sizeof(reader.buf)) {
         u2f_send_err_hid(f->cid, U2F_ERR_INVALID_LEN);
         return;
     }
 
-    reader = &readbuffer;
-    reader->seq = 0;
-    reader->buf_ptr = reader->buf;
-    reader->len = MSG_LEN(*f);
-    reader->cmd = f->type;
-    memcpy(reader->buf_ptr, f->init.data, sizeof(f->init.data));
-    reader->buf_ptr += sizeof(f->init.data);
+    memset(&reader, 0, sizeof(reader));
+    reader.seq = 0;
+    reader.buf_ptr = reader.buf;
+    reader.len = MSG_LEN(*f);
+    reader.cmd = f->type;
+    memcpy(reader.buf_ptr, f->init.data, sizeof(f->init.data));
+    reader.buf_ptr += sizeof(f->init.data);
     cid = f->cid;
 
     u2f_current_time_ms = 0;
@@ -518,7 +516,7 @@ void u2f_device_run(const USB_FRAME *f)
             goto exit;
         }
 
-        if (reader->seq != f->cont.seq) {
+        if (reader.seq != f->cont.seq) {
             usb_reply_queue_clear();
             u2f_device_reset_state();
             u2f_send_err_hid(f->cid, U2F_ERR_INVALID_SEQ);
@@ -526,15 +524,15 @@ void u2f_device_run(const USB_FRAME *f)
         }
 
         // Check bounds
-        if ((reader->buf_ptr - reader->buf) >= (signed) reader->len
-                || (reader->buf_ptr + sizeof(f->cont.data) - reader->buf) > (signed) sizeof(
-                    reader->buf)) {
+        if ((reader.buf_ptr - reader.buf) >= (signed) reader.len
+                || (reader.buf_ptr + sizeof(f->cont.data) - reader.buf) > (signed) sizeof(
+                    reader.buf)) {
             goto exit;
         }
 
-        reader->seq++;
-        memcpy(reader->buf_ptr, f->cont.data, sizeof(f->cont.data));
-        reader->buf_ptr += sizeof(f->cont.data);
+        reader.seq++;
+        memcpy(reader.buf_ptr, f->cont.data, sizeof(f->cont.data));
+        reader.buf_ptr += sizeof(f->cont.data);
         u2f_device_cmd_cont(f);
     }
 

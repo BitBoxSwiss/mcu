@@ -61,6 +61,12 @@ script:
           valgrind --leak-check=full --error-exitcode=1 bin/tests_api;
       fi;
     - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
+          valgrind --leak-check=full --error-exitcode=1 bin/tests_u2f_hid;
+      fi;
+    - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
+          valgrind --leak-check=full --error-exitcode=1 bin/tests_u2f_standard;
+      fi;
+    - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --error-exitcode=1 bin/tests_unit;
       fi;
       

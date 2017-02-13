@@ -100,7 +100,7 @@ if(BUILD_TYPE STREQUAL "bootloader")
     add_definitions(-DBOOTLOADER)
 endif()
 
-add_definitions(-DuECC_OPTIMIZATION_LEVEL=4) # match to compiler optimization level
+add_definitions(-DuECC_OPTIMIZATION_LEVEL=4)
     
 if(USE_SECP256K1_LIB)
     add_definitions(-DECC_USE_SECP256K1_LIB)
@@ -220,6 +220,8 @@ if(BUILD_TYPE STREQUAL "test")
     add_subdirectory(tests)
     add_test(NAME tests_unit COMMAND tests_unit)
     add_test(NAME tests_openssl COMMAND tests_openssl 200)
+    add_test(NAME tests_u2f_hid COMMAND tests_u2f_hid)
+    add_test(NAME tests_u2f_standard COMMAND tests_u2f_standard)
     add_test(NAME tests_api COMMAND tests_api)
     if(USE_SECP256K1_LIB)
         add_test(NAME tests_secp256k1 COMMAND tests_secp256k1 2)

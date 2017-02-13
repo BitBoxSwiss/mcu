@@ -447,13 +447,12 @@ static void tests_u2f(void)
 
     api_reset_device();
 
-    // U2F command should abort due to not seeded
+    // U2F command should run when not seeded
     api_hid_send_frame(&f);
     api_hid_read_frame(&r);
-    u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
-    u_assert_int_eq(r.init.bcntl, 1);
-    u_assert_int_eq(r.init.data[0], U2F_ERR_CHANNEL_BUSY);
     u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_WINK);
+    u_assert_int_eq(r.init.bcntl, 0);
 
     // Seed
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);

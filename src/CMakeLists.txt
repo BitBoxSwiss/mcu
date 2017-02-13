@@ -183,7 +183,7 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Build tests_api
+# Build bitbox static lib for tests
 
 if(BUILD_TYPE STREQUAL "test")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")

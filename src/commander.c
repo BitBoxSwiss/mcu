@@ -306,14 +306,21 @@ static void commander_process_reset(yajl_val json_node)
         return;
     }
 
-    if (strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__)))) {
-        commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_INVALID_CMD);
+    if (!strncmp(value, attr_str(ATTR_U2F), strlens(attr_str(ATTR_U2F)))) {
+        memory_reset_u2f();
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
         return;
     }
 
-    memory_reset_hww();
-    commander_clear_report();
-    commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+    if (!strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__)))) {
+        memory_reset_hww();
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+        return;
+    }
+
+    commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 

@@ -24,8 +24,6 @@
 
 */
 
-/* Some functions adapted from the Trezor crypto library. */
-
 
 #include <string.h>
 #include <stdlib.h>
@@ -132,7 +130,6 @@ int wallet_generate_master(const char *passphrase, const char *entropy_in)
     memory_master_hww(node.private_key);
     memory_master_hww_chaincode(node.chain_code);
     memory_master_hww_entropy(entropy);
-    memory_master_u2f(node.chain_code);// TODO - make independent of hww seed
 
     ret = wallet_seeded();
     if (ret != DBB_OK) {

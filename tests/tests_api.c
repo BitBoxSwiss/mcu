@@ -513,6 +513,12 @@ static void tests_u2f(void)
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+
+    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    // TODO - test that {reset: U2F} does reset U2F master by verifying U2F signatures
 }
 
 

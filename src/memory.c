@@ -265,13 +265,8 @@ void memory_reset_hww(void)
 
 void memory_reset_u2f(void)
 {
-    // Create random master U2F key
-    // Currently, the master is linked to the hww seed in wallet.h.
-    // Reseeding the hww will change the U2F master.
-    // Erasing the hww will not change the U2F master.
+    // Create random master U2F key. It is independent of the HWW.
     // U2F is functional on fresh device without a seeded wallet.
-    // TODO - make independent of hww seed
-    //      - requires independent backup / recovery / reset command
     uint8_t number[32] = {0};
     random_bytes(number, sizeof(number), 0);
     memory_master_u2f(number);

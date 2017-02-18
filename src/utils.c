@@ -34,8 +34,7 @@
 #include "flags.h"
 
 
-static uint8_t buffer_hex_to_uint8[TO_UINT8_HEX_BUF_LEN];
-static char buffer_uint8_to_hex[TO_UINT8_HEX_BUF_LEN];
+static uint8_t utils_buffer[UTILS_BUFFER_LEN];
 
 
 volatile void *utils_zero(volatile void *dst, size_t len)
@@ -48,8 +47,7 @@ volatile void *utils_zero(volatile void *dst, size_t len)
 
 void utils_clear_buffers(void)
 {
-    memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
-    memset(buffer_uint8_to_hex, 0, TO_UINT8_HEX_BUF_LEN);
+    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
 }
 
 
@@ -92,10 +90,10 @@ uint8_t utils_limit_alphanumeric_hyphen_underscore_period(const char *str)
 
 uint8_t *utils_hex_to_uint8(const char *str)
 {
-    if (strlens(str) > TO_UINT8_HEX_BUF_LEN) {
+    if (strlens(str) > UTILS_BUFFER_LEN) {
         return NULL;
     }
-    memset(buffer_hex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
+    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
     uint8_t c;
     size_t i;
     for (i = 0; i < strlens(str) / 2; i++) {
@@ -118,26 +116,26 @@ uint8_t *utils_hex_to_uint8(const char *str)
         if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') {
             c += (10 + str[i * 2 + 1] - 'A');
         }
-        buffer_hex_to_uint8[i] = c;
+        utils_buffer[i] = c;
     }
-    return buffer_hex_to_uint8;
+    return utils_buffer;
 }
 
 
 char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
 {
-    if (l > (TO_UINT8_HEX_BUF_LEN / 2 - 1)) {
+    if (l > (UTILS_BUFFER_LEN / 2 - 1)) {
         return NULL;
     }
     static char digits[] = "0123456789abcdef";
-    memset(buffer_uint8_to_hex, 0, TO_UINT8_HEX_BUF_LEN);
+    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
     size_t i;
     for (i = 0; i < l; i++) {
-        buffer_uint8_to_hex[i * 2] = digits[(bin[i] >> 4) & 0xF];
-        buffer_uint8_to_hex[i * 2 + 1] = digits[bin[i] & 0xF];
+        utils_buffer[i * 2] = digits[(bin[i] >> 4) & 0xF];
+        utils_buffer[i * 2 + 1] = digits[bin[i] & 0xF];
     }
-    buffer_uint8_to_hex[l * 2] = '\0';
-    return buffer_uint8_to_hex;
+    utils_buffer[l * 2] = '\0';
+    return (char *)utils_buffer;
 }
 
 

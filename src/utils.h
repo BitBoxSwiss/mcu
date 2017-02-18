@@ -34,7 +34,7 @@
 #include "memory.h"
 
 
-#define TO_UINT8_HEX_BUF_LEN COMMANDER_REPORT_SIZE
+#define UTILS_BUFFER_LEN COMMANDER_REPORT_SIZE
 #define VARINT_LEN 20
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 #define strlens(s) (s == NULL ? 0 : strlen(s))

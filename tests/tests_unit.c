@@ -947,9 +947,9 @@ static void test_utils(void)
     u_assert_mem_eq(uppercase, lowercase, 12);
 
     // overflow
-    char overflow[TO_UINT8_HEX_BUF_LEN + 2];
+    char overflow[UTILS_BUFFER_LEN + 2];
     memset(overflow, 'a', sizeof(overflow));
-    overflow[TO_UINT8_HEX_BUF_LEN + 1] = '\0';
+    overflow[UTILS_BUFFER_LEN + 1] = '\0';
     binary = (uint8_t *)overflow;
     u_assert_int_eq(1, (binary != NULL));
     binary = utils_hex_to_uint8(overflow);
@@ -957,7 +957,7 @@ static void test_utils(void)
 
     binary = (uint8_t *)overflow;
     u_assert_int_eq(1, (binary != NULL));
-    binary = (uint8_t *)utils_uint8_to_hex((uint8_t *)overflow, TO_UINT8_HEX_BUF_LEN / 2);
+    binary = (uint8_t *)utils_uint8_to_hex((uint8_t *)overflow, UTILS_BUFFER_LEN / 2);
     u_assert_int_eq(1, (binary == NULL));
 
     // varint conversion

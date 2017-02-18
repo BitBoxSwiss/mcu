@@ -170,7 +170,7 @@ static uint8_t bootloader_firmware_verified(void)
         memcpy(sig, (uint8_t *)(FLASH_SIG_START + cnt * sizeof(sig)), sizeof(sig));
         uECC_decompress(utils_hex_to_uint8(*pubkey), pubkey_64, uECC_secp256k1());
         valid += uECC_verify(pubkey_64, hash, SHA256_DIGEST_LENGTH, sig,
-                             uECC_secp256k1());// TODO - test
+                             uECC_secp256k1());
         pubkey++;
         cnt++;
     }

@@ -5,7 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://developers.google.com/open-source/licenses/bsd
 
+
 // U2F register / sign compliance test.
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -81,7 +83,6 @@ static void test_Version(void)
     buf[7] = 0;  // Le = 0
     buf[8] = 0;  // Le = 0
     CHECK_EQ(0x9000, U2Fob_exchange_apdu_buffer(device, buf, sizeof(buf), rsp, &rsp_len));
-    //CHECK_EQ(rsp, "U2F_V2");
     CHECK_EQ(0, strncmp("U2F_V2", rsp, rsp_len));
 }
 
@@ -206,33 +207,6 @@ static void test_Enroll(int expectedSW12)
 
     // Verify signature.
     CHECK_EQ(1, p256_ecdsa_verify(&pk_x, &pk_y, &h, &sig_r, &sig_s));
-
-#if 0
-    // Check for standard U2F self-signed certificate.
-    // Implementations without batch attestation should use this minimalist
-    // self-signed certificate for enroll.
-    // Conforming to a standard self-signed certficate format and attributes
-    // bins all such fobs into a single large batch, which helps privacy.
-    //char ss[] = "3081b3a003020102020101300a06082a8648ce3d040302300e310c300a060355040a0c035532463022180f32303030303130313030303030305a180f32303939313233313233353935395a300e310c300a060355040313035532463059301306072a8648ce3d020106082a8648ce3d030107034200";
-    uint8_t selfSigned[sizeof(ss) / 2];// + pk_len];
-    memcpy(selfSigned, utils_hex_to_uint8(ss), sizeof(ss) / 2);
-    //memcpy(selfSigned + sizeof(ss) / 2, (uint8_t *)pk, pk_len);
-
-    SHA256_init(&sha);
-    SHA256_update(&sha, selfSigned, sizeof(selfSigned));
-    p256_from_bin(SHA256_final(&sha), &h);
-
-    char certSig[MAX_CERT_SIZE];
-    size_t certSig_len;
-    CHECK_EQ(getCertSignature(cert, cert_len, certSig, &certSig_len), true);
-    printf("\x1b[34mCert sig:    %lu %s\x1b[0m\n", certSig_len,
-           utils_uint8_to_hex((uint8_t *)certSig,
-                              certSig_len));
-
-    CHECK_EQ(1, dsa_sig_unpack((uint8_t *)certSig, certSig_len, &sig_r, &sig_s));
-    // Verify cert signature.
-    CHECK_EQ(1, p256_ecdsa_verify(&pk_x, &pk_y, &h, &sig_r, &sig_s));
-#endif
 }
 
 

@@ -89,6 +89,7 @@ typedef struct {
     uint8_t cmd;
 } U2F_ReadBuffer;
 
+
 static U2F_ReadBuffer reader;
 
 
@@ -419,7 +420,7 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 
     u2f_state_continue = false;
 
-    if ( reader.cmd < U2FHID_VENDOR_FIRST &&
+    if ( (reader.cmd < U2FHID_VENDOR_FIRST) &&
             (memory_report_ext_flags() & MEM_EXT_FLAG_U2F) ) {
         // Abort U2F commands if the U2F bit is set (==U2F disabled).
         // Vendor specific commands are passed through.
@@ -436,12 +437,13 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
             case U2FHID_WINK:
                 u2f_device_wink(reader.buf, reader.len);
                 break;
-            case HWW_COMMAND:
-                reader.buf[MIN(reader.len,
-                               sizeof(reader.buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
-                char *report = commander((const char *)reader.buf);
+            case HWW_COMMAND: {
+                char *report;
+                reader.buf[MIN(reader.len, sizeof(reader.buf) - 1)] = '\0';// NULL terminate
+                report = commander((const char *)reader.buf);
                 usb_reply_queue_load_msg(HWW_COMMAND, (const uint8_t *)report, strlens(report), cid);
                 break;
+            }
             default:
                 u2f_send_err_hid(cid, U2F_ERR_INVALID_CMD);
                 break;

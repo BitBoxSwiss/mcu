@@ -447,6 +447,12 @@ static void tests_u2f(void)
 
     api_reset_device();
 
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
     // U2F command should run when not seeded
     api_hid_send_frame(&f);
     api_hid_read_frame(&r);
@@ -455,9 +461,6 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.bcntl, 0);
 
     // Seed
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
@@ -514,6 +517,7 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
+    // Reset U2F
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));

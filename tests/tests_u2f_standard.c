@@ -23,15 +23,11 @@
 
 #include "u2f/u2f_t.h"
 #include "u2f/u2f_util_t.h"
-#include "u2f/libmincrypt/p256.c"
-#include "u2f/libmincrypt/p256_ec.c"
-#include "u2f/libmincrypt/p256_ecdsa.c"
-#include "u2f/libmincrypt/sha256.c"
-#include "u2f/libmincrypt/dsa_sig.c"
 
 #include "random.h"
 #include "memory.h"
 #include "utils.h"
+#include "sha2.h"
 #include "ecc.h"
 
 
@@ -176,6 +172,7 @@ static void test_Enroll(int expectedSW12)
     CHECK_EQ(getSubjectPublicKey(cert, cert_len, pk, &pk_len), true);
     printf("\x1b[34mPublic key:  %lu %s\x1b[0m\n", pk_len, utils_uint8_to_hex((uint8_t *)pk,
             pk_len));
+    CHECK_EQ(pk_len, P256_POINT_SIZE);
 
     char sig[MAX_ECDSA_SIG_SIZE];
     size_t sig_len;
@@ -184,29 +181,23 @@ static void test_Enroll(int expectedSW12)
             sig_len));
 
     // Parse signature into two integers.
-    p256_int sig_r, sig_s;
-    CHECK_EQ(1, dsa_sig_unpack((uint8_t *) sig, sig_len, &sig_r, &sig_s));
+    uint8_t signature[64];
+    CHECK_EQ(0, ecc_der_to_sig((uint8_t *)sig, sig_len, signature));
 
-    // Compute hash as integer.
-    p256_int h;
-    HASH_CTX sha;
-    SHA256_init(&sha);
+    // Compute hash.
+    uint8_t hash[SHA256_BLOCK_LENGTH];
     uint8_t rfu = 0;
-    SHA256_update(&sha, &rfu, sizeof(rfu));  // 0x00
-    SHA256_update(&sha, regReq.appId, sizeof(regReq.appId));  // O
-    SHA256_update(&sha, regReq.nonce, sizeof(regReq.nonce));  // d
-    SHA256_update(&sha, regRsp.keyHandleCertSig, regRsp.keyHandleLen);  // hk
-    SHA256_update(&sha, &regRsp.pubKey, sizeof(regRsp.pubKey));  // pk
-    p256_from_bin(SHA256_final(&sha), &h);
-
-    // Parse subject public key into two integers.
-    CHECK_EQ(pk_len, P256_POINT_SIZE);
-    p256_int pk_x, pk_y;
-    p256_from_bin((uint8_t *) pk + 1, &pk_x);
-    p256_from_bin((uint8_t *) pk + 1 + P256_SCALAR_SIZE, &pk_y);
+    SHA256_CTX ctx;
+    sha256_Init(&ctx);
+    sha256_Update(&ctx, &rfu, sizeof(rfu));  // 0x00
+    sha256_Update(&ctx, regReq.appId, sizeof(regReq.appId));  // O
+    sha256_Update(&ctx, regReq.nonce, sizeof(regReq.nonce));  // d
+    sha256_Update(&ctx, regRsp.keyHandleCertSig, regRsp.keyHandleLen); // hk
+    sha256_Update(&ctx, (uint8_t *)&regRsp.pubKey, sizeof(regRsp.pubKey));  // pk
+    sha256_Final(hash, &ctx);
 
     // Verify signature.
-    CHECK_EQ(1, p256_ecdsa_verify(&pk_x, &pk_y, &h, &sig_r, &sig_s));
+    CHECK_EQ(0, ecc_verify_digest((uint8_t *)pk + 1, hash, signature, ECC_SECP256r1));
 }
 
 
@@ -258,28 +249,24 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
     printf("\x1b[34mSign: %lu bytes in %fs\x1b[0m\n", rsp_len, U2Fob_deltaTime(&t));
 
     // Parse signature from authenticate response.
-    p256_int sig_r, sig_s;
-    CHECK_EQ(1, dsa_sig_unpack(resp.sig,
-                               rsp_len - sizeof(resp.flags) - sizeof(resp.ctr),
-                               &sig_r, &sig_s));
+    uint8_t signature[64];
+    CHECK_EQ(0, ecc_der_to_sig(resp.sig, rsp_len - sizeof(resp.flags) - sizeof(resp.ctr),
+                               signature));
 
-    // Compute hash as integer.
-    p256_int h;
-    HASH_CTX sha;
-    SHA256_init(&sha);
-    SHA256_update(&sha, regReq.appId, sizeof(regReq.appId));  // O
-    SHA256_update(&sha, &resp.flags, sizeof(resp.flags));  // T
-    SHA256_update(&sha, &resp.ctr, sizeof(resp.ctr));  // CTR
-    SHA256_update(&sha, authReq.nonce, sizeof(authReq.nonce));  // d
-    p256_from_bin(SHA256_final(&sha), &h);
+    // Compute hash.
+    uint8_t hash[SHA256_BLOCK_LENGTH];
+    SHA256_CTX ctx;
+    sha256_Init(&ctx);
 
-    // Parse public key from registration response.
-    p256_int pk_x, pk_y;
-    p256_from_bin(regRsp.pubKey.x, &pk_x);
-    p256_from_bin(regRsp.pubKey.y, &pk_y);
+    sha256_Update(&ctx, regReq.appId, sizeof(regReq.appId));  // O
+    sha256_Update(&ctx, &resp.flags, sizeof(resp.flags));  // T
+    sha256_Update(&ctx, (uint8_t *)&resp.ctr, sizeof(resp.ctr));  // CTR
+    sha256_Update(&ctx, authReq.nonce, sizeof(authReq.nonce));  // d
+    sha256_Final(hash, &ctx);
 
     // Verify signature.
-    CHECK_EQ(1, p256_ecdsa_verify(&pk_x, &pk_y, &h, &sig_r, &sig_s));
+    CHECK_EQ(0, ecc_verify_digest((uint8_t *)&regRsp.pubKey + 1, hash, signature,
+                                  ECC_SECP256r1));
 
     return ntohl(resp.ctr);
 }

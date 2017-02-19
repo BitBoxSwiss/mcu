@@ -151,6 +151,17 @@ void utils_reverse_hex(char *h, int len)
 }
 
 
+void utils_reverse_bin(uint8_t *b, int len)
+{
+    uint8_t copy[len];
+    memcpy(copy, b, len);
+    int i;
+    for (i = 0; i < len; i++) {
+        b[i] = copy[len - i - 1];
+    }
+}
+
+
 void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
 {
     int len;

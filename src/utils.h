@@ -47,6 +47,7 @@ uint8_t utils_limit_alphanumeric_hyphen_underscore_period(const char *str);
 uint8_t *utils_hex_to_uint8(const char *str);
 char *utils_uint8_to_hex(const uint8_t *bin, size_t l);
 void utils_reverse_hex(char *h, int len);
+void utils_reverse_bin(uint8_t *b, int len);
 void utils_uint64_to_varint(char *vi, int *l, uint64_t i);
 int utils_varint_to_uint64(const char *vi, uint64_t *i);
 

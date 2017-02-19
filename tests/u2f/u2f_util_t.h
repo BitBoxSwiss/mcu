@@ -14,23 +14,18 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#ifdef _MSC_VER
-#include <windows.h>
-#define usleep(x) Sleep((x + 999) / 1000)
-#else
 #include <unistd.h>
-#endif
 
-#include "u2f_t.h"
-#include "u2f_hid_t.h"
+#include "u2f/u2f.h"
+#include "u2f/u2f_hid.h"
+#include "usb.h"
+
 
 #ifndef CONTINUOUS_INTEGRATION
 #include <hidapi.h>
 #else
 typedef void hid_device;
 #endif
-
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 
 #define CHECK_EQ(a,b) do { if ((a)!=(b)) { printf("\x1b[31mCHECK_EQ fail at %s()[%d] %f != %f\x1b[0m \n", __func__, __LINE__, a*1.0, b*1.0); abort();}} while(0)
@@ -50,7 +45,7 @@ struct U2Fob {
     hid_device *dev;
     char *path;
     uint32_t cid;
-    uint8_t nonce[INIT_NONCE_SIZE];
+    uint8_t nonce[U2FHID_INIT_NONCE_SIZE];
 };
 
 struct U2Fob *U2Fob_create(void);
@@ -60,8 +55,8 @@ void U2Fob_close(struct U2Fob *device);
 int U2Fob_reopen(struct U2Fob *device);
 int U2Fob_init(struct U2Fob *device);
 uint32_t U2Fob_getCid(struct U2Fob *device);
-int U2Fob_sendHidFrame(struct U2Fob *device, U2FHID_FRAME *out);
-int U2Fob_receiveHidFrame(struct U2Fob *device, U2FHID_FRAME *in,
+int U2Fob_sendHidFrame(struct U2Fob *device, USB_FRAME *out);
+int U2Fob_receiveHidFrame(struct U2Fob *device, USB_FRAME *in,
                           float timeoutSeconds);
 int U2Fob_send(struct U2Fob *device, uint8_t cmd,
                const void *data, size_t size);

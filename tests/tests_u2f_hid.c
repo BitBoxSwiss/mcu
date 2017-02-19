@@ -13,10 +13,15 @@
 #include <string.h>
 #include <time.h>
 
-#include "u2f/u2f_util_t.h"
 #include "random.h"
 #include "memory.h"
+#include "utils.h"
 #include "ecc.h"
+
+#include "usb.h"
+#include "u2f/u2f.h"
+#include "u2f/u2f_hid.h"
+#include "u2f/u2f_util_t.h"
 
 
 struct U2Fob *device;
@@ -27,12 +32,12 @@ struct U2Fob *device;
 
 
 // Initialize a frame with |len| random payload, or data.
-static void initFrame(U2FHID_FRAME *f, uint32_t cid, uint8_t cmd,
+static void initFrame(USB_FRAME *f, uint32_t cid, uint8_t cmd,
                       size_t len, const void *data)
 {
-    memset(f, 0, sizeof(U2FHID_FRAME));
+    memset(f, 0, sizeof(USB_FRAME));
     f->cid = cid;
-    f->init.cmd = cmd | TYPE_INIT;
+    f->init.cmd = cmd | U2FHID_TYPE_INIT;
     f->init.bcnth = (uint8_t) (len >> 8);
     f->init.bcntl = (uint8_t) len;
     for (size_t i = 0; i < MIN(len, sizeof(f->init.data)); ++i) {
@@ -41,11 +46,11 @@ static void initFrame(U2FHID_FRAME *f, uint32_t cid, uint8_t cmd,
 }
 
 // Return true if frame r is error frame for expected error.
-static bool isError(const U2FHID_FRAME r, int error)
+static bool isError(const USB_FRAME r, int error)
 {
     return
         r.init.cmd == U2FHID_ERROR &&
-        MSG_LEN(r) == 1 &&
+        U2FHID_MSG_LEN(r) == 1 &&
         r.init.data[0] == error;
 }
 
@@ -53,16 +58,16 @@ static bool isError(const U2FHID_FRAME r, int error)
 // Returns basic capabilities field.
 static uint8_t test_BasicInit(void)
 {
-    U2FHID_FRAME f, r;
-    initFrame(&f, U2Fob_getCid(device), U2FHID_INIT, INIT_NONCE_SIZE, NULL);
+    USB_FRAME f, r;
+    initFrame(&f, U2Fob_getCid(device), U2FHID_INIT, U2FHID_INIT_NONCE_SIZE, NULL);
 
     SEND(f);
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_EQ(r.init.cmd, U2FHID_INIT);
-    CHECK_EQ(MSG_LEN(r), sizeof(U2FHID_INIT_RESP));
-    CHECK_EQ(memcmp(&f.init.data[0], &r.init.data[0], INIT_NONCE_SIZE), 0);
+    CHECK_EQ(U2FHID_MSG_LEN(r), U2FHID_INIT_RESP_SIZE);
+    CHECK_EQ(memcmp(&f.init.data[0], &r.init.data[0], U2FHID_INIT_NONCE_SIZE), 0);
     CHECK_EQ(r.init.data[12], U2FHID_IF_VERSION);
     return r.init.data[16];
 }
@@ -70,7 +75,7 @@ static uint8_t test_BasicInit(void)
 // Test we have a working (single frame) echo.
 static void test_Echo(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
@@ -87,8 +92,8 @@ static void test_Echo(void)
 
     // Check echoed content matches.
     CHECK_EQ(U2FHID_PING, r.init.cmd);
-    CHECK_EQ(MSG_LEN(f), MSG_LEN(r));
-    CHECK_EQ(0, memcmp(f.init.data, r.init.data, MSG_LEN(f)));
+    CHECK_EQ(U2FHID_MSG_LEN(f), U2FHID_MSG_LEN(r));
+    CHECK_EQ(0, memcmp(f.init.data, r.init.data, U2FHID_MSG_LEN(f)));
 }
 
 // Test we can echo message larger than a single frame.
@@ -134,7 +139,7 @@ static void test_LongEcho(void)
 // Visually inspect fob for compliance.
 static void test_OptionalWink(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint8_t caps = test_BasicInit();
 
     initFrame(&f, U2Fob_getCid(device), U2FHID_WINK, 0, NULL);
@@ -143,11 +148,11 @@ static void test_OptionalWink(void)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    if (caps & CAPFLAG_WINK) {
+    if (caps & U2FHID_CAPFLAG_WINK) {
         CHECK_EQ(f.init.cmd, r.init.cmd);
-        CHECK_EQ(MSG_LEN(r), 0);
+        CHECK_EQ(U2FHID_MSG_LEN(r), 0);
     } else {
-        CHECK_EQ(isError(r, ERR_INVALID_CMD), true);
+        CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CMD), true);
     }
 }
 
@@ -156,7 +161,7 @@ static void test_OptionalWink(void)
 // Device should pre-empt communications with error reply.
 static void test_Limits(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
@@ -166,7 +171,7 @@ static void test_Limits(void)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_INVALID_LEN), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_LEN), true);
 }
 
 // Check there are no frames pending for this cid.
@@ -174,24 +179,24 @@ static void test_Limits(void)
 // Make sure none got received and timeout time passed.
 static void test_Idle(float timeOut)
 {
-    U2FHID_FRAME r;
+    USB_FRAME r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
     U2Fob_deltaTime(&t);
-    CHECK_EQ(-ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, timeOut));
+    CHECK_EQ(-U2FHID_ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, timeOut));
     if (U2Fob_liveDeviceTesting()) {
         CHECK_GE(U2Fob_deltaTime(&t), .2);
     }
     CHECK_LE(U2Fob_deltaTime(&t), .5);
 }
 
-// Check we get a timeout error frame if not sending TYPE_CONT frames
+// Check we get a timeout error frame if not sending U2FHID_TYPE_CONT frames
 // for a message that spans multiple frames.
 // Device should timeout at ~.5 seconds.
 static void test_Timeout(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     float measuredTimeout;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
@@ -204,7 +209,7 @@ static void test_Timeout(void)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_MSG_TIMEOUT), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_MSG_TIMEOUT), true);
 
     measuredTimeout = U2Fob_deltaTime(&t);
     CHECK_GE(measuredTimeout, .4);  // needs to be at least 0.4 seconds
@@ -214,7 +219,7 @@ static void test_Timeout(void)
 // Test LOCK functionality, if implemented.
 static void test_Lock(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
     uint8_t caps = test_BasicInit();
@@ -225,9 +230,9 @@ static void test_Lock(void)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    if (!(caps & CAPFLAG_LOCK)) {
+    if (!(caps & U2FHID_CAPFLAG_LOCK)) {
         // Make sure CAPFLAG reflects behavior.
-        CHECK_EQ(isError(r, ERR_INVALID_CMD), true);
+        CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CMD), true);
         return;
     }
 
@@ -239,7 +244,7 @@ static void test_Lock(void)
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_EQ(f.init.cmd, r.init.cmd);
-    CHECK_EQ(0, MSG_LEN(r));
+    CHECK_EQ(0, U2FHID_MSG_LEN(r));
 
     // Rattle lock, checking for BUSY.
     int count = 0;
@@ -260,17 +265,17 @@ static void test_Lock(void)
 
         if (r.init.cmd == U2FHID_ERROR) {
             // We only expect BUSY here.
-            CHECK_EQ(isError(r, ERR_CHANNEL_BUSY), true);
+            CHECK_EQ(isError(r, U2FHID_ERR_CHANNEL_BUSY), true);
         }
     } while (r.init.cmd == U2FHID_ERROR);
 
     CHECK_GE(U2Fob_deltaTime(&t), 2.5);
 }
 
-// Check we get abort if we send TYPE_INIT when TYPE_CONT is expected.
+// Check we get abort if we send U2FHID_TYPE_INIT when U2FHID_TYPE_CONT is expected.
 static void test_NotCont(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
@@ -278,21 +283,21 @@ static void test_NotCont(void)
 
     SEND(f);
 
-    SEND(f);  // Send frame again, i.e. another TYPE_INIT frame.
+    SEND(f);  // Send frame again, i.e. another U2FHID_TYPE_INIT frame.
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_LT(U2Fob_deltaTime(&t), .1);  // Expect fail reply quickly.
-    CHECK_EQ(isError(r, ERR_INVALID_SEQ), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_SEQ), true);
 
     // Check there are no further messages.
-    CHECK_EQ(-ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 0.6f));
+    CHECK_EQ(-U2FHID_ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 0.6f));
 }
 
 // Check we get a error when sending wrong sequence in continuation frame.
 static void test_WrongSeq(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
@@ -300,35 +305,35 @@ static void test_WrongSeq(void)
 
     SEND(f);
 
-    f.cont.seq = 1 | TYPE_CONT;  // Send wrong SEQ, 0 is expected.
+    f.cont.seq = 1 | U2FHID_TYPE_CONT;  // Send wrong SEQ, 0 is expected.
 
     SEND(f);
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_LT(U2Fob_deltaTime(&t), .1);  // Expect fail reply quickly.
-    CHECK_EQ(isError(r, ERR_INVALID_SEQ), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_SEQ), true);
 
     // Check there are no further messages.
-    CHECK_EQ(-ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 0.6f));
+    CHECK_EQ(-U2FHID_ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 0.6f));
 }
 
 // Check we hear nothing if we send a random CONT frame.
 static void test_NotFirst(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
 
     initFrame(&f, U2Fob_getCid(device), U2FHID_PING, 8, NULL);
-    f.cont.seq = 0 | TYPE_CONT;  // Make continuation packet.
+    f.cont.seq = 0 | U2FHID_TYPE_CONT;  // Make continuation packet.
 
     SEND(f);
-    CHECK_EQ(-ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 1.0));
+    CHECK_EQ(-U2FHID_ERR_MSG_TIMEOUT, U2Fob_receiveHidFrame(device, &r, 1.0));
 }
 
 // Check we get a BUSY if device is waiting for CONT on other channel.
 static void test_Busy(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint64_t t = 0;
     U2Fob_deltaTime(&t);
 
@@ -343,14 +348,14 @@ static void test_Busy(void)
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_LT(U2Fob_deltaTime(&t), .1);  // Expect busy reply quickly.
-    CHECK_EQ(isError(r, ERR_CHANNEL_BUSY), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_CHANNEL_BUSY), true);
 
     f.cid ^= 1;  // Flip back.
 
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_MSG_TIMEOUT), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_MSG_TIMEOUT), true);
 
     CHECK_GE(U2Fob_deltaTime(&t), .45);  // Expect T/O msg only after timeout.
 }
@@ -358,20 +363,20 @@ static void test_Busy(void)
 // Test INIT self aborts wait for CONT frame
 static void test_InitSelfAborts(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
 
     initFrame(&f, U2Fob_getCid(device), U2FHID_PING, 99, NULL);
     SEND(f);
 
-    initFrame(&f, U2Fob_getCid(device), U2FHID_INIT, INIT_NONCE_SIZE, NULL);
+    initFrame(&f, U2Fob_getCid(device), U2FHID_INIT, U2FHID_INIT_NONCE_SIZE, NULL);
 
     SEND(f);
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_EQ(r.init.cmd, U2FHID_INIT);
-    CHECK_GE(MSG_LEN(r), MSG_LEN(f));
-    CHECK_EQ(memcmp(&f.init.data[0], &r.init.data[0], INIT_NONCE_SIZE), 0);
+    CHECK_GE(U2FHID_MSG_LEN(r), U2FHID_MSG_LEN(f));
+    CHECK_EQ(memcmp(&f.init.data[0], &r.init.data[0], U2FHID_INIT_NONCE_SIZE), 0);
 
     test_NotFirst();
 }
@@ -379,12 +384,12 @@ static void test_InitSelfAborts(void)
 // Test INIT other does not abort wait for CONT.
 static void test_InitOther(void)
 {
-    U2FHID_FRAME f, f2, r;
+    USB_FRAME f, f2, r;
 
     initFrame(&f, U2Fob_getCid(device), U2FHID_PING, 99, NULL);
     SEND(f);
 
-    initFrame(&f2, U2Fob_getCid(device) ^ 1, U2FHID_INIT, INIT_NONCE_SIZE, NULL);
+    initFrame(&f2, U2Fob_getCid(device) ^ 1, U2FHID_INIT, U2FHID_INIT_NONCE_SIZE, NULL);
 
     SEND(f2);
     RECV(r, 1.0);
@@ -392,27 +397,27 @@ static void test_InitOther(void)
 
     // Expect sync reply for requester
     CHECK_EQ(r.init.cmd, U2FHID_INIT);
-    CHECK_GE(MSG_LEN(r), MSG_LEN(f2));
-    CHECK_EQ(memcmp(&f2.init.data[0], &r.init.data[0], INIT_NONCE_SIZE), 0);
+    CHECK_GE(U2FHID_MSG_LEN(r), U2FHID_MSG_LEN(f2));
+    CHECK_EQ(memcmp(&f2.init.data[0], &r.init.data[0], U2FHID_INIT_NONCE_SIZE), 0);
 
     // Expect error frame after timeout on first channel.
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_MSG_TIMEOUT), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_MSG_TIMEOUT), true);
 }
 
 static void wait_Idle(void)
 {
-    U2FHID_FRAME r;
+    USB_FRAME r;
 
-    while (-ERR_MSG_TIMEOUT != U2Fob_receiveHidFrame(device, &r, .2f)) {
+    while (-U2FHID_ERR_MSG_TIMEOUT != U2Fob_receiveHidFrame(device, &r, .2f)) {
     }
 }
 
 static void test_LeadingZero(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     initFrame(&f, 0x100, U2FHID_PING, 10, NULL);
 
     SEND(f);
@@ -420,13 +425,13 @@ static void test_LeadingZero(void)
     CHECK_EQ(r.cid, f.cid);
 
     CHECK_EQ(r.init.cmd, U2FHID_PING);
-    CHECK_EQ(MSG_LEN(f), MSG_LEN(r));
+    CHECK_EQ(U2FHID_MSG_LEN(f), U2FHID_MSG_LEN(r));
 }
 
 static void test_InitOnNonBroadcastEchoesCID(void)
 {
-    U2FHID_FRAME f, r;
-    size_t cs = INIT_NONCE_SIZE;
+    USB_FRAME f, r;
+    size_t cs = U2FHID_INIT_NONCE_SIZE;
 
     initFrame(&f, 0xdeadbeef, U2FHID_INIT, cs, NULL);  // Use non-broadcast cid
 
@@ -435,7 +440,7 @@ static void test_InitOnNonBroadcastEchoesCID(void)
     CHECK_EQ(r.cid, f.cid);
 
     CHECK_EQ(r.init.cmd, U2FHID_INIT);
-    CHECK_EQ(MSG_LEN(r), sizeof(U2FHID_INIT_RESP));
+    CHECK_EQ(U2FHID_MSG_LEN(r), U2FHID_INIT_RESP_SIZE);
     CHECK_EQ(0, memcmp(f.init.data, r.init.data, cs));
 
     if (U2Fob_liveDeviceTesting()) {
@@ -451,8 +456,8 @@ static void test_InitOnNonBroadcastEchoesCID(void)
 
 static uint32_t test_Init(bool check)
 {
-    U2FHID_FRAME f, r;
-    size_t cs = INIT_NONCE_SIZE;
+    USB_FRAME f, r;
+    size_t cs = U2FHID_INIT_NONCE_SIZE;
 
     initFrame(&f, -1, U2FHID_INIT, cs, NULL);  // -1 is broadcast channel
 
@@ -463,7 +468,7 @@ static uint32_t test_Init(bool check)
     // expect init reply
     CHECK_EQ(r.init.cmd, U2FHID_INIT);
 
-    CHECK_EQ(MSG_LEN(r), sizeof(U2FHID_INIT_RESP));
+    CHECK_EQ(U2FHID_MSG_LEN(r), U2FHID_INIT_RESP_SIZE);
 
     // Check echo of challenge
     CHECK_EQ(0, memcmp(f.init.data, r.init.data, cs));
@@ -484,7 +489,7 @@ static uint32_t test_Init(bool check)
 
 static void test_InitUnderLock(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
     uint8_t caps = test_BasicInit();
 
     // Check whether lock is supported, using an unlock command.
@@ -494,9 +499,9 @@ static void test_InitUnderLock(void)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    if (!(caps & CAPFLAG_LOCK)) {
+    if (!(caps & U2FHID_CAPFLAG_LOCK)) {
         // Make sure CAPFLAG reflects behavior.
-        CHECK_EQ(isError(r, ERR_INVALID_CMD), true);
+        CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CMD), true);
         return;
     }
 
@@ -507,7 +512,7 @@ static void test_InitUnderLock(void)
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_EQ(f.init.cmd, r.init.cmd);
-    CHECK_EQ(0, MSG_LEN(r));
+    CHECK_EQ(0, U2FHID_MSG_LEN(r));
 
     // We have a lock. CMD_INIT should work whilst another holds lock.
 
@@ -522,12 +527,12 @@ static void test_InitUnderLock(void)
     CHECK_EQ(f.cid, r.cid);
 
     CHECK_EQ(f.init.cmd, r.init.cmd);
-    CHECK_EQ(0, MSG_LEN(r));
+    CHECK_EQ(0, U2FHID_MSG_LEN(r));
 }
 
 static void test_Unknown(uint8_t cmd)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
 
     initFrame(&f, U2Fob_getCid(device), cmd, 0, NULL);
 
@@ -535,33 +540,33 @@ static void test_Unknown(uint8_t cmd)
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_INVALID_CMD), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CMD), true);
 }
 
 static void test_OnlyInitOnBroadcast(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
 
-    initFrame(&f, -1, U2FHID_PING, INIT_NONCE_SIZE, NULL);
+    initFrame(&f, -1, U2FHID_PING, U2FHID_INIT_NONCE_SIZE, NULL);
 
     SEND(f);
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_INVALID_CID), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CID), true);
 }
 
 static void test_NothingOnChannel0(void)
 {
-    U2FHID_FRAME f, r;
+    USB_FRAME f, r;
 
-    initFrame(&f, 0, U2FHID_INIT, INIT_NONCE_SIZE, NULL);
+    initFrame(&f, 0, U2FHID_INIT, U2FHID_INIT_NONCE_SIZE, NULL);
 
     SEND(f);
     RECV(r, 1.0);
     CHECK_EQ(f.cid, r.cid);
 
-    CHECK_EQ(isError(r, ERR_INVALID_CID), true);
+    CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CID), true);
 }
 
 static void test_Descriptor(void)

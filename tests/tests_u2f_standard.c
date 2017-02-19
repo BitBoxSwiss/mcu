@@ -15,20 +15,14 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <winsock2.h>  // ntohl, htonl
-#else
-#include <arpa/inet.h>  // ntohl, htonl
-#endif
-
-#include "u2f/u2f_t.h"
-#include "u2f/u2f_util_t.h"
-
 #include "random.h"
 #include "memory.h"
 #include "utils.h"
 #include "sha2.h"
 #include "ecc.h"
+
+#include "u2f/u2f.h"
+#include "u2f/u2f_util_t.h"
 
 
 static bool arg_hasButton = true;  // fob has button
@@ -60,17 +54,17 @@ static void test_Version(void)
 {
     char rsp[4096];
     size_t rsp_len;
-    int res = U2Fob_apdu(device, 0, U2F_INS_VERSION, 0, 0, "", 0, rsp, &rsp_len);
+    int res = U2Fob_apdu(device, 0, U2F_VERSION, 0, 0, "", 0, rsp, &rsp_len);
     if (res == 0x9000) {
         CHECK_EQ(0, strncmp("U2F_V2", rsp, rsp_len));
         return;
     }
 
-    // Non-ISO 7816-4 compliant U2F_INS_VERSION "APDU" that includes Lc value 0,
+    // Non-ISO 7816-4 compliant U2F_VERSION "APDU" that includes Lc value 0,
     // for compatibility with older devices.
     uint8_t buf[4 + 3 + 2];
     buf[0] = 0;  // CLA
-    buf[1] = U2F_INS_VERSION;  // INS
+    buf[1] = U2F_VERSION;  // INS
     buf[2] = 0;  // P1
     buf[3] = 0;  // P2
     buf[4] = 0;  // extended length
@@ -98,7 +92,7 @@ static void test_BadCLA(void)
     char rsp[4096];
     size_t rsp_len;
     CHECK_EQ(0x6E00, U2Fob_apdu(device, 1 /* not U2F CLA, 0x00 */,
-                                U2F_INS_VERSION, 0, 0, "abc", 3, rsp, &rsp_len));
+                                U2F_VERSION, 0, 0, "abc", 3, rsp, &rsp_len));
     CHECK_EQ(rsp_len, 0);
 }
 
@@ -108,7 +102,7 @@ static void test_WrongLength_U2F_VERSION(void)
     char rsp[4096];
     size_t rsp_len;
     // U2F_VERSION does not take any input.
-    CHECK_EQ(0x6700, U2Fob_apdu(device, 0, U2F_INS_VERSION, 0, 0, "abc", 3, rsp, &rsp_len));
+    CHECK_EQ(0x6700, U2Fob_apdu(device, 0, U2F_VERSION, 0, 0, "abc", 3, rsp, &rsp_len));
     CHECK_EQ(rsp_len, 0);
 }
 
@@ -118,7 +112,7 @@ static void test_WrongLength_U2F_REGISTER(void)
     char rsp[4096];
     size_t rsp_len;
     // U2F_REGISTER does expect input.
-    CHECK_EQ(0x6700, U2Fob_apdu(device, 0, U2F_INS_REGISTER, 0, 0, "abc", 3, rsp, &rsp_len));
+    CHECK_EQ(0x6700, U2Fob_apdu(device, 0, U2F_REGISTER, 0, 0, "abc", 3, rsp, &rsp_len));
     CHECK_EQ(rsp_len, 0);
 }
 
@@ -126,8 +120,8 @@ static void test_WrongLength_U2F_REGISTER(void)
 static void test_Enroll(int expectedSW12)
 {
     // pick random origin and challenge.
-    for (size_t i = 0; i < sizeof(regReq.nonce); ++i) {
-        regReq.nonce[i] = rand();
+    for (size_t i = 0; i < sizeof(regReq.challenge); ++i) {
+        regReq.challenge[i] = rand();
     }
     for (size_t i = 0; i < sizeof(regReq.appId); ++i) {
         regReq.appId[i] = rand();
@@ -140,10 +134,10 @@ static void test_Enroll(int expectedSW12)
     size_t rsp_len;
     char regReq_c[U2F_NONCE_SIZE + U2F_APPID_SIZE + 1];
     memset(regReq_c, 0, sizeof(regReq_c));
-    memcpy(regReq_c, regReq.nonce, U2F_NONCE_SIZE);
+    memcpy(regReq_c, regReq.challenge, U2F_NONCE_SIZE);
     memcpy(regReq_c + U2F_NONCE_SIZE, regReq.appId, U2F_APPID_SIZE);
     CHECK_EQ(expectedSW12,
-             U2Fob_apdu(device, 0, U2F_INS_REGISTER, U2F_AUTH_ENFORCE, 0,
+             U2Fob_apdu(device, 0, U2F_REGISTER, U2F_AUTH_ENFORCE, 0,
                         regReq_c, sizeof(regReq), rsp, &rsp_len));
 
     if (expectedSW12 != 0x9000) {
@@ -156,25 +150,25 @@ static void test_Enroll(int expectedSW12)
 
     memcpy(&regRsp, rsp, rsp_len);
     CHECK_EQ(regRsp.registerId, U2F_REGISTER_ID);
-    CHECK_EQ(regRsp.pubKey.format, UNCOMPRESSED_POINT);
+    CHECK_EQ(regRsp.pubKey.format, U2F_UNCOMPRESSED_POINT);
 
     printf("\x1b[34mEnroll: %lu bytes in %fs\x1b[0m\n", rsp_len, U2Fob_deltaTime(&t));
 
     // Check crypto of enroll response.
-    char cert[MAX_CERT_SIZE];
+    char cert[U2F_MAX_ATT_CERT_SIZE];
     size_t cert_len;
     CHECK_EQ(getCertificate(regRsp, cert, &cert_len), true);
     printf("\x1b[34mCertificate: %lu %s\x1b[0m\n", cert_len,
            utils_uint8_to_hex((uint8_t *)cert, cert_len));
 
-    char pk[P256_POINT_SIZE];
+    char pk[U2F_EC_POINT_SIZE];
     size_t pk_len;
     CHECK_EQ(getSubjectPublicKey(cert, cert_len, pk, &pk_len), true);
     printf("\x1b[34mPublic key:  %lu %s\x1b[0m\n", pk_len, utils_uint8_to_hex((uint8_t *)pk,
             pk_len));
-    CHECK_EQ(pk_len, P256_POINT_SIZE);
+    CHECK_EQ(pk_len, U2F_EC_POINT_SIZE);
 
-    char sig[MAX_ECDSA_SIG_SIZE];
+    char sig[U2F_MAX_EC_SIG_SIZE];
     size_t sig_len;
     CHECK_EQ(getSignature(regRsp, sig, &sig_len), true);
     printf("\x1b[34mSignature:   %lu %s\x1b[0m\n", sig_len, utils_uint8_to_hex((uint8_t *)sig,
@@ -191,7 +185,7 @@ static void test_Enroll(int expectedSW12)
     sha256_Init(&ctx);
     sha256_Update(&ctx, &rfu, sizeof(rfu));  // 0x00
     sha256_Update(&ctx, regReq.appId, sizeof(regReq.appId));  // O
-    sha256_Update(&ctx, regReq.nonce, sizeof(regReq.nonce));  // d
+    sha256_Update(&ctx, regReq.challenge, sizeof(regReq.challenge));  // d
     sha256_Update(&ctx, regRsp.keyHandleCertSig, regRsp.keyHandleLen); // hk
     sha256_Update(&ctx, (uint8_t *)&regRsp.pubKey, sizeof(regRsp.pubKey));  // pk
     sha256_Final(hash, &ctx);
@@ -207,8 +201,8 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
     U2F_AUTHENTICATE_REQ authReq;
 
     // pick random challenge and use registered appId.
-    for (size_t i = 0; i < sizeof(authReq.nonce); ++i) {
-        authReq.nonce[i] = rand();
+    for (size_t i = 0; i < sizeof(authReq.challenge); ++i) {
+        authReq.challenge[i] = rand();
     }
     memcpy(authReq.appId, regReq.appId, sizeof(authReq.appId));
     authReq.keyHandleLen = regRsp.keyHandleLen;
@@ -219,16 +213,16 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
 
     char rsp[4096];
     size_t rsp_len;
-    char authReq_c[U2F_NONCE_SIZE + U2F_APPID_SIZE + 1 + MAX_KH_SIZE + 1];
+    char authReq_c[U2F_NONCE_SIZE + U2F_APPID_SIZE + 1 + U2F_MAX_KH_SIZE + 1];
     memset(authReq_c, 0, sizeof(authReq_c));
-    memcpy(authReq_c, authReq.nonce, U2F_NONCE_SIZE);
+    memcpy(authReq_c, authReq.challenge, U2F_NONCE_SIZE);
     memcpy(authReq_c + U2F_NONCE_SIZE, authReq.appId, U2F_APPID_SIZE);
     memcpy(authReq_c + U2F_NONCE_SIZE + U2F_APPID_SIZE, &authReq.keyHandleLen, 1);
     memcpy(authReq_c + U2F_NONCE_SIZE + U2F_APPID_SIZE + 1, authReq.keyHandle,
            authReq.keyHandleLen);
 
     CHECK_EQ(expectedSW12,
-             U2Fob_apdu(device, 0, U2F_INS_AUTHENTICATE,
+             U2Fob_apdu(device, 0, U2F_AUTHENTICATE,
                         checkOnly ? U2F_AUTH_CHECK_ONLY : U2F_AUTH_ENFORCE, 0,
                         authReq_c, U2F_NONCE_SIZE + U2F_APPID_SIZE + 1 + authReq.keyHandleLen,
                         rsp, &rsp_len));
@@ -261,21 +255,21 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
     sha256_Update(&ctx, regReq.appId, sizeof(regReq.appId));  // O
     sha256_Update(&ctx, &resp.flags, sizeof(resp.flags));  // T
     sha256_Update(&ctx, (uint8_t *)&resp.ctr, sizeof(resp.ctr));  // CTR
-    sha256_Update(&ctx, authReq.nonce, sizeof(authReq.nonce));  // d
+    sha256_Update(&ctx, authReq.challenge, sizeof(authReq.challenge));  // d
     sha256_Final(hash, &ctx);
 
     // Verify signature.
     CHECK_EQ(0, ecc_verify_digest((uint8_t *)&regRsp.pubKey + 1, hash, signature,
                                   ECC_SECP256r1));
 
-    return ntohl(resp.ctr);
+    return ((resp.ctr[0] << 24) + (resp.ctr[1] << 16) + (resp.ctr[2] << 8) + (resp.ctr[3]));
 }
 
 
 static void check_Compilation(void)
 {
     // Couple of sanity checks.
-    CHECK_EQ(sizeof(P256_POINT), 65);
+    CHECK_EQ(sizeof(U2F_EC_POINT), 65);
     CHECK_EQ(sizeof(U2F_REGISTER_REQ), 64);
 }
 

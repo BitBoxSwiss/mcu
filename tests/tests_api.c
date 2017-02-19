@@ -488,7 +488,7 @@ static void tests_u2f(void)
     u_assert_int_eq(r.cid, cid);
     u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
     u_assert_int_eq(r.init.bcntl, 1);
-    u_assert_int_eq(r.init.data[0], U2F_ERR_CHANNEL_BUSY);
+    u_assert_int_eq(r.init.data[0], U2FHID_ERR_CHANNEL_BUSY);
 
     // Enable U2F
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);

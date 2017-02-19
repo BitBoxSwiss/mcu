@@ -123,7 +123,7 @@ static void api_create_u2f_frame(USB_FRAME *f, uint32_t cid, uint8_t cmd, size_t
 {
     memset(f, 0, sizeof(USB_FRAME));
     f->cid = cid;
-    f->init.cmd = cmd | TYPE_INIT;
+    f->init.cmd = cmd | U2FHID_TYPE_INIT;
     f->init.bcnth = (uint8_t) (len >> 8);
     f->init.bcntl = (uint8_t) len;
     for (size_t i = 0; i < MIN(len, sizeof(f->init.data)); ++i) {
@@ -167,7 +167,7 @@ static int api_hid_send_frames(uint32_t cid, uint8_t cmd, const void *data, size
     const uint8_t *pData = (const uint8_t *) data;
 
     frame.cid = cid;
-    frame.init.cmd = TYPE_INIT | cmd;
+    frame.init.cmd = U2FHID_TYPE_INIT | cmd;
     frame.init.bcnth = (size >> 8) & 255;
     frame.init.bcntl = (size & 255);
 
@@ -242,13 +242,13 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
             return res;
         }
 
-    } while (frame.cid != cid || FRAME_TYPE(frame) != TYPE_INIT);
+    } while (frame.cid != cid || U2FHID_FRAME_TYPE(frame) != U2FHID_TYPE_INIT);
 
     if (frame.init.cmd == U2FHID_ERROR) {
         return -frame.init.data[0];
     }
 
-    totalLen = MIN(max, MSG_LEN(frame));
+    totalLen = MIN(max, U2FHID_MSG_LEN(frame));
     frameLen = MIN(sizeof(frame.init.data), totalLen);
 
     result = totalLen;
@@ -266,11 +266,11 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
         if (frame.cid != cid) {
             continue;
         }
-        if (FRAME_TYPE(frame) != TYPE_CONT) {
-            return -U2F_ERR_INVALID_SEQ;
+        if (U2FHID_FRAME_TYPE(frame) != U2FHID_TYPE_CONT) {
+            return -U2FHID_ERR_INVALID_SEQ;
         }
-        if (FRAME_SEQ(frame) != seq++) {
-            return -U2F_ERR_INVALID_SEQ;
+        if (U2FHID_FRAME_SEQ(frame) != seq++) {
+            return -U2FHID_ERR_INVALID_SEQ;
         }
 
         frameLen = MIN(sizeof(frame.cont.data), totalLen);
@@ -299,7 +299,7 @@ static int api_hid_init(void)
 static void api_hid_read(PASSWORD_ID id)
 {
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    int res = api_hid_read_frames(HWW_CID, HWW_COMMAND, HID_REPORT, HID_REPORT_SIZE);
+    int res = api_hid_read_frames(HWW_CID, U2FHID_HWW, HID_REPORT, HID_REPORT_SIZE);
     if (res < 0) {
         printf("ERROR: Unable to read report.\n");
         return;
@@ -311,7 +311,7 @@ static void api_hid_read(PASSWORD_ID id)
 
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
-    api_hid_send_frames(HWW_CID, HWW_COMMAND, cmd, cmdlen);
+    api_hid_send_frames(HWW_CID, U2FHID_HWW, cmd, cmdlen);
 }
 
 

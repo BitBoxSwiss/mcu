@@ -67,7 +67,7 @@ volatile uint16_t u2f_current_time_ms = 0;
 typedef struct {
     uint8_t reserved;
     uint8_t appId[U2F_APPID_SIZE];
-    uint8_t chal[U2F_CHAL_SIZE];
+    uint8_t challenge[U2F_NONCE_SIZE];
     uint8_t keyHandle[U2F_KEYHANDLE_LEN];
     uint8_t pubKey[U2F_EC_POINT_SIZE];
 } U2F_REGISTER_SIG_STR;
@@ -77,7 +77,7 @@ typedef struct {
     uint8_t appId[U2F_APPID_SIZE];
     uint8_t flags;
     uint8_t ctr[4];
-    uint8_t chal[U2F_CHAL_SIZE];
+    uint8_t challenge[U2F_NONCE_SIZE];
 } U2F_AUTHENTICATE_SIG_STR;
 
 
@@ -97,7 +97,7 @@ static uint32_t next_cid(void)
 {
     do {
         cid = random_uint32(0);
-    } while (cid == 0 || cid == CID_BROADCAST);
+    } while (cid == 0 || cid == U2FHID_CID_BROADCAST);
     return cid;
 }
 
@@ -201,7 +201,7 @@ static void u2f_device_register(const USB_APDU *a)
         // Add signature using attestation key
         sig_base.reserved = 0;
         memcpy(sig_base.appId, req->appId, U2F_APPID_SIZE);
-        memcpy(sig_base.chal, req->chal, U2F_CHAL_SIZE);
+        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_SIZE);
         memcpy(sig_base.keyHandle, &resp->keyHandleCertSig, U2F_KEYHANDLE_LEN);
         memcpy(sig_base.pubKey, &resp->pubKey, U2F_EC_POINT_SIZE);
 
@@ -284,7 +284,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
         memcpy(sig_base.appId, req->appId, U2F_APPID_SIZE);
         sig_base.flags = resp->flags;
         memcpy(sig_base.ctr, resp->ctr, 4);
-        memcpy(sig_base.chal, req->chal, U2F_CHAL_SIZE);
+        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_SIZE);
 
         if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig, ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
@@ -322,7 +322,7 @@ static void u2f_device_wink(const uint8_t *buf, uint32_t len)
     (void)buf;
 
     if (len > 0) {
-        u2f_send_err_hid(cid, U2F_ERR_INVALID_LEN);
+        u2f_send_err_hid(cid, U2FHID_ERR_INVALID_LEN);
         return;
     }
 
@@ -360,7 +360,7 @@ static void u2f_device_init(const USB_FRAME *in)
     U2FHID_INIT_RESP resp;
 
     if (in->cid == 0) {
-        u2f_send_err_hid(in->cid, U2F_ERR_INVALID_CID);
+        u2f_send_err_hid(in->cid, U2FHID_ERR_INVALID_CID);
         return;
     }
 
@@ -371,12 +371,12 @@ static void u2f_device_init(const USB_FRAME *in)
     f.init.bcntl = U2FHID_INIT_RESP_SIZE;
 
     memcpy(resp.nonce, init_req->nonce, sizeof(init_req->nonce));
-    resp.cid = in->cid == CID_BROADCAST ? next_cid() : in->cid;
+    resp.cid = in->cid == U2FHID_CID_BROADCAST ? next_cid() : in->cid;
     resp.versionInterface = U2FHID_IF_VERSION;
     resp.versionMajor = DIGITAL_BITBOX_VERSION_MAJOR;
     resp.versionMinor = DIGITAL_BITBOX_VERSION_MINOR;
     resp.versionBuild = DIGITAL_BITBOX_VERSION_PATCH;
-    resp.capFlags = CAPFLAG_WINK;
+    resp.capFlags = U2FHID_CAPFLAG_WINK;
     memcpy(&f.init.data, &resp, sizeof(resp));
     usb_reply_queue_add(&f);
 }
@@ -424,7 +424,7 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
             (memory_report_ext_flags() & MEM_EXT_FLAG_U2F) ) {
         // Abort U2F commands if the U2F bit is set (==U2F disabled).
         // Vendor specific commands are passed through.
-        u2f_send_err_hid(cid, U2F_ERR_CHANNEL_BUSY);
+        u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
     } else {
         // Received all data
         switch (reader.cmd) {
@@ -437,15 +437,15 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
             case U2FHID_WINK:
                 u2f_device_wink(reader.buf, reader.len);
                 break;
-            case HWW_COMMAND: {
+            case U2FHID_HWW: {
                 char *report;
                 reader.buf[MIN(reader.len, sizeof(reader.buf) - 1)] = '\0';// NULL terminate
                 report = commander((const char *)reader.buf);
-                usb_reply_queue_load_msg(HWW_COMMAND, (const uint8_t *)report, strlens(report), cid);
+                usb_reply_queue_load_msg(U2FHID_HWW, (const uint8_t *)report, strlens(report), cid);
                 break;
             }
             default:
-                u2f_send_err_hid(cid, U2F_ERR_INVALID_CMD);
+                u2f_send_err_hid(cid, U2FHID_ERR_INVALID_CMD);
                 break;
         }
     }
@@ -459,20 +459,20 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 
 static void u2f_device_cmd_init(const USB_FRAME *f)
 {
-    if (f->cid == CID_BROADCAST || f->cid == 0) {
-        u2f_send_err_hid(f->cid, U2F_ERR_INVALID_CID);
+    if (f->cid == U2FHID_CID_BROADCAST || f->cid == 0) {
+        u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_CID);
         return;
     }
 
-    if ((unsigned)MSG_LEN(*f) > sizeof(reader.buf)) {
-        u2f_send_err_hid(f->cid, U2F_ERR_INVALID_LEN);
+    if ((unsigned)U2FHID_MSG_LEN(*f) > sizeof(reader.buf)) {
+        u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_LEN);
         return;
     }
 
     memset(&reader, 0, sizeof(reader));
     reader.seq = 0;
     reader.buf_ptr = reader.buf;
-    reader.len = MSG_LEN(*f);
+    reader.len = U2FHID_MSG_LEN(*f);
     reader.cmd = f->type;
     memcpy(reader.buf_ptr, f->init.data, sizeof(f->init.data));
     reader.buf_ptr += sizeof(f->init.data);
@@ -486,7 +486,7 @@ static void u2f_device_cmd_init(const USB_FRAME *f)
 
 void u2f_device_run(const USB_FRAME *f)
 {
-    if ((f->type & TYPE_MASK) == TYPE_INIT) {
+    if ((f->type & U2FHID_TYPE_MASK) == U2FHID_TYPE_INIT) {
 
         if (f->init.cmd == U2FHID_INIT) {
             u2f_device_init(f);
@@ -497,9 +497,9 @@ void u2f_device_run(const USB_FRAME *f)
             if (f->cid == cid) {
                 usb_reply_queue_clear();
                 u2f_device_reset_state();
-                u2f_send_err_hid(f->cid, U2F_ERR_INVALID_SEQ);
+                u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
             } else {
-                u2f_send_err_hid(f->cid, U2F_ERR_CHANNEL_BUSY);
+                u2f_send_err_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
             }
         } else {
             u2f_device_cmd_init(f);
@@ -507,21 +507,21 @@ void u2f_device_run(const USB_FRAME *f)
         goto exit;
     }
 
-    if ((f->type & TYPE_MASK) == TYPE_CONT) {
+    if ((f->type & U2FHID_TYPE_MASK) == U2FHID_TYPE_CONT) {
 
         if (!u2f_state_continue) {
             goto exit;
         }
 
         if (cid != f->cid) {
-            u2f_send_err_hid(f->cid, U2F_ERR_CHANNEL_BUSY);
+            u2f_send_err_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
             goto exit;
         }
 
         if (reader.seq != f->cont.seq) {
             usb_reply_queue_clear();
             u2f_device_reset_state();
-            u2f_send_err_hid(f->cid, U2F_ERR_INVALID_SEQ);
+            u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
             goto exit;
         }
 
@@ -553,7 +553,7 @@ void u2f_device_timeout(void)
 
     if (u2f_current_time_ms > U2F_TIMEOUT) {
         u2f_device_reset_state();
-        u2f_send_err_hid(cid, U2F_ERR_MSG_TIMEOUT);
+        u2f_send_err_hid(cid, U2FHID_ERR_MSG_TIMEOUT);
         usb_reply_queue_send();
     }
 }

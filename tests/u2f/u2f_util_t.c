@@ -9,22 +9,12 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-
-#ifdef _WIN32
-#include <winsock2.h>  // ntohl, htonl
-#else
-#include <arpa/inet.h>  // ntohl, htonl
-#endif
+#include <arpa/inet.h>
 
 #include "u2f_util_t.h"
 #include "usb.h"
 #include "u2f_device.h"
 #include "utils.h"
-
-
-#ifdef _WIN32
-#define strdup _strdup
-#endif
 
 
 #ifdef CONTINUOUS_INTEGRATION
@@ -69,13 +59,9 @@ static int TEST_LIVE_DEVICE = 0;
 
 #ifdef __APPLE__
 // Implement something compatible w/ linux clock_gettime()
-
 #include <mach/mach_time.h>
-
 #define CLOCK_MONOTONIC 0
-
-static
-void clock_gettime(int which, struct timespec *ts)
+static void clock_gettime(int which, struct timespec *ts)
 {
     (void)which;
     static mach_timebase_info_data_t __clock_gettime_inf;
@@ -98,22 +84,20 @@ void U2Fob_testLiveDevice(uint8_t test)
     TEST_LIVE_DEVICE = test;
 }
 
+
 uint8_t U2Fob_liveDeviceTesting(void)
 {
     return TEST_LIVE_DEVICE;
 }
 
+
 float U2Fob_deltaTime(uint64_t *state)
 {
 #ifndef CONTINUOUS_INTEGRATION
     uint64_t now, delta;
-#ifdef _WIN32
-    now = (uint64_t) GetTickCount64() * 1000000;
-#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     now = (uint64_t) (ts.tv_sec * 1e9 + ts.tv_nsec);
-#endif
     delta = *state ? now - *state : 0;
     *state = now;
     return (float) (delta / 1.0e9);
@@ -122,6 +106,7 @@ float U2Fob_deltaTime(uint64_t *state)
     return 0.0;
 #endif
 }
+
 
 struct U2Fob *U2Fob_create(void)
 {
@@ -134,6 +119,7 @@ struct U2Fob *U2Fob_create(void)
     return f;
 }
 
+
 void U2Fob_destroy(struct U2Fob *device)
 {
     if (device) {
@@ -143,20 +129,23 @@ void U2Fob_destroy(struct U2Fob *device)
     hid_exit();
 }
 
+
 uint32_t U2Fob_getCid(struct U2Fob *device)
 {
     return device->cid;
 }
 
+
 int U2Fob_open(struct U2Fob *device)
 {
     if (!TEST_LIVE_DEVICE) {
-        return -ERR_NONE;
+        return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
     device->dev = hid_open(0x03eb, 0x2402, NULL);
-    return device->dev != NULL ? -ERR_NONE : -ERR_OTHER;
+    return device->dev != NULL ? -U2FHID_ERR_NONE : -U2FHID_ERR_OTHER;
 }
+
 
 void U2Fob_close(struct U2Fob *device)
 {
@@ -166,29 +155,31 @@ void U2Fob_close(struct U2Fob *device)
     }
 }
 
+
 int U2Fob_reopen(struct U2Fob *device)
 {
     if (!TEST_LIVE_DEVICE) {
-        return -ERR_NONE;
+        return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
     device->dev = hid_open(0x03eb, 0x2402, NULL);
-    return device->dev != NULL ? -ERR_NONE : -ERR_OTHER;
+    return device->dev != NULL ? -U2FHID_ERR_NONE : -U2FHID_ERR_OTHER;
 }
 
-int U2Fob_sendHidFrame(struct U2Fob *device, U2FHID_FRAME *f)
+
+int U2Fob_sendHidFrame(struct U2Fob *device, USB_FRAME *f)
 {
-    uint8_t d[sizeof(U2FHID_FRAME) + 1];
+    uint8_t d[sizeof(USB_FRAME) + 1];
     int res = 0;
 
     d[0] = 0;  // un-numbered report
     f->cid = htonl(f->cid);  // cid is in network order on the wire
-    memcpy(d + 1, f, sizeof(U2FHID_FRAME));
+    memcpy(d + 1, f, sizeof(USB_FRAME));
     f->cid = ntohl(f->cid);
 
     if (TEST_LIVE_DEVICE) {
         if (!device->dev) {
-            return -ERR_OTHER;
+            return -U2FHID_ERR_OTHER;
         }
         res = hid_write(device->dev, d, sizeof(d));
     } else {
@@ -200,24 +191,25 @@ int U2Fob_sendHidFrame(struct U2Fob *device, U2FHID_FRAME *f)
         return 0;
     }
 
-    return -ERR_OTHER;
+    return -U2FHID_ERR_OTHER;
 }
 
-int U2Fob_receiveHidFrame(struct U2Fob *device, U2FHID_FRAME *r, float to)
+
+int U2Fob_receiveHidFrame(struct U2Fob *device, USB_FRAME *r, float to)
 {
     if (to <= 0.0) {
-        return -ERR_MSG_TIMEOUT;
+        return -U2FHID_ERR_MSG_TIMEOUT;
     }
 
     if (TEST_LIVE_DEVICE && !device->dev) {
-        return -ERR_OTHER;
+        return -U2FHID_ERR_OTHER;
     }
-    memset((int8_t *)r, 0xEE, sizeof(U2FHID_FRAME));
+    memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
 
     int res = 0;
     if (TEST_LIVE_DEVICE) {
         res = hid_read_timeout(device->dev,
-                               (uint8_t *) r, sizeof(U2FHID_FRAME),
+                               (uint8_t *) r, sizeof(USB_FRAME),
                                (int) (to * 1000));
     } else {
         static uint8_t *data;
@@ -230,7 +222,7 @@ int U2Fob_receiveHidFrame(struct U2Fob *device, U2FHID_FRAME *r, float to)
         }
     }
 
-    if (res == sizeof(U2FHID_FRAME)) {
+    if (res == sizeof(USB_FRAME)) {
         if (TEST_LIVE_DEVICE) {
             r->cid = ntohl(r->cid);
         }
@@ -240,26 +232,27 @@ int U2Fob_receiveHidFrame(struct U2Fob *device, U2FHID_FRAME *r, float to)
 
 
     if (res == -1) {
-        return -ERR_OTHER;
+        return -U2FHID_ERR_OTHER;
     }
 
-    return -ERR_MSG_TIMEOUT;
+    return -U2FHID_ERR_MSG_TIMEOUT;
 }
+
 
 int U2Fob_init(struct U2Fob *device)
 {
     int res;
-    U2FHID_FRAME challenge;
+    USB_FRAME challenge;
 
     for (size_t i = 0; i < sizeof(device->nonce); ++i) {
         device->nonce[i] ^= (rand() >> 3);
     }
 
     challenge.cid = device->cid;
-    challenge.init.cmd = U2FHID_INIT | TYPE_INIT;
+    challenge.init.cmd = U2FHID_INIT | U2FHID_TYPE_INIT;
     challenge.init.bcnth = 0;
-    challenge.init.bcntl = INIT_NONCE_SIZE;
-    memcpy(challenge.init.data, device->nonce, INIT_NONCE_SIZE);
+    challenge.init.bcntl = U2FHID_INIT_NONCE_SIZE;
+    memcpy(challenge.init.data, device->nonce, U2FHID_INIT_NONCE_SIZE);
 
     res = U2Fob_sendHidFrame(device, &challenge);
     if (res != 0) {
@@ -267,13 +260,13 @@ int U2Fob_init(struct U2Fob *device)
     }
 
     for (;;) {
-        U2FHID_FRAME response;
+        USB_FRAME response;
         res = U2Fob_receiveHidFrame(device, &response, 2.0);
 
-        if (res == -ERR_MSG_TIMEOUT) {
+        if (res == -U2FHID_ERR_MSG_TIMEOUT) {
             return res;
         }
-        if (res == -ERR_OTHER) {
+        if (res == -U2FHID_ERR_OTHER) {
             return res;
         }
 
@@ -283,10 +276,10 @@ int U2Fob_init(struct U2Fob *device)
         if (response.init.cmd != challenge.init.cmd) {
             continue;
         }
-        if (MSG_LEN(response) != sizeof(U2FHID_INIT_RESP)) {
+        if (U2FHID_MSG_LEN(response) != U2FHID_INIT_RESP_SIZE) {
             continue;
         }
-        if (memcmp(response.init.data, challenge.init.data, INIT_NONCE_SIZE)) {
+        if (memcmp(response.init.data, challenge.init.data, U2FHID_INIT_NONCE_SIZE)) {
             continue;
         }
 
@@ -302,17 +295,18 @@ int U2Fob_init(struct U2Fob *device)
     return 0;
 }
 
+
 int U2Fob_send(struct U2Fob *device, uint8_t cmd,
                const void *data, size_t size)
 {
-    U2FHID_FRAME frame;
+    USB_FRAME frame;
     int res;
     size_t frameLen;
     uint8_t seq = 0;
     const uint8_t *pData = (const uint8_t *) data;
 
     frame.cid = device->cid;
-    frame.init.cmd = TYPE_INIT | cmd;
+    frame.init.cmd = U2FHID_TYPE_INIT | cmd;
     frame.init.bcnth = (size >> 8) & 255;
     frame.init.bcntl = (size & 255);
 
@@ -338,11 +332,12 @@ int U2Fob_send(struct U2Fob *device, uint8_t cmd,
     return 0;
 }
 
+
 int U2Fob_recv(struct U2Fob *device, uint8_t *cmd,
                void *data, size_t max,
                float timeout)
 {
-    U2FHID_FRAME frame;
+    USB_FRAME frame;
     int res, result;
     size_t totalLen, frameLen;
     uint8_t seq = 0;
@@ -358,7 +353,7 @@ int U2Fob_recv(struct U2Fob *device, uint8_t *cmd,
         }
 
         timeout -= U2Fob_deltaTime(&timeTracker);
-    } while (frame.cid != device->cid || FRAME_TYPE(frame) != TYPE_INIT);
+    } while (frame.cid != device->cid || U2FHID_FRAME_TYPE(frame) != U2FHID_TYPE_INIT);
 
     if (frame.init.cmd == U2FHID_ERROR) {
         return -frame.init.data[0];
@@ -366,7 +361,7 @@ int U2Fob_recv(struct U2Fob *device, uint8_t *cmd,
 
     *cmd = frame.init.cmd;
 
-    totalLen = MIN(max, MSG_LEN(frame));
+    totalLen = MIN((uint16_t)max, U2FHID_MSG_LEN(frame));
     frameLen = MIN(sizeof(frame.init.data), totalLen);
 
     result = totalLen;
@@ -386,11 +381,11 @@ int U2Fob_recv(struct U2Fob *device, uint8_t *cmd,
         if (frame.cid != device->cid) {
             continue;
         }
-        if (FRAME_TYPE(frame) != TYPE_CONT) {
-            return -ERR_INVALID_SEQ;
+        if (U2FHID_FRAME_TYPE(frame) != U2FHID_TYPE_CONT) {
+            return -U2FHID_ERR_INVALID_SEQ;
         }
-        if (FRAME_SEQ(frame) != seq++) {
-            return -ERR_INVALID_SEQ;
+        if (U2FHID_FRAME_SEQ(frame) != seq++) {
+            return -U2FHID_ERR_INVALID_SEQ;
         }
 
         frameLen = MIN(sizeof(frame.cont.data), totalLen);
@@ -402,6 +397,7 @@ int U2Fob_recv(struct U2Fob *device, uint8_t *cmd,
 
     return result;
 }
+
 
 int U2Fob_exchange_apdu_buffer(struct U2Fob *device,
                                void *data,
@@ -423,13 +419,13 @@ int U2Fob_exchange_apdu_buffer(struct U2Fob *device,
     }
 
     if (cmd != U2FHID_MSG) {
-        return -ERR_OTHER;
+        return -U2FHID_ERR_OTHER;
     }
 
     uint16_t sw12;
 
     if (res < 2) {
-        return -ERR_OTHER;
+        return -U2FHID_ERR_OTHER;
     }
     sw12 = (buf[res - 2] << 8) | buf[res - 1];
     res -= 2;
@@ -438,6 +434,7 @@ int U2Fob_exchange_apdu_buffer(struct U2Fob *device,
     *in_len = res;
     return sw12;
 }
+
 
 int U2Fob_apdu(struct U2Fob *device,
                uint8_t CLA, uint8_t INS, uint8_t P1, uint8_t P2,
@@ -475,6 +472,7 @@ int U2Fob_apdu(struct U2Fob *device,
 
     return U2Fob_exchange_apdu_buffer(device, buf, offs, in, in_len);
 }
+
 
 
 bool getCertificate(const U2F_REGISTER_RESP rsp,
@@ -515,6 +513,7 @@ bool getCertificate(const U2F_REGISTER_RESP rsp,
     return true;
 }
 
+
 bool getSignature(const U2F_REGISTER_RESP rsp,
                   char *sig, size_t *sig_len)
 {
@@ -539,12 +538,13 @@ bool getSignature(const U2F_REGISTER_RESP rsp,
     return true;
 }
 
+
 bool getSubjectPublicKey(const char *cert, size_t cert_len,
                          char *pk, size_t *pk_len)
 {
-    CHECK_GE(cert_len, P256_POINT_SIZE);
+    CHECK_GE(cert_len, U2F_EC_POINT_SIZE);
 
-    // Explicitly search for asn1 lead-in sequence of p256-ecdsa public key.
+    // Explicitly search for ASN.1 lead-in sequence of p256-ecdsa public key.
     const char asn1[] = "3059301306072a8648ce3d020106082a8648ce3d030107034200";
 
     char cert_c[cert_len * 2];
@@ -558,17 +558,18 @@ bool getSubjectPublicKey(const char *cert, size_t cert_len,
     CHECK_NE(off, 0);
 
     off += sizeof(asn1) / 2;
-    CHECK_LE(off, cert_len - P256_POINT_SIZE);
+    CHECK_LE(off, cert_len - U2F_EC_POINT_SIZE);
 
-    memcpy(pk, cert + off, P256_POINT_SIZE);
-    *pk_len = P256_POINT_SIZE;
+    memcpy(pk, cert + off, U2F_EC_POINT_SIZE);
+    *pk_len = U2F_EC_POINT_SIZE;
     return true;
 }
+
 
 bool getCertSignature(const char *cert, size_t cert_len,
                       char *sig, size_t *sig_len)
 {
-    // Explicitly search asn1 lead-in sequence of p256-ecdsa signature.
+    // Explicitly search ASN.1 lead-in sequence of p256-ecdsa signature.
     const char asn1[] = "300906072a8648ce3d040103";
     char cert_c[cert_len * 2];
     char *cert_c_p = cert_c;
@@ -591,6 +592,7 @@ bool getCertSignature(const char *cert, size_t cert_len,
     *sig_len = cert_len - off - 2;
     return true;
 }
+
 
 bool verifyCertificate(const char *pk,
                        const char *cert)

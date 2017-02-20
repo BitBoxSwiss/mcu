@@ -6,30 +6,30 @@ from dbb_utils import *
 
 try:
 
-    pw = '0000'
+    password = '0000'
 
     openHid()
 
 
     # Start up options - factory reset; initial password setting
     if 0:
-        sendEncrypt('{"reset":"__ERASE__"}')
-        sendPlain('{"password":"' + pw + '"}')
+        hid_send_encrypt('{"reset":"__ERASE__"}')
+        hid_send_plain('{"password":"' + password + '"}')
         sys.exit()
 
 
     # Example JSON commands - refer to digitalbitbox.com/api
-    msg = '{"backup":"list"}' 
-    msg = '{"seed":{"source": "create"}}'
-    msg = '{"device":"info"}'
-    msg = '{"random":"pseudo"}' 
-    msg = '{"bootloader":"lock"}' 
-    msg = '{"bootloader":"unlock"}' 
-    msg = '{"led":"blink"}' 
+    message = '{"backup":"list"}' 
+    message = '{"seed":{"source": "create"}}'
+    message = '{"device":"info"}'
+    message = '{"random":"pseudo"}' 
+    message = '{"bootloader":"lock"}' 
+    message = '{"bootloader":"unlock"}' 
+    message = '{"led":"blink"}' 
 
 
     # Send a JSON command
-    sendEncrypt(msg, pw)
+    hid_send_encrypt(message, password)
 
 
 except IOError, ex:
@@ -37,5 +37,5 @@ except IOError, ex:
 except (KeyboardInterrupt, SystemExit):
     print "Exiting code"
 
-dbb.close()
+dbb_hid.close()
 

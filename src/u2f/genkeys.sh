@@ -1,7 +1,7 @@
 #!/bin/bash
 
 err_report() {
-    printf "\n** ERROR on line $1 due to OpenSSL bug.\n** Remove 'dbbdev.key' and run the script again.\n\n"
+    printf "\n** ERROR on line $1 due to known bug.\n** Remove 'dbbdev.key' and run the script again.\n\n"
     exit
 }
 

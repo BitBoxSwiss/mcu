@@ -1460,8 +1460,26 @@ static void tests_aes_cbc(void)
 }
 
 
+static void tests_memory_setup(void)
+{
+    api_reset_device();
+
+    if (!TEST_LIVE_DEVICE) {
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_MEM_SETUP));
+    }
+
+    memory_setup();
+    memory_setup(); // run twice
+
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+}
+
+
 static void run_utests(void)
 {
+    u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
@@ -1501,8 +1519,6 @@ int main(void)
 #ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();
 #endif
-    memory_setup();
-    memory_setup(); // run twice
     printf("\n\nInternal API Result:\n");
     run_utests();
 

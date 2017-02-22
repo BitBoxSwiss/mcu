@@ -237,6 +237,7 @@ X(ERR_SD_KEY,          412, "Please provide an encryption key.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\
+X(ERR_MEM_SETUP,       503, "Device initialization in progress.")\
 X(ERR_TOUCH_ABORT,     600, "Aborted by user.")\
 X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\

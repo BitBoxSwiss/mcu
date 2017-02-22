@@ -95,19 +95,19 @@ uint8_t *memory_report_master_u2f(void);
 uint8_t *memory_read_memseed(void);
 uint8_t memory_read_erased(void);
 uint8_t memory_report_erased(void);
-uint8_t memory_read_setup(void);
+uint8_t memory_report_setup(void);
 uint8_t memory_read_unlocked(void);
 uint32_t memory_read_ext_flags(void);
 uint32_t memory_report_ext_flags(void);
 
 void memory_write_memseed(const uint8_t *s);
 void memory_write_erased(uint8_t erase);
-void memory_write_setup(uint8_t setup);
 void memory_write_unlocked(uint8_t u);
 void memory_write_ext_flags(uint32_t flags);
 
 uint16_t memory_access_err_count(const uint8_t access);
 uint16_t memory_read_access_err_count(void);
+uint16_t memory_report_access_err_count(void);
 uint16_t memory_pin_err_count(const uint8_t access);
 uint16_t memory_read_pin_err_count(void);
 

@@ -205,6 +205,19 @@ err:
 }
 
 
+static void memory_write_setup(uint8_t setup)
+{
+    memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
+}
+
+
+static uint8_t memory_read_setup(void)
+{
+    memory_eeprom(NULL, &MEM_setup, MEM_SETUP_ADDR, 1);
+    return MEM_setup;
+}
+
+
 int memory_setup(void)
 {
     if (memory_read_setup()) {
@@ -225,14 +238,15 @@ int memory_setup(void)
         memory_write_setup(0x00);
     } else {
         memory_mempass();
+        memory_read_ext_flags();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
         memory_master_u2f(NULL);// Load cache so that U2F speed is fast enough
+        memory_read_access_err_count(); // Load cache
         memory_u2f_count_read();
-        memory_read_ext_flags();
     }
     return DBB_OK;
 }
@@ -421,13 +435,8 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
 }
 
 
-void memory_write_setup(uint8_t setup)
+uint8_t memory_report_setup(void)
 {
-    memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
-}
-uint8_t memory_read_setup(void)
-{
-    memory_eeprom(NULL, &MEM_setup, MEM_SETUP_ADDR, 1);
     return MEM_setup;
 }
 
@@ -481,6 +490,10 @@ uint16_t memory_access_err_count(const uint8_t access)
 uint16_t memory_read_access_err_count(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
+    return MEM_access_err;
+}
+uint16_t memory_report_access_err_count(void)
+{
     return MEM_access_err;
 }
 

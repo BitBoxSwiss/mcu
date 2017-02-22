@@ -1489,7 +1489,9 @@ static void commander_parse(char *command)
     } else if (json_node->u.object.len > 1) {
         commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_MULT_CMD);
     } else {
-        memory_access_err_count(DBB_ACCESS_INITIALIZE);
+        if (memory_report_access_err_count()) {
+            memory_access_err_count(DBB_ACCESS_INITIALIZE);
+        }
 
         // Signing
         if (TFA_VERIFY) {
@@ -1576,8 +1578,8 @@ static char *commander_decrypt(const char *encrypted_command)
                                   &command_len,
                                   PASSWORD_STAND);
 
-    err_count = memory_read_access_err_count();     // Reads over TWI introduce additional
-    err_iter = memory_read_access_err_count() + 1;  // temporal jitter in code execution.
+    err_count = memory_report_access_err_count();
+    err_iter = memory_report_access_err_count() + 1;
 
     if (strlens(command)) {
         yajl_val json_node = yajl_tree_parse(command, NULL, 0);
@@ -1637,7 +1639,12 @@ static char *commander_decrypt(const char *encrypted_command)
 
 static int commander_check_init(const char *encrypted_command)
 {
-    if (memory_read_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
+    if (memory_report_setup()) {
+        commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_MEM_SETUP);
+        return DBB_ERROR;
+    }
+
+    if (memory_report_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
         int status = touch_button_press(DBB_TOUCH_LONG);
         if (status != DBB_TOUCHED) {
             commander_fill_report(cmd_str(CMD_input), NULL, status);

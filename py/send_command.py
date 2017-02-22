@@ -20,7 +20,6 @@ try:
 
     # Example JSON commands - refer to digitalbitbox.com/api
     message = '{"backup":"list"}' 
-    message = '{"seed":{"source": "create"}}'
     message = '{"device":"info"}'
     message = '{"random":"pseudo"}' 
     message = '{"bootloader":"lock"}' 

@@ -375,6 +375,7 @@ static int commander_process_backup_check(const char *key, const char *filename)
                 commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
                 ret = DBB_OK;
             }
+            utils_zero(seed, sizeof(seed));
         }
         utils_zero(backup_hex, strlens(backup_hex));
         utils_zero(backup, sizeof(backup));

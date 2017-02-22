@@ -306,7 +306,6 @@ void memory_clear(void)
     memcpy(MEM_master_hww_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_hww_entropy, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_u2f, MEM_PAGE_ERASE, MEM_PAGE_LEN);
 #endif
 }
 

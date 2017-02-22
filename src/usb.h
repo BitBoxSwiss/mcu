@@ -29,8 +29,50 @@
 #define _USB_H_
 
 
+#include <stdlib.h>
+#include <stdbool.h>
+#ifndef TESTING
+#include "conf_usb.h"
+#endif
+
+
+#define  USB_REPORT_SIZE 64
+
+
+__extension__ typedef struct {
+    uint32_t cid;               // Channel identifier
+    union {
+        uint8_t type;           // Frame type - bit 7 defines type
+        struct {
+            uint8_t cmd;        // Command - bit 7 set
+            uint8_t bcnth;      // Message byte count - high
+            uint8_t bcntl;      // Message byte count - low
+            uint8_t data[USB_REPORT_SIZE - 7]; // Data payload
+        } init;
+        struct {
+            uint8_t seq;        // Sequence number - bit 7 cleared
+            uint8_t data[USB_REPORT_SIZE - 5]; // Data payload
+        } cont;
+    };
+} USB_FRAME;
+
+
+typedef struct {
+    uint8_t cla, ins, p1, p2;
+    uint8_t lc1, lc2, lc3;
+    uint8_t data[];
+} USB_APDU;
+
+
 void usb_report(const unsigned char *command);
 void usb_report_sent(void);
+void usb_reply(uint8_t *report);
+void usb_reply_queue_clear(void);
+void usb_reply_queue_add(const USB_FRAME *frame);
+void usb_reply_queue_load_msg(const uint8_t cmd, const uint8_t *data, const uint32_t len,
+                              const uint32_t cid);
+void usb_reply_queue_send(void);
+uint8_t *usb_reply_queue_read(void);
 void usb_process(uint16_t framenumber);
 bool usb_enable(void);
 void usb_disable(void);

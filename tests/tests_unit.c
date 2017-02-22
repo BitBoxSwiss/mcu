@@ -438,19 +438,22 @@ static void test_bip32_vector_2(void)
 }
 
 
-#ifdef ECC_USE_UECC_LIB
 #define test_deterministic(KEY, MSG, K) do { \
     sha256_Raw((const uint8_t *)MSG, strlen(MSG), buf); \
-    res = uECC_generate_k_rfc6979_test(k, utils_hex_to_uint8(KEY), buf); \
-    u_assert_int_eq(res, 0); \
+    res = uECC_generate_k_rfc6979(k, utils_hex_to_uint8(KEY), buf, 32, &ctx.uECC, uECC_secp256k1()); \
+    u_assert_int_eq(res, 1); \
     u_assert_mem_eq(k, utils_hex_to_uint8(K), 32); \
 } while (0)
+
 
 static void test_rfc6979(void)
 {
     int res;
     uint8_t buf[32];
     uint8_t k[32];
+    uint8_t tmp[32 + 32 + 64];
+
+    SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
 
     test_deterministic("cca9fbcc1b41e5a95d369eaa6ddcff73b61a4efaa279cfc6567e8daa39cbaf50",
                        "sample", "2df40ca70e639d89528a6b670d9d48d9165fdc0febc0974056bdce192b8e16a3");
@@ -467,7 +470,6 @@ static void test_rfc6979(void)
                        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!",
                        "1f4b84c23a86a221d233f2521be018d9318639d5b8bbd6374a8a59232d16ad3d");
 }
-#endif
 
 
 // generated using http://althenia.net/svn/stackoverflow/pbkdf2-test-vectors.py?rev=6
@@ -521,7 +523,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -529,11 +531,12 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
-    printf("  Signing speed: %0.2f sig/s\n", N * 2 / ((float)(clock() - t) / CLOCKS_PER_SEC));
+    u_print_info("Signing speed: %0.2f sig/s\n",
+                 N * 2 / ((float)(clock() - t) / CLOCKS_PER_SEC));
 }
 
 
@@ -560,9 +563,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = bitcoin_ecc.ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = bitcoin_ecc.ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -577,14 +580,14 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = bitcoin_ecc.ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = bitcoin_ecc.ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
-    printf("  Verifying speed: %0.2f sig/s\n",
-           100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));
+    u_print_info("Verifying speed: %0.2f sig/s\n",
+                 100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));
 }
 
 
@@ -601,18 +604,45 @@ static void test_ecdh(void)
 
         random_bytes(privkey_1, sizeof(privkey_1), 0);
         random_bytes(privkey_2, sizeof(privkey_2), 0);
+        u_assert_mem_not_eq(privkey_1, privkey_2, 32);
 
-        ecc_get_public_key33(privkey_1, pubkey_1);
-        ecc_get_public_key33(privkey_2, pubkey_2);
+        bitcoin_ecc.ecc_get_public_key33(privkey_1, pubkey_1, ECC_SECP256k1);
+        bitcoin_ecc.ecc_get_public_key33(privkey_2, pubkey_2, ECC_SECP256k1);
 
-        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1);
+        bitcoin_ecc.ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1, ECC_SECP256k1);
         u_assert_mem_not_eq(ecdh_secret_1, ecdh_secret_2, 32);
 
-        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2);
+        bitcoin_ecc.ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2, ECC_SECP256k1);
         u_assert_mem_eq(ecdh_secret_1, ecdh_secret_2, 32);
     }
 }
 
+static void test_ecc_sig_to_der(void)
+{
+    uint8_t sig[64], sig2[64], priv_key[32], msg[32], der[256];
+    size_t i, N = 20;
+    int der_len;
+
+    // secp256k1
+    for (i = 0 ; i < N; i++) {
+        random_bytes(priv_key, sizeof(priv_key), 0);
+        random_bytes(msg, sizeof(msg), 0);
+        u_assert_int_eq(0, bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1));
+        u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
+        u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
+        u_assert_mem_eq(sig, sig2, sizeof(sig));
+    }
+
+    // secp256r1
+    for (i = 0 ; i < N; i++) {
+        random_bytes(priv_key, sizeof(priv_key), 0);
+        random_bytes(msg, sizeof(msg), 0);
+        u_assert_int_eq(0, ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256r1));
+        u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
+        u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
+        u_assert_mem_eq(sig, sig2, sizeof(sig));
+    }
+}
 
 // test vectors from http://www.inconteam.com/software-development/41-encryption/55-aes-test-vectors
 static void test_aes_cbc(void)
@@ -944,9 +974,9 @@ static void test_utils(void)
     u_assert_mem_eq(uppercase, lowercase, 12);
 
     // overflow
-    char overflow[TO_UINT8_HEX_BUF_LEN + 2];
+    char overflow[UTILS_BUFFER_LEN + 2];
     memset(overflow, 'a', sizeof(overflow));
-    overflow[TO_UINT8_HEX_BUF_LEN + 1] = '\0';
+    overflow[UTILS_BUFFER_LEN + 1] = '\0';
     binary = (uint8_t *)overflow;
     u_assert_int_eq(1, (binary != NULL));
     binary = utils_hex_to_uint8(overflow);
@@ -954,7 +984,7 @@ static void test_utils(void)
 
     binary = (uint8_t *)overflow;
     u_assert_int_eq(1, (binary != NULL));
-    binary = (uint8_t *)utils_uint8_to_hex((uint8_t *)overflow, TO_UINT8_HEX_BUF_LEN / 2);
+    binary = (uint8_t *)utils_uint8_to_hex((uint8_t *)overflow, UTILS_BUFFER_LEN / 2);
     u_assert_int_eq(1, (binary == NULL));
 
     // varint conversion
@@ -989,16 +1019,38 @@ static void test_utils(void)
         I_p++;
         VI_p++;
     }
+
+    // reverse bytes
+    int l = 8;
+    char hex[] = "0123456789abcdef";
+    char hex_rev[] = "efcdab8967452301";
+    uint8_t bin[l];
+    uint8_t bin_rev[l];
+    memcpy(bin, utils_hex_to_uint8(hex), l);
+    memcpy(bin_rev, utils_hex_to_uint8(hex_rev), l);
+
+    utils_reverse_hex(hex, l * 2);
+    u_assert_str_eq(hex, hex_rev);
+
+    utils_reverse_bin(bin, l);
+    u_assert_mem_eq(bin, bin_rev, l);
+
+    utils_reverse_bin(bin_rev, l);
+    utils_reverse_hex(hex, l * 2);
+    u_assert_str_eq(hex, utils_uint8_to_hex(bin_rev, l));
 }
 
 
 int main(void)
 {
     ecc_context_init();
+    bitcoin_ecc.ecc_context_init();
+    random_init();
 
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);
     u_run_test(test_ecdh);
+    u_run_test(test_ecc_sig_to_der);
     u_run_test(test_bip32_vector_1);
     u_run_test(test_bip32_vector_2);
     u_run_test(test_pbkdf2);
@@ -1009,10 +1061,8 @@ int main(void)
     u_run_test(test_aes_cbc);
     u_run_test(test_buffer_overflow);
     u_run_test(test_utils);
-#ifdef ECC_USE_UECC_LIB
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);
-#endif
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
@@ -1021,5 +1071,6 @@ int main(void)
     }
 
     ecc_context_destroy();
+    bitcoin_ecc.ecc_context_destroy();
     return U_TESTS_FAIL;
 }

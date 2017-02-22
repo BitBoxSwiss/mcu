@@ -34,27 +34,16 @@
 #include "utils.h"
 
 
-int main(int argc, char *argv[])
+static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup, ecc_curve_id curve)
 {
     uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000],
             hash[32], msg_len = 0, *p;
     uint32_t i, j, p_len = 0;
-    SHA256_CTX sha256;
-    EC_GROUP *ecgroup;
     int cnt = 0, err = 0;
 
-    random_init();
-    ecc_context_init();
-    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-
-    unsigned long max_iterations = -1;
-    if (argc == 2) {
-        sscanf(argv[1], "%lu", &max_iterations);
-    } else if (argc > 2) {
-        puts("Zero or one command-line arguments only, exiting....");
-    }
+    SHA256_CTX sha256;
     unsigned long iterations = 0;
-    while (argc == 1 || iterations < max_iterations) {
+    while (iterations < max_iterations) {
 
         // random message len between 1 and 256
         random_bytes(msg, 1 , 0);
@@ -89,24 +78,24 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (ecc_sign(priv_key, msg, msg_len, sig)) {
+        if (bitcoin_ecc.ecc_sign(priv_key, msg, msg_len, sig, curve)) {
             printf("signing failed\n");
             err++;
             break;
         }
 
         // generate public key from private key
-        ecc_get_public_key33(priv_key, pub_key33);
-        ecc_get_public_key65(priv_key, pub_key65);
+        bitcoin_ecc.ecc_get_public_key33(priv_key, pub_key33, curve);
+        bitcoin_ecc.ecc_get_public_key65(priv_key, pub_key65, curve);
 
 
         // verify the message signature
-        if (ecc_verify(pub_key65, sig, msg, msg_len)) {
+        if (bitcoin_ecc.ecc_verify(pub_key65, sig, msg, msg_len, curve)) {
             printf("verification failed (pub_key_len = 65)\n");
             err++;
             break;
         }
-        if (ecc_verify(pub_key33, sig, msg, msg_len)) {
+        if (bitcoin_ecc.ecc_verify(pub_key33, sig, msg, msg_len, curve)) {
             printf("verification failed (pub_key_len = 33)\n");
             err++;
             break;
@@ -142,7 +131,38 @@ int main(int argc, char *argv[])
         printf("eckey dump:\n%.*s\n\n", p_len, utils_uint8_to_hex(p, sizeof(buffer)));
     }
 
+    return err;
+}
+
+
+int main(int argc, char *argv[])
+{
+    EC_GROUP *ecgroup;
+    int err = 0;
+
+    random_init();
+    bitcoin_ecc.ecc_context_init();
+
+    unsigned long max_iterations = 1000;
+    if (argc == 2) {
+        sscanf(argv[1], "%lu", &max_iterations);
+    } else if (argc > 2) {
+        puts("Zero or one command-line arguments only, exiting....");
+    }
+
+    printf("\nTesting curve secp256k1\n");
+    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    err += run_test(max_iterations, ecgroup, ECC_SECP256k1);
     EC_GROUP_free(ecgroup);
-    ecc_context_destroy();
+
+#ifndef ECC_USE_SECP256K1_LIB
+    // secp256k1 library does not have secp256r1 functionality
+    printf("\nTesting curve secp256r1\n");
+    ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    err += run_test(max_iterations, ecgroup, ECC_SECP256r1);
+    EC_GROUP_free(ecgroup);
+#endif
+
+    bitcoin_ecc.ecc_context_destroy();
     return err;
 }

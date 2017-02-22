@@ -20,20 +20,19 @@ set(DBB-FIRMWARE-SOURCES
         random.c
         ripemd160.c
         ecc.c
+        uECC.c
         utils.c
         wallet.c
         flags.c
         sha2.c
+        u2f_device.c
+        usb.c
 )
 
-if(USE_UECC_LIB)
+if(USE_SECP256K1_LIB)
     set(DBB-FIRMWARE-SOURCES
         ${DBB-FIRMWARE-SOURCES}
-        uECC.c
-    )
-else()
-    set(DBB-FIRMWARE-SOURCES
-        ${DBB-FIRMWARE-SOURCES}
+        ecc_bitcoin.c
         secp256k1.c
     )
 endif()
@@ -42,7 +41,6 @@ set(DBB-BOOTLOADER-SOURCES
         startup.c
         bootloader.c
         led.c
-        ecc.c
         uECC.c
         sha2.c
         utils.c
@@ -50,6 +48,8 @@ set(DBB-BOOTLOADER-SOURCES
         flags.c
         random.c
         ataes132.c
+        u2f_device.c
+        usb.c
 )
 
 set(DBB-HARDWARE-SOURCES
@@ -57,7 +57,6 @@ set(DBB-HARDWARE-SOURCES
         sd.c
         systick.c
         touch.c
-        usb.c
 )
 
 set(DBB-TEST-SOURCES
@@ -165,6 +164,8 @@ set(DRIVER-INCLUDES
 )
 
 set(DBB-INCLUDES
+        .
+        asm
         secp256k1
         secp256k1/src
         secp256k1/include
@@ -182,7 +183,7 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Build tests_api
+# Build bitbox static lib for tests
 
 if(BUILD_TYPE STREQUAL "test")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")

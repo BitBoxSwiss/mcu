@@ -78,7 +78,11 @@ int main (void)
     systick_init();
     touch_init();
     ecc_context_init();
-
+#ifdef ECC_USE_SECP256K1_LIB
+    /* only init the context if libsecp256k1 is present */
+    /* otherwise we would re-init the context of uECC */
+    bitcoin_ecc.ecc_context_init();
+#endif
     memset(usb_serial_number, 0, sizeof(usb_serial_number));
     snprintf(usb_serial_number, sizeof(usb_serial_number), "%s%s",
              USB_DEVICE_SERIAL_NAME_TYPE, DIGITAL_BITBOX_VERSION_SHORT);

@@ -34,6 +34,7 @@
 #include "random.h"
 #include "utils.h"
 #include "flags.h"
+#include "hmac.h"
 #include "sha2.h"
 #ifndef TESTING
 #include "ataes132.h"
@@ -46,6 +47,8 @@
 static uint8_t MEM_unlocked = DEFAULT_unlocked;
 static uint8_t MEM_erased = DEFAULT_erased;
 static uint8_t MEM_setup = DEFAULT_setup;
+static uint32_t MEM_ext_flags = DEFAULT_ext_flags;
+static uint32_t MEM_u2f_count = DEFAULT_u2f_count;
 static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
@@ -54,9 +57,10 @@ __extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0x
 __extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_memory[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_master_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_master_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_master[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_hww[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_u2f[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_name[] = {[0 ... MEM_PAGE_LEN - 1] = '0'};
 
 __extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -76,17 +80,6 @@ static void memory_mempass(void)
     memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
                         PASSWORD_MEMORY);
     utils_zero(mempass, sizeof(mempass));
-    utils_clear_buffers();
-}
-
-
-static void memory_create_verifypass(void)
-{
-    uint8_t number[16] = {0};
-    random_bytes(number, sizeof(number), 0);
-    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
-                        PASSWORD_VERIFY);
-    utils_zero(number, sizeof(number));
     utils_clear_buffers();
 }
 
@@ -212,11 +205,23 @@ err:
 }
 
 
+static void memory_write_setup(uint8_t setup)
+{
+    memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
+}
+
+
+static uint8_t memory_read_setup(void)
+{
+    memory_eeprom(NULL, &MEM_setup, MEM_SETUP_ADDR, 1);
+    return MEM_setup;
+}
+
+
 int memory_setup(void)
 {
     if (memory_read_setup()) {
         // One-time setup on factory install
-        memory_erase();
 #ifndef TESTING
         // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
         const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
@@ -226,49 +231,70 @@ int memory_setup(void)
             return DBB_ERROR;
         }
 #endif
+        uint32_t c = 0x00000000;
+        memory_reset_hww();
+        memory_reset_u2f();
+        memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
         memory_write_setup(0x00);
     } else {
         memory_mempass();
+        memory_read_ext_flags();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
+        memory_master_u2f(NULL);// Load cache so that U2F speed is fast enough
+        memory_read_access_err_count(); // Load cache
+        memory_u2f_count_read();
     }
     return DBB_OK;
 }
 
 
-void memory_erase_seed(void)
+void memory_erase_hww_seed(void)
 {
-    memory_master_entropy(MEM_PAGE_ERASE);
-    memory_chaincode(MEM_PAGE_ERASE);
-    memory_master(MEM_PAGE_ERASE);
+    memory_master_hww_entropy(MEM_PAGE_ERASE);
+    memory_master_hww_chaincode(MEM_PAGE_ERASE);
+    memory_master_hww(MEM_PAGE_ERASE);
 }
 
 
-void memory_erase(void)
+void memory_reset_hww(void)
 {
     memory_mempass();
-    memory_create_verifypass();
-    memory_erase_hidden_password();
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_STAND);
+    memory_random_password(PASSWORD_STAND);
+    memory_random_password(PASSWORD_VERIFY);
+    memory_random_password(PASSWORD_HIDDEN);
     memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
-    memory_erase_seed();
+    memory_erase_hww_seed();
     memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
     memory_write_unlocked(DEFAULT_unlocked);
+    memory_write_ext_flags(DEFAULT_ext_flags);
     memory_access_err_count(DBB_ACCESS_INITIALIZE);
     memory_pin_err_count(DBB_ACCESS_INITIALIZE);
 }
 
 
-void memory_erase_hidden_password(void)
+void memory_reset_u2f(void)
+{
+    // Create random master U2F key. It is independent of the HWW.
+    // U2F is functional on fresh device without a seeded wallet.
+    uint8_t number[32] = {0};
+    random_bytes(number, sizeof(number), 0);
+    memory_master_u2f(number);
+    utils_zero(number, sizeof(number));
+}
+
+
+void memory_random_password(PASSWORD_ID id)
 {
     uint8_t number[16] = {0};
     random_bytes(number, sizeof(number), 0);
-    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2,
-                        PASSWORD_HIDDEN);
+    memory_write_aeskey(utils_uint8_to_hex(number, sizeof(number)), sizeof(number) * 2, id);
+    utils_zero(number, sizeof(number));
+    utils_clear_buffers();
 }
 
 
@@ -277,9 +303,9 @@ void memory_clear(void)
 #ifndef TESTING
     // Zero important variables in RAM on embedded MCU.
     // Do not clear for testing routines (i.e. not embedded).
-    memcpy(MEM_master_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-    memcpy(MEM_master_entropy, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_hww_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN);
+    memcpy(MEM_master_hww_entropy, MEM_PAGE_ERASE, MEM_PAGE_LEN);
 #endif
 }
 
@@ -297,24 +323,37 @@ uint8_t *memory_name(const char *name)
 }
 
 
-uint8_t *memory_master_entropy(const uint8_t *master_entropy)
+uint8_t *memory_master_hww(const uint8_t *master)
 {
-    memory_eeprom_crypt(master_entropy, MEM_master_entropy, MEM_MASTER_ENTROPY_ADDR);
-    return MEM_master_entropy;
+    memory_eeprom_crypt(master, MEM_master_hww, MEM_MASTER_BIP32_ADDR);
+    return MEM_master_hww;
 }
 
 
-uint8_t *memory_master(const uint8_t *master)
+uint8_t *memory_master_hww_chaincode(const uint8_t *chain)
 {
-    memory_eeprom_crypt(master, MEM_master, MEM_MASTER_BIP32_ADDR);
-    return MEM_master;
+    memory_eeprom_crypt(chain, MEM_master_hww_chain, MEM_MASTER_BIP32_CHAIN_ADDR);
+    return MEM_master_hww_chain;
 }
 
 
-uint8_t *memory_chaincode(const uint8_t *chain)
+uint8_t *memory_master_hww_entropy(const uint8_t *master_entropy)
 {
-    memory_eeprom_crypt(chain, MEM_master_chain, MEM_MASTER_BIP32_CHAIN_ADDR);
-    return MEM_master_chain;
+    memory_eeprom_crypt(master_entropy, MEM_master_hww_entropy, MEM_MASTER_ENTROPY_ADDR);
+    return MEM_master_hww_entropy;
+}
+
+
+uint8_t *memory_master_u2f(const uint8_t *master_u2f)
+{
+    memory_eeprom_crypt(master_u2f, MEM_master_u2f, MEM_MASTER_U2F_ADDR);
+    return MEM_master_u2f;
+}
+
+
+uint8_t *memory_report_master_u2f(void)
+{
+    return MEM_master_u2f;
 }
 
 
@@ -395,13 +434,8 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
 }
 
 
-void memory_write_setup(uint8_t setup)
+uint8_t memory_report_setup(void)
 {
-    memory_eeprom(&setup, &MEM_setup, MEM_SETUP_ADDR, 1);
-}
-uint8_t memory_read_setup(void)
-{
-    memory_eeprom(NULL, &MEM_setup, MEM_SETUP_ADDR, 1);
     return MEM_setup;
 }
 
@@ -457,6 +491,10 @@ uint16_t memory_read_access_err_count(void)
     memory_eeprom(NULL, (uint8_t *)&MEM_access_err, MEM_ACCESS_ERR_ADDR, 2);
     return MEM_access_err;
 }
+uint16_t memory_report_access_err_count(void)
+{
+    return MEM_access_err;
+}
 
 
 uint16_t memory_pin_err_count(const uint8_t access)
@@ -485,3 +523,32 @@ uint16_t memory_read_pin_err_count(void)
     return MEM_pin_err;
 }
 
+
+uint32_t memory_u2f_count_iter(void)
+{
+    uint32_t c;
+    memory_u2f_count_read();
+    c = MEM_u2f_count + 1;
+    memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
+    return MEM_u2f_count;
+}
+uint32_t memory_u2f_count_read(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
+    return MEM_u2f_count;
+}
+
+
+void memory_write_ext_flags(uint32_t flags)
+{
+    memory_eeprom((uint8_t *)&flags, (uint8_t *)&MEM_ext_flags, MEM_EXT_FLAGS_ADDR, 4);
+}
+uint32_t memory_read_ext_flags(void)
+{
+    memory_eeprom(NULL, (uint8_t *)&MEM_ext_flags, MEM_EXT_FLAGS_ADDR, 4);
+    return MEM_ext_flags;
+}
+uint32_t memory_report_ext_flags(void)
+{
+    return MEM_ext_flags;
+}

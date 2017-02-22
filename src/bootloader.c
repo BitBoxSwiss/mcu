@@ -31,7 +31,7 @@
 #include "conf_usb.h"
 #include "mcu.h"
 #include "led.h"
-#include "ecc.h"
+#include "uECC.h"
 #include "sha2.h"
 #include "flags.h"
 #include "utils.h"
@@ -160,13 +160,17 @@ static void bootloader_firmware_erase(void)
 
 static uint8_t bootloader_firmware_verified(void)
 {
-    uint8_t cnt = 0, valid = 0, hash[32], sig[64];
+    uint8_t cnt = 0, valid = 0, hash[32], sig[64], pubkey_64[64];
     const char **pubkey = pubkeys;
 
     sha256_Raw((uint8_t *)(FLASH_APP_START), FLASH_APP_LEN, hash);
+    sha256_Raw(hash, 32, hash);
+
     while (*pubkey && valid < BOOT_SIG_M) {
         memcpy(sig, (uint8_t *)(FLASH_SIG_START + cnt * sizeof(sig)), sizeof(sig));
-        valid += !ecc_verify(utils_hex_to_uint8(*pubkey), sig, hash, 32); // hashed internally
+        uECC_decompress(utils_hex_to_uint8(*pubkey), pubkey_64, uECC_secp256k1());
+        valid += uECC_verify(pubkey_64, hash, SHA256_DIGEST_LENGTH, sig,
+                             uECC_secp256k1());
         pubkey++;
         cnt++;
     }
@@ -177,7 +181,6 @@ static uint8_t bootloader_firmware_verified(void)
         bootloader_report_status(OP_STATUS_OK);
     }
 
-    sha256_Raw(hash, 32, hash);
     memcpy(report + 2, utils_uint8_to_hex(hash, 32), 64); // return double hash of app binary
     return (valid < BOOT_SIG_M) ? 0 : 1;
 }
@@ -206,7 +209,7 @@ static void bootloader_reboot(void)
 }
 
 
-static char *bootloader(const char *command)
+void bootloader_command(const char *command)
 {
     memset(report, 0, sizeof(report));
     report[0] = command[0]; // OP_CODE
@@ -271,7 +274,7 @@ static char *bootloader(const char *command)
             break;
     }
 
-    return report;
+    usb_reply((uint8_t *)report);
 }
 
 
@@ -308,10 +311,3 @@ void bootloader_jump(void)
     }
     led_off();
 }
-
-
-char *commander(const char *command)
-{
-    return bootloader(command);
-}
-

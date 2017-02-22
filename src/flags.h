@@ -47,16 +47,12 @@
 #define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
 
 
-#ifndef TESTING
-#include "conf_usb.h"
-#define COMMANDER_REPORT_SIZE       UDI_HID_REPORT_OUT_SIZE
-#else
 #define COMMANDER_REPORT_SIZE       4096
-#endif
 #define COMMANDER_SIG_LEN           219// sig + pubkey + json encoding
 #define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
+#define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
 #define VERIFYPASS_FILENAME         "verification.txt"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
@@ -95,6 +91,7 @@ X(random)         \
 X(backup)         \
 X(aes256cbc)      \
 X(ping)           \
+X(feature_set)    \
 /*  child keys  */\
 X(source)         \
 X(entropy)        \
@@ -117,6 +114,7 @@ X(check)          \
 X(key)            \
 X(sig)            \
 X(pin)            \
+X(U2F)            \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
@@ -162,6 +160,7 @@ X(serial)         \
 X(version)        \
 X(password)       \
 X(TFA)            \
+X(U2F)            \
 X(__ERASE__)      \
 X(__FORCE__)      \
 X(NUM)             /* keep last */
@@ -238,11 +237,13 @@ X(ERR_SD_KEY,          412, "Please provide an encryption key.")\
 X(ERR_MEM_ATAES,       500, "Chip communication error.")\
 X(ERR_MEM_FLASH,       501, "Could not read flash.")\
 X(ERR_MEM_ENCRYPT,     502, "Could not encrypt.")\
+X(ERR_MEM_SETUP,       503, "Device initialization in progress.")\
 X(ERR_TOUCH_ABORT,     600, "Aborted by user.")\
 X(ERR_TOUCH_TIMEOUT,   601, "Touchbutton timed out.")\
 X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
 X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncated.")\
+X(WARN_RESET_TOUCH,    903, "attempts remain before the device is reset. The next login requires holding the touch button.")\
 X(FLAG_NUM,              0, 0)/* keep last */
 
 

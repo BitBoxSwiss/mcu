@@ -107,40 +107,37 @@ COMPILER_WORD_ALIGNED
 //@}
 
 //! HID report descriptor for standard HID generic
+// If change length, need to change `udi_hid_generic_report_desc_t` in:
+// `drivers/common/services/usb/class/hid/device/generic/udi_hid_generic.h`
 UDC_DESC_STORAGE udi_hid_generic_report_desc_t udi_hid_generic_report_desc = { {
-				0x06, 0xFF, 0xFF,	// 04|2   , Usage Page (vendor defined?)
-				0x09, 0x01,	// 08|1   , Usage      (vendor defined
-				0xA1, 0x01,	// A0|1   , Collection (Application)
-				// IN report
-				0x09, 0x02,	// 08|1   , Usage      (vendor defined)
-				0x09, 0x03,	// 08|1   , Usage      (vendor defined)
-				0x15, 0x00,	// 14|1   , Logical Minimum(0 for signed byte?)
-				0x26, 0xFF, 0x00,	// 24|1   , Logical Maximum(255 for signed byte?)
-				0x75, 0x08,	// 74|1   , Report Size(8) = field size in bits = 1 byte
-				// 94|1   , ReportCount(size) = repeat count of previous item
-// db //////////0x95, sizeof(udi_hid_generic_report_in),
-				0x96, (sizeof(udi_hid_generic_report_in)&0xFF), ((sizeof(udi_hid_generic_report_in)>>8)&0xFF),
-				0x81, 0x02,	// 80|1   , IN report (Data,Variable, Absolute)
-				// OUT report
-				0x09, 0x04,	// 08|1   , Usage      (vendor defined)
-				0x09, 0x05,	// 08|1   , Usage      (vendor defined)
-				0x15, 0x00,	// 14|1   , Logical Minimum(0 for signed byte?)
-				0x26, 0xFF, 0x00,	// 24|1   , Logical Maximum(255 for signed byte?)
-				0x75, 0x08,	// 74|1   , Report Size(8) = field size in bits = 1 byte
-				// 94|1   , ReportCount(size) = repeat count of previous item
-// db //////////0x95, sizeof(udi_hid_generic_report_out),
-				0x96, (sizeof(udi_hid_generic_report_out)&0xFF), ((sizeof(udi_hid_generic_report_out)>>8)&0xFF),
-				0x91, 0x02,	// 90|1   , OUT report (Data,Variable, Absolute)
-				// Feature report
-				0x09, 0x06,	// 08|1   , Usage      (vendor defined)
-				0x09, 0x07,	// 08|1   , Usage      (vendor defined)
-				0x15, 0x00,	// 14|1   , LogicalMinimum(0 for signed byte)
-				0x26, 0xFF, 0x00,	// 24|1   , Logical Maximum(255 for signed byte)
-				0x75, 0x08,	// 74|1   , Report Size(8) =field size in bits = 1 byte
-				0x95, sizeof(udi_hid_generic_report_feature),	// 94|x   , ReportCount in byte
-				0xB1, 0x02,	// B0|1   , Feature report
-				0xC0	// C0|0   , End Collection
-		}
+	0x06, 0xd0, 0xf1,   // USAGE_PAGE (FIDO Alliance) (previously 0x06, 0xff, 0xff)
+	0x09, 0x01,         // USAGE (U2F HID Authenticator Device)
+	0xa1, 0x01,         // COLLECTION (Application)
+	// In Report
+    0x09, 0x20,         // USAGE (FIDO) (Input Report Data) (previously 0x09, 0x02, 0x09, 0x03)
+	0x15, 0x00,         // LOGICAL_MINIMUM (0)
+	0x26, 0xff, 0x00,   // LOGICAL_MAXIMUM (255)
+	0x75, 0x08,         // REPORT_SIZE (8)
+	0x95, 0x40,         // REPORT_COUNT (64) 
+                        // (previous 0x96, (sizeof(udi_hid_generic_report_in)&0xFF), ((sizeof(udi_hid_generic_report_in)>>8)&0xFF),)
+	0x81, 0x02,         // INPUT (Data,Var,Abs)
+	// Out Report
+    0x09, 0x21,         // USAGE (FIDO) (Output Report Data) (previously 0x09, 0x04, 0x09, 0x05)
+	0x15, 0x00,         // LOGICAL_MINIMUM (0)
+	0x26, 0xff, 0x00,   // LOGICAL_MAXIMUM (255)
+	0x75, 0x08,         // REPORT_SIZE (8)
+	0x95, 0x40,         // REPORT_COUNT (64)
+                        // (previous 0x96, (sizeof(udi_hid_generic_report_in)&0xFF), ((sizeof(udi_hid_generic_report_in)>>8)&0xFF),)
+	0x91, 0x02,         // OUTPUT (Data,Var,Abs)
+    // Feature Report
+    0x09, 0x22,	        // USAGE (Feature Report Data (previously 0x09, 0x06, 0x09, 0x07))
+    0x15, 0x00,	        // LOGICAL_MINIMUM (0)
+    0x26, 0xff, 0x00,	// LOGICAL MAXIMUM (255)
+    0x75, 0x08,	        // REPORT SIZE (8)
+    0x95, sizeof(udi_hid_generic_report_feature), // REPORT COUNT
+    0xb1, 0x02,	        // FEATURE REPORT
+    0xc0                // END_COLLECTION
+    }
 };
 
 /**

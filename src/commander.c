@@ -290,7 +290,7 @@ int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[3
 
 void commander_force_reset(void)
 {
-    memory_erase();
+    memory_reset_hww();
     commander_clear_report();
     commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_RESET);
 }
@@ -306,14 +306,21 @@ static void commander_process_reset(yajl_val json_node)
         return;
     }
 
-    if (strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__)))) {
-        commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_INVALID_CMD);
+    if (!strncmp(value, attr_str(ATTR_U2F), strlens(attr_str(ATTR_U2F)))) {
+        memory_reset_u2f();
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
         return;
     }
 
-    memory_erase();
-    commander_clear_report();
-    commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+    if (!strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__)))) {
+        memory_reset_hww();
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
+        return;
+    }
+
+    commander_fill_report(cmd_str(CMD_reset), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 
@@ -350,7 +357,7 @@ static int commander_process_backup_check(const char *key, const char *filename)
         if (!memcmp(backup, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
             ret = DBB_ERROR;
-        } else if (memcmp(backup, memory_master_entropy(NULL), MEM_PAGE_LEN)) {
+        } else if (memcmp(backup, memory_master_hww_entropy(NULL), MEM_PAGE_LEN)) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
             ret = DBB_ERROR;
         } else {
@@ -368,6 +375,7 @@ static int commander_process_backup_check(const char *key, const char *filename)
                 commander_fill_report(cmd_str(CMD_backup), attr_str(ATTR_success), DBB_OK);
                 ret = DBB_OK;
             }
+            utils_zero(seed, sizeof(seed));
         }
         utils_zero(backup_hex, strlens(backup_hex));
         utils_zero(backup, sizeof(backup));
@@ -388,7 +396,7 @@ static int commander_process_backup_create(const char *key, const char *filename
     char backup_hex[MEM_PAGE_LEN * 2 + 1];
     char *name = (char *)memory_name("");
 
-    memcpy(backup, memory_master_entropy(NULL), MEM_PAGE_LEN);
+    memcpy(backup, memory_master_hww_entropy(NULL), MEM_PAGE_LEN);
 
     if (!memcmp(backup, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_KEY_MASTER);
@@ -560,7 +568,7 @@ static void commander_process_seed(yajl_val json_node)
         ret = wallet_generate_master(key, entropy_c);
         if (ret == DBB_OK) {
             if (commander_process_backup_create(key, filename) != DBB_OK) {
-                memory_erase_seed();
+                memory_erase_hww_seed();
                 return;
             }
         }
@@ -704,7 +712,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         return DBB_ERROR;
     }
 
-    if (ecc_ecdh(pair_pubkey, rand_privkey, ecdh_secret)) {
+    if (bitcoin_ecc.ecc_ecdh(pair_pubkey, rand_privkey, ecdh_secret, ECC_SECP256k1)) {
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_KEY_ECDH);
         return DBB_ERROR;
     }
@@ -739,7 +747,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         return ret;
     }
 
-    ecc_get_public_key33(rand_privkey, out_pubkey);
+    bitcoin_ecc.ecc_get_public_key33(rand_privkey, out_pubkey, ECC_SECP256k1);
     utils_zero(rand_privkey, sizeof(rand_privkey));
     utils_zero(ecdh_secret, sizeof(ecdh_secret));
     utils_clear_buffers();
@@ -924,6 +932,7 @@ static void commander_process_device(yajl_val json_node)
         char seeded[6] = {0};
         char sdcard[6] = {0};
         char bootlock[6] = {0};
+        char u2f_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_read_unique_id(serial, 4);
@@ -947,6 +956,14 @@ static void commander_process_device(yajl_val json_node)
             snprintf(bootlock, sizeof(bootlock), "%s", attr_str(ATTR_true));
         }
 
+        uint32_t ext_flags = memory_report_ext_flags();
+        if (ext_flags & MEM_EXT_FLAG_U2F) {
+            // Bit is set == disabled because default EEPROM space is 0xFF
+            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_false));
+        } else {
+            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_true));
+        }
+
         if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
         } else {
@@ -965,7 +982,7 @@ static void commander_process_device(yajl_val json_node)
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":\"%s\"}",
+                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":\"%s\", \"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
@@ -974,7 +991,8 @@ static void commander_process_device(yajl_val json_node)
                  attr_str(ATTR_lock), lock,
                  attr_str(ATTR_bootlock), bootlock,
                  attr_str(ATTR_sdcard), sdcard,
-                 attr_str(ATTR_TFA), tfa);
+                 attr_str(ATTR_TFA), tfa,
+                 attr_str(ATTR_U2F), u2f_enabled);
 
         free(tfa);
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
@@ -1090,6 +1108,44 @@ static void commander_process_led(yajl_val json_node)
 }
 
 
+static void commander_process_feature_set(yajl_val json_node)
+{
+    const char *path[] = { cmd_str(CMD_feature_set), NULL };
+    yajl_val data = yajl_tree_get(json_node, path, yajl_t_any);
+
+    if (!YAJL_IS_OBJECT(data) || data->u.object.len <= 0) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
+    } else {
+        int flags_set = 0;
+        const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
+        yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
+        // Check if u2f exists.
+        // At the moment, only allow a single element.
+        // TODO: better way to throw an error in case of
+        //       invalid features
+        if (u2f && data->u.object.len == 1) {
+            uint32_t flags = memory_report_ext_flags();
+            if (YAJL_IS_TRUE(u2f)) {
+                // Unset the bit == U2F enabled
+                flags &= ~(MEM_EXT_FLAG_U2F);
+            } else {
+                flags |= MEM_EXT_FLAG_U2F;
+            }
+            memory_write_ext_flags(flags);
+            flags_set++;
+        }
+
+        if (flags_set <= 0) {
+            commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
+            return;
+        }
+        commander_fill_report(cmd_str(CMD_feature_set), attr_str(ATTR_success), DBB_OK);
+    }
+}
+
+
 static void commander_process_bootloader(yajl_val json_node)
 {
     const char *path[] = { cmd_str(CMD_bootloader), NULL };
@@ -1151,7 +1207,7 @@ static void commander_process_password(yajl_val json_node, int cmd, PASSWORD_ID 
 
     if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_HIDDEN),
                 MEM_PAGE_LEN)) {
-        memory_erase_hidden_password();
+        memory_random_password(PASSWORD_HIDDEN);
         commander_fill_report(cmd_str(CMD_password), NULL, DBB_ERR_IO_PW_COLLIDE);
         return;
     }
@@ -1218,6 +1274,10 @@ static int commander_process(int cmd, yajl_val json_node)
 
         case CMD_bootloader:
             commander_process_bootloader(json_node);
+            break;
+
+        case CMD_feature_set:
+            commander_process_feature_set(json_node);
             break;
 
         default: {
@@ -1392,6 +1452,20 @@ static int commander_touch_button(int found_cmd)
 }
 
 
+static void commander_access_err(uint8_t err_msg, uint16_t err_count)
+{
+    char msg[256];
+    uint8_t warn_msg = (err_count < COMMANDER_TOUCH_ATTEMPTS) ? DBB_WARN_RESET :
+                       DBB_WARN_RESET_TOUCH;
+    snprintf(msg, sizeof(msg), "%s %i %s",
+             flag_msg(err_msg),
+             COMMANDER_MAX_ATTEMPTS - err_count,
+             flag_msg(warn_msg));
+
+    commander_fill_report(cmd_str(CMD_input), msg, err_msg);
+}
+
+
 static void commander_parse(char *command)
 {
     char *encoded_report;
@@ -1416,7 +1490,9 @@ static void commander_parse(char *command)
     } else if (json_node->u.object.len > 1) {
         commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_MULT_CMD);
     } else {
-        memory_access_err_count(DBB_ACCESS_INITIALIZE);
+        if (memory_report_access_err_count()) {
+            memory_access_err_count(DBB_ACCESS_INITIALIZE);
+        }
 
         // Signing
         if (TFA_VERIFY) {
@@ -1428,13 +1504,8 @@ static void commander_parse(char *command)
 
             if (wallet_is_locked()) {
                 if (commander_tfa_check_pin(json_node) != DBB_OK) {
-                    char msg[256];
                     memset(TFA_PIN, 0, sizeof(TFA_PIN));
-                    snprintf(msg, sizeof(msg), "%s %i %s",
-                             flag_msg(DBB_ERR_SIGN_TFA_PIN),
-                             COMMANDER_MAX_ATTEMPTS - memory_read_pin_err_count() - 1,
-                             flag_msg(DBB_WARN_RESET));
-                    commander_fill_report(cmd_str(CMD_sign), msg, DBB_ERR_SIGN_TFA_PIN);
+                    commander_access_err(DBB_ERR_SIGN_TFA_PIN, memory_read_pin_err_count() + 1);
                     memory_pin_err_count(DBB_ACCESS_ITERATE);
                     memset(sign_command, 0, COMMANDER_REPORT_SIZE);
                     goto exit;
@@ -1490,7 +1561,6 @@ static void commander_parse(char *command)
     }
 
 exit:
-    yajl_tree_free(value);
     yajl_tree_free(json_node);
 }
 
@@ -1509,8 +1579,8 @@ static char *commander_decrypt(const char *encrypted_command)
                                   &command_len,
                                   PASSWORD_STAND);
 
-    err_count = memory_read_access_err_count();     // Reads over TWI introduce additional
-    err_iter = memory_read_access_err_count() + 1;  // temporal jitter in code execution.
+    err_count = memory_report_access_err_count();
+    err_iter = memory_report_access_err_count() + 1;
 
     if (strlens(command)) {
         yajl_val json_node = yajl_tree_parse(command, NULL, 0);
@@ -1550,11 +1620,8 @@ static char *commander_decrypt(const char *encrypted_command)
         }
 
         // Incorrect input
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_JSON_PARSE),
-                 COMMANDER_MAX_ATTEMPTS - err_iter - 1, flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_JSON_PARSE);
         err_iter = memory_access_err_count(DBB_ACCESS_ITERATE);
+        commander_access_err(DBB_ERR_IO_JSON_PARSE, err_iter);
     }
 
     if (err_iter - err_count == 0 && err == 0) {
@@ -1573,21 +1640,26 @@ static char *commander_decrypt(const char *encrypted_command)
 
 static int commander_check_init(const char *encrypted_command)
 {
+    if (memory_report_setup()) {
+        commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_MEM_SETUP);
+        return DBB_ERROR;
+    }
+
+    if (memory_report_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
+        int status = touch_button_press(DBB_TOUCH_LONG);
+        if (status != DBB_TOUCHED) {
+            commander_fill_report(cmd_str(CMD_input), NULL, status);
+            return DBB_ERROR;
+        }
+    }
+
     if (!encrypted_command) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
-                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
-                 flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        commander_access_err(DBB_ERR_IO_NO_INPUT, memory_access_err_count(DBB_ACCESS_ITERATE));
         return DBB_ERROR;
     }
 
     if (!strlens(encrypted_command)) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "%s %i %s", flag_msg(DBB_ERR_IO_NO_INPUT),
-                 COMMANDER_MAX_ATTEMPTS - memory_access_err_count(DBB_ACCESS_ITERATE),
-                 flag_msg(DBB_WARN_RESET));
-        commander_fill_report(cmd_str(CMD_input), msg, DBB_ERR_IO_NO_INPUT);
+        commander_access_err(DBB_ERR_IO_NO_INPUT, memory_access_err_count(DBB_ACCESS_ITERATE));
         return DBB_ERROR;
     }
 

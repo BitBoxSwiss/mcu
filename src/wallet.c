@@ -24,8 +24,6 @@
 
 */
 
-/* Some functions adapted from the Trezor crypto library. */
-
 
 #include <string.h>
 #include <stdlib.h>
@@ -35,7 +33,6 @@
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
-#include "random.h"
 #include "base58.h"
 #include "pbkdf2.h"
 #include "utils.h"
@@ -72,9 +69,9 @@ int wallet_is_locked(void)
 uint8_t *wallet_get_master(void)
 {
     if (HIDDEN) {
-        return memory_chaincode(NULL);
+        return memory_master_hww_chaincode(NULL);
     } else {
-        return memory_master(NULL);
+        return memory_master_hww(NULL);
     }
 }
 
@@ -82,17 +79,17 @@ uint8_t *wallet_get_master(void)
 uint8_t *wallet_get_chaincode(void)
 {
     if (HIDDEN) {
-        return memory_master(NULL);
+        return memory_master_hww(NULL);
     } else {
-        return memory_chaincode(NULL);
+        return memory_master_hww_chaincode(NULL);
     }
 }
 
 
 int wallet_seeded(void)
 {
-    if (!memcmp(memory_master(NULL), MEM_PAGE_ERASE, 32)  ||
-            !memcmp(memory_chaincode(NULL), MEM_PAGE_ERASE, 32)) {
+    if (!memcmp(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
+            !memcmp(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32)) {
         return DBB_ERROR;
     } else {
         return DBB_OK;
@@ -130,9 +127,9 @@ int wallet_generate_master(const char *passphrase, const char *entropy_in)
 
     memcpy(entropy, utils_hex_to_uint8(entropy_in), sizeof(entropy));
 
-    memory_master(node.private_key);
-    memory_chaincode(node.chain_code);
-    memory_master_entropy(entropy);
+    memory_master_hww(node.private_key);
+    memory_master_hww_chaincode(node.chain_code);
+    memory_master_hww_entropy(entropy);
 
     ret = wallet_seeded();
     if (ret != DBB_OK) {
@@ -285,7 +282,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
         goto err;
     }
 
-    ecc_get_public_key33(node.private_key, pub_key);
+    bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key, ECC_SECP256k1);
 
     utils_zero(&node, sizeof(HDNode));
     if (strncmp(pubkey, utils_uint8_to_hex(pub_key, 33), 66)) {
@@ -328,13 +325,13 @@ int wallet_sign(const char *message, const char *keypath)
 
     memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (ecc_sign_digest(node.private_key, data, sig)) {
+    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, ECC_SECP256k1)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;
     }
 
-    ecc_get_public_key33(node.private_key, pub_key);
+    bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key, ECC_SECP256k1);
     utils_zero(&node, sizeof(HDNode));
     return commander_fill_signature_array(sig, pub_key);
 

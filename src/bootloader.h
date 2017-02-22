@@ -68,7 +68,7 @@ typedef enum BOOT_STATUS {
 
 
 void bootloader_jump(void);
-char *commander(const char *command);
+void bootloader_command(const char *command);
 
 
 #endif

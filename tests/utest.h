@@ -78,20 +78,28 @@
 #include <stdio.h>
 #include <string.h>
 
+#define u_print_info(...) do {\
+  printf("\x1b[34m"); \
+  printf(__VA_ARGS__); \
+  printf("\x1b[0m"); \
+} while (0)
+
 #define u_run_test(TEST) do {\
  int f_ = U_TESTS_FAIL; \
  TEST();  U_TESTS_RUN++; \
  if (f_ == U_TESTS_FAIL) { \
-  printf("PASSED - %s()\n", #TEST); };\
- } while (0)
+  printf("\x1b[32mPASSED - %s()\x1b[0m\n", #TEST); };\
+} while (0)
 
 #define u_assert_int_eq(R,E) {\
  int r_ = (R); \
  int e_ = (E); \
  do { if (r_!=e_) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tExpect: \t%d\n", e_);\
   printf("\tReceive:\t%d\n", r_);\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -100,9 +108,11 @@
  const char * r_ = (R); \
  const char * e_ = (E); \
  do { if (strcmp(r_,e_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tExpect: \t%s\n", e_);\
   printf("\tReceive:\t%s\n", r_);\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -111,9 +121,11 @@
  const char * r_ = (R); \
  const char * e_ = (E); \
  do { if (!strcmp(r_,e_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tNot expect:\t%s\n", e_);\
   printf("\tReceive:\t%s\n", r_);\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -122,9 +134,11 @@
  const char * r_ = (R); \
  const char * e_ = (E); \
  do { if (!strstr(r_,e_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tExpect: \t%s\n", e_);\
   printf("\tReceive:\t%s\n", r_);\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -133,9 +147,11 @@
  const char * r_ = (R); \
  const char * e_ = (E); \
  do { if (strstr(r_,e_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tNot expect:\t%s\n", e_);\
   printf("\tReceive:\t%s\n", r_);\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -145,9 +161,11 @@
  const void * e_ = (E); \
  size_t l_ = (L); \
  do { if (memcmp(r_,e_,l_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tExpect: \t%s\n", utils_uint8_to_hex(e_,l_));\
   printf("\tReceive:\t%s\n", utils_uint8_to_hex(r_,l_));\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }
@@ -157,9 +175,11 @@
  const void * e_ = (E); \
  size_t l_ = (L); \
  do { if (!memcmp(r_,e_,l_)) { \
+  printf("\x1b[31m");\
   printf("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   printf("\tExpect: \t%s\n", utils_uint8_to_hex(e_,l_));\
   printf("\tReceive:\t%s\n", utils_uint8_to_hex(r_,l_));\
+  printf("\x1b[0m");\
   U_TESTS_FAIL++;\
   return; }; \
  } while(0); }

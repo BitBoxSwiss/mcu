@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015 Douglas J. Bakkum
+ Copyright (c) 2016 Douglas J. Bakkum, Shift Devices AG
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -25,13 +25,17 @@
 */
 
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef __U2F_DEVICE_H__
+#define __U2F_DEVICE_H__
 
-#define DIGITAL_BITBOX_VERSION "@VERSION_STRING@"
-#define DIGITAL_BITBOX_VERSION_SHORT "@VERSION_STRING_SHORT@"
-#define DIGITAL_BITBOX_VERSION_MAJOR @VERSION_STRING_MAJOR@
-#define DIGITAL_BITBOX_VERSION_MINOR @VERSION_STRING_MINOR@
-#define DIGITAL_BITBOX_VERSION_PATCH @VERSION_STRING_PATCH@
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "usb.h"
+
+
+void u2f_device_run(const USB_FRAME *f);
+void u2f_device_timeout(void);
+
 
 #endif

@@ -34,287 +34,165 @@
 #include "utils.h"
 #include "random.h"
 #include "ecc.h"
-#ifndef ECC_USE_UECC_LIB
-#include "secp256k1/include/secp256k1.h"
-#include "secp256k1/include/secp256k1_ecdh.h"
 
+#include "uECC.h"
 
-static secp256k1_context *ctx = NULL;
+#ifndef ECC_USE_SECP256K1_LIB
+/* link the bitcoin ECC wrapper to uECC if secp256k1 is not available */
+struct ecc_wrapper bitcoin_ecc = {
+    ecc_context_init,
+    ecc_context_destroy,
+    ecc_sign_digest,
+    ecc_sign,
+    ecc_sign_double,
+    ecc_verify,
+    ecc_generate_private_key,
+    ecc_isValid,
+    ecc_get_public_key65,
+    ecc_get_public_key33,
+    ecc_ecdh
+};
+#endif
+
+static int ecc_rng_function(uint8_t *r, unsigned l)
+{
+    int ret = random_bytes(r, l, 0);
+    if (ret == DBB_OK) {
+        return 1;
+    }
+    return 0;
+}
 
 
 void ecc_context_init(void)
 {
-#ifdef TESTING
-    ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-#else
-    ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-#endif
-
-    uint8_t rndm[32] = {0};
-    random_bytes(rndm, sizeof(rndm), 0);
-    if (secp256k1_context_randomize(ctx, rndm)) {
-        /* pass */
-    }
+    uECC_RNG_Function rng_function = ecc_rng_function;
+    uECC_set_rng(rng_function);
 }
 
 
 void ecc_context_destroy(void)
 {
-    secp256k1_context_destroy(ctx);
+    // pass
 }
 
-
-int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
+static uECC_Curve ecc_curve_from_id(ecc_curve_id curve)
 {
-    secp256k1_ecdsa_signature signature;
-
-    if (!ctx) {
-        ecc_context_init();
+    if (curve == ECC_SECP256r1) {
+        return uECC_secp256r1();
     }
+    return uECC_secp256k1();
+}
 
-    if (secp256k1_ecdsa_sign(ctx, &signature, (const unsigned char *)data,
-                             (const unsigned char *)private_key, secp256k1_nonce_function_rfc6979, NULL)) {
-        int i;
-        for (i = 0; i < 32; i++) {
-            sig[i] = signature.data[32 - i - 1];
-            sig[i + 32] = signature.data[64 - i - 1];
-        }
+int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
+                    ecc_curve_id curve)
+{
+    uint8_t tmp[32 + 32 + 64];
+    SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
+    if (uECC_sign_deterministic(private_key, data, SHA256_DIGEST_LENGTH, &ctx.uECC, sig,
+                                ecc_curve_from_id(curve))) {
+        uECC_normalize_signature(sig, ecc_curve_from_id(curve));
         return 0;
     } else {
-        return 1;
+        return 1; // error
     }
 }
 
 
 int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-             uint8_t *sig)
+             uint8_t *sig, ecc_curve_id curve)
 {
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
-    return ecc_sign_digest(private_key, hash, sig);
+    return ecc_sign_digest(private_key, hash, sig, curve);
 }
 
 
 int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
-                    uint8_t *sig)
+                    uint8_t *sig, ecc_curve_id curve)
 {
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
     sha256_Raw(hash, SHA256_DIGEST_LENGTH, hash);
-    return ecc_sign_digest(privateKey, hash, sig);
+    return ecc_sign_digest(privateKey, hash, sig, curve);
 }
 
 
-static int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
-                             const uint8_t *sig)
+static int ecc_read_pubkey(const uint8_t *publicKey, uint8_t *public_key_64,
+                           ecc_curve_id curve)
 {
-
-    int public_key_len;
-    secp256k1_ecdsa_signature signature, signorm;
-    secp256k1_pubkey pubkey;
-
-    if (!ctx) {
-        ecc_context_init();
-    }
-
-    int i;
-    for (i = 0; i < 32; i++) {
-        signature.data[32 - i - 1] = sig[i];
-        signature.data[64 - i - 1] = sig[i + 32];
-    }
-
-    if (public_key[0] == 0x04) {
-        public_key_len = 65;
-    } else if (public_key[0] == 0x02 || public_key[0] == 0x03) {
-        public_key_len = 33;
-    } else {
+    if (publicKey[0] == 0x04) {
+        memcpy(public_key_64, publicKey + 1, 64);
+        return 1;
+    } else if (publicKey[0] == 0x02 || publicKey[0] == 0x03) { // compute missing y coords
+        uECC_decompress(publicKey, public_key_64, ecc_curve_from_id(curve));
         return 1;
     }
+    // error
+    return 0;
+}
 
-    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, public_key, public_key_len)) {
-        return 1;
-    }
 
-    secp256k1_ecdsa_signature_normalize(ctx, &signorm, &signature);
-
-    if (!secp256k1_ecdsa_verify(ctx, &signorm, (const unsigned char *)hash, &pubkey)) {
-        return 1;
-    }
-
-    return 0; // success
+int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
+                      const uint8_t *sig, ecc_curve_id curve)
+{
+    // Do not force normalization of the signature. Otherwise will break bootloader
+    // verification of previous firmware blobs.
+    return !uECC_verify(public_key, hash, SHA256_DIGEST_LENGTH, sig,
+                        ecc_curve_from_id(curve));
 }
 
 
 int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,
-               uint32_t msg_len)
+               uint32_t msg_len, ecc_curve_id curve)
 {
+    uint8_t public_key_64[64];
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
-    return ecc_verify_digest(public_key, hash, signature);
+    ecc_read_pubkey(public_key, public_key_64, curve);
+    return ecc_verify_digest(public_key_64, hash, signature, curve);
 }
 
 
 int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_master,
-                             const uint8_t *z)
+                             const uint8_t *z, ecc_curve_id curve)
 {
-    memcpy(private_child, private_master, 32);
-    return secp256k1_ec_privkey_tweak_add(ctx, (unsigned char *)private_child,
-                                          (const unsigned char *)z);
+    uECC_generate_private_key(private_child, private_master, z, ecc_curve_from_id(curve));
+    return ecc_isValid(private_child, curve);
 }
 
 
-int ecc_isValid(uint8_t *private_key)
+int ecc_isValid(uint8_t *private_key, ecc_curve_id curve)
 {
-    if (!ctx) {
-        ecc_context_init();
-    }
-    return (secp256k1_ec_seckey_verify(ctx, (const unsigned char *)private_key));
+    return uECC_isValid(private_key, ecc_curve_from_id(curve));
 }
 
 
-static void ecc_get_pubkey(const uint8_t *private_key, uint8_t *public_key,
-                           size_t public_key_len, int compressed)
+void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key,
+                          ecc_curve_id curve)
 {
-    secp256k1_pubkey pubkey;
-
-    memset(public_key, 0, public_key_len);
-
-    if (!ctx) {
-        ecc_context_init();
-    }
-
-    if (!secp256k1_ec_pubkey_create(ctx, &pubkey, (const unsigned char *)private_key)) {
-        return;
-    }
-
-    if (!secp256k1_ec_pubkey_serialize(ctx, public_key, &public_key_len, &pubkey,
-                                       compressed)) {
-        return;
-    }
-
-    return;
+    uint8_t *p = public_key;
+    p[0] = 0x04;
+    uECC_compute_public_key(private_key, p + 1, ecc_curve_from_id(curve));
 }
 
 
-void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key)
+void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key,
+                          ecc_curve_id curve)
 {
-    ecc_get_pubkey(private_key, public_key, 65, SECP256K1_EC_UNCOMPRESSED);
-}
-
-
-void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
-{
-    ecc_get_pubkey(private_key, public_key, 33, SECP256K1_EC_COMPRESSED);
+    uint8_t public_key_long[64];
+    uECC_compute_public_key(private_key, public_key_long, ecc_curve_from_id(curve));
+    uECC_compress(public_key_long, public_key, ecc_curve_from_id(curve));
 }
 
 
 int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
-             uint8_t *ecdh_secret)
+             uint8_t *ecdh_secret, ecc_curve_id curve)
 {
-    uint8_t ecdh_secret_compressed[33];
-    secp256k1_pubkey pubkey_secp;
-
-    if (!rand_privkey || !pair_pubkey) {
-        return 1;
-    }
-
-    if (!ctx) {
-        ecc_context_init();
-    }
-
-    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey_secp, pair_pubkey, 33)) {
-        return 1;
-    }
-
-    if (!secp256k1_ecdh(ctx, ecdh_secret_compressed, &pubkey_secp, rand_privkey)) {
-        return 1;
-    }
-
-    sha256_Raw(ecdh_secret_compressed + 1, 32, ecdh_secret);
-    sha256_Raw(ecdh_secret, 32, ecdh_secret);
-
-    return 0; // success
-}
-
-
-#else
-
-
-#include "uECC.h"
-
-
-void ecc_context_init(void)
-{
-    // pass
-}
-
-
-void ecc_context_destroy(void)
-{
-    // pass
-}
-
-
-int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig)
-{
-    return uECC_sign_digest(private_key, data, sig);
-}
-
-
-int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-             uint8_t *sig)
-{
-    return uECC_sign(private_key, msg, msg_len, sig);
-}
-
-
-int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
-                    uint8_t *sig)
-{
-    return uECC_sign_double(privateKey, msg, msg_len, sig);
-}
-
-
-int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,
-               uint32_t msg_len)
-{
-    return uECC_verify(public_key, signature, msg, msg_len);
-}
-
-
-int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_master,
-                             const uint8_t *z)
-{
-    uECC_generate_private_key(private_child, private_master, z);
-    return uECC_isValid(private_child);
-}
-
-
-int ecc_isValid(uint8_t *private_key)
-{
-    return uECC_isValid(private_key);
-}
-
-
-void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key)
-{
-    uECC_get_public_key65(private_key, public_key);
-}
-
-
-void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key)
-{
-    uECC_get_public_key33(private_key, public_key);
-}
-
-
-int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
-             uint8_t *ecdh_secret)
-{
-    uint8_t public_key[64], ecdh_secret_compressed[33];
-    uECC_decompress(pair_pubkey, public_key);
-    if (!uECC_shared_secret(public_key, rand_privkey, ecdh_secret_compressed)) {
-        sha256_Raw(ecdh_secret_compressed + 1, 32, ecdh_secret);
+    uint8_t public_key[64];
+    uECC_decompress(pair_pubkey, public_key, ecc_curve_from_id(curve));
+    if (uECC_shared_secret(public_key, rand_privkey, ecdh_secret, ecc_curve_from_id(curve))) {
+        sha256_Raw(ecdh_secret, 32, ecdh_secret);
         sha256_Raw(ecdh_secret, 32, ecdh_secret);
         return 0;
     } else {
@@ -323,4 +201,152 @@ int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
 }
 
 
-#endif
+int ecc_sig_to_der(const uint8_t *sig, uint8_t *der)
+{
+    int i;
+    uint8_t *p = der, *len, *len1, *len2;
+    *p = 0x30;
+    p++; // sequence
+    *p = 0x00;
+    len = p;
+    p++; // len(sequence)
+
+    *p = 0x02;
+    p++; // integer
+    *p = 0x00;
+    len1 = p;
+    p++; // len(integer)
+
+    // process R
+    i = 0;
+    while (sig[i] == 0 && i < 32) {
+        i++; // skip leading zeroes
+    }
+    if (sig[i] >= 0x80) { // put zero in output if MSB set
+        *p = 0x00;
+        p++;
+        *len1 = *len1 + 1;
+    }
+    while (i < 32) { // copy bytes to output
+        *p = sig[i];
+        p++;
+        *len1 = *len1 + 1;
+        i++;
+    }
+
+    *p = 0x02;
+    p++; // integer
+    *p = 0x00;
+    len2 = p;
+    p++; // len(integer)
+
+    // process S
+    i = 32;
+    while (sig[i] == 0 && i < 64) {
+        i++; // skip leading zeroes
+    }
+    if (sig[i] >= 0x80) { // put zero in output if MSB set
+        *p = 0x00;
+        p++;
+        *len2 = *len2 + 1;
+    }
+    while (i < 64) { // copy bytes to output
+        *p = sig[i];
+        p++;
+        *len2 = *len2 + 1;
+        i++;
+    }
+
+    *len = *len1 + *len2 + 4;
+    return *len + 2;
+}
+
+
+static int trim_to_32_bytes(const uint8_t *src, int src_len, uint8_t *dst)
+{
+    int dst_offset;
+    while (*src == '\0' && src_len > 0) {
+        src++;
+        src_len--;
+    }
+    if (src_len > 32 || src_len < 1) {
+        return 1;
+    }
+    dst_offset = 32 - src_len;
+    memset(dst, 0, dst_offset);
+    memcpy(dst + dst_offset, src, src_len);
+    return 0;
+}
+
+
+int ecc_der_to_sig(const uint8_t *der, int der_len, uint8_t *sig_64)
+{
+    /*
+     * Structure is:
+     *   0x30 0xNN  SEQUENCE + s_length
+     *   0x02 0xNN  INTEGER + r_length
+     *   0xAA 0xBB  ..   r_length bytes of "r" (offset 4)
+     *   0x02 0xNN  INTEGER + s_length
+     *   0xMM 0xNN  ..   s_length bytes of "s" (offset 6 + r_len)
+     */
+    int seq_len;
+    uint8_t r_bytes[32];
+    uint8_t s_bytes[32];
+    int r_len;
+    int s_len;
+
+    memset(r_bytes, 0, sizeof(r_bytes));
+    memset(s_bytes, 0, sizeof(s_bytes));
+
+    /*
+     * Must have at least:
+     * 2 bytes sequence header and length
+     * 2 bytes R integer header and length
+     * 1 byte of R
+     * 2 bytes S integer header and length
+     * 1 byte of S
+     *
+     * 8 bytes total
+     */
+    if (der_len < 8 || der[0] != 0x30 || der[2] != 0x02) {
+        return 1;
+    }
+
+    seq_len = der[1];
+    if ((seq_len <= 0) || (seq_len + 2 != der_len)) {
+        return 1;
+    }
+
+    r_len = der[3];
+    /*
+     * Must have at least:
+     * 2 bytes for R header and length
+     * 2 bytes S integer header and length
+     * 1 byte of S
+     */
+    if ((r_len < 1) || (r_len > seq_len - 5) || (der[4 + r_len] != 0x02)) {
+        return 1;
+    }
+    s_len = der[5 + r_len];
+
+    /**
+     * Must have:
+     * 2 bytes for R header and length
+     * r_len bytes for R
+     * 2 bytes S integer header and length
+     */
+    if ((s_len < 1) || (s_len != seq_len - 4 - r_len)) {
+        return 1;
+    }
+
+    /*
+     * ASN.1 encoded integers are zero-padded for positive integers. Make sure we have
+     * a correctly-sized buffer and that the resulting integer isn't too large.
+     */
+    if (trim_to_32_bytes(&der[4], r_len, sig_64) ||
+            trim_to_32_bytes(&der[6 + r_len], s_len, sig_64 + 32)) {
+        return 1;
+    }
+
+    return 0;
+}

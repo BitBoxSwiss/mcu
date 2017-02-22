@@ -535,7 +535,8 @@ static void test_sign_speed(void)
         u_assert_int_eq(res, 0);
     }
 
-    printf("  Signing speed: %0.2f sig/s\n", N * 2 / ((float)(clock() - t) / CLOCKS_PER_SEC));
+    u_print_info("Signing speed: %0.2f sig/s\n",
+                 N * 2 / ((float)(clock() - t) / CLOCKS_PER_SEC));
 }
 
 
@@ -585,8 +586,8 @@ static void test_verify_speed(void)
         u_assert_int_eq(res, 0);
     }
 
-    printf("  Verifying speed: %0.2f sig/s\n",
-           100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));
+    u_print_info("Verifying speed: %0.2f sig/s\n",
+                 100.0f / ((float)(clock() - t) / CLOCKS_PER_SEC));
 }
 
 

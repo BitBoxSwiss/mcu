@@ -2,9 +2,10 @@ Digital Bitbox Firmware
 ============
 
 [![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
-[![Coverage Status](https://coveralls.io/repos/digitalbitbox/mcu/badge.svg?branch=master&service=github)](https://coveralls.io/github/digitalbitbox/mcu?branch=master)
-[![Coverity Scan Build Status](https://img.shields.io/coverity/scan/7041.svg)](https://scan.coverity.com/projects/mcu)
-[![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/digitalbitbox/mcu/badge.svg?branch=master)](https://coveralls.io/github/digitalbitbox/mcu?branch=master)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/7041/badge.svg)](https://scan.coverity.com/projects/mcu)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+
 
 **MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 

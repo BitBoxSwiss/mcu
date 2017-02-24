@@ -32,6 +32,7 @@ addons:
     - valgrind
 
 install:
+    - pip install --user urllib3[secure]
     - pip install --user cpp-coveralls 
     - cd contrib
     - tar xfv astyle_2.05.1_linux.tar.gz;

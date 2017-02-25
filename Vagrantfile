@@ -2,13 +2,13 @@
 # vi: set ft=ruby :
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu/trusty32"
+  config.vm.box = "ubuntu/trusty64"
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     sudo locale-gen UTF-8
-    sudo add-apt-repository ppa:terry.guo/gcc-arm-embedded -y
+    sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa -y
     sudo apt-get update
-    sudo apt-get install -y cmake git gcc-arm-none-eabi
+    sudo apt-get install -y cmake git gcc-arm-embedded=6-2017q1-1~trusty1
   SHELL
 
   config.vm.provision "shell", run: "always", privileged: false, inline: <<-SHELL

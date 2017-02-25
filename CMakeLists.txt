@@ -15,9 +15,9 @@ else()
     ")
 endif()
 
-    
 set(MYPROJECT ${BUILD_TYPE})
 project(${MYPROJECT} C)
+
 
 #-----------------------------------------------------------------------------
 # Options for building
@@ -43,6 +43,8 @@ if(CONTINUOUS_INTEGRATION AND BUILD_TYPE STREQUAL "test")
     set(BUILD_COVERAGE "ON")
     set(BUILD_VALGRIND "ON")
 endif()
+
+execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE C_COMPILER_VERSION)
 
 
 #-----------------------------------------------------------------------------
@@ -119,6 +121,7 @@ message(STATUS "CMake version:          ${CMAKE_VERSION}")
 message(STATUS "System:                 ${CMAKE_SYSTEM}")
 message(STATUS "Processor:              ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "             - Build -")
+message(STATUS "Compiler version:       ${CMAKE_C_COMPILER_ID} ${C_COMPILER_VERSION}")
 message(STATUS "Compiler:               ${CMAKE_C_COMPILER}")
 message(STATUS "Linker:                 ${CMAKE_LINKER}")
 message(STATUS "Archiver:               ${CMAKE_AR}")
@@ -212,7 +215,6 @@ endif()
 #-----------------------------------------------------------------------------
 # Build 
 
-message(STATUS "C Compiler ID:    ${CMAKE_C_COMPILER_ID}")
 message(STATUS "C Flags:          ${CMAKE_C_FLAGS}")
 
 add_subdirectory(src)

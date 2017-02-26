@@ -7,3 +7,6 @@
 [submodule "secp256k1"]
 	path = src/secp256k1
 	url = https://github.com/digitalbitbox/secp256k1.git
+[submodule "hidapi"]
+	path = tests/hidapi
+	url = https://github.com/digitalbitbox/hidapi.git

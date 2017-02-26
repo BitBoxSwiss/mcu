@@ -1,9 +1,6 @@
 [submodule "src/yajl"]
 	path = src/yajl
 	url = https://github.com/digitalbitbox/yajl.git
-[submodule "tests/windows/hidapi"]
-	path = tests/windows/hidapi
-	url = https://github.com/signal11/hidapi.git
 [submodule "secp256k1"]
 	path = src/secp256k1
 	url = https://github.com/digitalbitbox/secp256k1.git

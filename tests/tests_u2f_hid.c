@@ -12,6 +12,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#ifdef __linux__
+#include <sys/ioctl.h>
+#include <linux/hidraw.h>
+#endif
 
 #include "random.h"
 #include "memory.h"
@@ -569,10 +573,10 @@ static void test_NothingOnChannel0(void)
     CHECK_EQ(isError(r, U2FHID_ERR_INVALID_CID), true);
 }
 
+
 static void test_Descriptor(void)
 {
-#ifndef CONTINUOUS_INTEGRATION
-#ifdef __linux__
+#if !defined(CONTINUOUS_INTEGRATION) && defined(__linux__)
     struct hidraw_report_descriptor rpt_desc;
     int res, desc_size;
     // hidapi hides internal struct.
@@ -593,8 +597,8 @@ static void test_Descriptor(void)
 
     // TODO: check for 0x20 and 0x21 endpoints.
 #endif
-#endif
 }
+
 
 static void run_tests(void)
 {
@@ -624,12 +628,12 @@ static void run_tests(void)
             PASS(test_InitOther());
             PASS(test_Timeout());
             PASS(test_Busy());
+            PASS(test_Descriptor());
         }
         PASS(test_LeadingZero());
         PASS(test_Idle(2.0));
         PASS(test_NothingOnChannel0());
         PASS(test_OnlyInitOnBroadcast());
-        PASS(test_Descriptor());
     } else {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
         return;

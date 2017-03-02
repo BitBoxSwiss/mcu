@@ -61,7 +61,7 @@
  */
 
 //! Only one interface for this device
-#define  USB_DEVICE_NB_INTERFACE       1
+#define  USB_DEVICE_NB_INTERFACE       1 
 
 //! USB Device Descriptor
 COMPILER_WORD_ALIGNED

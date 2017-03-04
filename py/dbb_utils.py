@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import sys
 import json
 import base64
 import aes # slowaes
@@ -41,13 +42,23 @@ def Hash(x):
 # HID
 #
 
+def getHidPath():
+    for d in hid.enumerate(0, 0):
+        if d['usage_page'] == 0xffff and d['vendor_id'] == 0x03eb and d['product_id'] == 0x2402:
+            return d['path'] 
+
+
 dbb_hid = hid.device()
 def openHid():
     print "\nOpening device"
-    dbb_hid.open(0x03eb, 0x2402) # 
-    print "\tManufacturer: %s" % dbb_hid.get_manufacturer_string()
-    print "\tProduct: %s" % dbb_hid.get_product_string()
-    print "\tSerial No: %s\n\n" % dbb_hid.get_serial_number_string()
+    try:
+        dbb_hid.open_path(getHidPath())
+        print "\tManufacturer: %s" % dbb_hid.get_manufacturer_string()
+        print "\tProduct: %s" % dbb_hid.get_product_string()
+        print "\tSerial No: %s\n\n" % dbb_hid.get_serial_number_string()
+    except:
+        print "\nDevice not found\n"
+        sys.exit()
 
 
 # ----------------------------------------------------------------------------------

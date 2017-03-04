@@ -30,30 +30,52 @@
 #ifndef TESTING
 #include "conf_usb.h"
 #include "mcu.h"
-#ifdef BOOTLOADER
+#endif
 #include "bootloader.h"
-#endif
-#endif
 #include "utils.h"
 #include "usb.h"
 #include "u2f_device.h"
+#include "u2f/u2f_hid.h"
 
 
 #define USB_QUEUE_NUM_PACKETS 128
 
 
+static bool usb_hww_enabled = false;
+static bool usb_u2f_enabled = false;
+static uint8_t usb_hww_interface_occupied = 0;
 static uint8_t usb_reply_queue_packets[USB_QUEUE_NUM_PACKETS][USB_REPORT_SIZE];
 static uint32_t usb_reply_queue_index_start = 0;
 static uint32_t usb_reply_queue_index_end = 0;
 
 
-void usb_report(const unsigned char *command)
+void usb_hww_report(const unsigned char *command)
 {
+    usb_hww_interface_occupied = 1;
 #ifdef BOOTLOADER
     bootloader_command((const char *)command);
 #else
+    usb_reply_queue_clear();// Give HWW priority
     u2f_device_run((const USB_FRAME *)command);
 #endif
+}
+
+
+void usb_u2f_report(const unsigned char *command)
+{
+    const USB_FRAME *c = (const USB_FRAME *)command;
+    if (usb_hww_interface_occupied) {
+        // Give preference to HWW commands
+        // Let U2F client timeout
+        return;
+    }
+    if (c->type >= U2FHID_VENDOR_FIRST) {
+        // Disable vendor defined commands in u2f interface
+        u2f_send_err_hid(c->cid, U2FHID_ERR_INVALID_CMD);
+        usb_reply_queue_send();
+        return;
+    }
+    u2f_device_run(c);
 }
 
 
@@ -67,9 +89,14 @@ void usb_reply(uint8_t *report)
 {
     if (report) {
 #ifndef TESTING
-        if (udi_hid_generic_send_report_in(report)) {
-            return;
+        if (usb_hww_interface_occupied) {
+            udi_hww_send_report_in(report);
         }
+#ifndef BOOTLOADER
+        else {
+            udi_u2f_send_report_in(report);
+        }
+#endif
 #endif
     }
 }
@@ -79,7 +106,9 @@ uint8_t *usb_reply_queue_read(void)
 {
     uint32_t p = usb_reply_queue_index_start;
     if (p == usb_reply_queue_index_end) {
-        return NULL;    // No data
+        // queue is empty
+        usb_hww_interface_occupied = 0;
+        return NULL;
     }
     usb_reply_queue_index_start = (p + 1) % USB_QUEUE_NUM_PACKETS;
     return usb_reply_queue_packets[p];
@@ -141,18 +170,58 @@ void usb_reply_queue_send(void)
 #ifndef TESTING
     static uint8_t *data;
     data = usb_reply_queue_read();
-    if (data) {
-        usb_reply(data);
-    }
+    usb_reply(data);
 #endif
 }
 
 
-#ifndef TESTING
-static bool usb_b_enable = false;
+void usb_set_feature(uint8_t *report)
+{
+    (void) report;
+}
+
+
+void usb_suspend_action(void) {}
+
+
+void usb_resume_action(void) {}
+
+
+void usb_remotewakeup_enable(void) {}
+
+
+void usb_remotewakeup_disable(void) {}
+
+
+bool usb_u2f_enable(void)
+{
+    usb_u2f_enabled = true;
+    return true;
+}
+
+
+void usb_u2f_disable(void)
+{
+    usb_u2f_enabled = false;
+}
+
+
+bool usb_hww_enable(void)
+{
+    usb_hww_enabled = true;
+    return true;
+}
+
+
+void usb_hww_disable(void)
+{
+    usb_hww_enabled = false;
+}
+
 
 // Periodically called every 1(?) msec
 // Can run timed locked processes here
+// Use for u2f timeout function
 void usb_process(uint16_t framenumber)
 {
     static uint8_t cpt_sof = 0;
@@ -169,48 +238,12 @@ void usb_process(uint16_t framenumber)
 }
 
 
-void usb_suspend_action(void) {}
-
-
-void usb_resume_action(void) {}
-
-
 void usb_sof_action(void)
 {
-    if (!usb_b_enable) {
+#if !defined(BOOTLOADER) && !defined(TESTING)
+    if (!usb_u2f_enabled) {
         return;
     }
     usb_process(udd_get_frame_number());
-}
-
-
-void usb_remotewakeup_enable(void) {}
-
-
-void usb_remotewakeup_disable(void) {}
-
-
-bool usb_enable(void)
-{
-    usb_b_enable = true;
-    return true;
-}
-
-
-void usb_disable(void)
-{
-    usb_b_enable = false;
-}
-
-
-void usb_hid_set_feature(uint8_t *report)
-{
-    if (report[0] == 0xAA && report[1] == 0x55
-            && report[2] == 0xAA && report[3] == 0x55) {
-        // Disconnect USB Device
-        udc_stop();
-        usb_suspend_action();
-    }
-}
 #endif
-
+}

@@ -34,7 +34,12 @@ typedef void hid_device;
 #define CHECK_GT(a,b) do { if ((a)<=(b)) { printf("\x1b[31mCHECK_GT fail at %s()[%d] %f  < %f\x1b[0m \n", __func__, __LINE__, a*1.0 ,b*1.0); abort();}} while(0)
 #define CHECK_LT(a,b) do { if ((a)>=(b)) { printf("\x1b[31mCHECK_LT fail at %s()[%d] %f >= %f\x1b[0m \n", __func__, __LINE__, a*1.0 ,b*1.0); abort();}} while(0)
 #define CHECK_LE(a,b) do { if ((a)>(b))  { printf("\x1b[31mCHECK_LE fail at %s()[%d] %f  > %f\x1b[0m \n", __func__, __LINE__, a*1.0 ,b*1.0); abort();}} while(0)
-#define PASS(x)  do { (x); printf("\x1b[32mPASS("#x")\x1b[0m \n");} while(0)
+#define PASS(x) do { (x); printf("\x1b[32mPASS("#x")\x1b[0m \n");} while(0)
+#define PRINT_INFO(...)  do { printf("\x1b[34m");  \
+                              printf(__VA_ARGS__); \
+                              printf("\x1b[0m \n");\
+                         } while(0)
+
 
 
 void U2Fob_testLiveDevice(uint8_t test);

@@ -136,13 +136,46 @@ uint32_t U2Fob_getCid(struct U2Fob *device)
 }
 
 
+static char *U2Fob_path(void)
+{
+    // Enumerate and print the HID devices on the system
+    static char path[1024];
+    struct hid_device_info *devs, *cur_dev;
+
+    hid_init();
+    memset(path, 0, sizeof(path));
+    devs = hid_enumerate(0x0, 0x0);
+    cur_dev = devs;
+    while (cur_dev) {
+        if (cur_dev->usage_page == 0xf1d0) {
+            PRINT_INFO("Device Found");
+            PRINT_INFO("  VID PID:      %04hx %04hx",
+                       cur_dev->vendor_id, cur_dev->product_id);
+            PRINT_INFO("  Page/Usage:   0x%x/0x%x (%d/%d)",
+                       cur_dev->usage_page, cur_dev->usage,
+                       cur_dev->usage_page, cur_dev->usage);
+            PRINT_INFO("  Manufacturer: %ls", cur_dev->manufacturer_string);
+            PRINT_INFO("  Product:      %ls", cur_dev->product_string);
+            PRINT_INFO("  Device path:  %s", cur_dev->path);
+
+            snprintf(path, sizeof(path), "%s", cur_dev->path);
+        }
+        cur_dev = cur_dev->next;
+    }
+    hid_free_enumeration(devs);
+    hid_exit();
+    return path;
+}
+
+
 int U2Fob_open(struct U2Fob *device)
 {
     if (!TEST_LIVE_DEVICE) {
         return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
-    device->dev = hid_open(0x03eb, 0x2402, NULL);
+    device->path = U2Fob_path();
+    device->dev = hid_open_path(device->path);
     return device->dev != NULL ? -U2FHID_ERR_NONE : -U2FHID_ERR_OTHER;
 }
 
@@ -162,7 +195,7 @@ int U2Fob_reopen(struct U2Fob *device)
         return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
-    device->dev = hid_open(0x03eb, 0x2402, NULL);
+    device->dev = hid_open_path(device->path);
     return device->dev != NULL ? -U2FHID_ERR_NONE : -U2FHID_ERR_OTHER;
 }
 

@@ -287,7 +287,18 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
 #ifndef CONTINUOUS_INTEGRATION
 static int api_hid_init(void)
 {
-    HID_HANDLE = hid_open(0x03eb, 0x2402, NULL);
+    struct hid_device_info *devs, *cur_dev;
+    devs = hid_enumerate(0x0, 0x0);
+    cur_dev = devs;
+    while (cur_dev) {
+        if (cur_dev->usage_page == 0xffff && cur_dev->vendor_id == 0x03eb &&
+                cur_dev->product_id == 0x2402) {
+            HID_HANDLE = hid_open_path(cur_dev->path);
+            break;
+        }
+        cur_dev = cur_dev->next;
+    }
+    hid_free_enumeration(devs);
     if (!HID_HANDLE) {
         return DBB_ERROR;
     }

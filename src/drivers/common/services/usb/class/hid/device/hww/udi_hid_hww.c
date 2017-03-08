@@ -47,7 +47,7 @@
 #include "udd.h"
 #include "udc.h"
 #include "udi_hid.h"
-#include "udi_hid_generic.h"
+#include "udi_hid_hww.h"
 #include <string.h>
 
 
@@ -74,9 +74,9 @@ COMPILER_WORD_ALIGNED static uint8_t udi_hww_report_out[UDI_HID_REPORT_OUT_SIZE]
 COMPILER_WORD_ALIGNED static uint8_t udi_hww_report_feature[UDI_HID_REPORT_FEATURE_SIZE];
 
 
-//! HID report descriptor for standard HID generic
+//! HID report descriptor
 // If change length, need to change `udi_hww_report_desc_t` in:
-// `drivers/common/services/usb/class/hid/device/generic/udi_hww.h`
+// `drivers/common/services/usb/class/hid/device/hww/udi_hww.h`
 UDC_DESC_STORAGE udi_hww_report_desc_t udi_hww_report_desc = { {
 	0x06, 0xff, 0xff,   // USAGE_PAGE (Vendor Defined)
 	0x09, 0x01,         // USAGE (U2F HID Authenticator Device)

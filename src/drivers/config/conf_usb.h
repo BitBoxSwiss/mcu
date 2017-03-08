@@ -124,7 +124,7 @@ typedef struct {
 
 
 // Keep these includes at the end of the file
-#include "udi_hid_generic.h"
+#include "udi_hid_hww.h"
 #include "udi_hid_u2f.h"
 
 

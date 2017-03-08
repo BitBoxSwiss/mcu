@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 
+import os
 import sys
 import json
 import base64
-import aes # slowaes
+import pyaes
 import hid # hidapi (requires cython)
 import hashlib
 import struct
@@ -25,8 +26,32 @@ boot_buf_size_reply = 256
 # Crypto
 #
 
-EncodeAES = lambda secret, s: base64.b64encode(aes.encryptData(secret,s))
-DecodeAES = lambda secret, e: aes.decryptData(secret, base64.b64decode(e))
+def aes_encrypt_with_iv(key, iv, data):
+    aes_cbc = pyaes.AESModeOfOperationCBC(key, iv=iv)
+    aes = pyaes.Encrypter(aes_cbc)
+    e = aes.feed(data) + aes.feed()  # empty aes.feed() appends pkcs padding
+    return e
+
+
+def aes_decrypt_with_iv(key, iv, data):
+    aes_cbc = pyaes.AESModeOfOperationCBC(key, iv=iv)
+    aes = pyaes.Decrypter(aes_cbc)
+    s = aes.feed(data) + aes.feed()  # empty aes.feed() strips pkcs padding
+    return s
+
+
+def EncodeAES(secret, s):
+    iv = bytes(os.urandom(16))
+    ct = aes_encrypt_with_iv(secret, iv, s)
+    e = iv + ct
+    return base64.b64encode(e)
+
+
+def DecodeAES(secret, e):
+    e = bytes(base64.b64decode(e))
+    iv, e = e[:16], e[16:]
+    s = aes_decrypt_with_iv(secret, iv, e)
+    return s
 
 
 def sha256(x):
@@ -41,11 +66,13 @@ def Hash(x):
 # ----------------------------------------------------------------------------------
 # HID
 #
-
 def getHidPath():
     for d in hid.enumerate(0, 0):
-        if d['usage_page'] == 0xffff and d['vendor_id'] == 0x03eb and d['product_id'] == 0x2402:
-            return d['path'] 
+        if d['vendor_id'] == 0x03eb and d['product_id'] == 0x2402:
+            if d['interface_number'] == 0 or d['usage_page'] == 0xffff:
+                # hidapi is not consistent across platforms
+                # usage_page works on Windows/Mac; interface_number works on Linux
+                return d['path']
 
 
 dbb_hid = hid.device()

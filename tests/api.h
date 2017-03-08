@@ -291,10 +291,13 @@ static int api_hid_init(void)
     devs = hid_enumerate(0x0, 0x0);
     cur_dev = devs;
     while (cur_dev) {
-        if (cur_dev->usage_page == 0xffff && cur_dev->vendor_id == 0x03eb &&
-                cur_dev->product_id == 0x2402) {
-            HID_HANDLE = hid_open_path(cur_dev->path);
-            break;
+        if (cur_dev->vendor_id == 0x03eb && cur_dev->product_id == 0x2402) {
+            if (cur_dev->interface_number == 0 || cur_dev->usage_page == 0xffff) {
+                // hidapi is not consistent across platforms
+                // usage_page works on Windows/Mac; interface_number works on Linux
+                HID_HANDLE = hid_open_path(cur_dev->path);
+                break;
+            }
         }
         cur_dev = cur_dev->next;
     }

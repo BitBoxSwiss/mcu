@@ -38,7 +38,7 @@ Build:
 
     git clone https://github.com/digitalbitbox/mcu && cd mcu
     mkdir build && cd build
-    cmake .. -DBUILD_TYPE=test
+    cmake .. -DBUILD_TYPE=test # `-DBUILD_TYPE=firmware` and `-DBUILD_TYPE=bootloader` work if a GNU ARM toolchain is installed
     make
     make test
 
@@ -52,7 +52,6 @@ Requires:
 Build:
 
     git clone https://github.com/digitalbitbox/mcu && cd mcu
-    vagrant box add ubuntu/trusty32
     vagrant up # Creates: build-vagrant/bin/firmware.bin
     vagrant halt
     

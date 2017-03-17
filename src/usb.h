@@ -64,24 +64,31 @@ typedef struct {
 } USB_APDU;
 
 
-void usb_report(const unsigned char *command);
-void usb_report_sent(void);
-void usb_reply(uint8_t *report);
 void usb_reply_queue_clear(void);
 void usb_reply_queue_add(const USB_FRAME *frame);
 void usb_reply_queue_load_msg(const uint8_t cmd, const uint8_t *data, const uint32_t len,
                               const uint32_t cid);
 void usb_reply_queue_send(void);
 uint8_t *usb_reply_queue_read(void);
+void usb_reply(uint8_t *report);
+
 void usb_process(uint16_t framenumber);
-bool usb_enable(void);
-void usb_disable(void);
 void usb_sof_action(void);
 void usb_suspend_action(void);
 void usb_resume_action(void);
 void usb_remotewakeup_enable(void);
 void usb_remotewakeup_disable(void);
-void usb_hid_set_feature(uint8_t *report);
+
+void usb_set_feature(uint8_t *report);
+void usb_report_sent(void);
+
+bool usb_hww_enable(void);
+void usb_hww_disable(void);
+void usb_hww_report(const unsigned char *command);
+
+bool usb_u2f_enable(void);
+void usb_u2f_disable(void);
+void usb_u2f_report(const unsigned char *command);
 
 
 #endif

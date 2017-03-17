@@ -24,12 +24,6 @@
 #define U2FHID_FRAME_SEQ(f)  ((f).cont.seq & ~U2FHID_TYPE_MASK)
 #define U2FHID_MSG_LEN(f)    (((f).init.bcnth << 8) + (f).init.bcntl)
 
-// HID usage- and usage-page definitions
-#define FIDO_USAGE_PAGE     0xf1d0
-#define FIDO_USAGE_U2FHID   0x01
-#define FIDO_USAGE_DATA_IN  0x20
-#define FIDO_USAGE_DATA_OUT 0x21
-
 // General constants
 #define U2FHID_IF_VERSION    2// Current interface implementation version
 #define U2FHID_FRAME_TIMEOUT 500// Default frame timeout in ms

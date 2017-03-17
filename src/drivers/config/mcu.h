@@ -147,9 +147,6 @@
 // From module: USART - Univ. Syn Async Rec/Trans
 #include <usart.h>
 
-// From module: USB Device HID Generic (Single Interface Device)
-#include <udi_hid_generic.h>
-
 // From module: USB Device Stack Core (Common API)
 #include <udc.h>
 #include <udd.h>

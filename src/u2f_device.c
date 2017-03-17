@@ -108,7 +108,7 @@ static void u2f_send_message(const uint8_t *data, const uint32_t len)
 }
 
 
-static void u2f_send_err_hid(uint32_t fcid, uint8_t err)
+void u2f_send_err_hid(uint32_t fcid, uint8_t err)
 {
     USB_FRAME f;
 
@@ -304,9 +304,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
 
 static void u2f_device_reset_state(void)
 {
-    reader.cmd = 0;
-    reader.len = 0;
-    reader.seq = 255;
+    memset(&reader, 0, sizeof(reader));
     u2f_state_continue = false;
 }
 
@@ -452,7 +450,6 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 
     // Finished
     u2f_device_reset_state();
-    memset(&reader, 0, sizeof(reader));
     cid = 0;
 }
 

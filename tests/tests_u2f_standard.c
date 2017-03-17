@@ -152,27 +152,25 @@ static void test_Enroll(int expectedSW12)
     CHECK_EQ(regRsp.registerId, U2F_REGISTER_ID);
     CHECK_EQ(regRsp.pubKey.format, U2F_UNCOMPRESSED_POINT);
 
-    printf("\x1b[34mEnroll: %lu bytes in %fs\x1b[0m\n", rsp_len, U2Fob_deltaTime(&t));
+    PRINT_INFO("Enroll: %lu bytes in %fs", rsp_len, U2Fob_deltaTime(&t));
 
     // Check crypto of enroll response.
     char cert[U2F_MAX_ATT_CERT_SIZE];
     size_t cert_len;
     CHECK_EQ(getCertificate(regRsp, cert, &cert_len), true);
-    printf("\x1b[34mCertificate: %lu %s\x1b[0m\n", cert_len,
-           utils_uint8_to_hex((uint8_t *)cert, cert_len));
+    PRINT_INFO("Certificate: %lu %s", cert_len, utils_uint8_to_hex((uint8_t *)cert,
+               cert_len));
 
     char pk[U2F_EC_POINT_SIZE];
     size_t pk_len;
     CHECK_EQ(getSubjectPublicKey(cert, cert_len, pk, &pk_len), true);
-    printf("\x1b[34mPublic key:  %lu %s\x1b[0m\n", pk_len, utils_uint8_to_hex((uint8_t *)pk,
-            pk_len));
+    PRINT_INFO("Public key:  %lu %s", pk_len, utils_uint8_to_hex((uint8_t *)pk, pk_len));
     CHECK_EQ(pk_len, U2F_EC_POINT_SIZE);
 
     char sig[U2F_MAX_EC_SIG_SIZE];
     size_t sig_len;
     CHECK_EQ(getSignature(regRsp, sig, &sig_len), true);
-    printf("\x1b[34mSignature:   %lu %s\x1b[0m\n", sig_len, utils_uint8_to_hex((uint8_t *)sig,
-            sig_len));
+    PRINT_INFO("Signature:   %lu %s", sig_len, utils_uint8_to_hex((uint8_t *)sig, sig_len));
 
     // Parse signature into two integers.
     uint8_t signature[64];
@@ -240,7 +238,7 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
 
     CHECK_EQ(resp.flags, 0x01);
 
-    printf("\x1b[34mSign: %lu bytes in %fs\x1b[0m\n", rsp_len, U2Fob_deltaTime(&t));
+    PRINT_INFO("Sign: %lu bytes in %fs", rsp_len, U2Fob_deltaTime(&t));
 
     // Parse signature from authenticate response.
     uint8_t signature[64];

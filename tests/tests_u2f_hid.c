@@ -127,7 +127,7 @@ static void test_LongEcho(void)
     CHECK_EQ(cmd, U2FHID_PING);
     CHECK_EQ(0, memcmp(challenge, response, sizeof(challenge)));
 
-    printf("\x1b[34mtest_LongEcho() - SENT %f, RECV %f\x1b[0m\n", sent, received);
+    PRINT_INFO("test_LongEcho() - SENT %f, RECV %f", sent, received);
 
     // Expected transfer times for 2ms bInterval.
     // We do not want fobs to be too slow or too agressive.

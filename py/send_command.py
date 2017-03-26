@@ -24,6 +24,7 @@ try:
     message = '{"random":"pseudo"}' 
     message = '{"bootloader":"lock"}' 
     message = '{"bootloader":"unlock"}' 
+    message = '{"feature_set":{"U2F":false}}' 
     message = '{"led":"blink"}' 
 
 

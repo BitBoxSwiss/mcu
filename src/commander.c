@@ -957,11 +957,11 @@ static void commander_process_device(yajl_val json_node)
         }
 
         uint32_t ext_flags = memory_report_ext_flags();
-        if (ext_flags & MEM_EXT_FLAG_U2F) {
-            // Bit is set == disabled because default EEPROM space is 0xFF
-            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_false));
-        } else {
+        if (ext_flags & MEM_EXT_MASK_U2F) {
+            // Bit is set == enabled
             snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_true));
+        } else {
+            snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_false));
         }
 
         if (sd_card_inserted() == DBB_OK) {
@@ -1119,6 +1119,7 @@ static void commander_process_feature_set(yajl_val json_node)
         return;
     } else {
         int flags_set = 0;
+        uint32_t flags = memory_report_ext_flags();
         const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
         yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
         // Check if u2f exists.
@@ -1126,21 +1127,22 @@ static void commander_process_feature_set(yajl_val json_node)
         // TODO: better way to throw an error in case of
         //       invalid features
         if (u2f && data->u.object.len == 1) {
-            uint32_t flags = memory_report_ext_flags();
             if (YAJL_IS_TRUE(u2f)) {
-                // Unset the bit == U2F enabled
-                flags &= ~(MEM_EXT_FLAG_U2F);
-            } else {
-                flags |= MEM_EXT_FLAG_U2F;
+                // Set the bit == U2F enabled
+                flags |= MEM_EXT_MASK_U2F;
+                flags_set++;
+            } else if (YAJL_IS_FALSE(u2f)) {
+                flags &= ~(MEM_EXT_MASK_U2F);
+                flags_set++;
             }
-            memory_write_ext_flags(flags);
-            flags_set++;
         }
 
         if (flags_set <= 0) {
             commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
             return;
         }
+
+        memory_write_ext_flags(flags);
         commander_fill_report(cmd_str(CMD_feature_set), attr_str(ATTR_success), DBB_OK);
     }
 }

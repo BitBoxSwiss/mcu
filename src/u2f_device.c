@@ -419,8 +419,8 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
     u2f_state_continue = false;
 
     if ( (reader.cmd < U2FHID_VENDOR_FIRST) &&
-            (memory_report_ext_flags() & MEM_EXT_FLAG_U2F) ) {
-        // Abort U2F commands if the U2F bit is set (==U2F disabled).
+            !(memory_report_ext_flags() & MEM_EXT_MASK_U2F) ) {
+        // Abort U2F commands if the U2F bit is not set (==U2F disabled).
         // Vendor specific commands are passed through.
         u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
     } else {

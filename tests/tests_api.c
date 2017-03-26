@@ -517,6 +517,12 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"true\"}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
     // Reset U2F
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));

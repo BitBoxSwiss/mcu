@@ -44,11 +44,11 @@
 #define  USB_DEVICE_ATTR                  (USB_CONFIG_ATTR_BUS_POWERED)
 #define  USB_DEVICE_MANUFACTURE_NAME      "www.shiftdevices.com"
 #ifdef BOOTLOADER 
-#define  USB_DEVICE_PRODUCT_NAME          "bootloader"
+#define  USB_DEVICE_PRODUCT_NAME          "Digital Bitbox bootloader"
 #define  USB_DEVICE_SERIAL_NAME_TYPE      "dbb.bl:"
 #define  USB_DEVICE_SERIAL_NAME           USB_DEVICE_SERIAL_NAME_TYPE DIGITAL_BITBOX_VERSION_SHORT
 #else
-#define  USB_DEVICE_PRODUCT_NAME          "firmware"
+#define  USB_DEVICE_PRODUCT_NAME          "Digital Bitbox firmware"
 #define  USB_DEVICE_SERIAL_NAME_TYPE      "dbb.fw:"
 #define  USB_DEVICE_SERIAL_NAME
 #define  USB_DEVICE_GET_SERIAL_NAME_POINTER usb_serial_number

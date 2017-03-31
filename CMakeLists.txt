@@ -92,11 +92,18 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
 # Source Definitions
 
 if(CONTINUOUS_INTEGRATION)
-  add_definitions(-DCONTINUOUS_INTEGRATION)
+    add_definitions(-DCONTINUOUS_INTEGRATION)
+endif()
+
+if(ENABLE_DEBUG_IFACE AND BUILD_TYPE STREQUAL "firmware")
+    add_definitions(-DENABLE_DEBUG_IFACE)
+    set(DEBUG_IFACE "ON")
+else()
+    set(DEBUG_IFACE "OFF")
 endif()
 
 if(BUILD_TYPE STREQUAL "test")
-  add_definitions(-DTESTING)
+    add_definitions(-DTESTING)
 endif()
 
 if(BUILD_TYPE STREQUAL "bootloader")
@@ -108,6 +115,9 @@ add_definitions(-DuECC_OPTIMIZATION_LEVEL=4)
 if(USE_SECP256K1_LIB)
     add_definitions(-DECC_USE_SECP256K1_LIB)
     add_definitions(-DSECP256K1_BUILD=1)
+    set(SECP_LIB "libsecp256k1")
+else()
+    set(SECP_LIB "uECC")
 endif()
 
 
@@ -131,11 +141,8 @@ message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}  (make doc)")
 message(STATUS "Coverage flags:         ${BUILD_COVERAGE}")
 message(STATUS "Debug symbols:          ${BUILD_VALGRIND}")
-if(USE_SECP256K1_LIB)
-    message(STATUS "SECP256k1 library:      libsecp256k1")
-else()
-    message(STATUS "SECP256k1 library:      uECC ")
-endif()
+message(STATUS "Debug USB interface:    ${DEBUG_IFACE}")
+message(STATUS "SECP256k1 library:      ${SECP_LIB}")
 message(STATUS "\n=============================================\n\n")
 
 

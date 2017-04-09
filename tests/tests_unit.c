@@ -523,7 +523,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -531,7 +531,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -627,7 +627,8 @@ static void test_ecc_sig_to_der(void)
     for (i = 0 ; i < N; i++) {
         random_bytes(priv_key, sizeof(priv_key), 0);
         random_bytes(msg, sizeof(msg), 0);
-        u_assert_int_eq(0, bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1));
+        u_assert_int_eq(0, bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL,
+                                                ECC_SECP256k1));
         u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
         u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
         u_assert_mem_eq(sig, sig2, sizeof(sig));
@@ -637,7 +638,7 @@ static void test_ecc_sig_to_der(void)
     for (i = 0 ; i < N; i++) {
         random_bytes(priv_key, sizeof(priv_key), 0);
         random_bytes(msg, sizeof(msg), 0);
-        u_assert_int_eq(0, ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256r1));
+        u_assert_int_eq(0, ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256r1));
         u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
         u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
         u_assert_mem_eq(sig, sig2, sizeof(sig));

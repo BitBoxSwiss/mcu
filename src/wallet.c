@@ -325,7 +325,7 @@ int wallet_sign(const char *message, const char *keypath)
 
     memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, ECC_SECP256k1)) {
+    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, NULL, ECC_SECP256k1)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;

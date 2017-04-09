@@ -78,7 +78,7 @@ static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup, ecc_curve_i
             }
         }
 
-        if (bitcoin_ecc.ecc_sign(priv_key, msg, msg_len, sig, curve)) {
+        if (bitcoin_ecc.ecc_sign(priv_key, msg, msg_len, sig, NULL, curve)) {
             printf("signing failed\n");
             err++;
             break;

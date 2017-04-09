@@ -41,11 +41,11 @@ struct ecc_wrapper {
     void (*ecc_context_init)(void);
     void (*ecc_context_destroy)(void);
     int (*ecc_sign_digest)(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
-                           ecc_curve_id curve);
+                           uint8_t *recid, ecc_curve_id curve);
     int (*ecc_sign)(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-                    uint8_t *sig, ecc_curve_id curve);
+                    uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
     int (*ecc_sign_double)(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
-                           uint8_t *sig, ecc_curve_id curve);
+                           uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
     int (*ecc_verify)(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,
                       uint32_t msg_len, ecc_curve_id curve);
     int (*ecc_generate_private_key)(uint8_t *private_child, const uint8_t *private_master,
@@ -64,11 +64,11 @@ struct ecc_wrapper {
 void ecc_context_init(void);
 void ecc_context_destroy(void);
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
-                    ecc_curve_id curve);
+                    uint8_t *recid, ecc_curve_id curve);
 int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-             uint8_t *sig, ecc_curve_id curve);
+             uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
 int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
-                    uint8_t *sig, ecc_curve_id curve);
+                    uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
 int ecc_verify_digest(const uint8_t *public_key, const uint8_t *hash,
                       const uint8_t *sig, ecc_curve_id curve);
 int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,

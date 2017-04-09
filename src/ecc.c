@@ -84,9 +84,11 @@ static uECC_Curve ecc_curve_from_id(ecc_curve_id curve)
     return uECC_secp256k1();
 }
 
+
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
-                    ecc_curve_id curve)
+                    uint8_t *recid, ecc_curve_id curve)
 {
+    (void) recid; // not implemented in uECC
     uint8_t tmp[32 + 32 + 64];
     SHA256_HashContext ctx = {{&init_SHA256, &update_SHA256, &finish_SHA256, 64, 32, tmp}};
     if (uECC_sign_deterministic(private_key, data, SHA256_DIGEST_LENGTH, &ctx.uECC, sig,
@@ -100,21 +102,21 @@ int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *si
 
 
 int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-             uint8_t *sig, ecc_curve_id curve)
+             uint8_t *sig, uint8_t *recid, ecc_curve_id curve)
 {
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
-    return ecc_sign_digest(private_key, hash, sig, curve);
+    return ecc_sign_digest(private_key, hash, sig, recid, curve);
 }
 
 
 int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
-                    uint8_t *sig, ecc_curve_id curve)
+                    uint8_t *sig, uint8_t *recid, ecc_curve_id curve)
 {
     uint8_t hash[SHA256_DIGEST_LENGTH];
     sha256_Raw(msg, msg_len, hash);
     sha256_Raw(hash, SHA256_DIGEST_LENGTH, hash);
-    return ecc_sign_digest(privateKey, hash, sig, curve);
+    return ecc_sign_digest(privateKey, hash, sig, recid, curve);
 }
 
 

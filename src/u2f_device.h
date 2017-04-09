@@ -34,6 +34,7 @@
 #include "usb.h"
 
 
+void u2f_send_message(const uint8_t *data, const uint32_t len);
 void u2f_send_err_hid(uint32_t fcid, uint8_t err);
 void u2f_device_run(const USB_FRAME *f);
 void u2f_device_timeout(void);

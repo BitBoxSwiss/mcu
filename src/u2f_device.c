@@ -47,11 +47,13 @@
 #include "u2f/u2f_hid.h"
 #include "u2f/u2f_keys.h"
 #include "u2f_device.h"
+#ifndef BOOTLOADER
+#include "u2f_hijack.h"
+#endif
 
 
 #define APDU_LEN(A)        (uint32_t)(((A).lc1 << 16) + ((A).lc2 << 8) + ((A).lc3))
 #define U2F_TIMEOUT        500// [msec]
-#define U2F_NONCE_LENGTH   32
 #define U2F_KEYHANDLE_LEN  (U2F_NONCE_LENGTH + SHA256_DIGEST_LENGTH)
 
 #if (U2F_EC_KEY_SIZE != SHA256_DIGEST_LENGTH) || (U2F_EC_KEY_SIZE != U2F_NONCE_LENGTH)
@@ -62,12 +64,13 @@
 static uint32_t cid = 0;
 volatile bool u2f_state_continue = false;
 volatile uint16_t u2f_current_time_ms = 0;
+const uint8_t U2F_HIJACK_CODE[32];// extern
 
 
 typedef struct {
     uint8_t reserved;
     uint8_t appId[U2F_APPID_SIZE];
-    uint8_t challenge[U2F_NONCE_SIZE];
+    uint8_t challenge[U2F_NONCE_LENGTH];
     uint8_t keyHandle[U2F_KEYHANDLE_LEN];
     uint8_t pubKey[U2F_EC_POINT_SIZE];
 } U2F_REGISTER_SIG_STR;
@@ -77,7 +80,7 @@ typedef struct {
     uint8_t appId[U2F_APPID_SIZE];
     uint8_t flags;
     uint8_t ctr[4];
-    uint8_t challenge[U2F_NONCE_SIZE];
+    uint8_t challenge[U2F_NONCE_LENGTH];
 } U2F_AUTHENTICATE_SIG_STR;
 
 
@@ -102,7 +105,7 @@ static uint32_t next_cid(void)
 }
 
 
-static void u2f_send_message(const uint8_t *data, const uint32_t len)
+void u2f_send_message(const uint8_t *data, const uint32_t len)
 {
     usb_reply_queue_load_msg(U2FHID_MSG, data, len, cid);
 }
@@ -201,12 +204,12 @@ static void u2f_device_register(const USB_APDU *a)
         // Add signature using attestation key
         sig_base.reserved = 0;
         memcpy(sig_base.appId, req->appId, U2F_APPID_SIZE);
-        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_SIZE);
+        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_LENGTH);
         memcpy(sig_base.keyHandle, &resp->keyHandleCertSig, U2F_KEYHANDLE_LEN);
         memcpy(sig_base.pubKey, &resp->pubKey, U2F_EC_POINT_SIZE);
 
         if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig,
-                     ECC_SECP256r1)) {
+                     NULL, ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
             return;
         }
@@ -239,6 +242,14 @@ static void u2f_device_authenticate(const USB_APDU *a)
         u2f_send_error(U2F_SW_WRONG_LENGTH);
         return;
     }
+
+#ifndef BOOTLOADER
+    if (req->keyHandle[0] == U2F_HIJACK_CMD &&
+            !memcmp(req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH)) {
+        u2f_hijack((const U2F_REQ_HIJACK *)req->keyHandle);
+        return;
+    }
+#endif
 
     if (req->keyHandleLen != U2F_KEYHANDLE_LEN) {
         u2f_send_error(U2F_SW_WRONG_DATA);
@@ -284,9 +295,9 @@ static void u2f_device_authenticate(const USB_APDU *a)
         memcpy(sig_base.appId, req->appId, U2F_APPID_SIZE);
         sig_base.flags = resp->flags;
         memcpy(sig_base.ctr, resp->ctr, 4);
-        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_SIZE);
+        memcpy(sig_base.challenge, req->challenge, U2F_NONCE_LENGTH);
 
-        if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig, ECC_SECP256r1)) {
+        if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig, NULL, ECC_SECP256r1)) {
             u2f_send_error(U2F_SW_WRONG_DATA);
             return;
         }

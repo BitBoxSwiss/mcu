@@ -26,6 +26,7 @@ set(DBB-FIRMWARE-SOURCES
         flags.c
         sha2.c
         u2f_device.c
+        u2f_hijack.c
         usb.c
 )
 
@@ -172,6 +173,7 @@ set(DBB-INCLUDES
         secp256k1
         secp256k1/src
         secp256k1/include
+        secp256k1/src/modules/recovery
 )
 
 

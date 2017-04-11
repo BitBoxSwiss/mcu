@@ -31,10 +31,12 @@
 
 #include <stdint.h>
 
+
 typedef enum ecc_curve_id {
     ECC_SECP256k1,
     ECC_SECP256r1,
 } ecc_curve_id;
+
 
 /* ecc_wrapper for bitcoin use */
 struct ecc_wrapper {
@@ -57,6 +59,8 @@ struct ecc_wrapper {
                                  ecc_curve_id curve);
     int (*ecc_ecdh)(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
                     uint8_t *ecdh_secret, ecc_curve_id curve);
+    int (*ecc_recover_public_key)(const uint8_t *sig, const uint8_t *msg, uint32_t msg_len,
+                                  uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve);
 };
 
 
@@ -84,8 +88,12 @@ int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
              uint8_t *ecdh_secret, ecc_curve_id curve);
 int ecc_sig_to_der(const uint8_t *sig, uint8_t *der);
 int ecc_der_to_sig(const uint8_t *der, int der_len, uint8_t *sig);
+int ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg, uint32_t msg_len,
+                           uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve);
+
 
 /* bitcoin ecc wrapper that gets linked to secp256k1 if presen, otherwise to uECC */
 extern struct ecc_wrapper bitcoin_ecc;
+
 
 #endif

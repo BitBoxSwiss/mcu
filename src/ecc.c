@@ -50,7 +50,8 @@ struct ecc_wrapper bitcoin_ecc = {
     ecc_isValid,
     ecc_get_public_key65,
     ecc_get_public_key33,
-    ecc_ecdh
+    ecc_ecdh,
+    ecc_recover_public_key
 };
 #endif
 
@@ -200,6 +201,20 @@ int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
     } else {
         return 1;
     }
+}
+
+
+int ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg, uint32_t msg_len,
+                           uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve)
+{
+    /* not implemented for uECC */
+    (void) sig;
+    (void) msg;
+    (void) msg_len;
+    (void) pubkey_65;
+    (void) recid;
+    (void) curve;
+    return 1;
 }
 
 

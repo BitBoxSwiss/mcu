@@ -61,6 +61,9 @@ void libsecp256k1_ecc_get_public_key33(const uint8_t *private_key, uint8_t *publ
                                        ecc_curve_id curve);
 int libsecp256k1_ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
                           uint8_t *ecdh_secret, ecc_curve_id curve);
+int libsecp256k1_ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg,
+                                        uint32_t msg_len, uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve);
+
 
 struct ecc_wrapper bitcoin_ecc = {
     libsecp256k1_ecc_context_init,
@@ -73,8 +76,10 @@ struct ecc_wrapper bitcoin_ecc = {
     libsecp256k1_ecc_isValid,
     libsecp256k1_ecc_get_public_key65,
     libsecp256k1_ecc_get_public_key33,
-    libsecp256k1_ecc_ecdh
+    libsecp256k1_ecc_ecdh,
+    libsecp256k1_ecc_recover_public_key,
 };
+
 
 void libsecp256k1_ecc_context_init(void)
 {
@@ -290,6 +295,40 @@ int libsecp256k1_ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privke
 
     sha256_Raw(ecdh_secret_compressed + 1, 32, ecdh_secret);
     sha256_Raw(ecdh_secret, 32, ecdh_secret);
+
+    return 0; // success
+}
+
+
+int libsecp256k1_ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg,
+                                        uint32_t msg_len, uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve)
+{
+    (void)(curve);
+    uint8_t i, msg_hash[32];
+    size_t public_key_len = 65;
+    secp256k1_ecdsa_recoverable_signature signature;
+    secp256k1_pubkey pubkey_recover;
+
+    if (!libsecp256k1_ctx) {
+        libsecp256k1_ecc_context_init();
+    }
+
+    for (i = 0; i < 32; i++) {
+        signature.data[32 - i - 1] = sig[i];
+        signature.data[64 - i - 1] = sig[i + 32];
+    }
+    signature.data[64] = recid;
+
+    sha256_Raw(msg, msg_len, msg_hash);
+
+    if (!secp256k1_ecdsa_recover(libsecp256k1_ctx, &pubkey_recover, &signature, msg_hash)) {
+        return 1;
+    }
+
+    if (!secp256k1_ec_pubkey_serialize(libsecp256k1_ctx, pubkey_65, &public_key_len,
+                                       &pubkey_recover, SECP256K1_EC_UNCOMPRESSED)) {
+        return 1;
+    }
 
     return 0; // success
 }

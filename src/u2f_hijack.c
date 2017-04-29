@@ -52,8 +52,6 @@ static bool U2F_HIJACK_UNLOCKED = false;// Correct (session) password received
 
 void u2f_hijack(const U2F_REQ_HIJACK *req)
 {
-    // TODO - add unit testing
-
     if (req->mode == U2F_HIJACK_ETH_MODE) {
         char keypath[64];
         const uint32_t ctr = memory_u2f_count_iter();

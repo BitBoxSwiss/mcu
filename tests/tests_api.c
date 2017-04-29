@@ -35,6 +35,7 @@
 #include "flags.h"
 #include "random.h"
 #include "commander.h"
+#include "u2f_hijack.h"
 #include "yajl/src/api/yajl_tree.h"
 
 #include "api.h"
@@ -529,6 +530,201 @@ static void tests_u2f(void)
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
     // TODO - test that {reset: U2F} does reset U2F master by verifying U2F signatures
+}
+
+
+#define TESTS_U2F_HIJACK_KEYPATH      U2F_HIJACK_ETH_KEYPATH "/0"
+#define TESTS_U2F_HIJACK_KEYPATH_ERR  "m/44'/99'/0'/0/0"
+const uint8_t U2F_HIJACK_CODE[32];// extern
+
+static void tests_u2f_hijack(void)
+{
+    int ret;
+    uint8_t buf[512];
+    uint32_t cid = 1;
+    USB_APDU *a = (USB_APDU *)buf;
+    U2F_AUTHENTICATE_REQ *auth_req = (U2F_AUTHENTICATE_REQ *)a->data;
+    U2F_REQ_HIJACK *req = (U2F_REQ_HIJACK *)auth_req->keyHandle;
+    U2F_RESP_HIJACK resp;
+
+    memset(buf, 0, sizeof(buf));
+    memset(&resp, 0, sizeof(resp));
+
+    a->ins = U2F_AUTHENTICATE;
+    a->lc1 = 0;
+    a->lc2 = (sizeof(U2F_AUTHENTICATE_REQ) >> 8) & 255;
+    a->lc3 = (sizeof(U2F_AUTHENTICATE_REQ) & 255);
+
+    req->cmd = U2F_HIJACK_CMD;
+    req->mode = U2F_HIJACK_ETH_MODE;
+    req->op = U2F_HIJACK_OP_XPUB;
+    req->keypathlen = sizeof(TESTS_U2F_HIJACK_KEYPATH);
+    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH, sizeof(TESTS_U2F_HIJACK_KEYPATH));
+    memcpy(req->password, memory_report_aeskey(PASSWORD_STAND), MEM_PAGE_LEN);
+    memset(req->data, 0x88, U2F_HIJACK_REQ_DATA_MAX_LEN);
+    memcpy(auth_req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH);
+
+    api_reset_device();
+
+    // Get error if device erased
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
+
+    // Set device password, send wrong password with request
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    memset(req->password, 0xff, MEM_PAGE_LEN);
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_WRONG_DATA);
+
+    // Set correct password in request, but not yet seeded
+    memcpy(req->password, memory_report_aeskey(PASSWORD_STAND), MEM_PAGE_LEN);
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
+
+    // Set wrong password in request. After sending a correct password once, password field should be ingored.
+    // Should NOT get wrong password error but the previous not seeded error.
+    memset(req->password, 0xff, MEM_PAGE_LEN);
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
+
+    // Seed a wallet. Get successful reply
+    char seed[] =
+        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_rawH13ucR3\", \"raw\":\"true\", \"filename\":\"h.pdf\"}";
+    api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+
+    char xpub[] =
+        "0479e69b793d08d243b45c741c9adc38bb26f8350c5f4deaba708af9388849b2d64eb3479a6ef74059eb2b4c123caedc9380792ecb4b6a541169e3e89779d2161a";
+    char chaincode[] = "b356a5a9cba6384ff5ae023956f8918cd017ee20b80d5270bdd6e115d3b99614";
+    uint8_t echo_len = 0x80;
+    char sig_r[] = "32485bf2fc40389a4562e3be8a1c7246ec391b2ba7eb6b47ac667b51a46a6483";
+    char sig_s[] = "37e5bae9e047a301ddbe50b5b0b35f53858cd6b3ae8549d02bee21fbe637b614";
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
+    u_assert_mem_eq(resp.data, utils_hex_to_uint8(xpub), 65);
+    u_assert_mem_eq(resp.data + 65, utils_hex_to_uint8(chaincode), 32);
+
+    // Set non ETH keypath.
+    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH_ERR, sizeof(TESTS_U2F_HIJACK_KEYPATH));
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_WRONG_DATA);
+
+    // Set correct keypath. Get successful reply
+    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH, sizeof(TESTS_U2F_HIJACK_KEYPATH));
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
+    u_assert_mem_eq(resp.data, utils_hex_to_uint8(xpub), 65);
+    u_assert_mem_eq(resp.data + 65, utils_hex_to_uint8(chaincode), 32);
+
+    // Send sign command
+    req->op = U2F_HIJACK_OP_SIGN;
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
+#ifdef ECC_USE_SECP256K1_LIB
+    u_assert_int_eq(resp.data[0], 0x00);// recid
+#endif
+    u_assert_mem_eq(resp.data + 1, utils_hex_to_uint8(sig_r), 32);
+    u_assert_mem_eq(resp.data + 1 + 32, utils_hex_to_uint8(sig_s), 32);
+    u_assert_int_eq(resp.data[1 + 64], echo_len);
+
+    int decrypt_len;
+    char *dec = aes_cbc_b64_decrypt((const unsigned char *)(resp.data + 1 + 64 + 4),
+                                    resp.data[1 + 64], &decrypt_len, PASSWORD_VERIFY);
+    u_assert_int_eq(dec != NULL, 1);
+    u_assert_int_eq(decrypt_len - 1, U2F_HIJACK_REQ_DATA_MAX_LEN);
+    u_assert_mem_eq(dec, req->data, U2F_HIJACK_REQ_DATA_MAX_LEN);
+    free(dec);
+
+    // Disable U2F
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
+
+    // U2F command should abort
+    USB_FRAME r;
+
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
+    u_assert_int_eq(r.init.bcntl, 1);
+    u_assert_int_eq(r.init.data[0], U2FHID_ERR_CHANNEL_BUSY);
+
+    // Enable U2F
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+
+    // U2F command runs
+    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
+                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
+    u_assert_int_eq(ret, 0);
+
+    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
+    u_assert_int_eq(ret, sizeof(resp));
+    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
+#ifdef ECC_USE_SECP256K1_LIB
+    u_assert_int_eq(resp.data[0], 0x00);// recid
+#endif
+    u_assert_mem_eq(resp.data + 1, utils_hex_to_uint8(sig_r), 32);
+    u_assert_mem_eq(resp.data + 1 + 32, utils_hex_to_uint8(sig_s), 32);
+    u_assert_int_eq(resp.data[1 + 64], echo_len);
 }
 
 
@@ -1487,6 +1683,7 @@ static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_u2f);
+    u_run_test(tests_u2f_hijack);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);

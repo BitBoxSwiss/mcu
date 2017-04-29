@@ -45,9 +45,14 @@
 #define U2F_HIJACK_ETH_MODE 0xe0
 #define U2F_HIJACK_ETH_KEYPATH "m/44'/60'/0'/0"
 #define U2F_HIJACK_ETH_KEYPATH_LEN 14
-#define U2F_HIJACK_RESP_DATA_MAX_LEN (128 - U2F_CTR_SIZE - 4)// 120 (can be larger if necessary later)
+#define U2F_HIJACK_RESP_DATA_MAX_LEN (256 - U2F_CTR_SIZE - 4)// 120 (can be larger if necessary later)
 #define U2F_HIJACK_REQ_DATA_MAX_LEN 64
 #define U2F_HIJACK_REQ_KEYPATH_MAX_LEN (U2F_MAX_KH_SIZE - U2F_HIJACK_REQ_DATA_MAX_LEN - U2F_NONCE_LENGTH - 4)// 28
+
+
+#if (U2F_HIJACK_REQ_DATA_MAX_LEN * 2 + 64 + 1 + 4 > U2F_HIJACK_RESP_DATA_MAX_LEN)
+#error "U2F_HIJACK_RESP_DATA_MAX_LEN may not be large enough"
+#endif
 
 
 extern const uint8_t U2F_HIJACK_CODE[32];

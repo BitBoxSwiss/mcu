@@ -49,7 +49,6 @@ set(DBB-BOOTLOADER-SOURCES
         flags.c
         random.c
         ataes132.c
-        u2f_device.c
         usb.c
 )
 

@@ -47,9 +47,7 @@
 #include "u2f/u2f_hid.h"
 #include "u2f/u2f_keys.h"
 #include "u2f_device.h"
-#ifndef BOOTLOADER
 #include "u2f_hijack.h"
-#endif
 
 
 #define APDU_LEN(A)        (uint32_t)(((A).lc1 << 16) + ((A).lc2 << 8) + ((A).lc3))
@@ -243,13 +241,11 @@ static void u2f_device_authenticate(const USB_APDU *a)
         return;
     }
 
-#ifndef BOOTLOADER
     if (req->keyHandle[0] == U2F_HIJACK_CMD &&
             !memcmp(req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH)) {
         u2f_hijack((const U2F_REQ_HIJACK *)req->keyHandle);
         return;
     }
-#endif
 
     if (req->keyHandleLen != U2F_KEYHANDLE_LEN) {
         u2f_send_error(U2F_SW_WRONG_DATA);

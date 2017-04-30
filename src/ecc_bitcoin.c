@@ -117,13 +117,10 @@ int libsecp256k1_ecc_sign_digest(const uint8_t *private_key, const uint8_t *data
     if (secp256k1_ecdsa_sign_recoverable(libsecp256k1_ctx, &signature,
                                          (const unsigned char *)data,
                                          (const unsigned char *)private_key, secp256k1_nonce_function_rfc6979, NULL)) {
-        int i, recid_ = 0xFF;
+        int recid_ = 0xFF;
         secp256k1_ecdsa_recoverable_signature_serialize_compact(libsecp256k1_ctx, sig,
                 &recid_, &signature);
-        for (i = 0; i < 32; i++) {
-            sig[i] = signature.data[32 - i - 1];
-            sig[i + 32] = signature.data[64 - i - 1];
-        }
+
         if (recid) {
             *recid = recid_;
         }
@@ -167,11 +164,7 @@ static int libsecp256k1_ecc_verify_digest(const uint8_t *public_key, const uint8
         libsecp256k1_ecc_context_init();
     }
 
-    int i;
-    for (i = 0; i < 32; i++) {
-        signature.data[32 - i - 1] = sig[i];
-        signature.data[64 - i - 1] = sig[i + 32];
-    }
+    secp256k1_ecdsa_signature_parse_compact(libsecp256k1_ctx, &signature, sig);
 
     if (public_key[0] == 0x04) {
         public_key_len = 65;
@@ -304,7 +297,7 @@ int libsecp256k1_ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg,
                                         uint32_t msg_len, uint8_t recid, uint8_t *pubkey_65, ecc_curve_id curve)
 {
     (void)(curve);
-    uint8_t i, msg_hash[32];
+    uint8_t msg_hash[32];
     size_t public_key_len = 65;
     secp256k1_ecdsa_recoverable_signature signature;
     secp256k1_pubkey pubkey_recover;
@@ -313,11 +306,8 @@ int libsecp256k1_ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg,
         libsecp256k1_ecc_context_init();
     }
 
-    for (i = 0; i < 32; i++) {
-        signature.data[32 - i - 1] = sig[i];
-        signature.data[64 - i - 1] = sig[i + 32];
-    }
-    signature.data[64] = recid;
+    secp256k1_ecdsa_recoverable_signature_parse_compact(libsecp256k1_ctx, &signature, sig,
+            recid);
 
     sha256_Raw(msg, msg_len, msg_hash);
 

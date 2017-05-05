@@ -523,7 +523,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -531,7 +531,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
+        res = bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -627,7 +627,8 @@ static void test_ecc_sig_to_der(void)
     for (i = 0 ; i < N; i++) {
         random_bytes(priv_key, sizeof(priv_key), 0);
         random_bytes(msg, sizeof(msg), 0);
-        u_assert_int_eq(0, bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1));
+        u_assert_int_eq(0, bitcoin_ecc.ecc_sign(priv_key, msg, sizeof(msg), sig, NULL,
+                                                ECC_SECP256k1));
         u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
         u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
         u_assert_mem_eq(sig, sig2, sizeof(sig));
@@ -637,7 +638,7 @@ static void test_ecc_sig_to_der(void)
     for (i = 0 ; i < N; i++) {
         random_bytes(priv_key, sizeof(priv_key), 0);
         random_bytes(msg, sizeof(msg), 0);
-        u_assert_int_eq(0, ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256r1));
+        u_assert_int_eq(0, ecc_sign(priv_key, msg, sizeof(msg), sig, NULL, ECC_SECP256r1));
         u_assert_int_eq(0, !(der_len = ecc_sig_to_der(sig, der)));
         u_assert_int_eq(0, ecc_der_to_sig(der, der_len, sig2));
         u_assert_mem_eq(sig, sig2, sizeof(sig));
@@ -1041,6 +1042,37 @@ static void test_utils(void)
 }
 
 
+static void test_recoverable_signature(void)
+{
+    size_t i, N = 256;
+    uint8_t res, recid, sig[64], pubkey_recover[65], pubkey_derive[65], privkey[32], msg[256],
+            msg_len = 0;
+
+    for (i = 0; i < N; i++) {
+        // random message len between 1 and 256
+        random_bytes(msg, 1, 0);
+        msg_len = msg[0];
+        random_bytes(msg, msg_len, 0);
+
+        // random private key
+        random_bytes(privkey, sizeof(privkey), 0);
+
+        res = bitcoin_ecc.ecc_sign(privkey, msg, msg_len, sig, &recid, ECC_SECP256k1);
+        u_assert_int_eq(res, 0);
+
+        bitcoin_ecc.ecc_get_public_key65(privkey, pubkey_derive, ECC_SECP256k1);
+
+        bitcoin_ecc.ecc_verify(pubkey_derive, sig, msg, msg_len, ECC_SECP256k1);
+        u_assert_int_eq(res, 0);
+
+        res = bitcoin_ecc.ecc_recover_public_key(sig, msg, msg_len, recid, pubkey_recover,
+                ECC_SECP256k1);
+        u_assert_int_eq(res, 0);
+        u_assert_mem_eq(pubkey_derive, pubkey_recover, 65);
+    }
+}
+
+
 int main(void)
 {
     ecc_context_init();
@@ -1061,8 +1093,14 @@ int main(void)
     u_run_test(test_aes_cbc);
     u_run_test(test_buffer_overflow);
     u_run_test(test_utils);
+
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);
+
+#ifdef ECC_USE_SECP256K1_LIB
+    // recoverable signature not implemented for uECC
+    u_run_test(test_recoverable_signature);
+#endif
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);

@@ -132,10 +132,10 @@ static void test_Enroll(int expectedSW12)
 
     char rsp[4096];
     size_t rsp_len;
-    char regReq_c[U2F_NONCE_SIZE + U2F_APPID_SIZE + 1];
+    char regReq_c[U2F_NONCE_LENGTH + U2F_APPID_SIZE + 1];
     memset(regReq_c, 0, sizeof(regReq_c));
-    memcpy(regReq_c, regReq.challenge, U2F_NONCE_SIZE);
-    memcpy(regReq_c + U2F_NONCE_SIZE, regReq.appId, U2F_APPID_SIZE);
+    memcpy(regReq_c, regReq.challenge, U2F_NONCE_LENGTH);
+    memcpy(regReq_c + U2F_NONCE_LENGTH, regReq.appId, U2F_APPID_SIZE);
     CHECK_EQ(expectedSW12,
              U2Fob_apdu(device, 0, U2F_REGISTER, U2F_AUTH_ENFORCE, 0,
                         regReq_c, sizeof(regReq), rsp, &rsp_len));
@@ -211,18 +211,18 @@ static uint32_t test_Sign(int expectedSW12, bool checkOnly)
 
     char rsp[4096];
     size_t rsp_len;
-    char authReq_c[U2F_NONCE_SIZE + U2F_APPID_SIZE + 1 + U2F_MAX_KH_SIZE + 1];
+    char authReq_c[U2F_NONCE_LENGTH + U2F_APPID_SIZE + 1 + U2F_MAX_KH_SIZE + 1];
     memset(authReq_c, 0, sizeof(authReq_c));
-    memcpy(authReq_c, authReq.challenge, U2F_NONCE_SIZE);
-    memcpy(authReq_c + U2F_NONCE_SIZE, authReq.appId, U2F_APPID_SIZE);
-    memcpy(authReq_c + U2F_NONCE_SIZE + U2F_APPID_SIZE, &authReq.keyHandleLen, 1);
-    memcpy(authReq_c + U2F_NONCE_SIZE + U2F_APPID_SIZE + 1, authReq.keyHandle,
+    memcpy(authReq_c, authReq.challenge, U2F_NONCE_LENGTH);
+    memcpy(authReq_c + U2F_NONCE_LENGTH, authReq.appId, U2F_APPID_SIZE);
+    memcpy(authReq_c + U2F_NONCE_LENGTH + U2F_APPID_SIZE, &authReq.keyHandleLen, 1);
+    memcpy(authReq_c + U2F_NONCE_LENGTH + U2F_APPID_SIZE + 1, authReq.keyHandle,
            authReq.keyHandleLen);
 
     CHECK_EQ(expectedSW12,
              U2Fob_apdu(device, 0, U2F_AUTHENTICATE,
                         checkOnly ? U2F_AUTH_CHECK_ONLY : U2F_AUTH_ENFORCE, 0,
-                        authReq_c, U2F_NONCE_SIZE + U2F_APPID_SIZE + 1 + authReq.keyHandleLen,
+                        authReq_c, U2F_NONCE_LENGTH + U2F_APPID_SIZE + 1 + authReq.keyHandleLen,
                         rsp, &rsp_len));
 
     if (expectedSW12 != 0x9000) {

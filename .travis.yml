@@ -7,7 +7,6 @@ env:
     - ENV="-DBUILD_TYPE=test -DUSE_SECP256K1_LIB=OFF" TEST=yes
     - ENV="-DBUILD_TYPE=bootloader -DUSE_SECP256K1_LIB=OFF" TEST=no
     - ENV="-DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=ON" TEST=no
-    - ENV="-DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=OFF" TEST=no
 
 compiler:
     - clang

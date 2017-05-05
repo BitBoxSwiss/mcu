@@ -21,7 +21,7 @@
 #define U2F_MAX_EC_SIG_SIZE     72      // Max size of ANS.1 DER encoded EC signature
 #define U2F_CTR_SIZE            4       // Size of counter field
 #define U2F_APPID_SIZE          32      // Size of application id
-#define U2F_NONCE_SIZE          32      // Size of challenge nonce
+#define U2F_NONCE_LENGTH        32      // Size of challenge nonce
 #define U2F_UNCOMPRESSED_POINT  0x04    // Uncompressed point format
 
 typedef struct {
@@ -42,7 +42,7 @@ typedef struct {
 #define U2F_REGISTER_HASH_ID    0x00// Version 2 hash identintifier
 
 typedef struct {
-    uint8_t challenge[U2F_NONCE_SIZE];
+    uint8_t challenge[U2F_NONCE_LENGTH];
     uint8_t appId[U2F_APPID_SIZE];
 } U2F_REGISTER_REQ;
 
@@ -60,7 +60,7 @@ typedef struct {
 #define U2F_AUTH_FLAG_TUP       0x01// Test of user presence set
 
 typedef struct {
-    uint8_t challenge[U2F_NONCE_SIZE];
+    uint8_t challenge[U2F_NONCE_LENGTH];
     uint8_t appId[U2F_APPID_SIZE];
     uint8_t keyHandleLen;
     uint8_t keyHandle[U2F_MAX_KH_SIZE];

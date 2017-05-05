@@ -644,7 +644,7 @@ static void tests_u2f_hijack(void)
 
     ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
     u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_WRONG_DATA);
+    u_assert_int_eq(resp.status, U2F_SW_WRONG_LENGTH);
 
     // Set correct keypath. Get successful reply
     memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH, sizeof(TESTS_U2F_HIJACK_KEYPATH));

@@ -97,8 +97,10 @@ void u2f_hijack(const U2F_REQ_HIJACK *req)
         memset(keypath, 0, sizeof(keypath));
         memcpy(keypath, req->keypath, req->keypathlen);
 
-        if (strncmp(keypath, U2F_HIJACK_ETH_KEYPATH, U2F_HIJACK_ETH_KEYPATH_LEN) != 0) {
-            resp->status = U2F_SW_WRONG_DATA;
+        if ((strncmp(keypath, U2F_HIJACK_ETH_KEYPATH, U2F_HIJACK_ETH_KEYPATH_LEN) != 0) &&
+                (strncmp(keypath, U2F_HIJACK_ETC_KEYPATH, U2F_HIJACK_ETC_KEYPATH_LEN) != 0) &&
+                (strncmp(keypath, U2F_HIJACK_TST_KEYPATH, U2F_HIJACK_TST_KEYPATH_LEN) != 0)) {
+            resp->status = U2F_SW_WRONG_LENGTH;
             goto exit;
         }
 

@@ -59,9 +59,9 @@ Build:
 ## Contributing
 Please do not use an editor that automatically reformats.
 
-Please do use the coding style set by astyle (http://astyle.sourceforge.net/) with the following parameters:
+Please do use the coding style set by AStyle version 3.0 (http://astyle.sourceforge.net/; also available from homebrew) with the following parameters:
 
-    astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=src/yajl --exclude=src/secp256k1 --exclude=src/drivers --exclude=tests/windows/hidapi | grep Formatted
+    astyle --style=kr --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-braces --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=src/yajl --exclude=src/secp256k1 --exclude=src/drivers --exclude=tests/hidapi | grep Formatted
 
 Pull requests will automatically fail if the coding style is not met. For convenience, enable a Git hook to trigger the `astyle` styling whenever a `git commit` operation is performed. This is done by typing in the repository directory:
 

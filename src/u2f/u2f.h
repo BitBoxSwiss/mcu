@@ -50,9 +50,7 @@ typedef struct {
     uint8_t registerId;// U2F_REGISTER_ID_V2
     U2F_EC_POINT pubKey;
     uint8_t keyHandleLen;
-    uint8_t keyHandleCertSig[U2F_MAX_KH_SIZE +
-                             U2F_MAX_ATT_CERT_SIZE +
-                             U2F_MAX_EC_SIG_SIZE];
+    uint8_t keyHandleCertSig[U2F_MAX_KH_SIZE + U2F_MAX_ATT_CERT_SIZE + U2F_MAX_EC_SIG_SIZE];
 } U2F_REGISTER_RESP;
 
 

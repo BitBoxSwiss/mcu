@@ -168,18 +168,18 @@ void utils_uint64_to_varint(char *vi, int *l, uint64_t i)
     char v[VARINT_LEN];
 
     if (i < 0xfd) {
-        sprintf(v, "%02" PRIx64 , i);
+        sprintf(v, "%02" PRIx64, i);
         len = 2;
     } else if (i <= 0xffff) {
-        sprintf(v, "%04" PRIx64 , i);
+        sprintf(v, "%04" PRIx64, i);
         sprintf(vi, "fd");
         len = 4;
     } else if (i <= 0xffffffff) {
-        sprintf(v, "%08" PRIx64 , i);
+        sprintf(v, "%08" PRIx64, i);
         sprintf(vi, "fe");
         len = 8;
     } else {
-        sprintf(v, "%016" PRIx64 , i);
+        sprintf(v, "%016" PRIx64, i);
         sprintf(vi, "ff");
         len = 16;
     }

@@ -46,7 +46,7 @@ static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup, ecc_curve_i
     while (iterations < max_iterations) {
 
         // random message len between 1 and 256
-        random_bytes(msg, 1 , 0);
+        random_bytes(msg, 1, 0);
         msg_len = msg[0];
 
         // create random message

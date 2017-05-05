@@ -1654,8 +1654,8 @@ int uECC_verify(const uint8_t *public_key,
     num_bits = smax(uECC_vli_numBits(u1, num_n_words),
                     uECC_vli_numBits(u2, num_n_words));
 
-    point = points[(!!uECC_vli_testBit(u1, num_bits - 1)) |
-                   ((!!uECC_vli_testBit(u2, num_bits - 1)) << 1)];
+    point = points[(!!uECC_vli_testBit(u1, num_bits - 1)) | ((!!uECC_vli_testBit(u2,
+                                                          num_bits - 1)) << 1)];
     uECC_vli_set(rx, point, num_words);
     uECC_vli_set(ry, point + num_words, num_words);
     uECC_vli_clear(z, num_words);

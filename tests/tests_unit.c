@@ -953,7 +953,7 @@ static void test_buffer_overflow(void)
 
     commander_clear_report();
     val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(flag_msg(
-                DBB_ERR_IO_REPORT_BUF))] = '\0';
+                                      DBB_ERR_IO_REPORT_BUF))] = '\0';
     commander_fill_report("testing", val, DBB_OK);
     commander_fill_signature_array(sig, pubkey);
     commander_fill_report("sign", commander_read_array(), DBB_OK);

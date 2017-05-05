@@ -22,7 +22,7 @@ files=$(git diff --cached --name-only --diff-filter=AM $against | \
         grep -E '^(src|tests)' | grep -E '(c|h)$' | grep -v 'src/drivers/' | grep -v '.inc' | grep -v '.sh')
         
 for file in $files; do
-    astyle --style=stroustrup --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-brackets --convert-tabs --max-code-length=90 --break-after-logical -Q $file
+    astyle --style=kr --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-braces --convert-tabs --max-code-length=90 --break-after-logical -Q $file
     if [ -e "$file.orig" ]; then
         mv $file "$file.formated"
         mv "$file.orig" $file

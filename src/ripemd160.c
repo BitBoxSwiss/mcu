@@ -253,22 +253,22 @@ static void compress(uint32_t *MDbuf, uint32_t *X)
     GGG(ccc, ddd, eee, aaa, bbb, X[14],  8);
 
     /* parallel round 5 */
-    FFF(bbb, ccc, ddd, eee, aaa, X[12] ,  8);
-    FFF(aaa, bbb, ccc, ddd, eee, X[15] ,  5);
-    FFF(eee, aaa, bbb, ccc, ddd, X[10] , 12);
-    FFF(ddd, eee, aaa, bbb, ccc, X[ 4] ,  9);
-    FFF(ccc, ddd, eee, aaa, bbb, X[ 1] , 12);
-    FFF(bbb, ccc, ddd, eee, aaa, X[ 5] ,  5);
-    FFF(aaa, bbb, ccc, ddd, eee, X[ 8] , 14);
-    FFF(eee, aaa, bbb, ccc, ddd, X[ 7] ,  6);
-    FFF(ddd, eee, aaa, bbb, ccc, X[ 6] ,  8);
-    FFF(ccc, ddd, eee, aaa, bbb, X[ 2] , 13);
-    FFF(bbb, ccc, ddd, eee, aaa, X[13] ,  6);
-    FFF(aaa, bbb, ccc, ddd, eee, X[14] ,  5);
-    FFF(eee, aaa, bbb, ccc, ddd, X[ 0] , 15);
-    FFF(ddd, eee, aaa, bbb, ccc, X[ 3] , 13);
-    FFF(ccc, ddd, eee, aaa, bbb, X[ 9] , 11);
-    FFF(bbb, ccc, ddd, eee, aaa, X[11] , 11);
+    FFF(bbb, ccc, ddd, eee, aaa, X[12],  8);
+    FFF(aaa, bbb, ccc, ddd, eee, X[15],  5);
+    FFF(eee, aaa, bbb, ccc, ddd, X[10], 12);
+    FFF(ddd, eee, aaa, bbb, ccc, X[ 4],  9);
+    FFF(ccc, ddd, eee, aaa, bbb, X[ 1], 12);
+    FFF(bbb, ccc, ddd, eee, aaa, X[ 5],  5);
+    FFF(aaa, bbb, ccc, ddd, eee, X[ 8], 14);
+    FFF(eee, aaa, bbb, ccc, ddd, X[ 7],  6);
+    FFF(ddd, eee, aaa, bbb, ccc, X[ 6],  8);
+    FFF(ccc, ddd, eee, aaa, bbb, X[ 2], 13);
+    FFF(bbb, ccc, ddd, eee, aaa, X[13],  6);
+    FFF(aaa, bbb, ccc, ddd, eee, X[14],  5);
+    FFF(eee, aaa, bbb, ccc, ddd, X[ 0], 15);
+    FFF(ddd, eee, aaa, bbb, ccc, X[ 3], 13);
+    FFF(ccc, ddd, eee, aaa, bbb, X[ 9], 11);
+    FFF(bbb, ccc, ddd, eee, aaa, X[11], 11);
 
     /* combine results */
     ddd += cc + MDbuf[1];

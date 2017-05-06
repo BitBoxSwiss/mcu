@@ -13,7 +13,7 @@ try:
 
     # Start up options - factory reset; initial password setting
     if 0:
-        hid_send_encrypt('{"reset":"__ERASE__"}')
+        hid_send_encrypt('{"reset":"__ERASE__"}', password)
         hid_send_plain('{"password":"' + password + '"}')
         sys.exit()
 

@@ -160,6 +160,13 @@ static int api_hid_send_frame(USB_FRAME *f)
 
 static int api_hid_send_frames(uint32_t cid, uint8_t cmd, const void *data, size_t size)
 {
+    if (size > COMMANDER_REPORT_SIZE) {
+        u_print_error("ERROR  - %s() - Line %d\n", __func__, __LINE__);
+        u_print_error("\tCommand size exceeds buffer size by %lu bytes.\n",
+                      size - COMMANDER_REPORT_SIZE);
+        return 0;
+    }
+
     USB_FRAME frame;
     int res;
     size_t frameLen;

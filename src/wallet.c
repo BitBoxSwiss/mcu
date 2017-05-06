@@ -301,7 +301,7 @@ int wallet_sign(const char *message, const char *keypath)
 {
     uint8_t data[32];
     uint8_t sig[64];
-    uint8_t pub_key[33];
+    uint8_t recid = 0xEE;// Set default value to give an error when trying to recover
     HDNode node;
 
     if (strlens(message) != (32 * 2)) {
@@ -325,15 +325,14 @@ int wallet_sign(const char *message, const char *keypath)
 
     memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, NULL, ECC_SECP256k1)) {
+    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, &recid, ECC_SECP256k1)) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;
     }
 
-    bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key, ECC_SECP256k1);
     utils_zero(&node, sizeof(HDNode));
-    return commander_fill_signature_array(sig, pub_key);
+    return commander_fill_signature_array(sig, recid);
 
 err:
     utils_zero(&node, sizeof(HDNode));

@@ -950,13 +950,13 @@ static void test_buffer_overflow(void)
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     uint8_t sig[64] = {0};
-    uint8_t pubkey[33] = {0};
+    uint8_t recid = 0;
 
     commander_clear_report();
-    val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(pubkey) - strlens(flag_msg(
+    val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(recid) - strlens(flag_msg(
                                       DBB_ERR_IO_REPORT_BUF))] = '\0';
     commander_fill_report("testing", val, DBB_OK);
-    commander_fill_signature_array(sig, pubkey);
+    commander_fill_signature_array(sig, recid);
     commander_fill_report("sign", commander_read_array(), DBB_OK);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 }

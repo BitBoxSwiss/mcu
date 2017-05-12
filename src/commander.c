@@ -271,15 +271,15 @@ const char *commander_read_array(void)
 }
 
 
-int commander_fill_signature_array(const uint8_t sig[64], const uint8_t pubkey[33])
+int commander_fill_signature_array(const uint8_t sig[64], uint8_t recid)
 {
+    char recid_c[2 + 1] = {0};
     char sig_c[128 + 1] = {0};
-    char pub_key_c[66 + 1] = {0};
+    snprintf(recid_c, sizeof(recid_c), "%02x", recid);
     snprintf(sig_c, sizeof(sig_c), "%s", utils_uint8_to_hex(sig, 64));
-    snprintf(pub_key_c, sizeof(pub_key_c), "%s", utils_uint8_to_hex(pubkey, 33));
-    const char *key[] = {cmd_str(CMD_sig), cmd_str(CMD_pubkey), 0};
-    const char *value[] = {sig_c, pub_key_c, 0};
-    int type[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
+    const char *key[] = {cmd_str(CMD_sig), cmd_str(CMD_recid), 0};
+    const char *value[] = {sig_c, recid_c, 0};
+    int type[] = {DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_STRING, DBB_JSON_NONE};
     return commander_fill_json_array(key, value, type, CMD_sign);
 }
 

@@ -48,8 +48,8 @@
 
 
 #define COMMANDER_REPORT_SIZE       4096
-#define COMMANDER_SIG_LEN           219// sig + pubkey + json encoding
-#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
+#define COMMANDER_SIG_LEN           154// sig + recid + json formatting
+#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN * 10))
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
@@ -113,6 +113,7 @@ X(erase)          \
 X(check)          \
 X(key)            \
 X(sig)            \
+X(recid)          \
 X(pin)            \
 X(U2F)            \
 /*  reply keys  */\

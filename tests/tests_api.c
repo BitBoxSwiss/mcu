@@ -37,6 +37,8 @@
 #include "commander.h"
 #include "u2f_hijack.h"
 #include "yajl/src/api/yajl_tree.h"
+#include "secp256k1/include/secp256k1.h"
+#include "secp256k1/include/secp256k1_recovery.h"
 
 #include "api.h"
 
@@ -676,13 +678,15 @@ static void tests_u2f_hijack(void)
     u_assert_mem_eq(resp.data + 1 + 32, utils_hex_to_uint8(sig_s), 32);
     u_assert_int_eq(resp.data[1 + 64], echo_len);
 
-    int decrypt_len;
-    char *dec = aes_cbc_b64_decrypt((const unsigned char *)(resp.data + 1 + 64 + 4),
-                                    resp.data[1 + 64], &decrypt_len, PASSWORD_VERIFY);
-    u_assert_int_eq(dec != NULL, 1);
-    u_assert_int_eq(decrypt_len - 1, U2F_HIJACK_REQ_DATA_MAX_LEN);
-    u_assert_mem_eq(dec, req->data, U2F_HIJACK_REQ_DATA_MAX_LEN);
-    free(dec);
+    if (!TEST_LIVE_DEVICE) {
+        int decrypt_len;
+        char *dec = aes_cbc_b64_decrypt((const unsigned char *)(resp.data + 1 + 64 + 4),
+                                        resp.data[1 + 64], &decrypt_len, PASSWORD_VERIFY);
+        u_assert_int_eq(dec != NULL, 1);
+        u_assert_int_eq(decrypt_len - 1, U2F_HIJACK_REQ_DATA_MAX_LEN);
+        u_assert_mem_eq(dec, req->data, U2F_HIJACK_REQ_DATA_MAX_LEN);
+        free(dec);
+    }
 
     // Disable U2F
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
@@ -1200,7 +1204,7 @@ static void tests_echo_tfa(void)
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_echo));
-    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sig));
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
@@ -1208,7 +1212,7 @@ static void tests_echo_tfa(void)
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_echo));
-    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sig));
 
     // test hash length
@@ -1243,7 +1247,7 @@ static void tests_echo_tfa(void)
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
     } else {
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sig));
     }
 
@@ -1259,6 +1263,62 @@ static void tests_echo_tfa(void)
 }
 
 
+static int recover_public_key_verify_sig(const char *sig, const char *hash,
+        const char *recid, const char *pubkey)
+{
+#ifdef ECC_USE_SECP256K1_LIB
+    static secp256k1_context *ctx = NULL;
+    uint8_t hash_b[32];
+    uint8_t sig_b[64];
+    uint8_t recid_b;
+    size_t public_key_len = 33;
+    uint8_t pubkey_33[public_key_len];
+    secp256k1_ecdsa_recoverable_signature signature_r;
+    secp256k1_ecdsa_signature signature, signorm;
+    secp256k1_pubkey pubkey_recover;
+
+    memcpy(hash_b, utils_hex_to_uint8(hash), 32);
+    memcpy(sig_b, utils_hex_to_uint8(sig), 64);
+    memcpy(&recid_b, utils_hex_to_uint8(recid), 1);
+    memset(pubkey_33, 0, 33);
+
+    if (!ctx) {
+        ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+        uint8_t rndm[32] = {0};
+        random_bytes(rndm, sizeof(rndm), 0);
+        if (secp256k1_context_randomize(ctx, rndm)) {
+            /* pass */
+        }
+    }
+
+    secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &signature_r, sig_b, recid_b);
+    if (!secp256k1_ecdsa_recover(ctx, &pubkey_recover, &signature_r, hash_b)) {
+        return 1;
+    }
+    secp256k1_ec_pubkey_serialize(ctx, pubkey_33, &public_key_len, &pubkey_recover,
+                                  SECP256K1_EC_COMPRESSED);
+
+    secp256k1_ecdsa_recoverable_signature_convert(ctx, &signature, &signature_r);
+    secp256k1_ecdsa_signature_normalize(ctx, &signorm, &signature);
+
+    if (!secp256k1_ecdsa_verify(ctx, &signorm, hash_b, &pubkey_recover)) {
+        return 1;
+    }
+
+    if (memcmp(utils_hex_to_uint8(pubkey), pubkey_33, public_key_len)) {
+        return 1;
+    }
+
+#else
+    (void) sig;
+    (void) hash;
+    (void) recid;
+    (void) pubkey;
+#endif
+    return 0; // success
+}
+
+
 // hash_1_input is normalized (low-S). The non-normalized value is "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
 const char hash_1_input[] =
     "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
@@ -1270,23 +1330,31 @@ const char hash_2_input_2[] =
 
 static void tests_sign(void)
 {
+    int i, res;
+    char one_input_msg[] = "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
     char one_input[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
     char pubkey_1_input[] =
         "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154";
+    char recid_1_input[] = "01";
 
+    char two_input_msg_1[] =
+        "c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d";
+    char two_input_msg_2[] =
+        "3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790";
     char two_inputs[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}";
     char pubkey_2_input_1[] =
         "035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704";
     char pubkey_2_input_2[] =
         "03cc673784d8dfe97ded72c91ebb1b87a52761e4be20f6229e56fd61fdf28ae3f2";
+    char recid_2_input_1[] = "01";
+    char recid_2_input_2[] = "01";
 
-    int i;
     char hashstr[] =
-        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/100203p/45p/0/100\"}";
+        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p/0p/0p/0/100\"}";
     char hashstart[] =
-        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/100203p/45p/0/100\"}], \"data\": [";
+        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/100\"}], \"data\": [";
     char maxhashes[COMMANDER_REPORT_SIZE];
     char hashoverflow[COMMANDER_REPORT_SIZE];
 
@@ -1306,6 +1374,10 @@ static void tests_sign(void)
     strcat(hashoverflow, "]}");
     strcat(maxhashes, "]}");
 
+    char checkpub_msg_1[] =
+        "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
+    char checkpub_msg_2[] =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     char checkpub[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
     char check_1[] =
@@ -1319,6 +1391,8 @@ static void tests_sign(void)
         "3323b353e9974ab1eb452eca19e1dc4dad0556dba668089c8c1214ca09b58ad12c82da6671a65f9b3803c1fe7a14f35d885caebce701f972641748738275782b";
     char check_pubkey[] =
         "02df86355b162c942b89e297c1e919f40943834d448b0b6b4538556e805ea4e18c";
+    char check_recid_1[] = "01";
+    char check_recid_2[] = "01";
 
     char checkpub_wrong_addr_len[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
@@ -1389,9 +1463,11 @@ static void tests_sign(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), hash_1_input);
-    u_assert_str_has(api_read_decrypted_report(), pubkey_1_input);
+    res = recover_public_key_verify_sig(hash_1_input, one_input_msg, recid_1_input,
+                                        pubkey_1_input);
+    u_assert_int_eq(res, 0);
 
     // sign using two inputs
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
@@ -1406,9 +1482,13 @@ static void tests_sign(void)
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(api_read_decrypted_report(), hash_2_input_1);
     u_assert_str_has(api_read_decrypted_report(), hash_2_input_2);
-    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-    u_assert_str_has(api_read_decrypted_report(), pubkey_2_input_1);
-    u_assert_str_has(api_read_decrypted_report(), pubkey_2_input_2);
+    u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
+    res = recover_public_key_verify_sig(hash_2_input_1, two_input_msg_1, recid_2_input_1,
+                                        pubkey_2_input_1);
+    u_assert_int_eq(res, 0);
+    res = recover_public_key_verify_sig(hash_2_input_2, two_input_msg_2, recid_2_input_2,
+                                        pubkey_2_input_2);
+    u_assert_int_eq(res, 0);
 
 
     // test checkpub
@@ -1424,7 +1504,12 @@ static void tests_sign(void)
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(api_read_decrypted_report(), check_sig_1);
     u_assert_str_has(api_read_decrypted_report(), check_sig_2);
-    u_assert_str_has(api_read_decrypted_report(), check_pubkey);
+    res = recover_public_key_verify_sig(check_sig_1, checkpub_msg_1, check_recid_1,
+                                        check_pubkey);
+    u_assert_int_eq(res, 0);
+    res = recover_public_key_verify_sig(check_sig_2, checkpub_msg_2, check_recid_2,
+                                        check_pubkey);
+    u_assert_int_eq(res, 0);
 
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
@@ -1485,8 +1570,10 @@ static void tests_sign(void)
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(api_read_decrypted_report(), hash_1_input);
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(api_read_decrypted_report(), pubkey_1_input);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
+        res = recover_public_key_verify_sig(hash_1_input, one_input_msg, recid_1_input,
+                                            pubkey_1_input);
+        u_assert_int_eq(res, 0);
     } else {
         pin_err_count++;
     }
@@ -1508,9 +1595,13 @@ static void tests_sign(void)
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
         u_assert_str_has(api_read_decrypted_report(), hash_2_input_1);
         u_assert_str_has(api_read_decrypted_report(), hash_2_input_2);
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(api_read_decrypted_report(), pubkey_2_input_1);
-        u_assert_str_has(api_read_decrypted_report(), pubkey_2_input_2);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
+        res = recover_public_key_verify_sig(hash_2_input_1, two_input_msg_1, recid_2_input_1,
+                                            pubkey_2_input_1);
+        u_assert_int_eq(res, 0);
+        res = recover_public_key_verify_sig(hash_2_input_2, two_input_msg_2, recid_2_input_2,
+                                            pubkey_2_input_2);
+        u_assert_int_eq(res, 0);
     } else {
         pin_err_count++;
     }

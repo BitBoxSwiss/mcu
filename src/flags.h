@@ -47,9 +47,10 @@
 #define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
 
 
-#define COMMANDER_REPORT_SIZE       4096
+#define COMMANDER_REPORT_SIZE       3584
+#define COMMANDER_NUM_SIG_MIN       14// Must be >= desktop app's `MAX_INPUTS_PER_SIGN` !!
 #define COMMANDER_SIG_LEN           154// sig + recid + json formatting
-#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN * 10))
+#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN * 8))// Multiple is emperically found such that NUM_SIG_MIN is maximum
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
@@ -57,8 +58,8 @@
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
 #define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
-#define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE / 2)
-#define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE / 2)// base64 increases size by ~4/3; AES encryption by max 32 char
+#define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE * 4 / 7)
+#define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE * 4 / 7)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
 #define BACKUP_DELIM                '-'
 #define BACKUP_DELIM_S              "-"
@@ -116,6 +117,7 @@ X(sig)            \
 X(recid)          \
 X(pin)            \
 X(U2F)            \
+X(U2F_hijack)     \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
@@ -162,6 +164,7 @@ X(version)        \
 X(password)       \
 X(TFA)            \
 X(U2F)            \
+X(U2F_hijack)     \
 X(__ERASE__)      \
 X(__FORCE__)      \
 X(NUM)             /* keep last */

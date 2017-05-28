@@ -37,6 +37,7 @@
 #define UTILS_BUFFER_LEN COMMANDER_REPORT_SIZE
 #define VARINT_LEN 20
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 #define strlens(s) (s == NULL ? 0 : strlen(s))
 
 

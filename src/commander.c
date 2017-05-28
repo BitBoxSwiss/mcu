@@ -181,26 +181,26 @@ void commander_fill_report(const char *cmd, const char *msg, int flag)
     if (flag > DBB_FLAG_ERROR_START) {
         if (strlens(msg)) {
             snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
-                     " \"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}",
+                     "\"%s\":{\"message\":\"%s\",\"code\":%s,\"command\":\"%s\"}",
                      attr_str(ATTR_error), msg, flag_code(flag), cmd);
         } else {
             snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
-                     " \"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}",
+                     "\"%s\":{\"message\":\"%s\",\"code\":%s,\"command\":\"%s\"}",
                      attr_str(ATTR_error), flag_msg(flag), flag_code(flag), cmd);
         }
     } else if (flag == DBB_JSON_BOOL || flag == DBB_JSON_ARRAY || flag == DBB_JSON_NUMBER) {
         snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
-                 " \"%s\": %s", cmd, msg);
+                 "\"%s\":%s", cmd, msg);
     } else {
         snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
-                 " \"%s\": \"%s\"", cmd, msg);
+                 "\"%s\":\"%s\"", cmd, msg);
     }
 
     if ((strlens(json_report) + 1) >= COMMANDER_REPORT_SIZE) {
         if (!REPORT_BUF_OVERFLOW) {
             commander_clear_report();
             snprintf(json_report, COMMANDER_REPORT_SIZE,
-                     "{\"%s\":{\"message\":\"%s\", \"code\":%s, \"command\":\"%s\"}}", attr_str(ATTR_error),
+                     "{\"%s\":{\"message\":\"%s\",\"code\":%s,\"command\":\"%s\"}}", attr_str(ATTR_error),
                      flag_msg(DBB_ERR_IO_REPORT_BUF), flag_code(DBB_ERR_IO_REPORT_BUF), cmd);
             REPORT_BUF_OVERFLOW = 1;
         }
@@ -933,6 +933,7 @@ static void commander_process_device(yajl_val json_node)
         char sdcard[6] = {0};
         char bootlock[6] = {0};
         char u2f_enabled[6] = {0};
+        char u2f_hijack_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_read_unique_id(serial, 4);
@@ -963,6 +964,12 @@ static void commander_process_device(yajl_val json_node)
         } else {
             snprintf(u2f_enabled, sizeof(u2f_enabled), "%s", attr_str(ATTR_false));
         }
+        if (ext_flags & MEM_EXT_MASK_U2F_HIJACK) {
+            // Bit is set == enabled
+            snprintf(u2f_hijack_enabled, sizeof(u2f_hijack_enabled), "%s", attr_str(ATTR_true));
+        } else {
+            snprintf(u2f_hijack_enabled, sizeof(u2f_hijack_enabled), "%s", attr_str(ATTR_false));
+        }
 
         if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
@@ -982,7 +989,7 @@ static void commander_process_device(yajl_val json_node)
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":\"%s\", \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":%s, \"%s\":\"%s\", \"%s\":%s}",
+                 "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":\"%s\",\"%s\":%s,\"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
@@ -992,7 +999,8 @@ static void commander_process_device(yajl_val json_node)
                  attr_str(ATTR_bootlock), bootlock,
                  attr_str(ATTR_sdcard), sdcard,
                  attr_str(ATTR_TFA), tfa,
-                 attr_str(ATTR_U2F), u2f_enabled);
+                 attr_str(ATTR_U2F), u2f_enabled,
+                 attr_str(ATTR_U2F_hijack), u2f_hijack_enabled);
 
         free(tfa);
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
@@ -1115,36 +1123,47 @@ static void commander_process_feature_set(yajl_val json_node)
 
     if (!YAJL_IS_OBJECT(data) || data->u.object.len <= 0) {
         commander_clear_report();
-        commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
-        return;
+        goto err;
     } else {
-        int flags_set = 0;
         uint32_t flags = memory_report_ext_flags();
         const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
+        const char *u2f_hijack_path[] = { cmd_str(CMD_U2F_hijack), NULL };
         yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
-        // Check if u2f exists.
-        // At the moment, only allow a single element.
-        // TODO: better way to throw an error in case of
-        //       invalid features
-        if (u2f && data->u.object.len == 1) {
+        yajl_val u2f_hijack = yajl_tree_get(data, u2f_hijack_path, yajl_t_any);
+
+        if (!u2f && !u2f_hijack) {
+            goto err;
+        }
+
+        // Set the bit == enabled
+        if (u2f) {
             if (YAJL_IS_TRUE(u2f)) {
-                // Set the bit == U2F enabled
                 flags |= MEM_EXT_MASK_U2F;
-                flags_set++;
             } else if (YAJL_IS_FALSE(u2f)) {
                 flags &= ~(MEM_EXT_MASK_U2F);
-                flags_set++;
+            } else {
+                goto err;
             }
         }
 
-        if (flags_set <= 0) {
-            commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
-            return;
+        // Set the bit == enabled
+        if (u2f_hijack) {
+            if (YAJL_IS_TRUE(u2f_hijack)) {
+                flags |= MEM_EXT_MASK_U2F_HIJACK;
+            } else if (YAJL_IS_FALSE(u2f_hijack)) {
+                flags &= ~(MEM_EXT_MASK_U2F_HIJACK);
+            } else {
+                goto err;
+            }
         }
 
         memory_write_ext_flags(flags);
         commander_fill_report(cmd_str(CMD_feature_set), attr_str(ATTR_success), DBB_OK);
+        return;
     }
+
+err:
+    commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_INVALID_CMD);
 }
 
 
@@ -1543,13 +1562,15 @@ static void commander_parse(char *command)
         status = commander_touch_button(found_cmd);
         if (status == DBB_TOUCHED || status == DBB_OK) {
             if (commander_process(found_cmd, json_node) == DBB_RESET) {
-                goto exit;
+                yajl_tree_free(json_node);
+                return;
             }
         } else {
             commander_fill_report(cmd_str(found_cmd), NULL, status);
         }
     }
 
+exit:
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlens(json_report),
                                          &encrypt_len,
@@ -1562,7 +1583,6 @@ static void commander_parse(char *command)
         commander_fill_report(cmd_str(CMD_ciphertext), NULL, DBB_ERR_MEM_ENCRYPT);
     }
 
-exit:
     yajl_tree_free(json_node);
 }
 

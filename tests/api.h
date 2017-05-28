@@ -39,7 +39,8 @@
 
 
 #define HWW_CID 0xff000000
-#define HID_REPORT_SIZE   COMMANDER_REPORT_SIZE
+#define HID_REPORT_SIZE COMMANDER_REPORT_SIZE
+#define API_READ_ERROR "ERROR: Unable to read report."
 
 
 #ifndef CONTINUOUS_INTEGRATION
@@ -53,10 +54,12 @@ static hid_device *HID_HANDLE;
 static const char tests_pwd[] = "0000";
 static const char hidden_pwd[] = "hide";
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
-static int TEST_LIVE_DEVICE = 0;
-
+const uint8_t U2F_HIJACK_CODE[32];// extern
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];
+
+static int TEST_LIVE_DEVICE = 0;
+static int TEST_U2FAUTH_HIJACK = 0;
 
 
 static const char *api_read_decrypted_report(void)
@@ -82,10 +85,8 @@ static void api_decrypt_report(const char *report, PASSWORD_ID dec_id)
     size_t i, r = json_node->u.object.len;
     for (i = 0; i < r; i++) {
         const char *ciphertext_path[] = { cmd_str(CMD_ciphertext), (const char *) 0 };
-        const char *echo_path[] = { "echo", (const char *) 0 };
         const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
                                  yajl_t_string));
-        const char *echo = YAJL_GET_STRING(yajl_tree_get(json_node, echo_path, yajl_t_string));
         if (ciphertext) {
             dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
                                       &decrypt_len, dec_id);
@@ -95,17 +96,6 @@ static void api_decrypt_report(const char *report, PASSWORD_ID dec_id)
             }
 
             sprintf(decrypted_report, "/* ciphertext */ %.*s", decrypt_len, dec);
-            free(dec);
-            goto exit;
-        } else if (echo) {
-            dec = aes_cbc_b64_decrypt((const unsigned char *)echo, strlens(echo), &decrypt_len,
-                                      PASSWORD_VERIFY);
-            if (!dec) {
-                strcpy(decrypted_report, "/* error: Failed to decrypt echo. */");
-                goto exit;
-            }
-
-            sprintf(decrypted_report, "/* echo */ %.*s", decrypt_len, dec);
             free(dec);
             goto exit;
         }
@@ -319,20 +309,59 @@ static int api_hid_init(void)
 
 static void api_hid_read(PASSWORD_ID id)
 {
+    int res;
+    int u2fhid_cmd = TEST_U2FAUTH_HIJACK ? U2FHID_MSG : U2FHID_HWW;
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    int res = api_hid_read_frames(HWW_CID, U2FHID_HWW, HID_REPORT, HID_REPORT_SIZE);
+    res = api_hid_read_frames(HWW_CID, u2fhid_cmd, HID_REPORT, HID_REPORT_SIZE);
     if (res < 0) {
-        printf("ERROR: Unable to read report.\n");
+        strcpy(decrypted_report, "/* " API_READ_ERROR " */");
         return;
     }
-    api_decrypt_report((char *)HID_REPORT, id);
+    if (TEST_U2FAUTH_HIJACK) {
+        // If the hijack command was sent in chunks, the first chunks return empty frames.
+        // The last chunk holds the JSON response. So poll until get a non-empty frame.
+        // First 5 bytes are the frame header.
+        // Set the appended U2F success byte 0x90 to zero. Otherwise cannot decrypt.
+        char *r = (char *)(HID_REPORT + 5);
+        r[strlens(r) - 1] = 0;
+        strlens(r) ? api_decrypt_report(r, id) : api_hid_read(id);
+    } else {
+        api_decrypt_report((char *)HID_REPORT, id);
+    }
     //printf("received:  >>%s<<\n", api_read_decrypted_report());
 }
 
 
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
-    api_hid_send_frames(HWW_CID, U2FHID_HWW, cmd, cmdlen);
+    if (TEST_U2FAUTH_HIJACK) {
+        // Vendor defined U2F commands appear to not be enabled in browsers.
+        // As an alternative interface, hijack the U2F AUTH key handle data field.
+        // Slower but works in browsers without requiring an extension.
+        uint8_t buf[sizeof(USB_APDU) + sizeof(U2F_AUTHENTICATE_REQ)];
+        USB_APDU *a = (USB_APDU *)buf;
+        U2F_AUTHENTICATE_REQ *auth_req = (U2F_AUTHENTICATE_REQ *)a->data;
+
+        int idx;
+        int kh_max_len = U2F_MAX_KH_SIZE - 2;// Subtract bytes for `idx` and `total`.
+        int total = cmdlen ? (1 + ((cmdlen - 1) / kh_max_len)) : 1;
+
+        for (idx = 0; idx < total; idx++) {
+            memset(buf, 0, sizeof(buf));
+            a->ins = U2F_AUTHENTICATE;
+            a->lc1 = 0;
+            a->lc2 = (sizeof(U2F_AUTHENTICATE_REQ) >> 8) & 255;
+            a->lc3 = (sizeof(U2F_AUTHENTICATE_REQ) & 255);
+            auth_req->keyHandle[0] = total;
+            auth_req->keyHandle[1] = idx;
+            memcpy(auth_req->keyHandle + 2, cmd + idx * kh_max_len, MIN(kh_max_len, MAX(0,
+                    cmdlen - idx * kh_max_len)));
+            memcpy(auth_req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH);
+            api_hid_send_frames(HWW_CID, U2FHID_MSG, buf, sizeof(buf));
+        }
+    } else {
+        api_hid_send_frames(HWW_CID, U2FHID_HWW, cmd, cmdlen);
+    }
 }
 
 
@@ -400,6 +429,23 @@ static const char *api_read_value(int cmd)
     yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
     if (json_node && YAJL_IS_OBJECT(json_node)) {
         const char *path[] = { cmd_str(cmd), NULL };
+        const char *v = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+        snprintf(value, sizeof(value), "%s", v);
+    }
+
+    yajl_tree_free(json_node);
+    return value;
+}
+
+
+static const char *api_read_value_depth_2(int cmd, int cmd_2)
+{
+    static char value[HID_REPORT_SIZE];
+    memset(value, 0, sizeof(value));
+
+    yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
+    if (json_node && YAJL_IS_OBJECT(json_node)) {
+        const char *path[] = { cmd_str(cmd), cmd_str(cmd_2), NULL };
         const char *v = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
         snprintf(value, sizeof(value), "%s", v);
     }

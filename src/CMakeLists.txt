@@ -26,7 +26,6 @@ set(DBB-FIRMWARE-SOURCES
         flags.c
         sha2.c
         u2f_device.c
-        u2f_hijack.c
         usb.c
 )
 

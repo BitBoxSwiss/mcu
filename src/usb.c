@@ -43,6 +43,7 @@
 
 static bool usb_hww_enabled = false;
 static bool usb_u2f_enabled = false;
+static bool usb_dbg_enabled = false;
 static uint8_t usb_hww_interface_occupied = 0;
 static uint8_t usb_reply_queue_packets[USB_QUEUE_NUM_PACKETS][USB_REPORT_SIZE];
 static uint32_t usb_reply_queue_index_start = 0;
@@ -97,6 +98,20 @@ void usb_reply(uint8_t *report)
             udi_u2f_send_report_in(report);
         }
 #endif
+#endif
+    }
+}
+
+
+void usb_reply_dbg(const char *msg, size_t len)
+{
+    if (msg && len) {
+#if defined(ENABLE_DEBUG_IFACE)
+        // TODO - send multiple reports if msg length > report size
+        static char report[USB_REPORT_SIZE];
+        memset(report, 0, USB_REPORT_SIZE);
+        memcpy(report, msg, len < USB_REPORT_SIZE ? len : USB_REPORT_SIZE);
+        udi_dbg_send_report_in(report);
 #endif
     }
 }
@@ -216,6 +231,19 @@ bool usb_hww_enable(void)
 void usb_hww_disable(void)
 {
     usb_hww_enabled = false;
+}
+
+
+bool usb_dbg_enable(void)
+{
+    usb_dbg_enabled = true;
+    return true;
+}
+
+
+void usb_dbg_disable(void)
+{
+    usb_dbg_enabled = false;
 }
 
 

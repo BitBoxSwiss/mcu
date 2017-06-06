@@ -71,6 +71,7 @@ void usb_reply_queue_load_msg(const uint8_t cmd, const uint8_t *data, const uint
 void usb_reply_queue_send(void);
 uint8_t *usb_reply_queue_read(void);
 void usb_reply(uint8_t *report);
+void usb_reply_dbg(const char *msg, size_t len);
 
 void usb_process(uint16_t framenumber);
 void usb_sof_action(void);
@@ -89,6 +90,9 @@ void usb_hww_report(const unsigned char *command);
 bool usb_u2f_enable(void);
 void usb_u2f_disable(void);
 void usb_u2f_report(const unsigned char *command);
+
+bool usb_dbg_enable(void);
+void usb_dbg_disable(void);
 
 
 #endif

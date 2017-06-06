@@ -93,6 +93,13 @@ extern char usb_serial_number[];
 #define  UDI_U2F_REPORT_SENT()       usb_u2f_report_sent()
 
 
+#define  UDI_DBG_IFACE_NUMBER        2
+#define  UDI_DBG_EP_COUNT            1
+#define  UDI_DBG_EP_IN               (5 | USB_EP_DIR_IN)
+#define  UDI_DBG_ENABLE_EXT()        usb_dbg_enable()
+#define  UDI_DBG_DISABLE_EXT()       usb_dbg_disable()
+
+
 #define  UDI_HID_REPORT_SENT()       usb_report_sent()
 #define  UDI_HID_SET_FEATURE(report) usb_set_feature(report)
 
@@ -105,14 +112,26 @@ typedef struct {
 	usb_ep_desc_t ep_out;
 } udi_hid_generic_desc_t;
 
+typedef struct {
+	usb_iface_desc_t iface;
+	usb_hid_descriptor_t hid;
+	usb_ep_desc_t ep_in;
+} udi_hid_generic_dbg_desc_t;
 
-#ifdef BOOTLOADER 
+#if defined(BOOTLOADER)
 #define  USB_DEVICE_EP_CTRL_SIZE       64
 #define  USB_DEVICE_NB_INTERFACE       1
 #define  USB_DEVICE_MAX_EP             2
 #define  UDI_COMPOSITE_DESC_T           udi_hid_generic_desc_t hid_hww
 #define  UDI_COMPOSITE_DESC             .hid_hww = UDI_HWW_DESC
 #define  UDI_COMPOSITE_API              &udi_api_hww
+#elif defined(ENABLE_DEBUG_IFACE)
+#define  USB_DEVICE_EP_CTRL_SIZE       64
+#define  USB_DEVICE_NB_INTERFACE       3
+#define  USB_DEVICE_MAX_EP             5
+#define  UDI_COMPOSITE_DESC_T           udi_hid_generic_desc_t hid_hww; udi_hid_generic_desc_t hid_u2f; udi_hid_generic_dbg_desc_t hid_dbg
+#define  UDI_COMPOSITE_DESC             .hid_hww = UDI_HWW_DESC, .hid_u2f = UDI_U2F_DESC, .hid_dbg = UDI_DBG_DESC
+#define  UDI_COMPOSITE_API              &udi_api_hww, &udi_api_u2f, &udi_api_dbg
 #else
 #define  USB_DEVICE_EP_CTRL_SIZE       64
 #define  USB_DEVICE_NB_INTERFACE       2
@@ -126,6 +145,7 @@ typedef struct {
 // Keep these includes at the end of the file
 #include "udi_hid_hww.h"
 #include "udi_hid_u2f.h"
+#include "udi_hid_dbg.h"
 
 
 #endif

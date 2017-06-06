@@ -84,6 +84,19 @@ set(VERSION_STRING_MAJOR ${MAJOR})
 set(VERSION_STRING_MINOR ${MINOR})
 set(VERSION_STRING_PATCH ${PATCH})
 
+
+if(CUSTOM_VERSION)
+    execute_process(COMMAND git "rev-parse" "--short" "HEAD" OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE "." ";" VERSION_LIST ${CUSTOM_VERSION})
+    list(GET VERSION_LIST 0 vMAJOR)
+    list(GET VERSION_LIST 1 MINOR)
+    list(GET VERSION_LIST 2 PATCH)
+    set(VERSION_STRING "v${CUSTOM_VERSION}-g${GIT_COMMIT_HASH_SHORT}")
+    set(VERSION_STRING_SHORT "v${MAJOR}.${MINOR}.${PATCH}")
+    set(VERSION_STRING_MAJOR ${MAJOR})
+    set(VERSION_STRING_MINOR ${MINOR})
+    set(VERSION_STRING_PATCH ${PATCH})
+endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
 
@@ -116,6 +129,7 @@ endif()
 
 message(STATUS "\n\n=============================================")
 message(STATUS "            - General -")
+message(STATUS "Custom Version:         ${CUSTOM_VERSION}")
 message(STATUS "MCU version:            ${VERSION_STRING}")
 message(STATUS "CMake version:          ${CMAKE_VERSION}")
 message(STATUS "System:                 ${CMAKE_SYSTEM}")

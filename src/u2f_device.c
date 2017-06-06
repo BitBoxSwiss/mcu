@@ -47,12 +47,15 @@
 #include "u2f/u2f_hid.h"
 #include "u2f/u2f_keys.h"
 #include "u2f_device.h"
-#include "u2f_hijack.h"
 
 
-#define APDU_LEN(A)        (uint32_t)(((A).lc1 << 16) + ((A).lc2 << 8) + ((A).lc3))
-#define U2F_TIMEOUT        500// [msec]
-#define U2F_KEYHANDLE_LEN  (U2F_NONCE_LENGTH + SHA256_DIGEST_LENGTH)
+#define APDU_LEN(A)              (uint32_t)(((A).lc1 << 16) + ((A).lc2 << 8) + ((A).lc3))
+#define U2F_TIMEOUT              500// [msec]
+#define U2F_KEYHANDLE_LEN        (U2F_NONCE_LENGTH + SHA256_DIGEST_LENGTH)
+#define U2F_READBUF_MAX_LEN      COMMANDER_REPORT_SIZE// Max allowed by U2F specification = (57 + 128 * 59) = 7609. 
+// In practice, U2F commands do not need this much space.
+// Therefore, reduce to save MCU memory.
+
 
 #if (U2F_EC_KEY_SIZE != SHA256_DIGEST_LENGTH) || (U2F_EC_KEY_SIZE != U2F_NONCE_LENGTH)
 #error "Incorrect macro values for u2f_device"
@@ -62,7 +65,7 @@
 static uint32_t cid = 0;
 volatile bool u2f_state_continue = false;
 volatile uint16_t u2f_current_time_ms = 0;
-const uint8_t U2F_HIJACK_CODE[32];// extern
+const uint8_t U2F_HIJACK_CODE[] = {57, 55, 173, 209, 178, 255, 144, 175, 24, 190, 240, 197, 183, 84, 22, 170, 58, 118, 133, 98, 243, 145, 238, 136, 137, 134, 248, 90, 247, 202, 114, 148};// Corresponds to a U2F client challenge filled with `0xdb`
 
 
 typedef struct {
@@ -83,7 +86,7 @@ typedef struct {
 
 
 typedef struct {
-    uint8_t buf[57 + 128 * 59];
+    uint8_t buf[U2F_READBUF_MAX_LEN];
     uint8_t *buf_ptr;
     uint32_t len;
     uint8_t seq;
@@ -229,6 +232,52 @@ static void u2f_device_register(const USB_APDU *a)
 }
 
 
+static void u2f_device_hijack(const U2F_AUTHENTICATE_REQ *req)
+{
+    static char hijack_cmd[COMMANDER_REPORT_SIZE] = {0};
+
+    const uint32_t ctr = memory_u2f_count_iter();
+    char empty_report[3 + U2F_CTR_SIZE] = {0};// 1-byte flag | 4-byte ctr | 2-byte status
+    char *report;
+    int report_len;
+
+    size_t kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
+    uint8_t tot = req->keyHandle[0];
+    uint8_t cnt = req->keyHandle[1];
+    size_t idx = cnt * (U2F_MAX_KH_SIZE - 2);
+
+    if (idx + kh_len < sizeof(hijack_cmd)) {
+        memcpy(hijack_cmd + idx, req->keyHandle + 2, kh_len);
+        hijack_cmd[idx + kh_len] = '\0';
+    }
+
+    if (cnt + 1 < tot) {
+        // Need more data. Acknowledge by returning an empty report.
+        report = empty_report;
+        report_len = sizeof(empty_report);
+    } else {
+        led_blink();
+        report = commander(hijack_cmd);
+        report_len = MIN(strlens(report) + sizeof(empty_report), COMMANDER_REPORT_SIZE);
+        memmove(report + 1 + U2F_CTR_SIZE, report, MIN(strlens(report),
+                COMMANDER_REPORT_SIZE - U2F_CTR_SIZE - 1));
+        memset(hijack_cmd, 0, sizeof(hijack_cmd));
+    }
+
+    report[0] = 0;// Flags
+    report[1] = (ctr >> 24) & 0xff;
+    report[2] = (ctr >> 16) & 0xff;
+    report[3] = (ctr >> 8) & 0xff;
+    report[4] = ctr & 0xff;
+
+    // Append success bytes so that response gets through U2F client code.
+    // Otherwise, the client will resend sign requests until timing out.
+    // Errors encoded in JSON-formatted report.
+    memcpy(report + report_len - 2, "\x90\x00", 2);
+    u2f_send_message((const uint8_t *)report, report_len);
+}
+
+
 static void u2f_device_authenticate(const USB_APDU *a)
 {
     uint8_t privkey[U2F_EC_KEY_SIZE], nonce[U2F_NONCE_LENGTH], mac[SHA256_DIGEST_LENGTH],
@@ -241,9 +290,16 @@ static void u2f_device_authenticate(const USB_APDU *a)
         return;
     }
 
-    if (req->keyHandle[0] == U2F_HIJACK_CMD &&
-            !memcmp(req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH)) {
-        u2f_hijack((const U2F_REQ_HIJACK *)req->keyHandle);
+    if (!memcmp(req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH)) {
+        // Vendor defined U2F commands appear to not be enabled in browsers.
+        // As an alternative interface, hijack the U2F AUTH key handle data field.
+        // Slower but works in browsers without requiring an extension.
+        if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
+            // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
+            u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
+        } else {
+            u2f_device_hijack(req);
+        }
         return;
     }
 

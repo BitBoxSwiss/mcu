@@ -54,7 +54,9 @@
 
 
 // Extension flags
-#define MEM_EXT_MASK_U2F  0x00000001// Mask of bit to enable (1) or disable (0) U2F
+#define MEM_EXT_MASK_U2F         0x00000001// Mask of bit to enable (1) or disable (0) U2F functions 
+// Will override and disable U2F_HIJACK bit when disabled
+#define MEM_EXT_MASK_U2F_HIJACK  0x00000002// Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
 
 
 // Default settings
@@ -62,7 +64,7 @@
 #define DEFAULT_erased    0xFF
 #define DEFAULT_setup     0xFF
 #define DEFAULT_u2f_count 0xFFFFFFFF
-#define DEFAULT_ext_flags 0xFFFFFFFF// U2F enabled by default
+#define DEFAULT_ext_flags 0xFFFFFFFF// U2F and U2F_hijack enabled by default
 
 
 typedef enum PASSWORD_ID {

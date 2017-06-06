@@ -35,7 +35,6 @@
 #include "flags.h"
 #include "random.h"
 #include "commander.h"
-#include "u2f_hijack.h"
 #include "yajl/src/api/yajl_tree.h"
 #include "secp256k1/include/secp256k1.h"
 #include "secp256k1/include/secp256k1_recovery.h"
@@ -91,6 +90,7 @@ static void tests_seed_xpub_backup(void)
 
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
+
     api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
@@ -103,7 +103,6 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
 
@@ -146,7 +145,6 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     if (!TEST_LIVE_DEVICE) {
         echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
@@ -446,9 +444,17 @@ static void tests_u2f(void)
 {
     USB_FRAME f, r;
     uint32_t cid = 5;
+    int test_u2fauth_hijack = TEST_U2FAUTH_HIJACK;
     api_create_u2f_frame(&f, cid, U2FHID_WINK, 0, NULL);
 
     api_reset_device();
+
+    // U2F command should run on fresh device
+    api_hid_send_frame(&f);
+    api_hid_read_frame(&r);
+    u_assert_int_eq(r.cid, cid);
+    u_assert_int_eq(r.init.cmd, U2FHID_WINK);
+    u_assert_int_eq(r.init.bcntl, 0);
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -456,16 +462,10 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    // U2F command should run when not seeded
-    api_hid_send_frame(&f);
-    api_hid_read_frame(&r);
-    u_assert_int_eq(r.cid, cid);
-    u_assert_int_eq(r.init.cmd, U2FHID_WINK);
-    u_assert_int_eq(r.init.bcntl, 0);
-
     // Seed
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
 
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"u.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
@@ -481,9 +481,15 @@ static void tests_u2f(void)
     // Disable U2F
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
+    if (TEST_U2FAUTH_HIJACK) {
+        u_assert_str_has(api_read_decrypted_report(), API_READ_ERROR);
+    } else {
+        u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
+        u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
+    }
 
     // U2F command should abort
     api_hid_send_frame(&f);
@@ -493,12 +499,30 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.bcntl, 1);
     u_assert_int_eq(r.init.data[0], U2FHID_ERR_CHANNEL_BUSY);
 
-    // Enable U2F
+    // Enable U2F - Must be done through HWW interface.
+    TEST_U2FAUTH_HIJACK = 0;
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
+
+
+    // Disable U2F hijack
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":false}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    if (TEST_U2FAUTH_HIJACK) {
+        u_assert_str_has(api_read_decrypted_report(), API_READ_ERROR);
+    } else {
+        u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+        u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":false");
+    }
 
     // U2F command runs
     api_hid_send_frame(&f);
@@ -507,24 +531,36 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.cmd, U2FHID_WINK);
     u_assert_int_eq(r.init.bcntl, 0);
 
+    // Enable U2F hijack - Must be done through HWW interface.
+    TEST_U2FAUTH_HIJACK = 0;
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":true}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
+
+    // Send invalid commands
     api_format_send_cmd(cmd_str(CMD_feature_set), "{}", PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"Foo\":false}", PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false, \"Foo\":false}",
-                        PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"true\"}", PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
     // Reset U2F
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), PASSWORD_STAND);
@@ -532,203 +568,6 @@ static void tests_u2f(void)
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
     // TODO - test that {reset: U2F} does reset U2F master by verifying U2F signatures
-}
-
-
-#define TESTS_U2F_HIJACK_KEYPATH      U2F_HIJACK_ETH_KEYPATH "/0"
-#define TESTS_U2F_HIJACK_KEYPATH_ERR  "m/44'/99'/0'/0/0"
-const uint8_t U2F_HIJACK_CODE[32];// extern
-
-static void tests_u2f_hijack(void)
-{
-    int ret;
-    uint8_t buf[512];
-    uint32_t cid = 1;
-    USB_APDU *a = (USB_APDU *)buf;
-    U2F_AUTHENTICATE_REQ *auth_req = (U2F_AUTHENTICATE_REQ *)a->data;
-    U2F_REQ_HIJACK *req = (U2F_REQ_HIJACK *)auth_req->keyHandle;
-    U2F_RESP_HIJACK resp;
-
-    memset(buf, 0, sizeof(buf));
-    memset(&resp, 0, sizeof(resp));
-
-    a->ins = U2F_AUTHENTICATE;
-    a->lc1 = 0;
-    a->lc2 = (sizeof(U2F_AUTHENTICATE_REQ) >> 8) & 255;
-    a->lc3 = (sizeof(U2F_AUTHENTICATE_REQ) & 255);
-
-    req->cmd = U2F_HIJACK_CMD;
-    req->mode = U2F_HIJACK_ETH_MODE;
-    req->op = U2F_HIJACK_OP_XPUB;
-    req->keypathlen = sizeof(TESTS_U2F_HIJACK_KEYPATH);
-    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH, sizeof(TESTS_U2F_HIJACK_KEYPATH));
-    memcpy(req->password, memory_report_aeskey(PASSWORD_STAND), MEM_PAGE_LEN);
-    memset(req->data, 0x88, U2F_HIJACK_REQ_DATA_MAX_LEN);
-    memcpy(auth_req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH);
-
-    api_reset_device();
-
-    // Get error if device erased
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
-
-    // Set device password, send wrong password with request
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    memset(req->password, 0xff, MEM_PAGE_LEN);
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_WRONG_DATA);
-
-    // Set correct password in request, but not yet seeded
-    memcpy(req->password, memory_report_aeskey(PASSWORD_STAND), MEM_PAGE_LEN);
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
-
-    // Set wrong password in request. After sending a correct password once, password field should be ingored.
-    // Should NOT get wrong password error but the previous not seeded error.
-    memset(req->password, 0xff, MEM_PAGE_LEN);
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_DATA_INVALID);
-
-    // Seed a wallet. Get successful reply
-    char seed[] =
-        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_rawH13ucR3\", \"raw\":\"true\", \"filename\":\"h.pdf\"}";
-    api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-
-    char xpub[] =
-        "0479e69b793d08d243b45c741c9adc38bb26f8350c5f4deaba708af9388849b2d64eb3479a6ef74059eb2b4c123caedc9380792ecb4b6a541169e3e89779d2161a";
-    char chaincode[] = "b356a5a9cba6384ff5ae023956f8918cd017ee20b80d5270bdd6e115d3b99614";
-    uint8_t echo_len = 0x80;
-    char sig_r[] = "32485bf2fc40389a4562e3be8a1c7246ec391b2ba7eb6b47ac667b51a46a6483";
-    char sig_s[] = "37e5bae9e047a301ddbe50b5b0b35f53858cd6b3ae8549d02bee21fbe637b614";
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
-    u_assert_mem_eq(resp.data, utils_hex_to_uint8(xpub), 65);
-    u_assert_mem_eq(resp.data + 65, utils_hex_to_uint8(chaincode), 32);
-
-    // Set non ETH keypath.
-    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH_ERR, sizeof(TESTS_U2F_HIJACK_KEYPATH));
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_WRONG_LENGTH);
-
-    // Set correct keypath. Get successful reply
-    memcpy(req->keypath, TESTS_U2F_HIJACK_KEYPATH, sizeof(TESTS_U2F_HIJACK_KEYPATH));
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
-    u_assert_mem_eq(resp.data, utils_hex_to_uint8(xpub), 65);
-    u_assert_mem_eq(resp.data + 65, utils_hex_to_uint8(chaincode), 32);
-
-    // Send sign command
-    req->op = U2F_HIJACK_OP_SIGN;
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
-#ifdef ECC_USE_SECP256K1_LIB
-    u_assert_int_eq(resp.data[0], 0x00);// recid
-#endif
-    u_assert_mem_eq(resp.data + 1, utils_hex_to_uint8(sig_r), 32);
-    u_assert_mem_eq(resp.data + 1 + 32, utils_hex_to_uint8(sig_s), 32);
-    u_assert_int_eq(resp.data[1 + 64], echo_len);
-
-    if (!TEST_LIVE_DEVICE) {
-        int decrypt_len;
-        char *dec = aes_cbc_b64_decrypt((const unsigned char *)(resp.data + 1 + 64 + 4),
-                                        resp.data[1 + 64], &decrypt_len, PASSWORD_VERIFY);
-        u_assert_int_eq(dec != NULL, 1);
-        u_assert_int_eq(decrypt_len - 1, U2F_HIJACK_REQ_DATA_MAX_LEN);
-        u_assert_mem_eq(dec, req->data, U2F_HIJACK_REQ_DATA_MAX_LEN);
-        free(dec);
-    }
-
-    // Disable U2F
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
-
-    // U2F command should abort
-    USB_FRAME r;
-
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    api_hid_read_frame(&r);
-    u_assert_int_eq(r.cid, cid);
-    u_assert_int_eq(r.init.cmd, U2FHID_ERROR);
-    u_assert_int_eq(r.init.bcntl, 1);
-    u_assert_int_eq(r.init.data[0], U2FHID_ERR_CHANNEL_BUSY);
-
-    // Enable U2F
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
-
-    // U2F command runs
-    ret = api_hid_send_frames(cid, U2FHID_MSG, buf,
-                              sizeof(U2F_AUTHENTICATE_REQ) + sizeof(USB_APDU));
-    u_assert_int_eq(ret, 0);
-
-    ret = api_hid_read_frames(cid, U2FHID_MSG, &resp, sizeof(resp));
-    u_assert_int_eq(ret, sizeof(resp));
-    u_assert_int_eq(resp.status, U2F_SW_NO_ERROR);
-#ifdef ECC_USE_SECP256K1_LIB
-    u_assert_int_eq(resp.data[0], 0x00);// recid
-#endif
-    u_assert_mem_eq(resp.data + 1, utils_hex_to_uint8(sig_r), 32);
-    u_assert_mem_eq(resp.data + 1 + 32, utils_hex_to_uint8(sig_s), 32);
-    u_assert_int_eq(resp.data[1 + 64], echo_len);
 }
 
 
@@ -1147,6 +986,7 @@ static void tests_password(void)
 
 static void tests_echo_tfa(void)
 {
+    char *echo;
     char hash_sign[] =
         "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign2[] =
@@ -1229,7 +1069,8 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pin));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
@@ -1238,7 +1079,8 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pin));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
     // correct pin
@@ -1331,6 +1173,7 @@ const char hash_2_input_2[] =
 static void tests_sign(void)
 {
     int i, res;
+    char *echo;
     char one_input_msg[] = "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
     char one_input[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
@@ -1352,17 +1195,18 @@ static void tests_sign(void)
     char recid_2_input_2[] = "01";
 
     char hashstr[] =
-        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p/0p/0p/0/100\"}";
+        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p/0p/0p/0/9999\"}";
     char hashstart[] =
-        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/100\"}], \"data\": [";
+        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/9999\"}], \"data\": [";
     char maxhashes[COMMANDER_REPORT_SIZE];
     char hashoverflow[COMMANDER_REPORT_SIZE];
 
+    i = 0;
     memset(hashoverflow, 0, sizeof(hashoverflow));
     memset(maxhashes, 0, sizeof(maxhashes));
     strcat(maxhashes, hashstart);
     strcat(maxhashes, hashstr);
-    i = 1;
+    i++;
     while ((i + 1) * COMMANDER_SIG_LEN < COMMANDER_ARRAY_MAX) {
         strcat(maxhashes, ",");
         strcat(maxhashes, hashstr);
@@ -1373,6 +1217,9 @@ static void tests_sign(void)
     strcat(hashoverflow, hashstr);
     strcat(hashoverflow, "]}");
     strcat(maxhashes, "]}");
+    u_print_info("Max hashes to sign: %i\n", i);
+    u_assert_int_eq(i >= COMMANDER_NUM_SIG_MIN, 1);
+
 
     char checkpub_msg_1[] =
         "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
@@ -1457,9 +1304,10 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/7");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
@@ -1473,9 +1321,10 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/8");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/8");
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
@@ -1495,9 +1344,11 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), checkpub, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "\"meta\":");
-        u_assert_str_has(api_read_decrypted_report(), check_1);
-        u_assert_str_has(api_read_decrypted_report(), check_2);
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "\"meta\":");
+        u_assert_str_has(echo, check_1);
+        u_assert_str_has(echo, check_2);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
@@ -1527,10 +1378,11 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/7");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pin));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
     // skip sending pin
@@ -1544,10 +1396,11 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/7");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pin));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
@@ -1557,10 +1410,11 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/7");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
-        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_pin));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, cmd_str(CMD_pin));
     } else {
         pin_err_count++;
     }
@@ -1583,9 +1437,10 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), "_meta_data_");
-        u_assert_str_has(api_read_decrypted_report(), "m/44'/0'/0'/1/8");
-        u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_pubkey));
+        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "m/44'/0'/0'/1/8");
     }
 
     // send correct pin
@@ -1757,7 +1612,7 @@ static void tests_memory_setup(void)
 {
     api_reset_device();
 
-    if (!TEST_LIVE_DEVICE) {
+    if (!TEST_LIVE_DEVICE && !TEST_U2FAUTH_HIJACK) {
         api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_MEM_SETUP));
     }
@@ -1774,16 +1629,15 @@ static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_u2f);
-    u_run_test(tests_u2f_hijack);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);
-    u_run_test(tests_sign);
     u_run_test(tests_device);
     u_run_test(tests_input);
     u_run_test(tests_seed_xpub_backup);
+    u_run_test(tests_sign);
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
@@ -1813,7 +1667,11 @@ int main(void)
 #ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();
 #endif
-    printf("\n\nInternal API Result:\n");
+    printf("\n\nInternal API result via standard interface:\n");
+    TEST_U2FAUTH_HIJACK = 0;
+    run_utests();
+    printf("\nInternal API result via hijack interface:\n");
+    TEST_U2FAUTH_HIJACK = 1;
     run_utests();
 
 #ifndef CONTINUOUS_INTEGRATION
@@ -1826,7 +1684,11 @@ int main(void)
     if (api_hid_init() == DBB_ERROR) {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
     } else {
-        printf("\n\nHID API Result:\n");
+        printf("\n\nHID API result via standard interface:\n");
+        TEST_U2FAUTH_HIJACK = 0;
+        run_utests();
+        printf("\nHID API result via hijack interface:\n");
+        TEST_U2FAUTH_HIJACK = 1;
         run_utests();
     }
 #endif

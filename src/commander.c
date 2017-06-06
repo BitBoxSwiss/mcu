@@ -1668,9 +1668,8 @@ static int commander_check_init(const char *encrypted_command)
     }
 
     if (memory_report_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
-        int status = touch_button_press(DBB_TOUCH_LONG);
-        if (status != DBB_TOUCHED) {
-            commander_fill_report(cmd_str(CMD_input), NULL, status);
+        if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
+            commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_TOUCH_BUTTON);
             return DBB_ERROR;
         }
     }

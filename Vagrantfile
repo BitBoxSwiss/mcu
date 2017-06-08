@@ -8,7 +8,7 @@ Vagrant.configure(2) do |config|
     sudo locale-gen UTF-8
     sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa -y
     sudo apt-get update
-    sudo apt-get install -y cmake git gcc-arm-embedded=6-2017q1-1~trusty1
+    sudo apt-get install -y cmake git gcc-arm-embedded=6-2017q1-1~trusty3
   SHELL
 
   config.vm.provision "shell", run: "always", privileged: false, inline: <<-SHELL

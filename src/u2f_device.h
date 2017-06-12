@@ -32,9 +32,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "usb.h"
+#include "u2f/u2f.h"
 
 
-extern const uint8_t U2F_HIJACK_CODE[32];
+extern const uint8_t U2F_HIJACK_CODE[U2F_NONCE_LENGTH];
 
 
 void u2f_send_message(const uint8_t *data, const uint32_t len);

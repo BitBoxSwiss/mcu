@@ -54,7 +54,7 @@ static hid_device *HID_HANDLE;
 static const char tests_pwd[] = "0000";
 static const char hidden_pwd[] = "hide";
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
-const uint8_t U2F_HIJACK_CODE[32];// extern
+const uint8_t U2F_HIJACK_CODE[U2F_NONCE_LENGTH];// extern
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];
 

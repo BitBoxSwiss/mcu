@@ -225,3 +225,19 @@ int utils_varint_to_uint64(const char *vi, uint64_t *i)
 
     return len;
 }
+
+static const char *PDF_FILE_EXT= ".pdf";
+
+void utils_get_u2f_bak_f(const char *p, char *s) {
+    unsigned long length_base = strlen(p);
+    if (length_base > strlen(PDF_FILE_EXT) && memcmp(p+length_base-strlen(PDF_FILE_EXT), PDF_FILE_EXT, strlen(PDF_FILE_EXT)) == 0) {
+        length_base -= strlen(PDF_FILE_EXT);
+    }
+    else {
+        memcpy(s, p, strlen(p)+1);
+        return;
+    }
+    memcpy(s, p, length_base);
+    memcpy(s+length_base, U2F_BAK_FILE_EXT, strlen(U2F_BAK_FILE_EXT));
+    s[length_base+strlen(U2F_BAK_FILE_EXT)] = 0; /* set terminating 0 byte */
+}

@@ -40,6 +40,7 @@
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 #define strlens(s) (s == NULL ? 0 : strlen(s))
 
+#define U2F_BAK_FILE_EXT ".u2f"
 
 volatile void *utils_zero(volatile void *dst, size_t len);
 void utils_clear_buffers(void);
@@ -52,5 +53,10 @@ void utils_reverse_bin(uint8_t *b, int len);
 void utils_uint64_to_varint(char *vi, int *l, uint64_t i);
 int utils_varint_to_uint64(const char *vi, uint64_t *i);
 
+/* writes the filename *p to *s, removes a possible .pdf
+ * file extenstions and adds .u2f
+ * *s musst be of size strlen(p)+strlen(U2F_BAK_FILE_EXT)+1
+ */
+void utils_get_u2f_bak_f(const char *p, char *s);
 
 #endif

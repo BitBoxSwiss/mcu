@@ -153,6 +153,8 @@ X(blink)          \
 X(pseudo)         \
 X(create)         \
 X(backup)         \
+X(backupwallet)\
+X(backupu2f)\
 X(export)         \
 X(xpub)           \
 X(id)             \
@@ -192,6 +194,8 @@ X(MEM_ERASED,            0, 0)\
 X(MEM_NOT_ERASED,        0, 0)\
 X(SD_REPLACE,            0, 0)\
 X(SD_NO_REPLACE,         0, 0)\
+X(SD_TYPE_PDF,           0, 0)\
+X(SD_TYPE_TXT,           0, 0)\
 X(JSON_STRING,           0, 0)\
 X(JSON_BOOL,             0, 0)\
 X(JSON_ARRAY,            0, 0)\

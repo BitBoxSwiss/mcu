@@ -53,9 +53,9 @@ uint8_t sd_list(int cmd);
 uint8_t sd_card_inserted(void);
 uint8_t sd_file_exists(const char *fn);
 uint8_t sd_erase(int cmd, const char *fn);
-char *sd_load(const char *fn, int cmd);
+char *sd_load(const char *fn, uint8_t type, int cmd);
 uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_name,
-                 uint8_t replace, int cmd);
+                 uint8_t replace, uint8_t type, int cmd);
 
 
 #endif

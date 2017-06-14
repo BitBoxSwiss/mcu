@@ -48,7 +48,7 @@ FATFS fs;
 
 
 uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_name,
-                 uint8_t replace, int cmd)
+                 uint8_t replace, uint8_t type, int cmd)
 {
     char file[256];
     char buffer[256];
@@ -89,6 +89,7 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
         goto err;
     }
 
+    if (type == DBB_SD_TYPE_PDF)
     {
         int len_1, len_2, len_3, len_4, len_total, len_xref, stream_len;
         unsigned long n = 0;
@@ -173,6 +174,16 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
             goto err;
         }
     }
+    else {
+        /* write txt file */
+        if (f_puts(wallet_backup, &file_object) == 0) {
+            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+            f_close(&file_object);
+            f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+            goto err;
+        }
+
+    }
 
     f_close(&file_object);
     f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
@@ -185,7 +196,7 @@ err:
 }
 
 
-char *sd_load(const char *fn, int cmd)
+char *sd_load(const char *fn, uint8_t type, int cmd)
 {
     FIL file_object;
     char file[256];
@@ -541,6 +552,12 @@ uint8_t sd_erase(int cmd, const char *fn)
             return DBB_ERROR;
         }
         failed = delete_file(fn);
+
+        /* try to delete a possible U2F file and eventually ignore an error */
+        char filenameU2F[strlen(fn)+strlen(U2F_BAK_FILE_EXT)+1];
+        utils_get_u2f_bak_f(fn, filenameU2F);
+        delete_file(filenameU2F);
+
     } else {
         failed = delete_files(path);
     }

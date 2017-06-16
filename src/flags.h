@@ -118,6 +118,7 @@ X(recid)          \
 X(pin)            \
 X(U2F)            \
 X(U2F_hijack)     \
+X(U2F_counter)    \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \

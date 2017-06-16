@@ -518,6 +518,7 @@ static void commander_process_seed(yajl_val json_node)
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
     const char *entropy_path[] = { cmd_str(CMD_seed), cmd_str(CMD_entropy), NULL };
     const char *filename_path[] = { cmd_str(CMD_seed), cmd_str(CMD_filename), NULL };
+    const char *u2f_counter_path[] = { cmd_str(CMD_seed), cmd_str(CMD_U2F_counter), NULL };
 
     const char *key = YAJL_GET_STRING(yajl_tree_get(json_node, key_path, yajl_t_string));
     const char *raw = YAJL_GET_STRING(yajl_tree_get(json_node, raw_path, yajl_t_string));
@@ -527,6 +528,9 @@ static void commander_process_seed(yajl_val json_node)
                                           yajl_t_string));
     const char *filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path,
                                            yajl_t_string));
+    yajl_val u2f_counter_data = yajl_tree_get(json_node, u2f_counter_path,
+                                              yajl_t_number);
+    long long u2f_counter = YAJL_GET_INTEGER(u2f_counter_data);
 
     if (wallet_is_locked()) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_LOCKED);
@@ -628,6 +632,12 @@ static void commander_process_seed(yajl_val json_node)
 
         utils_zero(backup_hex, strlens(backup_hex));
         utils_zero(entropy_c, sizeof(entropy_c));
+
+        /* see if we should set the counter */
+        if(u2f_counter_data) {
+            memory_u2f_count_set(u2f_counter);
+        }
+
         source_found = 1;
     }
     if (strcmp(source, attr_str(ATTR_backup)) == 0 || strcmp(source, attr_str(ATTR_backupu2f)) == 0) {

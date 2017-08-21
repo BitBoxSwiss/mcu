@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2016 Douglas J. Bakkum, Shift Devices AG
+ Copyright (c) 2016-2017 Douglas J. Bakkum, Shift Devices AG
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -65,8 +65,22 @@
 static uint32_t cid = 0;
 volatile bool u2f_state_continue = false;
 volatile uint16_t u2f_current_time_ms = 0;
-const uint8_t U2F_HIJACK_CODE[] = {57, 55, 173, 209, 178, 255, 144, 175, 24, 190, 240, 197, 183, 84, 22, 170, 58, 118, 133, 98, 243, 145, 238, 136, 137, 134, 248, 90, 247, 202, 114, 148};// Corresponds to a U2F client challenge filled with `0xdb`
-
+const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH] = {
+    {
+        /* Corresponds to U2F client challenge filled with `0xdb` */
+        /* Origin `https://digitalbitbox.com` */
+        57,  55, 173, 209, 178, 255, 144, 175,
+        24, 190, 240, 197, 183,  84,  22, 170,
+        58, 118, 133,  98, 243, 145, 238, 136,
+        137, 134, 248,  90, 247, 202, 114, 148
+    }, {
+        /* Origin `https://www.myetherwallet.com` */
+        240,  97, 125, 208,  85, 124, 251, 127,
+        247, 228, 158, 226, 243,  43,  46,  47,
+        60, 196, 229, 129, 113, 218, 237, 220,
+        200, 151, 111, 248,  63, 168, 101,  51
+    }
+};
 
 typedef struct {
     uint8_t reserved;
@@ -281,7 +295,7 @@ static void u2f_device_hijack(const U2F_AUTHENTICATE_REQ *req)
 static void u2f_device_authenticate(const USB_APDU *a)
 {
     uint8_t privkey[U2F_EC_KEY_SIZE], nonce[U2F_NONCE_LENGTH], mac[SHA256_DIGEST_LENGTH],
-            sig[64];
+            sig[64], i;
     const U2F_AUTHENTICATE_REQ *req = (const U2F_AUTHENTICATE_REQ *)a->data;
     U2F_AUTHENTICATE_SIG_STR sig_base;
 
@@ -290,17 +304,18 @@ static void u2f_device_authenticate(const USB_APDU *a)
         return;
     }
 
-    if (!memcmp(req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH)) {
-        // Vendor defined U2F commands appear to not be enabled in browsers.
+    for (i = 0; i < U2F_HIJACK_ORIGIN_TOTAL; i++) {
         // As an alternative interface, hijack the U2F AUTH key handle data field.
-        // Slower but works in browsers without requiring an extension.
-        if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
-            // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
-            u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
-        } else {
-            u2f_device_hijack(req);
+        // Slower but works in browsers for specified sites without requiring an extension.
+        if (!memcmp(req->challenge, U2F_HIJACK_CODE[i], U2F_NONCE_LENGTH)) {
+            if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
+                // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
+                u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
+            } else {
+                u2f_device_hijack(req);
+            }
+            return;
         }
-        return;
     }
 
     if (req->keyHandleLen != U2F_KEYHANDLE_LEN) {

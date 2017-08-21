@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2017 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -54,7 +54,7 @@ static hid_device *HID_HANDLE;
 static const char tests_pwd[] = "0000";
 static const char hidden_pwd[] = "hide";
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
-const uint8_t U2F_HIJACK_CODE[U2F_NONCE_LENGTH];// extern
+const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];// extern
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];
 

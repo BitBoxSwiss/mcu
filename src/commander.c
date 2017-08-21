@@ -1462,8 +1462,11 @@ static int commander_echo_command(yajl_val json_node)
 
 static int commander_touch_button(int found_cmd)
 {
-    if (found_cmd == CMD_seed && wallet_seeded() != DBB_OK) {
+    if ((found_cmd == CMD_seed || found_cmd == CMD_reset) && wallet_seeded() != DBB_OK) {
         // Do not require touch if not yet seeded
+        return DBB_OK;
+    } else if (found_cmd == CMD_bootloader && commander_bootloader_unlocked()) {
+        // Do not require touch to relock bootloader
         return DBB_OK;
     } else if (found_cmd < CMD_REQUIRE_TOUCH) {
         return touch_button_press(DBB_TOUCH_LONG);

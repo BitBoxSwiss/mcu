@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2016 Douglas J. Bakkum, Shift Devices AG
+ Copyright (c) 2016-2017 Douglas J. Bakkum, Shift Devices AG
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,10 @@
 #include "u2f/u2f.h"
 
 
-extern const uint8_t U2F_HIJACK_CODE[U2F_NONCE_LENGTH];
+#define U2F_HIJACK_ORIGIN_TOTAL 2
+
+
+extern const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];
 
 
 void u2f_send_message(const uint8_t *data, const uint32_t len);

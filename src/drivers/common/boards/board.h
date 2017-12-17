@@ -318,8 +318,7 @@ extern "C" {
 #elif BOARD == AVR_SIMULATOR_UC3
 #  include "avr_simulator_uc3/avr_simulator_uc3.h"
 #elif BOARD == USER_BOARD
-  // User-reserved area: #include the header file of your board here (if any).
-#  include "user_board.h"
+#  include "board_com.h"
 #elif BOARD == DUMMY_BOARD
 #  include "dummy/dummy_board.h"
 #else
@@ -348,27 +347,6 @@ extern "C" {
     // User-reserved area: #include the header file of your extension board here
     // (if any).
 #  endif
-#endif
-
-
-#if (defined(__GNUC__) && defined(__AVR32__)) || (defined(__ICCAVR32__) || defined(__AAVR32__))
-#ifdef __AVR32_ABI_COMPILER__ // Automatically defined when compiling for AVR32, not when assembling.
-
-/*! \brief This function initializes the board target resources
- *
- * This function should be called to ensure proper initialization of the target
- * board hardware connected to the part.
- */
-extern void board_init(void);
-
-#endif  // #ifdef __AVR32_ABI_COMPILER__
-#else
-/*! \brief This function initializes the board target resources
- *
- * This function should be called to ensure proper initialization of the target
- * board hardware connected to the part.
- */
-extern void board_init(void);
 #endif
 
 

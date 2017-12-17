@@ -19,14 +19,16 @@ try:
 
 
     # Example JSON commands - refer to digitalbitbox.com/api
-    message = '{"backup":"list"}' 
+    message = '{"backup":"list"}'
     message = '{"device":"info"}'
-    message = '{"random":"pseudo"}' 
-    message = '{"bootloader":"lock"}' 
-    message = '{"bootloader":"unlock"}' 
-    message = '{"feature_set":{"U2F":false}}' 
-    message = '{"led":"blink"}' 
-
+    message = '{"random":"pseudo"}'
+    message = '{"bootloader":"lock"}'
+    message = '{"bootloader":"unlock"}'
+    message = '{"feature_set":{"U2F":false}}'
+    message = '{"seed":{\"source\":\"create\", \"filename\":\"testing.pdf\", \"key\":\"password\"}}'
+    message = '{"sign":{"meta":"hash", "data":[{"keypath":"m/1/1/1/0", "hash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},{"keypath":"m/1/1/1/1", "hash":"123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"}]}}'
+    message = '{"led":"blink"}'
+    
 
     # Send a JSON command
     hid_send_encrypt(message, password)

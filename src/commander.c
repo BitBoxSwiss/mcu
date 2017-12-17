@@ -42,7 +42,6 @@
 #include "led.h"
 #include "ecc.h"
 #ifndef TESTING
-#include "ataes132.h"
 #include "touch.h"
 #include "mcu.h"
 #include "sd.h"

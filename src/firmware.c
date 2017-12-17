@@ -30,7 +30,6 @@
 #include <string.h>
 #include "drivers/config/conf_usb.h"
 #include "drivers/config/mcu.h"
-#include "sd.h"
 #include "usb.h"
 #include "ecc.h"
 #include "led.h"
@@ -38,8 +37,8 @@
 #include "memory.h"
 #include "random.h"
 #include "systick.h"
-#include "ataes132.h"
 #include "commander.h"
+#include "board_com.h"
 
 
 uint32_t __stack_chk_guard = 0;
@@ -60,6 +59,24 @@ void SysTick_Handler(void)
 }
 
 
+void HardFault_Handler(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(500);
+    }
+}
+
+
+void MemManage_Handler(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(1000);
+    }
+}
+
+
 char usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
 
 int main (void)
@@ -69,10 +86,9 @@ int main (void)
     cpu_irq_enable();
     sleepmgr_init();
     sysclk_init();
-    board_init();
-    ataes_init();
-    __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
+    board_com_init();
+    __stack_chk_guard = random_uint32(0);
     pmc_enable_periph_clk(ID_PIOA);
     delay_init(F_CPU);
     systick_init();

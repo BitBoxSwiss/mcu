@@ -48,7 +48,6 @@
 #include "preprocessor.h"
 
 /* Get USB VBus pin configuration in board configuration */
-#include "conf_board.h"
 #include "board.h"
 #include "ioport.h"
 #include "pio.h"

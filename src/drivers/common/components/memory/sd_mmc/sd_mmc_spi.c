@@ -44,65 +44,27 @@
 #include <status_codes.h>
 #include <board.h>
 #include <string.h>
-#include "conf_board.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <spi_master.h>
 #include "conf_sd_mmc.h"
 #include "sd_mmc_protocol.h"
 #include "sd_mmc_spi.h"
 #include "sd_mmc.h"
 #include "ioport.h"
 
-#ifdef SD_MMC_SPI_MODE
-
-/**
- * \ingroup sd_mmc_stack_spi
- * \defgroup sd_mmc_stack_spi_internal Common SPI interface for SD/MMC stack
- * implementation
- *
- * @{
- */
-
-
-// Check configurations
-#if (!defined SD_MMC_SPI_MEM_CNT) || (SD_MMC_SPI_MEM_CNT == 0)
-#  warning SD_MMC_SPI_MEM_CNT must be defined in board.h file.
-#  define SD_MMC_SPI_MEM_CNT 1
-#endif
-
-#if defined(SD_MMC_SPI_USES_USART_SPI_SERVICE)
-#  include <usart_spi.h>
-#  define driver  usart_spi
-#else
-#  include <spi_master.h>
-#  define driver  spi
-#  define spi_setup_device  spi_master_setup_device
-#endif
 
 // Link common functions to the driver used (spi or usart_spi)
-#define sd_mmc_spi_drv_device           ATPASTE2(driver, _device)
-#define sd_mmc_spi_drv_setup_device     ATPASTE2(driver, _setup_device)
-#define sd_mmc_spi_drv_select_device    ATPASTE2(driver, _select_device)
-#define sd_mmc_spi_drv_deselect_device  ATPASTE2(driver, _deselect_device)
-#define sd_mmc_spi_drv_write_packet     ATPASTE2(driver, _write_packet)
-#define sd_mmc_spi_drv_read_packet      ATPASTE2(driver, _read_packet)
+#define sd_mmc_spi_drv_setup_device     spi_master_setup_device
+#define sd_mmc_spi_drv_select_device    spi_select_device
+#define sd_mmc_spi_drv_deselect_device  spi_deselect_device
+#define sd_mmc_spi_drv_write_packet     spi_write_packet
+#define sd_mmc_spi_drv_read_packet      spi_read_packet
 
-// Enable debug information for SD/MMC SPI module
-#ifdef SD_MMC_SPI_DEBUG
-#include <stdio.h>
-#define sd_mmc_spi_debug(...)      printf(__VA_ARGS__)
-#else
 #define sd_mmc_spi_debug(...)
-#endif
 
 //! Internal global error status
 static sd_mmc_spi_errno_t sd_mmc_spi_err;
-
-//! Slot array of SPI structures
-static struct sd_mmc_spi_drv_device sd_mmc_spi_devices[] = {
-# define SD_MMC_SPI_CS(slot, unused) \
-		{ .id = SD_MMC_SPI_##slot##_CS},
-		MREPEAT(SD_MMC_SPI_MEM_CNT, SD_MMC_SPI_CS, ~)
-# undef SD_MMC_SPI_CS
-};
 
 //! 32 bits response of the last command
 static uint32_t sd_mmc_spi_response_32;
@@ -344,21 +306,14 @@ sd_mmc_spi_errno_t sd_mmc_spi_get_errno(void)
 
 void sd_mmc_spi_init(void)
 {
-	sd_mmc_spi_err = SD_MMC_SPI_NO_ERR;
-	// Initialize SPI interface and enable it
-#if defined(SD_MMC_SPI_USES_USART_SPI_SERVICE)
-		usart_spi_init(SD_MMC_SPI);
-#else
-	if (!spi_is_enabled(SD_MMC_SPI)) {
-		spi_master_init(SD_MMC_SPI);
-		spi_enable(SD_MMC_SPI);
-	}
-#endif
+	board_com_init();
+    sd_mmc_spi_err = SD_MMC_SPI_NO_ERR;
 }
 
 void sd_mmc_spi_select_device(uint8_t slot, uint32_t clock, uint8_t bus_width,
 		bool high_speed)
 {
+	UNUSED(slot);
 	UNUSED(bus_width);
 	UNUSED(high_speed);
 	sd_mmc_spi_err = SD_MMC_SPI_NO_ERR;
@@ -369,15 +324,21 @@ void sd_mmc_spi_select_device(uint8_t slot, uint32_t clock, uint8_t bus_width,
 	}
 #endif
 
-	sd_mmc_spi_drv_setup_device(SD_MMC_SPI, &sd_mmc_spi_devices[slot],
-			SPI_MODE_0, clock, 0);
-	sd_mmc_spi_drv_select_device(SD_MMC_SPI, &sd_mmc_spi_devices[slot]);
+    struct spi_device sd_mmc_spi_device = {
+        .id = board_com_report_sd_cs()
+    };
+    sd_mmc_spi_drv_setup_device(SD_MMC_SPI, &sd_mmc_spi_device, SPI_MODE_0, clock, 0);
+    sd_mmc_spi_drv_select_device(SD_MMC_SPI, &sd_mmc_spi_device);
 }
 
 void sd_mmc_spi_deselect_device(uint8_t slot)
 {
+	UNUSED(slot);
+    struct spi_device sd_mmc_spi_device = {
+        .id = board_com_report_sd_cs()
+    };
 	sd_mmc_spi_err = SD_MMC_SPI_NO_ERR;
-	sd_mmc_spi_drv_deselect_device(SD_MMC_SPI, &sd_mmc_spi_devices[slot]);
+	sd_mmc_spi_drv_deselect_device(SD_MMC_SPI, &sd_mmc_spi_device);
 }
 
 void sd_mmc_spi_send_clock(void)
@@ -628,7 +589,3 @@ bool sd_mmc_spi_wait_end_of_write_blocks(void)
 	}
 	return sd_mmc_spi_stop_multiwrite_block();
 }
-
-//! @}
-
-#endif // SD_MMC_SPI_MODE

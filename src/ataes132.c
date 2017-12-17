@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2017 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -27,17 +27,10 @@
 
 #include <string.h>
 
+#include "board_com.h"
 #include "ataes132.h"
-#include "delay.h"
 #include "flags.h"
 #include "mcu.h"
-
-
-#define ataes_build_word_address(p_u8, addr) \
-do {\
-    p_u8[0] = (uint8_t)(addr >> 8);\
-    p_u8[1] = (uint8_t)(addr & 0xFF);\
-} while (0)
 
 
 static void ataes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *crc)
@@ -71,38 +64,46 @@ static void ataes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *cr
 static uint8_t ataes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length,
                                   uint8_t *p_wr_buffer)
 {
-    twi_package_t twi_package;
-    twi_package.chip = AES_DEVICE_ADDR;
-    ataes_build_word_address(twi_package.addr, u32_start_address);
-    twi_package.addr_length = AES_MEM_ADDR_LEN;
-    twi_package.buffer = p_wr_buffer;
-    twi_package.length = u16_length;
-    return twi_master_write(AES_TWI, &twi_package);
+    switch (board_com_report_ataes_mode()) {
+        case BOARD_COM_ATAES_MODE_SPI: {
+            uint8_t spi_cmd[3 + u16_length];
+            spi_cmd[0] = BOARD_COM_ATAES_SPI_INS_WREN;
+            board_com_spi_write(BOARD_COM_SPI_DEV_ATAES, spi_cmd, 1);
+            spi_cmd[0] = BOARD_COM_ATAES_SPI_INS_WRITE;
+            spi_cmd[1] = (uint8_t)(u32_start_address >> 8);
+            spi_cmd[2] = (uint8_t)(u32_start_address & 0xFF);
+            memcpy(spi_cmd + 3, p_wr_buffer, u16_length);
+            return board_com_spi_write(BOARD_COM_SPI_DEV_ATAES, spi_cmd, sizeof(spi_cmd));
+        }
+        case BOARD_COM_ATAES_MODE_TWI: {
+            return board_com_twi_write(u32_start_address, p_wr_buffer, u16_length);
+        }
+        default: {
+            return 1;
+        }
+    }
 }
 
 
 static uint32_t ataes_eeprom_read(uint32_t u32_start_address, uint16_t u16_length,
                                   uint8_t *p_rd_buffer)
 {
-    twi_package_t twi_package;
-    twi_package.chip = AES_DEVICE_ADDR;
-    ataes_build_word_address(twi_package.addr, u32_start_address);
-    twi_package.addr_length = AES_MEM_ADDR_LEN;
-    twi_package.buffer = p_rd_buffer;
-    twi_package.length = u16_length;
-    return twi_master_read(AES_TWI, &twi_package);
-}
-
-
-void ataes_init(void)
-{
-    twi_options_t opts = {
-        .master_clk = sysclk_get_cpu_hz(),
-        .speed = AES_TWI_SPEED,
-        .smbus = 0
-    };
-    sysclk_enable_peripheral_clock(AES_TWI_ID);
-    twi_master_init(AES_TWI, &opts);
+    switch (board_com_report_ataes_mode()) {
+        case BOARD_COM_ATAES_MODE_SPI: {
+            uint8_t spi_cmd[3];
+            spi_cmd[0] = BOARD_COM_ATAES_SPI_INS_READ;
+            spi_cmd[1] = (uint8_t)(u32_start_address >> 8);
+            spi_cmd[2] = (uint8_t)(u32_start_address & 0xFF);
+            return board_com_spi_write_read(BOARD_COM_SPI_DEV_ATAES, spi_cmd, sizeof(spi_cmd),
+                                            p_rd_buffer, u16_length);
+        }
+        case BOARD_COM_ATAES_MODE_TWI: {
+            return board_com_twi_read(u32_start_address, p_rd_buffer, u16_length);
+        }
+        default: {
+            return 1;
+        }
+    }
 }
 
 
@@ -137,7 +138,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Check if awake
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &ataes_status);
+        ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
         if (!ataes_status && !ret) {
             break;
         }
@@ -153,7 +154,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Reset memory pointer
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_write(AES_MEM_ADDR_RESET, 1, 0);
+        ret = ataes_eeprom_write(BOARD_COM_ATAES_ADDR_RESET, 1, 0);
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
@@ -164,7 +165,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Check if ready
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &ataes_status);
+        ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
         if (!ataes_status && !ret) {
             break;
         }
@@ -179,7 +180,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Write command block
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_write(AES_MEM_ADDR_IO, cmd_len + 3, command_block);
+        ret = ataes_eeprom_write(BOARD_COM_ATAES_ADDR_IO, cmd_len + 3, command_block);
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
@@ -190,7 +191,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Check if data is available to read (0x40)
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &ataes_status);
+        ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
         if ((ataes_status & 0x40) && !ret) {
             break;
         }
@@ -203,7 +204,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Reset memory pointer
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_write(AES_MEM_ADDR_RESET, 1, 0);
+        ret = ataes_eeprom_write(BOARD_COM_ATAES_ADDR_RESET, 1, 0);
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
@@ -214,7 +215,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
     // Read response block - does not change STATUS register
     cnt = 0;
     while (1) {
-        ret = ataes_eeprom_read(AES_MEM_ADDR_IO, response_len, response_block);
+        ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_IO, response_len, response_block);
         if (!ret) {
             break;
         } else if (cnt++ > timeout) {
@@ -242,7 +243,7 @@ int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
             return DBB_ERROR;
         }
         while (1) {
-            ret = ataes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &ataes_status);
+            ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
             if (!(ataes_status & 0x81) && !ret) { // 0x81 = no error and device ready
                 break;
             } else if (cnt++ > timeout) {
@@ -258,7 +259,7 @@ int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
             return DBB_ERROR;
         }
         while (1) {
-            ret = ataes_eeprom_read(AES_MEM_ADDR_STATUS, 1, &ataes_status);
+            ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
             if (!ataes_status && !ret) {
                 break;
             } else if (cnt++ > timeout) {

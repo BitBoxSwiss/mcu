@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -702,7 +702,7 @@ static void tests_device(void)
         u_assert_int_eq(!ciphertext, 0);
         int decrypt_len;
         char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                        &decrypt_len, PASSWORD_VERIFY);
+                                        &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
         u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
         free(dec);
         yajl_tree_free(json_node);
@@ -882,7 +882,7 @@ static void tests_password(void)
         if (ciphertext) {
             int decrypt_len;
             char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                            &decrypt_len, PASSWORD_VERIFY);
+                                            &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
             u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
             free(dec);
         }
@@ -1520,7 +1520,7 @@ static void tests_aes_cbc(void)
                                  yajl_t_string));
         int dlen;
         char *d = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                      &dlen, PASSWORD_VERIFY);
+                                      &dlen, memory_report_aeskey(PASSWORD_VERIFY));
         u_assert_str_eq(d, "passwordpassword");
         free(d);
         yajl_tree_free(json_node);

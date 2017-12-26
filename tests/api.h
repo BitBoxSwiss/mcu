@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2017 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -89,7 +89,7 @@ static void api_decrypt_report(const char *report, PASSWORD_ID dec_id)
                                  yajl_t_string));
         if (ciphertext) {
             dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                      &decrypt_len, dec_id);
+                                      &decrypt_len, memory_report_aeskey(dec_id));
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 goto exit;
@@ -374,7 +374,8 @@ static void api_hid_send(const char *cmd)
 static void api_hid_send_encrypt(const char *cmd, PASSWORD_ID id)
 {
     int enc_len;
-    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len, id);
+    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len,
+                                    memory_report_aeskey(id));
     api_hid_send_len(enc, enc_len);
     free(enc);
 }
@@ -463,7 +464,7 @@ static char *api_read_value_decrypt(int cmd, PASSWORD_ID id)
 
     int decrypt_len;
     char *dec = aes_cbc_b64_decrypt((const unsigned char *)val, strlens(val),
-                                    &decrypt_len, id);
+                                    &decrypt_len, memory_report_aeskey(id));
 
     snprintf(val_dec, HID_REPORT_SIZE, "%.*s", decrypt_len, dec);
     free(dec);

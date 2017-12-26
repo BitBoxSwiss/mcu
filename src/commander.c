@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -61,7 +61,7 @@ static int TFA_VERIFY = 0;
 
 // Must free() returned value (allocated inside base64() function)
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
-                          PASSWORD_ID id)
+                          const uint8_t *key)
 {
     int  pads;
     int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
@@ -73,7 +73,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
 
     // Set cipher key
     memset(ctx, 0, sizeof(ctx));
-    aes_set_key(memory_report_aeskey(id), 32, ctx);
+    aes_set_key(key, 32, ctx);
 
     // PKCS7 padding
     memcpy(inpad, in, inlen);
@@ -85,6 +85,7 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == DBB_ERROR) {
         commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
         utils_zero(inpad, inpadlen);
+        utils_zero(ctx, sizeof(ctx));
         return NULL;
     }
     memcpy(enc_cat, iv, N_BLOCK);
@@ -99,13 +100,14 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
     *out_b64len = b64len;
     utils_zero(inpad, inpadlen);
+    utils_zero(ctx, sizeof(ctx));
     return b64;
 }
 
 
 // Must free() returned value
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
-                          PASSWORD_ID id)
+                          const uint8_t *key)
 {
     *decrypt_len = 0;
 
@@ -124,7 +126,7 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     // Set cipher key
     aes_context ctx[1];
     memset(ctx, 0, sizeof(ctx));
-    aes_set_key(memory_report_aeskey(id), 32, ctx);
+    aes_set_key(key, 32, ctx);
 
     unsigned char dec_pad[ub64len - N_BLOCK];
     aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
@@ -135,17 +137,20 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     int padlen = dec_pad[ub64len - N_BLOCK - 1];
     if (ub64len - N_BLOCK - padlen <= 0) {
         utils_zero(dec_pad, sizeof(dec_pad));
+        utils_zero(ctx, sizeof(ctx));
         return NULL;
     }
     char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
     if (!dec) {
         utils_zero(dec_pad, sizeof(dec_pad));
+        utils_zero(ctx, sizeof(ctx));
         return NULL;
     }
     memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
     dec[ub64len - N_BLOCK - padlen] = '\0';
     *decrypt_len = ub64len - N_BLOCK - padlen + 1;
     utils_zero(dec_pad, sizeof(dec_pad));
+    utils_zero(ctx, sizeof(ctx));
     return dec;
 }
 
@@ -690,7 +695,7 @@ static void commander_process_random(yajl_val json_node)
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)echo_number,
                                          strlens(echo_number),
                                          &encrypt_len,
-                                         PASSWORD_VERIFY);
+                                         memory_report_aeskey(PASSWORD_VERIFY));
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
         free(encoded_report);
@@ -831,7 +836,7 @@ static void commander_process_verifypass(yajl_val json_node)
             char *enc = aes_cbc_b64_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
                                             strlens(VERIFYPASS_CRYPT_TEST),
                                             &encrypt_len,
-                                            PASSWORD_VERIFY);
+                                            memory_report_aeskey(PASSWORD_VERIFY));
             if (enc) {
                 snprintf(msg, sizeof(msg), "{\"%s\":\"%s\", \"%s\":\"%s\"}",
                          cmd_str(CMD_ecdh), utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)),
@@ -871,7 +876,7 @@ static void commander_process_xpub(yajl_val json_node)
         encoded_report = aes_cbc_b64_encrypt((unsigned char *)xpub,
                                              strlens(xpub),
                                              &encrypt_len,
-                                             PASSWORD_VERIFY);
+                                             memory_report_aeskey(PASSWORD_VERIFY));
         if (encoded_report) {
             commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
             free(encoded_report);
@@ -980,7 +985,7 @@ static void commander_process_device(yajl_val json_node)
         char *tfa = aes_cbc_b64_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
                                         strlens(VERIFYPASS_CRYPT_TEST),
                                         &tfa_len,
-                                        PASSWORD_VERIFY);
+                                        memory_report_aeskey(PASSWORD_VERIFY));
         if (!tfa) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_ENCRYPT);
@@ -1067,7 +1072,8 @@ static void commander_process_aes256cbc(yajl_val json_node)
         if (strlens(data) > AES_DATA_LEN_MAX) {
             commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DATA_LEN);
         } else {
-            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len, id);
+            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len,
+                                        memory_report_aeskey(id));
             if (crypt) {
                 commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
             } else {
@@ -1079,7 +1085,8 @@ static void commander_process_aes256cbc(yajl_val json_node)
     }
 
     if (strncmp(type, attr_str(ATTR_decrypt), strlens(attr_str(ATTR_decrypt))) == 0) {
-        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len, id);
+        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len,
+                                    memory_report_aeskey(id));
         if (crypt) {
             commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
         } else {
@@ -1446,7 +1453,7 @@ static int commander_echo_command(yajl_val json_node)
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlens(json_report),
                                          &encrypt_len,
-                                         PASSWORD_VERIFY);
+                                         memory_report_aeskey(PASSWORD_VERIFY));
     commander_clear_report();
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
@@ -1576,7 +1583,8 @@ exit:
     encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
                                          strlens(json_report),
                                          &encrypt_len,
-                                         wallet_is_hidden() ? PASSWORD_HIDDEN : PASSWORD_STAND);
+                                         wallet_is_hidden() ? memory_report_aeskey(PASSWORD_HIDDEN) : memory_report_aeskey(
+                                                 PASSWORD_STAND));
     commander_clear_report();
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_ciphertext), encoded_report, DBB_OK);
@@ -1601,7 +1609,7 @@ static char *commander_decrypt(const char *encrypted_command)
     command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                   strlens(encrypted_command),
                                   &command_len,
-                                  PASSWORD_STAND);
+                                  memory_report_aeskey(PASSWORD_STAND));
 
     err_count = memory_report_access_err_count();
     err_iter = memory_report_access_err_count() + 1;
@@ -1631,7 +1639,7 @@ static char *commander_decrypt(const char *encrypted_command)
         command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
                                       strlens(encrypted_command),
                                       &command_len,
-                                      PASSWORD_HIDDEN);
+                                      memory_report_aeskey(PASSWORD_HIDDEN));
         if (strlens(command)) {
             yajl_val json_node = yajl_tree_parse(command, NULL, 0);
             if (json_node && YAJL_IS_OBJECT(json_node)) {

@@ -54,7 +54,6 @@ static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -234,7 +233,6 @@ uint8_t memory_setup(void)
         memory_read_ext_flags();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
         memory_master_u2f(NULL);// Load cache so that U2F speed is fast enough
@@ -258,7 +256,6 @@ void memory_reset_hww(void)
     memory_random_password(PASSWORD_STAND);
     memory_random_password(PASSWORD_VERIFY);
     memory_random_password(PASSWORD_HIDDEN);
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_hww_seed();
     memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
@@ -369,9 +366,6 @@ uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_HIDDEN:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
             break;
-        case PASSWORD_CRYPT:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
-            break;
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
             break;
@@ -396,8 +390,6 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
             return MEM_aeskey_stand;
         case PASSWORD_HIDDEN:
             return MEM_aeskey_reset;
-        case PASSWORD_CRYPT:
-            return MEM_aeskey_crypt;
         case PASSWORD_VERIFY:
             return MEM_aeskey_verify;
         default:

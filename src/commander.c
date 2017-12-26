@@ -1015,91 +1015,6 @@ static void commander_process_device(yajl_val json_node)
 }
 
 
-static void commander_process_aes256cbc(yajl_val json_node)
-{
-    const char *type, *data;
-    char *crypt;
-    int crypt_len;
-    PASSWORD_ID id;
-
-    const char *type_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_type), NULL };
-    const char *data_path[] = { cmd_str(CMD_aes256cbc), cmd_str(CMD_data), NULL };
-    type = YAJL_GET_STRING(yajl_tree_get(json_node, type_path, yajl_t_string));
-    data = YAJL_GET_STRING(yajl_tree_get(json_node, data_path, yajl_t_string));
-
-    if (!type || !data) {
-        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
-        return;
-    }
-
-    if (strncmp(type, attr_str(ATTR_password), strlens(attr_str(ATTR_password))) == 0) {
-        int ret = commander_process_aes_key(data, strlens(data), PASSWORD_CRYPT);
-        if (ret == DBB_OK) {
-            commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
-        } else {
-            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, ret);
-        }
-        return;
-    }
-
-    if (strncmp(type, attr_str(ATTR_xpub), strlens(attr_str(ATTR_xpub))) == 0) {
-        char xpub[112] = {0};
-        wallet_report_xpub(data, xpub);
-        if (xpub[0]) {
-            int ret = commander_process_aes_key(xpub, 112, PASSWORD_CRYPT);
-            if (ret == DBB_OK) {
-                commander_fill_report(cmd_str(CMD_aes256cbc), attr_str(ATTR_success), DBB_OK);
-            } else {
-                commander_fill_report(cmd_str(CMD_aes256cbc), NULL, ret);
-            }
-        } else {
-            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_KEY_MASTER);
-        }
-        return;
-    }
-
-    if (strncmp(type, attr_str(ATTR_verify), strlens(attr_str(ATTR_verify))) == 0) {
-        id = PASSWORD_VERIFY;
-    } else if (memory_aeskey_is_erased(PASSWORD_CRYPT) == DBB_MEM_ERASED) {
-        commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_NO_PASSWORD);
-        return;
-    } else {
-        id = PASSWORD_CRYPT;
-    }
-
-    if (strncmp(type, attr_str(ATTR_encrypt), strlens(attr_str(ATTR_encrypt))) == 0 ||
-            strncmp(type, attr_str(ATTR_verify), strlens(attr_str(ATTR_verify))) == 0) {
-        if (strlens(data) > AES_DATA_LEN_MAX) {
-            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DATA_LEN);
-        } else {
-            crypt = aes_cbc_b64_encrypt((const unsigned char *)data, strlens(data), &crypt_len,
-                                        memory_report_aeskey(id));
-            if (crypt) {
-                commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
-            } else {
-                commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_MEM_ENCRYPT);
-            }
-            free(crypt);
-        }
-        return;
-    }
-
-    if (strncmp(type, attr_str(ATTR_decrypt), strlens(attr_str(ATTR_decrypt))) == 0) {
-        crypt = aes_cbc_b64_decrypt((const unsigned char *)data, strlens(data), &crypt_len,
-                                    memory_report_aeskey(id));
-        if (crypt) {
-            commander_fill_report(cmd_str(CMD_aes256cbc), crypt, DBB_OK);
-        } else {
-            commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_DECRYPT);
-        }
-        free(crypt);
-        return;
-    }
-
-    commander_fill_report(cmd_str(CMD_aes256cbc), NULL, DBB_ERR_IO_INVALID_CMD);
-}
-
-
 static void commander_process_led(yajl_val json_node)
 {
     const char *path[] = { cmd_str(CMD_led), NULL };
@@ -1293,10 +1208,6 @@ static int commander_process(int cmd, yajl_val json_node)
 
         case CMD_device:
             commander_process_device(json_node);
-            break;
-
-        case CMD_aes256cbc:
-            commander_process_aes256cbc(json_node);
             break;
 
         case CMD_bootloader:

@@ -47,8 +47,9 @@
 #define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
 #define MEM_AESKEY_STAND_ADDR           0x0400
 #define MEM_AESKEY_VERIFY_ADDR          0x0500
-#define MEM_AESKEY_CRYPT_ADDR           0x0600
-#define MEM_AESKEY_HIDDEN_ADDR          0x0800// Zone 7 reserved
+#define MEM_AESKEY_Z6_ADDR              0x0600// Zone 6 reserved first 32*4 bytes
+#define MEM_AESKEY_Z7_ADDR              0x0700// Zone 7 reserved
+#define MEM_AESKEY_HIDDEN_ADDR          0x0800
 #define MEM_MASTER_ENTROPY_ADDR         0x0900
 #define MEM_MASTER_U2F_ADDR             0x0A00
 
@@ -71,7 +72,6 @@ typedef enum PASSWORD_ID {
     PASSWORD_STAND,
     PASSWORD_HIDDEN,
     PASSWORD_VERIFY,
-    PASSWORD_CRYPT,
     PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 

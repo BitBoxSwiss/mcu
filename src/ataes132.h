@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2017 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -32,17 +32,6 @@
 #include <stdint.h>
 
 
-#define AES_DEVICE_ADDR     0x50u
-#define AES_MEM_ADDR_LEN    2
-#define AES_MEM_ADDR_IO     0xFE00
-#define AES_MEM_ADDR_STATUS 0xFFF0
-#define AES_MEM_ADDR_RESET  0xFFE0
-#define AES_TWI             TWI0
-#define AES_TWI_ID          ID_TWI0
-#define AES_TWI_SPEED       10000
-
-
-void ataes_init(void);
 int ataes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block,
                   uint16_t response_len);
 int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,

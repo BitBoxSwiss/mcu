@@ -42,7 +42,6 @@
  */
 
 #include <string.h>
-#include "conf_board.h"
 #include "board.h"
 #include "conf_sd_mmc.h"
 #include "sd_mmc_protocol.h"
@@ -1756,22 +1755,6 @@ static bool sd_mmc_mci_install_mmc(void)
 
 void sd_mmc_init(void)
 {
-	//! Enable the PMC clock for the card detect pins
-#if (defined SD_MMC_0_CD_GPIO) && (!defined SAM4L)
-# include "pmc.h"
-# define SD_MMC_ENABLE_CD_PIN(slot, unused) \
-	pmc_enable_periph_clk(SD_MMC_##slot##_CD_PIO_ID);
-	MREPEAT(SD_MMC_MEM_CNT, SD_MMC_ENABLE_CD_PIN, ~)
-# undef SD_MMC_ENABLE_CD_PIN
-#endif
-	//! Enable the PMC clock for the card write protection pins
-#if (defined SD_MMC_0_WP_GPIO) && (!defined SAM4L)
-# include "pmc.h"
-# define SD_MMC_ENABLE_WP_PIN(slot, unused) \
-	pmc_enable_periph_clk(SD_MMC_##slot##_WP_PIO_ID);
-	MREPEAT(SD_MMC_MEM_CNT, SD_MMC_ENABLE_WP_PIN, ~)
-# undef SD_MMC_ENABLE_WP_PIN
-#endif
 	for (uint8_t slot = 0; slot < SD_MMC_MEM_CNT; slot++) {
 		sd_mmc_cards[slot].state = SD_MMC_CARD_STATE_NO_CARD;
 	}

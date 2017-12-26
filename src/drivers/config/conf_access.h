@@ -53,8 +53,6 @@
 
 #include "compiler.h"
 #include "board.h"
-#include "conf_board.h"
-
 
 /*! \name Activation of Logical Unit Numbers
  */

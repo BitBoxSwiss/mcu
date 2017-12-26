@@ -60,9 +60,6 @@
 #include <compiler.h>
 #include <status_codes.h>
 
-// From module: Common build items for user board support templates
-#include <user_board.h>
-
 // From module: Delay routines
 #include <delay.h>
 
@@ -120,9 +117,6 @@
 #include <sam/sleepmgr.h>
 #include <sleepmgr.h>
 
-// From module: Standard serial I/O (stdio) - SAM implementation
-#include <stdio_serial.h>
-
 // From module: Supported ports of FatFS
 #include <diskio.h>
 
@@ -137,15 +131,6 @@
 
 // From module: TWI - Two-wire Interface
 #include <twi.h>
-
-// From module: UART - Univ. Async Rec/Trans
-#include <uart.h>
-
-// From module: USART - Serial interface - SAM implementation for devices with both UART and USART
-#include <serial.h>
-
-// From module: USART - Univ. Syn Async Rec/Trans
-#include <usart.h>
 
 // From module: USB Device Stack Core (Common API)
 #include <udc.h>

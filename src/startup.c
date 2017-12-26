@@ -34,8 +34,8 @@
 #include "touch.h"
 #include "random.h"
 #include "systick.h"
-#include "ataes132.h"
 #include "bootloader.h"
+#include "board_com.h"
 #include "sam4s4a.h"
 #include "core_cm4.h"
 
@@ -63,6 +63,15 @@ void HardFault_Handler(void)
     while (1) {
         led_toggle();
         delay_ms(500);
+    }
+}
+
+
+void MemManage_Handler(void)
+{
+    while (1) {
+        led_toggle();
+        delay_ms(1000);
     }
 }
 
@@ -123,8 +132,7 @@ int main(void)
     irq_initialize_vectors();
     cpu_irq_enable();
     sysclk_init();
-    board_init();
-    ataes_init();
+    board_com_init();
     __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     flash_enable_security_bit();

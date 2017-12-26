@@ -52,6 +52,7 @@ set(DBB-BOOTLOADER-SOURCES
 )
 
 set(DBB-HARDWARE-SOURCES
+        board_com.c
         ataes132.c
         sd.c
         systick.c
@@ -80,7 +81,6 @@ set(DRIVER-SOURCES
         drivers/common/components/memory/sd_mmc/sd_mmc_spi.c 
         drivers/common/services/clock/sam4s/sysclk.c 
         drivers/common/services/delay/sam/cycle_counter.c 
-        drivers/common/services/serial/usart_serial.c 
         drivers/common/services/sleepmgr/sam/sleepmgr.c 
         drivers/common/services/spi/sam_spi/spi_master.c 
         drivers/common/services/storage/ctrl_access/ctrl_access.c 
@@ -92,7 +92,6 @@ set(DRIVER-SOURCES
         drivers/common/utils/interrupt/interrupt_sam_nvic.c 
         drivers/common/utils/stdio/read.c 
         drivers/common/utils/stdio/write.c 
-        drivers/common/boards/user_board/init.c 
         drivers/sam/services/flash_efc/flash_efc.c 
         drivers/sam/drivers/efc/efc.c 
         drivers/sam/drivers/pio/pio.c 
@@ -102,9 +101,7 @@ set(DRIVER-SOURCES
         drivers/sam/drivers/rtc/rtc.c 
         drivers/sam/drivers/spi/spi.c 
         drivers/sam/drivers/twi/twi.c 
-        drivers/sam/drivers/uart/uart.c 
         drivers/sam/drivers/udp/udp_device.c 
-        drivers/sam/drivers/usart/usart.c 
         drivers/sam/drivers/wdt/wdt.c 
         drivers/sam/utils/cmsis/sam4s/source/templates/gcc/startup_sam4s.c 
         drivers/sam/utils/cmsis/sam4s/source/templates/system_sam4s.c 
@@ -122,15 +119,12 @@ set(DRIVER-SOURCES
 set(DRIVER-INCLUDES
         drivers/config
         drivers/common/boards
-        drivers/common/boards/user_board
         drivers/common/components/memory/sd_mmc
         drivers/common/services/storage/ctrl_access
         drivers/common/services/clock
         drivers/common/services/delay
         drivers/common/services/gpio
         drivers/common/services/ioport
-        drivers/common/services/serial/sam_uart
-        drivers/common/services/serial
         drivers/common/services/sleepmgr
         drivers/common/services/spi/sam_spi
         drivers/common/services/spi
@@ -143,7 +137,6 @@ set(DRIVER-INCLUDES
         drivers/common/services/usb/class/composite/device
         drivers/common/services/usb/udc
         drivers/common/utils
-        drivers/common/utils/stdio/stdio_serial
         drivers/sam/utils
         drivers/sam/utils/preprocessor
         drivers/sam/utils/cmsis/sam4s/include
@@ -153,8 +146,6 @@ set(DRIVER-INCLUDES
         drivers/sam/drivers/rtc
         drivers/sam/drivers/spi
         drivers/sam/drivers/twi
-        drivers/sam/drivers/uart
-        drivers/sam/drivers/usart
         drivers/sam/drivers/udp
         drivers/sam/drivers/wdt
         drivers/sam/drivers/efc

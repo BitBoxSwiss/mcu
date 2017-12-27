@@ -51,7 +51,7 @@ static void tests_seed_xpub_backup(void)
     char name0[] = "name0";
     char key[] = "password";
     char xpub0[112], xpub1[112], *echo;
-    char seed_usb[512], seed_c[512], seed_b[512], back[512], check[512], erase_file[512];
+    char seed_usb[512], seed_c[512], seed_b[512], seed_d[512], seed_e[512], back[512], check[512], erase_file[512];
     char filename[] = "tests_backup.txt";
     char filename2[] = "tests_backup2.txt";
     char filename_create[] = "tests_backup_c.txt";
@@ -70,6 +70,10 @@ static void tests_seed_xpub_backup(void)
              filename_create, key);
     snprintf(seed_b, sizeof(seed_b),
              "{\"source\":\"backup\",\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
+    snprintf(seed_d, sizeof(seed_d),
+             "{\"source\":\"backupwallet\",\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
+    snprintf(seed_e, sizeof(seed_e),
+             "{\"source\":\"backupu2f\",\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
     snprintf(back, sizeof(back), "{\"filename\":\"%s\",\"key\":\"%s\"}", filename, key);
     snprintf(check, sizeof(check), "{\"check\":\"%s\",\"key\":\"%s\"}", filename, key);
     snprintf(seed_usb, sizeof(seed_usb),
@@ -136,7 +140,29 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
     u_assert_str_eq(DEVICE_DEFAULT_NAME, api_read_value(CMD_name));
 
-    // load backup
+    // load backup wallet only
+    api_format_send_cmd(cmd_str(CMD_seed), seed_d, PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
+
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    // load backup u2f only
+    api_format_send_cmd(cmd_str(CMD_seed), seed_e, PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
+
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
     api_format_send_cmd(cmd_str(CMD_seed), seed_b, PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -1647,14 +1673,7 @@ static void run_utests(void)
 }
 
 
-uint32_t __stack_chk_guard = 0;
 
-extern void __attribute__((noreturn)) __stack_chk_fail(void);
-void __attribute__((noreturn)) __stack_chk_fail(void)
-{
-    printf("\n\nError: stack smashing detected!\n\n");
-    abort();
-}
 
 
 int main(void)
@@ -1662,7 +1681,7 @@ int main(void)
     // Test the C code API
     TEST_LIVE_DEVICE = 0;
     random_init();
-    __stack_chk_guard = random_uint32(0);
+
     ecc_context_init();
 #ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();

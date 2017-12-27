@@ -532,6 +532,10 @@ uint32_t memory_u2f_count_iter(void)
     memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
     return MEM_u2f_count;
 }
+void memory_u2f_count_set(uint32_t c)
+{
+    memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
+}
 uint32_t memory_u2f_count_read(void)
 {
     memory_eeprom(NULL, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);

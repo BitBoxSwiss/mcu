@@ -342,7 +342,7 @@ static int commander_process_backup_check(const char *key, const char *filename)
     int ret;
     HDNode node;
     uint8_t backup[MEM_PAGE_LEN];
-    char *backup_hex = sd_load(filename, CMD_backup);
+    char *backup_hex = sd_load(filename, DBB_SD_TYPE_PDF, CMD_backup);
 
     if (strlens(backup_hex)) {
 
@@ -405,10 +405,35 @@ static int commander_process_backup_create(const char *key, const char *filename
     snprintf(backup_hex, sizeof(backup_hex), "%s", utils_uint8_to_hex(backup,
              sizeof(backup)));
 
-    ret = sd_write(filename, backup_hex, name, DBB_SD_NO_REPLACE, CMD_backup);
+    /* write PDF for hww backup */
+    ret = sd_write(filename, backup_hex, name, DBB_SD_NO_REPLACE, DBB_SD_TYPE_PDF, CMD_backup);
 
     utils_zero(backup, sizeof(backup));
     utils_zero(backup_hex, sizeof(backup_hex));
+
+    if (ret != DBB_OK) {
+        /* error reported in sd_write() */
+        return ret;
+    }
+
+    /* try to write U2F backup */
+    memcpy(backup, memory_master_u2f(NULL), MEM_PAGE_LEN);
+
+    if (memcmp(backup, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
+        /* u2f seed is set, backup */
+
+        snprintf(backup_hex, sizeof(backup_hex), "%s", utils_uint8_to_hex(backup,
+                 sizeof(backup)));
+
+        /* try to remove the .pdf extension and add .u2f */
+        char filenameU2F[strlen(filename)+strlen(U2F_BAK_FILE_EXT)+1];
+        utils_get_u2f_bak_f(filename, filenameU2F);
+
+        /* write the u2f backup */
+        ret = sd_write((const char *)filenameU2F, backup_hex, name, DBB_SD_NO_REPLACE, DBB_SD_TYPE_TXT, CMD_backup);
+        utils_zero(backup, sizeof(backup));
+        utils_zero(backup_hex, sizeof(backup_hex));
+    }
 
     if (ret != DBB_OK) {
         /* error reported in sd_write() */
@@ -448,6 +473,10 @@ static void commander_process_backup(yajl_val json_node)
 
     if (erase) {
         sd_erase(CMD_backup, erase);
+
+        char eraseU2F[strlen(erase)+strlen(U2F_BAK_FILE_EXT)+1];
+        utils_get_u2f_bak_f(erase, eraseU2F);
+        sd_erase(CMD_backup, eraseU2F);
         return;
     }
 
@@ -488,6 +517,7 @@ static void commander_process_seed(yajl_val json_node)
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
     const char *entropy_path[] = { cmd_str(CMD_seed), cmd_str(CMD_entropy), NULL };
     const char *filename_path[] = { cmd_str(CMD_seed), cmd_str(CMD_filename), NULL };
+    const char *u2f_counter_path[] = { cmd_str(CMD_seed), cmd_str(CMD_U2F_counter), NULL };
 
     const char *key = YAJL_GET_STRING(yajl_tree_get(json_node, key_path, yajl_t_string));
     const char *raw = YAJL_GET_STRING(yajl_tree_get(json_node, raw_path, yajl_t_string));
@@ -497,6 +527,9 @@ static void commander_process_seed(yajl_val json_node)
                                           yajl_t_string));
     const char *filename = YAJL_GET_STRING(yajl_tree_get(json_node, filename_path,
                                            yajl_t_string));
+    yajl_val u2f_counter_data = yajl_tree_get(json_node, u2f_counter_path,
+                                              yajl_t_number);
+    long long u2f_counter = YAJL_GET_INTEGER(u2f_counter_data);
 
     if (wallet_is_locked()) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_LOCKED);
@@ -523,6 +556,7 @@ static void commander_process_seed(yajl_val json_node)
         return;
     }
 
+    uint_8t source_found = 0;
     if (strcmp(source, attr_str(ATTR_create)) == 0) {
         // Generate a new wallet, optionally with entropy entered via USB
         uint8_t i, add_entropy, number[MEM_PAGE_LEN], entropy_b[MEM_PAGE_LEN];
@@ -574,9 +608,10 @@ static void commander_process_seed(yajl_val json_node)
 
         utils_zero(entropy_b, sizeof(entropy_b));
         utils_zero(entropy_c, sizeof(entropy_c));
-    } else if (strcmp(source, attr_str(ATTR_backup)) == 0) {
+        source_found = 1;
+    } else if (strcmp(source, attr_str(ATTR_backup)) == 0 || strcmp(source, attr_str(ATTR_backupwallet)) == 0) {
         char entropy_c[MEM_PAGE_LEN * 2 + 1];
-        char *backup_hex = sd_load(filename, CMD_seed);
+        char *backup_hex = sd_load(filename, DBB_SD_TYPE_PDF, CMD_seed);
         char *name = strchr(backup_hex, BACKUP_DELIM);
 
         if (strlens(backup_hex) < MEM_PAGE_LEN * 2) {
@@ -596,7 +631,35 @@ static void commander_process_seed(yajl_val json_node)
 
         utils_zero(backup_hex, strlens(backup_hex));
         utils_zero(entropy_c, sizeof(entropy_c));
-    } else {
+
+        /* see if we should set the counter */
+        if(u2f_counter_data) {
+            memory_u2f_count_set(u2f_counter);
+        }
+
+        source_found = 1;
+    }
+    if (strcmp(source, attr_str(ATTR_backup)) == 0 || strcmp(source, attr_str(ATTR_backupu2f)) == 0) {
+        char filenameU2F[strlen(filename)+strlen(U2F_BAK_FILE_EXT)+1];
+        utils_get_u2f_bak_f(filename, filenameU2F);
+
+        if (sd_file_exists(filenameU2F) == DBB_OK) {
+            /* u2f file seems to exists, try to set it */
+            char *u2f_backup_hex = sd_load(filename, DBB_SD_TYPE_TXT, CMD_seed);
+            if (strlens(u2f_backup_hex) != MEM_PAGE_LEN * 2) {
+                ret = DBB_ERROR;
+            }
+            uint8_t u2f_seed[MEM_PAGE_LEN];
+            memcpy(u2f_seed, utils_hex_to_uint8(u2f_backup_hex), sizeof(u2f_seed));
+            memory_master_u2f(u2f_seed);
+
+            utils_zero(u2f_backup_hex, strlens(u2f_backup_hex));
+            utils_zero(u2f_seed, sizeof(u2f_seed));
+            ret = DBB_OK;
+        }
+        source_found = 1;
+    }
+    if (source_found == 0) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
         return;
     }
@@ -776,10 +839,10 @@ static void commander_process_verifypass(yajl_val json_node)
             memcpy(text, utils_uint8_to_hex(memory_report_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
             utils_clear_buffers();
             int ret = sd_write(VERIFYPASS_FILENAME, text, NULL,
-                               DBB_SD_REPLACE, CMD_verifypass);
+                               DBB_SD_REPLACE, DBB_SD_TYPE_PDF, CMD_verifypass);
 
             if (ret == DBB_OK) {
-                l = sd_load(VERIFYPASS_FILENAME, CMD_verifypass);
+                l = sd_load(VERIFYPASS_FILENAME, DBB_SD_TYPE_PDF, CMD_verifypass);
                 if (l) {
                     if (memcmp(text, l, strlens(text))) {
                         commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);

@@ -33,6 +33,7 @@
 #ifndef TESTING
 #include "ataes132.h"
 #include "sha2.h"
+#include "mcu.h"
 
 
 void random_init(void)
@@ -84,18 +85,25 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         i += 16;
     }
 #ifndef BOOTLOADER
-    // Add ataes independent entropy from random bytes set during factory install
+    // Add ataes independent entropy from second chip (MCU UID)
     uint8_t entropy[32];
-    sha256_Raw((uint8_t *)(FLASH_BOOT_START) + FLASH_BOOT_LEN / 2, FLASH_BOOT_LEN / 2,
-               entropy);
-    sha256_Raw(entropy, sizeof(entropy), entropy);
-    for (i = 0; i < len; i++) {
-        buf[i] ^= entropy[i % MEM_PAGE_LEN];
+    uint32_t serial[4] = {0};
+    flash_read_unique_id(serial, 4);
+    sha256_Raw((uint8_t *)serial, sizeof(serial), entropy);
+    for (i = 0; i < sizeof(serial); i++) {
+        buf[i % len] ^= entropy[i % MEM_PAGE_LEN];
     }
-    // Add ataes independent entropy from user
-    memcpy(entropy, memory_report_aeskey(PASSWORD_STAND), sizeof(entropy));
-    for (i = 0; i < len; i++) {
-        buf[i] ^= entropy[i % MEM_PAGE_LEN];
+    // Add ataes independent entropy from random bytes set during factory install
+    sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, entropy);
+    sha256_Raw(entropy, sizeof(entropy), entropy);
+    sha256_Raw(entropy, sizeof(entropy), entropy);
+    for (i = 0; i < MEM_PAGE_LEN; i++) {
+        buf[i % len] ^= entropy[i % MEM_PAGE_LEN];
+    }
+    // Add ataes independent entropy from user (hashed device password)
+    memcpy(entropy, memory_report_user_entropy(), sizeof(entropy));
+    for (i = 0; i < MEM_PAGE_LEN; i++) {
+        buf[i % len] ^= entropy[i % MEM_PAGE_LEN];
     }
 #endif
 #else

@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -702,7 +702,7 @@ static void tests_device(void)
         u_assert_int_eq(!ciphertext, 0);
         int decrypt_len;
         char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                        &decrypt_len, PASSWORD_VERIFY);
+                                        &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
         u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
         free(dec);
         yajl_tree_free(json_node);
@@ -882,7 +882,7 @@ static void tests_password(void)
         if (ciphertext) {
             int decrypt_len;
             char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                            &decrypt_len, PASSWORD_VERIFY);
+                                            &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
             u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
             free(dec);
         }
@@ -1480,134 +1480,6 @@ static void tests_sign(void)
 }
 
 
-// test vectors generated from Python 2.7 code using aes, base64, and hashlib imports
-static void tests_aes_cbc(void)
-{
-    const char **plainp, **cipherp;
-
-    char encrypt[] = "{\"type\":\"encrypt\", \"data\":\"";
-    char decrypt[] = "{\"type\":\"decrypt\", \"data\":\"";
-    char password[] = "{\"type\":\"password\", \"data\":\"passwordpassword\"}";
-    char verify[] = "{\"type\":\"verify\", \"data\":\"passwordpassword\"}";
-    char xpub[] = "{\"type\":\"xpub\", \"data\":\"m/0'\"}";
-    char enc[COMMANDER_REPORT_SIZE * 2], dec[COMMANDER_REPORT_SIZE * 2];
-    memset(enc, 0, sizeof(enc));
-    memset(dec, 0, sizeof(dec));
-
-    static const char *aes_vector[] = {
-        // plain                cipher (for 'passwordpassword')
-        "digital bitbox", "mheIJghfKiPxQpvqbbRCZnTkbMd+BdRf+1jDAjk9h2Y=",
-        "Satoshi Nakamoto", "28XHUwA+/5zHeSIxt1Ioaifl/BqWsTow1hrzJJ7p91EgYbw6MwzFMlLOWq22fUsw",
-        "All those moments will be lost in time, like tears in rain. Time to die...", "qjfyIWCoY8caehZFoZStmtDz6FaKYCaCrJXyiF6I2LwnLPVV9oGv9NtJ7aVXAICeP0Q2Agh0oPlbBLKfjkdtZGuwV/tya7KcIl1ieC/276JwRl2+XdkK3uBb2Yrljl4T",
-        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!", "biR4Ce1vnvrYAOQRwO+bW4aXiySH4plHVc9LlN8hJAb/q6Tw0x6aI+A7EeOF5a11EPTjJ454nREZ9S4nIBwlGDto2GrEq+TwQOpKb/YU1VxeGGlFLg8comVnVSPmNQ1WNX/E5bnNX8osgF69QFxOgaPzfLdKGr4isUBVO3BlOPV4oUmIUc7+DC5PwabWV4XrxLQzzw79KRxL3iPk4Tbk3CDxDBgE5Z7HlvZfTM5J9d7majdQTMtHYP7d1MJZblyTkB1R7DemQhf7xHllkSXwHattstz/d1NmgGQXHlISoPs=",
-        0, 0,
-    };
-
-    char seed[] =
-        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_raw9s21ZrQH143K2MkmL8hdyZk5uwTPEqkwS72jXDt5DGRtUVrfYiAvAnGmxmP3J5Z3BG5uQcy5UYUMDsqisyXEDNCG2uzixsckhnfCrJxKVme\", \"raw\":\"true\", \"filename\":\"x.pdf\"}";
-
-    api_reset_device();
-
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), verify, PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    if (!TEST_LIVE_DEVICE) {
-        yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
-        const char *ciphertext_path[] = { cmd_str(CMD_aes256cbc), (const char *) 0 };
-        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
-                                 yajl_t_string));
-        int dlen;
-        char *d = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                      &dlen, PASSWORD_VERIFY);
-        u_assert_str_eq(d, "passwordpassword");
-        free(d);
-        yajl_tree_free(json_node);
-    }
-
-    memcpy(dec, decrypt, strlens(decrypt));
-    strcat(dec, "password not set error\"}");
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), dec, PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), xpub, PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
-
-    api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), xpub, PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), password, PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), "type", PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), "", PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-
-    memcpy(enc, encrypt, strlens(encrypt));
-    memset(enc + strlens(encrypt), 'a', AES_DATA_LEN_MAX + 1);
-    strcat(enc, "\"}");
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), enc, PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_DATA_LEN));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), "{\"type\":\"\", \"data\":\"\"}",
-                        PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), "{\"type\":\"encrypt\", \"data\":\"\"}",
-                        PASSWORD_STAND);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_aes256cbc), "{\"type\":\"decrypt\", \"data\":\"\"}",
-                        PASSWORD_STAND);
-    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_DECRYPT));
-
-    plainp = aes_vector;
-    cipherp = aes_vector + 1;
-    while (*plainp && *cipherp) {
-
-        // check decryption
-        memset(dec, 0, sizeof(dec));
-        memcpy(dec, decrypt, strlens(decrypt));
-        memcpy(dec + strlens(decrypt), *cipherp, strlens(*cipherp));
-        strcat(dec, "\"}");
-
-        api_format_send_cmd(cmd_str(CMD_aes256cbc), dec, PASSWORD_STAND);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-        u_assert_mem_eq(*plainp, api_read_value(CMD_aes256cbc), strlens(*plainp));
-
-        // check encryption by encrypting then decrypting
-        memset(enc, 0, sizeof(enc));
-        memcpy(enc, encrypt, strlens(encrypt));
-        memcpy(enc + strlens(encrypt), *plainp, strlens(*plainp));
-        strcat(enc, "\"}");
-
-        api_format_send_cmd(cmd_str(CMD_aes256cbc), enc, PASSWORD_STAND);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-        const char *e = api_read_value(CMD_aes256cbc);
-
-        memset(dec, 0, sizeof(dec));
-        memcpy(dec, decrypt, strlens(decrypt));
-        memcpy(dec + strlens(decrypt), e, strlens(e));
-        strcat(dec, "\"}");
-
-        api_format_send_cmd(cmd_str(CMD_aes256cbc), dec, PASSWORD_STAND);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-        u_assert_mem_eq(*plainp, api_read_value(CMD_aes256cbc), strlens(*plainp));
-
-        plainp += 2;
-        cipherp += 2;
-    }
-}
-
-
 static void tests_memory_setup(void)
 {
     api_reset_device();
@@ -1630,7 +1502,6 @@ static void run_utests(void)
     u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
-    u_run_test(tests_aes_cbc);
     u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);

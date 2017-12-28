@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -47,8 +47,9 @@
 #define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
 #define MEM_AESKEY_STAND_ADDR           0x0400
 #define MEM_AESKEY_VERIFY_ADDR          0x0500
-#define MEM_AESKEY_CRYPT_ADDR           0x0600
-#define MEM_AESKEY_HIDDEN_ADDR          0x0800// Zone 7 reserved
+#define MEM_AESKEY_Z6_ADDR              0x0600// Zone 6 reserved first 32*4 bytes
+#define MEM_AESKEY_Z7_ADDR              0x0700// Zone 7 reserved
+#define MEM_AESKEY_HIDDEN_ADDR          0x0800
 #define MEM_MASTER_ENTROPY_ADDR         0x0900
 #define MEM_MASTER_U2F_ADDR             0x0A00
 
@@ -71,21 +72,18 @@ typedef enum PASSWORD_ID {
     PASSWORD_STAND,
     PASSWORD_HIDDEN,
     PASSWORD_VERIFY,
-    PASSWORD_MEMORY,
-    PASSWORD_CRYPT,
     PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 
 
-int memory_setup(void);
+uint8_t memory_setup(void);
 void memory_reset_u2f(void);
 void memory_reset_hww(void);
 void memory_erase_hww_seed(void);
 void memory_random_password(PASSWORD_ID id);
 void memory_clear(void);
 
-int memory_aeskey_is_erased(PASSWORD_ID id);
-int memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
+uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
 uint8_t *memory_report_aeskey(PASSWORD_ID id);
 uint8_t *memory_name(const char *name);
 uint8_t *memory_master_hww(const uint8_t *master_priv_key);

@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -34,9 +34,9 @@
 
 
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
-                          PASSWORD_ID id);
+                          const uint8_t *key);
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
-                          PASSWORD_ID id);
+                          const uint8_t *key);
 
 void commander_clear_report(void);
 const char *commander_read_report(void);

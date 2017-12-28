@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -54,9 +54,7 @@ static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
 
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_crypt[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_memory[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -67,25 +65,8 @@ __extension__ const uint8_t MEM_PAGE_ERASE[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF}
 __extension__ const uint16_t MEM_PAGE_ERASE_2X[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFFFF};
 
 
-static void memory_mempass(void)
-{
-    uint8_t mempass[32];
-    memset(mempass, 0, sizeof(mempass));
-    // Encrypt data saved to memory using an AES key obfuscated by the
-    // bootloader bytes.
-#ifndef TESTING
-    sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, mempass);
-#endif
-    sha256_Raw(mempass, 32, mempass);
-    memory_write_aeskey(utils_uint8_to_hex(mempass, sizeof(mempass)), sizeof(mempass) * 2,
-                        PASSWORD_MEMORY);
-    utils_zero(mempass, sizeof(mempass));
-    utils_clear_buffers();
-}
-
-
-static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
-                         const uint16_t len)
+static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
+                             const uint16_t len)
 {
 #ifndef TESTING
     // read current memory
@@ -128,14 +109,24 @@ static int memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
 
 
 // Encrypted storage
-static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
-                               const int32_t addr)
+static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
+                                   const int32_t addr)
 {
     int enc_len, dec_len;
     char *enc, *dec, enc_r[MEM_PAGE_LEN * 4 + 1] = {0};
+    static uint8_t mempass[MEM_PAGE_LEN];
+
+    // Encrypt data saved to memory using an AES key obfuscated by the
+    // bootloader bytes.
+    memset(mempass, 0, sizeof(mempass));
+#ifndef TESTING
+    sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, mempass);
+#endif
+    sha256_Raw(mempass, MEM_PAGE_LEN, mempass);
+
     if (read_b) {
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN),
-                                  MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+                                  MEM_PAGE_LEN * 2, &enc_len, mempass);
         if (!enc) {
             goto err;
         }
@@ -146,7 +137,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     if (write_b) {
         char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
         enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN),
-                                  MEM_PAGE_LEN * 2, &enc_len, PASSWORD_MEMORY);
+                                  MEM_PAGE_LEN * 2, &enc_len, mempass);
         if (!enc) {
             goto err;
         }
@@ -189,7 +180,7 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     }
 
     dec = aes_cbc_b64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len,
-                              PASSWORD_MEMORY);
+                              mempass);
     if (!dec) {
         goto err;
     }
@@ -197,9 +188,11 @@ static int memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     utils_zero(dec, dec_len);
     free(dec);
 
+    utils_zero(mempass, MEM_PAGE_LEN);
     utils_clear_buffers();
     return DBB_OK;
 err:
+    utils_zero(mempass, MEM_PAGE_LEN);
     utils_clear_buffers();
     return DBB_ERROR;
 }
@@ -218,7 +211,7 @@ static uint8_t memory_read_setup(void)
 }
 
 
-int memory_setup(void)
+uint8_t memory_setup(void)
 {
     if (memory_read_setup()) {
         // One-time setup on factory install
@@ -237,11 +230,9 @@ int memory_setup(void)
         memory_eeprom((uint8_t *)&c, (uint8_t *)&MEM_u2f_count, MEM_U2F_COUNT_ADDR, 4);
         memory_write_setup(0x00);
     } else {
-        memory_mempass();
         memory_read_ext_flags();
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
         memory_master_u2f(NULL);// Load cache so that U2F speed is fast enough
@@ -262,11 +253,9 @@ void memory_erase_hww_seed(void)
 
 void memory_reset_hww(void)
 {
-    memory_mempass();
     memory_random_password(PASSWORD_STAND);
     memory_random_password(PASSWORD_VERIFY);
     memory_random_password(PASSWORD_HIDDEN);
-    memory_write_aeskey((const char *)MEM_PAGE_ERASE, MEM_PAGE_LEN, PASSWORD_CRYPT);
     memory_erase_hww_seed();
     memory_name(DEVICE_DEFAULT_NAME);
     memory_write_erased(DEFAULT_erased);
@@ -357,23 +346,9 @@ uint8_t *memory_report_master_u2f(void)
 }
 
 
-int memory_aeskey_is_erased(PASSWORD_ID id)
+uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
-    uint8_t mem_aeskey_erased[MEM_PAGE_LEN];
-    sha256_Raw((const uint8_t *)MEM_PAGE_ERASE, MEM_PAGE_LEN, mem_aeskey_erased);
-    sha256_Raw(mem_aeskey_erased, MEM_PAGE_LEN, mem_aeskey_erased);
-
-    if (memcmp(memory_report_aeskey(id), mem_aeskey_erased, 32)) {
-        return DBB_MEM_NOT_ERASED;
-    } else {
-        return DBB_MEM_ERASED;
-    }
-}
-
-
-int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
-{
-    int ret = DBB_ERROR;
+    uint8_t ret = DBB_ERROR;
     uint8_t password_b[MEM_PAGE_LEN];
     memset(password_b, 0, MEM_PAGE_LEN);
 
@@ -385,18 +360,11 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
 
     switch ((int)id) {
-        case PASSWORD_MEMORY:
-            memcpy(MEM_aeskey_memory, password_b, MEM_PAGE_LEN);
-            ret = DBB_OK;
-            break;
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             break;
         case PASSWORD_HIDDEN:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
-            break;
-        case PASSWORD_CRYPT:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_crypt, MEM_AESKEY_CRYPT_ADDR);
             break;
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
@@ -418,14 +386,10 @@ int memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 uint8_t *memory_report_aeskey(PASSWORD_ID id)
 {
     switch ((int)id) {
-        case PASSWORD_MEMORY:
-            return MEM_aeskey_memory;
         case PASSWORD_STAND:
             return MEM_aeskey_stand;
         case PASSWORD_HIDDEN:
             return MEM_aeskey_reset;
-        case PASSWORD_CRYPT:
-            return MEM_aeskey_crypt;
         case PASSWORD_VERIFY:
             return MEM_aeskey_verify;
         default:

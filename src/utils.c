@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -47,7 +47,7 @@ volatile void *utils_zero(volatile void *dst, size_t len)
 
 void utils_clear_buffers(void)
 {
-    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
+    utils_zero(utils_buffer, UTILS_BUFFER_LEN);
 }
 
 
@@ -93,7 +93,7 @@ uint8_t *utils_hex_to_uint8(const char *str)
     if (strlens(str) > UTILS_BUFFER_LEN) {
         return NULL;
     }
-    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
+    utils_clear_buffers();
     uint8_t c;
     size_t i;
     for (i = 0; i < strlens(str) / 2; i++) {
@@ -128,7 +128,7 @@ char *utils_uint8_to_hex(const uint8_t *bin, size_t l)
         return NULL;
     }
     static char digits[] = "0123456789abcdef";
-    memset(utils_buffer, 0, UTILS_BUFFER_LEN);
+    utils_clear_buffers();
     size_t i;
     for (i = 0; i < l; i++) {
         utils_buffer[i * 2] = digits[(bin[i] >> 4) & 0xF];

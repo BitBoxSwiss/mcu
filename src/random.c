@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,7 @@
 #include "flags.h"
 #ifndef TESTING
 #include "ataes132.h"
+#include "sha2.h"
 
 
 void random_init(void)
@@ -64,8 +65,8 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
 {
     uint32_t i = 0;
 #ifndef TESTING
-    const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // pseudo RNG
-    const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // true RNG - writes to EEPROM
+    const uint8_t ataes_cmd[] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00}; // Pseudo RNG
+    const uint8_t ataes_cmd_up[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00}; // True RNG - writes to EEPROM
     uint8_t ret, ataes_ret[20] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
 
     while (len > i) {
@@ -82,28 +83,27 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         }
         i += 16;
     }
+#ifndef BOOTLOADER
+    // Add ataes independent entropy from random bytes set during factory install
+    uint8_t entropy[32];
+    sha256_Raw((uint8_t *)(FLASH_BOOT_START) + FLASH_BOOT_LEN / 2, FLASH_BOOT_LEN / 2,
+               entropy);
+    sha256_Raw(entropy, sizeof(entropy), entropy);
+    for (i = 0; i < len; i++) {
+        buf[i] ^= entropy[i % MEM_PAGE_LEN];
+    }
+    // Add ataes independent entropy from user
+    memcpy(entropy, memory_report_aeskey(PASSWORD_STAND), sizeof(entropy));
+    for (i = 0; i < len; i++) {
+        buf[i] ^= entropy[i % MEM_PAGE_LEN];
+    }
+#endif
 #else
-    // use standard libary for off chip RNG
+    // Use standard libary for off chip RNG
     (void) update_seed;
     for (i = 0; i < len; i++) {
         buf[i] = rand();
     }
 #endif
-
-#ifndef BOOTLOADER
-    uint8_t *entropy;
-    // add ataes independent entropy from factory install
-    entropy = memory_report_aeskey(PASSWORD_MEMORY);
-    for (i = 0; i < len; i++) {
-        buf[i] ^= entropy[i % MEM_PAGE_LEN];
-    }
-
-    // add ataes independent entropy from user
-    entropy = memory_report_aeskey(PASSWORD_STAND);
-    for (i = 0; i < len; i++) {
-        buf[i] ^= entropy[i % MEM_PAGE_LEN];
-    }
-#endif
-
     return DBB_OK;
 }

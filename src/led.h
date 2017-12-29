@@ -33,6 +33,7 @@
 
 
 #define LED_MAX_CODE_BLINKS 4
+#define LED_MAX_BLINK_SETS  6
 
 
 void led_on(void);

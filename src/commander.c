@@ -735,7 +735,8 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         // Xor ECDH secret
         ecdh_secret[i % sizeof(ecdh_secret)] ^= rand_led;
         i++;
-    } while (touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT);
+    } while ((touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) &&
+             (i < LED_MAX_BLINK_SETS));
 
     if (i == 0) {
         // While loop not entered

@@ -51,9 +51,13 @@ static uint32_t MEM_ext_flags = DEFAULT_ext_flags;
 static uint32_t MEM_u2f_count = DEFAULT_u2f_count;
 static uint16_t MEM_pin_err = DBB_ACCESS_INITIALIZE;
 static uint16_t MEM_access_err = DBB_ACCESS_INITIALIZE;
+static uint8_t MEM_session_key_state = MEM_SESSION_KEY_STATE_OFF;
 
+__extension__ static uint8_t MEM_user_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_session_key[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_session_key_new[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_aeskey_reset[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_aeskey_hidden[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -231,14 +235,15 @@ uint8_t memory_setup(void)
         memory_write_setup(0x00);
     } else {
         memory_read_ext_flags();
-        memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
+        memory_read_aeskey(PASSWORD_VERIFY);
         memory_eeprom(NULL, &MEM_erased, MEM_ERASED_ADDR, 1);
         memory_master_u2f(NULL);// Load cache so that U2F speed is fast enough
-        memory_read_access_err_count(); // Load cache
+        memory_read_access_err_count();// Load cache
         memory_u2f_count_read();
     }
+    memory_session_key_update();
+    memory_session_key_set(NULL);
+    memory_session_key_off();
     return DBB_OK;
 }
 
@@ -263,6 +268,7 @@ void memory_reset_hww(void)
     memory_write_ext_flags(DEFAULT_ext_flags);
     memory_access_err_count(DBB_ACCESS_INITIALIZE);
     memory_pin_err_count(DBB_ACCESS_INITIALIZE);
+    memory_session_key_off();
 }
 
 
@@ -346,6 +352,59 @@ uint8_t *memory_report_master_u2f(void)
 }
 
 
+void memory_clear_passwords(void)
+{
+    uint8_t number[32] = {0};
+    random_bytes(number, sizeof(number), 0);
+#ifndef TESTING
+    memcpy(MEM_aeskey_stand, number, MEM_PAGE_LEN);
+    memcpy(MEM_aeskey_hidden, number, MEM_PAGE_LEN);
+#endif
+}
+
+
+uint8_t *memory_session_key_update(void)
+{
+    MEM_session_key_state = MEM_SESSION_KEY_STATE_UPDATING;
+    random_bytes(MEM_session_key_new, MEM_PAGE_LEN, 0);
+    return MEM_session_key_new;
+}
+
+
+void memory_session_key_off(void)
+{
+    MEM_session_key_state = MEM_SESSION_KEY_STATE_OFF;
+}
+
+
+void memory_session_key_set(uint8_t *key)
+{
+    if (key) {
+        memcpy(MEM_session_key, key, MEM_PAGE_LEN);
+        MEM_session_key_state = MEM_SESSION_KEY_STATE_STATIC;
+    } else {
+        if (MEM_session_key_state == MEM_SESSION_KEY_STATE_UPDATING) {
+            memcpy(MEM_session_key, MEM_session_key_new, MEM_PAGE_LEN);
+        } else {
+            random_bytes(MEM_session_key, MEM_PAGE_LEN, 0);
+        }
+        MEM_session_key_state = MEM_SESSION_KEY_STATE_EPHEMERAL;
+    }
+}
+
+
+uint8_t *memory_session_key_report(void)
+{
+    return MEM_session_key;
+}
+
+
+uint8_t memory_session_key_get_state(void)
+{
+    return MEM_session_key_state;
+}
+
+
 uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
     uint8_t ret = DBB_ERROR;
@@ -362,9 +421,11 @@ uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
     switch ((int)id) {
         case PASSWORD_STAND:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
+            sha256_Raw(password_b, MEM_PAGE_LEN, password_b);
+            memcpy(MEM_user_entropy, password_b, MEM_PAGE_LEN);
             break;
         case PASSWORD_HIDDEN:
-            ret = memory_eeprom_crypt(password_b, MEM_aeskey_reset, MEM_AESKEY_HIDDEN_ADDR);
+            ret = memory_eeprom_crypt(password_b, MEM_aeskey_hidden, MEM_AESKEY_HIDDEN_ADDR);
             break;
         case PASSWORD_VERIFY:
             ret = memory_eeprom_crypt(password_b, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
@@ -383,18 +444,33 @@ uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 }
 
 
-uint8_t *memory_report_aeskey(PASSWORD_ID id)
+uint8_t *memory_read_aeskey(PASSWORD_ID id)
 {
     switch ((int)id) {
         case PASSWORD_STAND:
+            memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
             return MEM_aeskey_stand;
         case PASSWORD_HIDDEN:
-            return MEM_aeskey_reset;
+            memory_eeprom_crypt(NULL, MEM_aeskey_hidden, MEM_AESKEY_HIDDEN_ADDR);
+            return MEM_aeskey_hidden;
         case PASSWORD_VERIFY:
+            memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
             return MEM_aeskey_verify;
         default:
-            return 0;
+            return NULL;
     }
+}
+
+
+uint8_t *memory_report_verification_key(void)
+{
+    return MEM_aeskey_verify;
+}
+
+
+uint8_t *memory_report_user_entropy(void)
+{
+    return MEM_user_entropy;
 }
 
 

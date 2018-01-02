@@ -30,9 +30,9 @@
 #include "mcu.h"
 #include "led.h"
 #include "usb.h"
+#include "sha2.h"
 #include "flags.h"
 #include "touch.h"
-#include "random.h"
 #include "systick.h"
 #include "bootloader.h"
 #include "board_com.h"
@@ -128,14 +128,17 @@ static void mpu_init(void)
 
 int main(void)
 {
+    uint8_t rnd[SHA256_BLOCK_LENGTH];
+
     wdt_disable(WDT);
     irq_initialize_vectors();
     cpu_irq_enable();
     sysclk_init();
     board_com_init();
-    __stack_chk_guard = random_uint32(0);
     flash_init(FLASH_ACCESS_MODE_128, 6);
     flash_enable_security_bit();
+    sha256_Raw((uint8_t *)(FLASH_BOOT_START + FLASH_BOOT_LEN / 2), FLASH_BOOT_LEN / 2, rnd);
+    memcpy((uint8_t *)__stack_chk_guard, rnd, sizeof(__stack_chk_guard));
     pmc_enable_periph_clk(ID_PIOA);
     delay_init(F_CPU);
     systick_init();

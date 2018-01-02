@@ -27,18 +27,14 @@
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#pragma GCC diagnostic ignored "-Winline"
 #pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wunused-variable"
 #endif
 
 

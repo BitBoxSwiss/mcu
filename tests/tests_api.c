@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include "ecc.h"
+#include "sha2.h"
 #include "utest.h"
 #include "utils.h"
 #include "flags.h"
@@ -80,74 +81,74 @@ static void tests_seed_xpub_backup(void)
     // erase
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // rename
-    api_format_send_cmd(cmd_str(CMD_name), name0, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), name0, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_eq(name0, api_read_value(CMD_name));
 
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
 
-    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
     // create
-    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_c, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
 
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_eq(xpub0, echo);
     }
 
     // check backup list and erase
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), filename_create);
 
     // backup
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
     if (TEST_LIVE_DEVICE) {
         u_assert_str_has_not(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_ERASE));
     }
 
-    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // erase device
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // check has default name
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_eq(DEVICE_DEFAULT_NAME, api_read_value(CMD_name));
 
     // load backup
-    api_format_send_cmd(cmd_str(CMD_seed), seed_b, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_b, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_eq(name0, api_read_value(CMD_name));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_eq(xpub0, echo);
     }
 
@@ -155,44 +156,44 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_eq(xpub0, xpub1);
 
     // check backup list and erase
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), filename);
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
 
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), filename);
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
 
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
 
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "seed_create.pdf");
 
     if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_seed), seed_create_bad, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_seed), seed_create_bad, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
-        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), "../seed_create_bad.pdf");
     }
 
@@ -207,121 +208,121 @@ static void tests_seed_xpub_backup(void)
         for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
             snprintf(lbn, sizeof(lbn), "%lu%s", i, long_backup_name);
             snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
-            api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+            api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
             u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-            api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+            api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
             u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_warning));
         }
 
         snprintf(lbn, sizeof(lbn), "%lu%s", i, long_backup_name);
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
-        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_warning));
 
-        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     }
 
     // test keypath
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/111", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/111", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"xpub\":");
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "111", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "111", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "/111", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "/111", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m111", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m111", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/a", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/a", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/!", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/!", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/-111", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/-111", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_CHILD));
 
     // test create seeds differ
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), filename);
 
     if (TEST_LIVE_DEVICE) {
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", filename_bad);
-        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
         snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"password\"}", filename_bad);
-        api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
     }
 
     snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", filename);
-    api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"password\"}", filename);
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
 
-    api_format_send_cmd(cmd_str(CMD_backup), check, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     if (TEST_LIVE_DEVICE) {
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
     }
 
     // test cannot overwrite existing backup file
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_OPEN_FILE));
 
     // test erase single backup file
     if (!TEST_LIVE_DEVICE) {
         // testing buffer gets overwritten by seed command, so reset it
-        api_format_send_cmd(cmd_str(CMD_backup), back, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     }
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), filename);
 
     snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
              filename);
-    api_format_send_cmd(cmd_str(CMD_backup), erase_file, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), erase_file, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     if (TEST_LIVE_DEVICE) {
         snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
                  filename_bad);
-        api_format_send_cmd(cmd_str(CMD_backup), erase_file, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_backup), erase_file, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
     }
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), filename);
 
 
@@ -331,17 +332,17 @@ static void tests_seed_xpub_backup(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // seed with extra entropy from device
-    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
@@ -350,22 +351,22 @@ static void tests_seed_xpub_backup(void)
     snprintf(seed_usb, sizeof(seed_usb),
              "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
              seed_entropy, filename2, key);
-    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // verify xpubs not same
-    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     u_assert_str_not_eq(xpub0, xpub1);
 
     // load backup
     if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_seed), seed_b, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_seed), seed_b, KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
         // verify xpub matches
-        api_format_send_cmd(cmd_str(CMD_xpub), "m/0", PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
         memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
         u_assert_str_eq(xpub0, xpub1);
@@ -373,7 +374,7 @@ static void tests_seed_xpub_backup(void)
 
 
     // clean up sd card
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 }
 
@@ -385,33 +386,33 @@ static void tests_random(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
     memcpy(number0, api_read_value(CMD_random), sizeof(number0));
 
-    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     memcpy(number1, api_read_value(CMD_random), sizeof(number1));
     u_assert_str_not_eq(number0, number1);
 
-    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_true), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_true), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     memcpy(number0, api_read_value(CMD_random), sizeof(number0));
 
-    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_true), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_true), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     memcpy(number1, api_read_value(CMD_random), sizeof(number1));
     u_assert_str_not_eq(number0, number1);
 
-    api_format_send_cmd(cmd_str(CMD_random), "invalid_cmd", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 }
 
@@ -423,18 +424,18 @@ static void tests_name(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_name), name0, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), name0, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_eq(name0, api_read_value(CMD_name));
 
-    api_format_send_cmd(cmd_str(CMD_name), name1, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), name1, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_eq(name1, api_read_value(CMD_name));
 
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_eq(name1, api_read_value(CMD_name));
 }
@@ -456,19 +457,19 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.cmd, U2FHID_WINK);
     u_assert_int_eq(r.init.bcntl, 0);
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // Seed
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
     u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"u.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"u.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // U2F command runs
@@ -479,11 +480,11 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.bcntl, 0);
 
     // Disable U2F
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {
         u_assert_str_has(api_read_decrypted_report(), API_READ_ERROR);
     } else {
@@ -501,22 +502,22 @@ static void tests_u2f(void)
 
     // Enable U2F - Must be done through HWW interface.
     TEST_U2FAUTH_HIJACK = 0;
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
     TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
     u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
 
 
     // Disable U2F hijack
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":false}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":false}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {
         u_assert_str_has(api_read_decrypted_report(), API_READ_ERROR);
     } else {
@@ -533,37 +534,37 @@ static void tests_u2f(void)
 
     // Enable U2F hijack - Must be done through HWW interface.
     TEST_U2FAUTH_HIJACK = 0;
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":true}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":true}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
     TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
     u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
 
     // Send invalid commands
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"Foo\":false}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"Foo\":false}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"true\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"true\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
     // Reset U2F
-    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
@@ -575,114 +576,114 @@ static void tests_device(void)
 {
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_ping), "", PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_ping), "", NULL);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_false));
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_ping), "", PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_ping), "", NULL);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_password));
 
-    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_abort), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_abort), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_led), "invalid_cmd", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_led), "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_led), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_led), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_seed), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\",\"filename\":\"junk\"}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\",\"key\":\"\",\"filename\":\"junk\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\",\"key\":\"\",\"filename\":\"junk\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"&^;:\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\",\"key\":\"key\",\"filename\":\"&^;:\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
-    api_format_send_cmd(cmd_str(CMD_xpub), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_xpub), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_reset), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_reset), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_backup), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
 
-    api_format_send_cmd(cmd_str(CMD_backup), "{\"key\":\"password\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
 
-    api_format_send_cmd(cmd_str(CMD_random), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_random), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_device), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), "", KEY_STANDARD);
 
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_bootloader), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_bootloader), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\", \"key\":\"password\"}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"l.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"l.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.txt\", \"key\":\"password\"}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd("invalid_cmd", "invalid_cmd", PASSWORD_STAND);
+    api_format_send_cmd("invalid_cmd", "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_device), "invalid_cmd", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_serial));
@@ -702,7 +703,7 @@ static void tests_device(void)
         u_assert_int_eq(!ciphertext, 0);
         int decrypt_len;
         char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                        &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
+                                        &decrypt_len, memory_report_verification_key());
         u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
         free(dec);
         yajl_tree_free(json_node);
@@ -712,10 +713,10 @@ static void tests_device(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_sdcard));
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_serial));
@@ -728,23 +729,23 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), "\"lock\":false");
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
-    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), "\"bootlock\":false");
     }
 
-    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), "\"bootlock\":true");
     }
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     if (!TEST_LIVE_DEVICE) {
@@ -758,77 +759,77 @@ static void tests_input(void)
     api_reset_device();
 
     if (!TEST_LIVE_DEVICE) {
-        api_send_cmd("", PASSWORD_NONE);
+        api_send_cmd("", NULL);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_INPUT));
 
-        api_send_cmd(NULL, PASSWORD_NONE);
+        api_send_cmd(NULL, NULL);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_INPUT));
     }
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
+    api_send_cmd("{\"name\": \"name\"}", NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_MULT_CMD));
 
 #ifndef CONTINUOUS_INTEGRATION
 // YAJL does not free allocated space for these improper JSON strings
 // so skip valgrind checks in travis CI.
-    api_send_cmd("\"name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{name\": \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name: \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name: \"name\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\"", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\"", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\", }", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\", }", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\", \"name\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\", \"name\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"name\", \"name\": }", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"name\", \"name\": }", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_send_cmd("{\"name\": \"na\\nme\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"na\\nme\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"na\\r\\\\ \\/ \\f\\b\\tme\\\"\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"na\\r\\\\ \\/ \\f\\b\\tme\\\"\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 #endif
 
-    api_send_cmd("{\"name\": null}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": null}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"na\\u0066me\\ufc00\\u0000\"}", PASSWORD_STAND);
+    api_send_cmd("{\"name\": \"na\\u0066me\\ufc00\\u0000\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     int i;
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {
-        api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
+        api_send_cmd("{\"name\": \"name\"}", NULL);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
         if (i < COMMANDER_TOUCH_ATTEMPTS) {
             u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_WARN_RESET));
@@ -836,7 +837,7 @@ static void tests_input(void)
             u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_WARN_RESET_TOUCH));
         }
     }
-    api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
+    api_send_cmd("{\"name\": \"name\"}", NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_RESET));
 }
 
@@ -845,31 +846,36 @@ static void tests_password(void)
 {
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_name), "", NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 
-    api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), "123", NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
-    api_format_send_cmd(cmd_str(CMD_password), "", PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), "", NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_password), "123", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
+
+    //
     // Test ECDH verifypass
+    //
+
     char ecdh[] =
         "{\"ecdh\":\"028d3bce812ac027fdea0e4ad98b2549a90bb9aa996396eec6bb1a8ed56e6976b8\"}";
-    api_format_send_cmd(cmd_str(CMD_verifypass), ecdh, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), ecdh, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_ecdh));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_ciphertext));
@@ -882,105 +888,264 @@ static void tests_password(void)
         if (ciphertext) {
             int decrypt_len;
             char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                            &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
+                                            &decrypt_len, memory_report_verification_key());
             u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
             free(dec);
         }
         yajl_tree_free(json_node);
     }
 
+
+    //
     // Test hidden password
-    if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_HIDDEN);
-        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-    }
+    //
 
-    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, PASSWORD_STAND);
+    // Login to hidden wallet -> error (hidden key not set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Set hidden key
+    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_hidden_password), "123", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Set hidden key with wrong length -> hidden key not reset
+    api_format_send_cmd(cmd_str(CMD_hidden_password), "123", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
-
-    api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, PASSWORD_STAND);
-    if (!TEST_LIVE_DEVICE) {
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Change standard key to hidden key from standard wallet -> error collision
+    // -> delete hidden key and set standard key to hidden key
+    api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, KEY_STANDARD);
+    if (!TEST_U2FAUTH_HIJACK) {
+        api_decrypt_report((char *)HID_REPORT, KEY_HIDDEN);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
     }
-    memory_write_aeskey(hidden_pwd, strlens(hidden_pwd), PASSWORD_STAND);
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    // Login to standard wallet (hidden key)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_STAND);
-    if (!TEST_LIVE_DEVICE) {
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Reset standard password
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, KEY_HIDDEN);
+    if (!TEST_U2FAUTH_HIJACK) {
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
     }
-    memory_write_aeskey(tests_pwd, strlens(tests_pwd), PASSWORD_STAND);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to standard wallet (hidden key)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet -> error (hidden key not set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_format_send_cmd(cmd_str(CMD_hidden_password), tests_pwd, PASSWORD_STAND);
+    // Reset hidden key
+    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Change (hidden) key to standard key from hidden wallet -> error collision
+    // -> delete hidden key and activate standard key
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, KEY_HIDDEN);
+    if (!TEST_U2FAUTH_HIJACK) {
+        api_decrypt_report((char *)HID_REPORT, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
+    }
+    // Login to hidden wallet -> error (hidden key not set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Login to standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Change hidden key to standard key from standard wallet -> error collision
+    // -> delete hidden key
+    api_format_send_cmd(cmd_str(CMD_hidden_password), tests_pwd, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    // Login to standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet -> error (hidden key not set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
-    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, PASSWORD_STAND);
+    // Reset hidden key
+    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
 
-
-    // hidden wallet uses different keys
+    // Verify hidden wallet uses different keys
     char keypath[] = "m/44'/0'/0'/0/0";
     char xpub0[112], xpub1[112];
     memset(xpub0, 0, sizeof(xpub0));
     memset(xpub1, 0, sizeof(xpub1));
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Erase backups
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
+    // Seed wallets
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"h.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"h.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_STAND);
+    // Get standard wallet xpub
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
-
-    api_format_send_cmd(cmd_str(CMD_xpub), keypath, PASSWORD_HIDDEN);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Get hidden wallet xpub and check that it is different
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     u_assert_str_not_eq(xpub0, xpub1);
 
-
-    // password command in hidden wallet changes hidden password
-    api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, PASSWORD_HIDDEN);
+    // Change key in hidden wallet
+    api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_HIDDEN);
+    // Login to hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-
-    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, PASSWORD_HIDDEN);
+    // Change hidden key in hidden wallet -> error disabled
+    api_format_send_cmd(cmd_str(CMD_hidden_password), tests_pwd, KEY_HIDDEN);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
-
-    api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, PASSWORD_STAND);
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
-    }
-    memory_write_aeskey(hidden_pwd, strlens(hidden_pwd), PASSWORD_STAND);
-
-    api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_STAND);
+    // Login to hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    // reset standard password
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_STAND);
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    }
-    memory_write_aeskey(tests_pwd, strlens(tests_pwd), PASSWORD_STAND);
+    //
+    // Test session password
+    //
+
+    uint8_t sessionkey[MEM_PAGE_LEN];
+    uint8_t sessionkey2[MEM_PAGE_LEN];
+    char xpub0s[112], xpub1s[112];
+    memset(xpub0s, 0, sizeof(xpub0s));
+    memset(xpub1s, 0, sizeof(xpub1s));
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Send bad session commands
+    api_format_send_cmd(cmd_str(CMD_session), "", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    api_format_send_cmd(cmd_str(CMD_session), "wrong_cmd", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    // Set session key
+    api_format_send_cmd(cmd_str(CMD_session), attr_str(ATTR_set), KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(sessionkey, utils_hex_to_uint8(api_read_value(CMD_session)), MEM_PAGE_LEN);
+    // Login standard wallet -> error (session key set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Login standard wallet (with session key)
+    api_format_send_cmd(cmd_str(CMD_name), "", sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Set new session key
+    api_format_send_cmd(cmd_str(CMD_session), attr_str(ATTR_set), sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(sessionkey2, utils_hex_to_uint8(api_read_value(CMD_session)), MEM_PAGE_LEN);
+    u_assert_mem_not_eq(sessionkey, sessionkey2, MEM_PAGE_LEN);
+    // Login standard wallet (with old session key) -> error
+    api_format_send_cmd(cmd_str(CMD_name), "", sessionkey);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Update sessionkey
+    memcpy(sessionkey, sessionkey2, MEM_PAGE_LEN);
+    // Login standard wallet (with session key)
+    api_format_send_cmd(cmd_str(CMD_name), "", sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Set hidden key
+    api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Check standard wallet xpub is correct
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub0s, api_read_value(CMD_xpub), sizeof(xpub0s));
+    u_assert_str_eq(xpub0, xpub0s);
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", sessionkey);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login hidden wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Set session key
+    api_format_send_cmd(cmd_str(CMD_session), attr_str(ATTR_set), KEY_HIDDEN);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(sessionkey, utils_hex_to_uint8(api_read_value(CMD_session)), MEM_PAGE_LEN);
+    // Login hidden wallet -> error (session key set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Login hidden wallet (with session key)
+    api_format_send_cmd(cmd_str(CMD_name), "", sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Check hidden wallet xpub is correct
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, sessionkey);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    memcpy(xpub1s, api_read_value(CMD_xpub), sizeof(xpub1s));
+    u_assert_str_eq(xpub1, xpub1s);
+    // Change hidden key in hidden wallet -> error disabled
+    api_format_send_cmd(cmd_str(CMD_hidden_password), tests_pwd, sessionkey);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
+    // Change (hidden) key to standard key from hidden wallet -> error collision
+    // -> delete hidden key
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, sessionkey);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
+    // Turn off session key to allow switching wallets
+    api_format_send_cmd(cmd_str(CMD_session), "off", sessionkey);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    // Login to hidden wallet -> error (hidden key not set)
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    // Login to standard wallet
+    api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    // Turn off session key to avoid conflicts in next unit test
+    api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 }
 
 
@@ -996,95 +1161,95 @@ static void tests_echo_tfa(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, KEY_STANDARD);
     u_assert_int_eq((strstr(api_read_decrypted_report(), cmd_str(CMD_echo)) ||
                      strstr(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER))), 1);
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", PASSWORD_STAND);
+                        "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // test verifypass
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), VERIFYPASS_FILENAME);
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), VERIFYPASS_FILENAME);
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), "invalid_cmd", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // test echo
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_device), "info", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), "info", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_echo));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sig));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_echo));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sig));
 
     // test hash length
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign3, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign3, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_HASH_LEN));
 
     // test locked
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
 
-    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
     // correct pin
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
     if (TEST_LIVE_DEVICE) {
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
     } else {
@@ -1094,13 +1259,13 @@ static void tests_echo_tfa(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"key\":\"password\"}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_LOCKED));
 }
 
@@ -1250,67 +1415,67 @@ static void tests_sign(void)
 
     api_reset_device();
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // backup
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // seed
     char seed[] =
         "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_rawH13ucR3\", \"raw\":\"true\", \"filename\":\"s.pdf\"}";
-    api_format_send_cmd(cmd_str(CMD_seed), seed, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
 
     // missing parameters
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_missing_parameter, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_missing_parameter, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
                         "{\"data\":[{\"keypath\":\"m/\"}]}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
                         "{\"data\":[{\"hash\":\"empty\"}]}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // data is not an array
     api_format_send_cmd(cmd_str(CMD_sign),
                         "{\"data\":{\"hash\":\"empty\"}}",
-                        PASSWORD_STAND);
+                        KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
 
     // sign max number of hashes per sign command
-    api_format_send_cmd(cmd_str(CMD_sign), maxhashes, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), maxhashes, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // sign 1 more than max number of hashes per sign command
-    api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
 
     // sign using one input
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_recid));
     u_assert_str_has(api_read_decrypted_report(), hash_1_input);
     res = recover_public_key_verify_sig(hash_1_input, one_input_msg, recid_1_input,
@@ -1318,16 +1483,16 @@ static void tests_sign(void)
     u_assert_int_eq(res, 0);
 
     // sign using two inputs
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/8");
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(api_read_decrypted_report(), hash_2_input_1);
     u_assert_str_has(api_read_decrypted_report(), hash_2_input_2);
@@ -1341,17 +1506,17 @@ static void tests_sign(void)
 
 
     // test checkpub
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "\"meta\":");
         u_assert_str_has(echo, check_1);
         u_assert_str_has(echo, check_2);
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
     u_assert_str_has(api_read_decrypted_report(), check_sig_1);
     u_assert_str_has(api_read_decrypted_report(), check_sig_2);
@@ -1362,23 +1527,23 @@ static void tests_sign(void)
                                         check_pubkey);
     u_assert_int_eq(res, 0);
 
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
 
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
 
 
     // lock to get TFA PINs
     int pin_err_count = 0;
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // sign using one input
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
@@ -1386,31 +1551,31 @@ static void tests_sign(void)
     }
 
     // skip sending pin
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
     if (TEST_LIVE_DEVICE) {
         pin_err_count++;
     }
 
     // send wrong pin
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
         u_assert_str_has(echo, cmd_str(CMD_pin));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
 
     // send correct pin
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
@@ -1419,7 +1584,7 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
     if (!TEST_LIVE_DEVICE) {
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
@@ -1434,17 +1599,17 @@ static void tests_sign(void)
 
 
     // sign using two inputs
-    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, PASSWORD_VERIFY);
+        echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/8");
     }
 
     // send correct pin
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
     if (!TEST_LIVE_DEVICE) {
         u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_sign));
@@ -1462,20 +1627,18 @@ static void tests_sign(void)
     }
 
     for (; pin_err_count < COMMANDER_MAX_ATTEMPTS - 1; pin_err_count++) {
-        api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
-        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_TFA_PIN));
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_WARN_RESET));
     }
 
-    api_format_send_cmd(cmd_str(CMD_sign), one_input, PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", PASSWORD_STAND);
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_RESET));
-    }
-    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_RESET));
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 }
 
@@ -1485,14 +1648,14 @@ static void tests_memory_setup(void)
     api_reset_device();
 
     if (!TEST_LIVE_DEVICE && !TEST_U2FAUTH_HIJACK) {
-        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
         u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_MEM_SETUP));
     }
 
     memory_setup();
     memory_setup(); // run twice
 
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 }
 
@@ -1538,6 +1701,12 @@ int main(void)
 #ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();
 #endif
+    // Fill test aes keys for standard and hidden wallets
+    sha256_Raw((const uint8_t *)tests_pwd, strlens(tests_pwd), KEY_STANDARD);
+    sha256_Raw(KEY_STANDARD, MEM_PAGE_LEN, KEY_STANDARD);
+    sha256_Raw((const uint8_t *)hidden_pwd, strlens(hidden_pwd), KEY_HIDDEN);
+    sha256_Raw(KEY_HIDDEN, MEM_PAGE_LEN, KEY_HIDDEN);
+
     printf("\n\nInternal API result via standard interface:\n");
     TEST_U2FAUTH_HIJACK = 0;
     run_utests();
@@ -1550,8 +1719,6 @@ int main(void)
     // Requires the hidapi library to be installed:
     //     http://www.signal11.us/oss/hidapi/
     TEST_LIVE_DEVICE = 1;
-    memory_write_aeskey(tests_pwd, strlens(tests_pwd), PASSWORD_STAND);
-    memory_write_aeskey(hidden_pwd, strlens(hidden_pwd), PASSWORD_HIDDEN);
     if (api_hid_init() == DBB_ERROR) {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
     } else {

@@ -53,6 +53,8 @@ static hid_device *HID_HANDLE;
 
 static const char tests_pwd[] = "0000";
 static const char hidden_pwd[] = "hide";
+static uint8_t KEY_STANDARD[MEM_PAGE_LEN];
+static uint8_t KEY_HIDDEN[MEM_PAGE_LEN];
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
 const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];// extern
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
@@ -68,7 +70,7 @@ static const char *api_read_decrypted_report(void)
 }
 
 
-static void api_decrypt_report(const char *report, PASSWORD_ID dec_id)
+static void api_decrypt_report(const char *report, uint8_t *key)
 {
     int decrypt_len;
     char *dec;
@@ -89,7 +91,7 @@ static void api_decrypt_report(const char *report, PASSWORD_ID dec_id)
                                  yajl_t_string));
         if (ciphertext) {
             dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                      &decrypt_len, memory_report_aeskey(dec_id));
+                                      &decrypt_len, key);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 goto exit;
@@ -307,7 +309,7 @@ static int api_hid_init(void)
 #endif
 
 
-static void api_hid_read(PASSWORD_ID id)
+static void api_hid_read(uint8_t *key)
 {
     int res;
     int u2fhid_cmd = TEST_U2FAUTH_HIJACK ? U2FHID_MSG : U2FHID_HWW;
@@ -324,9 +326,9 @@ static void api_hid_read(PASSWORD_ID id)
         // Set the appended U2F success byte 0x90 to zero. Otherwise cannot decrypt.
         char *r = (char *)(HID_REPORT + 5);
         r[strlens(r) - 1] = 0;
-        strlens(r) ? api_decrypt_report(r, id) : api_hid_read(id);
+        strlens(r) ? api_decrypt_report(r, key) : api_hid_read(key);
     } else {
-        api_decrypt_report((char *)HID_REPORT, id);
+        api_decrypt_report((char *)HID_REPORT, key);
     }
     //printf("received:  >>%s<<\n", api_read_decrypted_report());
 }
@@ -371,33 +373,32 @@ static void api_hid_send(const char *cmd)
 }
 
 
-static void api_hid_send_encrypt(const char *cmd, PASSWORD_ID id)
+static void api_hid_send_encrypt(const char *cmd, uint8_t *key)
 {
     int enc_len;
-    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len,
-                                    memory_report_aeskey(id));
+    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len, key);
     api_hid_send_len(enc, enc_len);
     free(enc);
 }
 
 
-static void api_send_cmd(const char *command, PASSWORD_ID id)
+static void api_send_cmd(const char *command, uint8_t *key)
 {
     memset(command_sent, 0, sizeof(command_sent));
     if (command) {
         memcpy(command_sent, command, strlens(command));
     }
-    if (id == PASSWORD_NONE) {
+    if (key == NULL) {
         api_hid_send(command);
-        api_hid_read(id);
+        api_hid_read(key);
     } else {
-        api_hid_send_encrypt(command, id);
-        api_hid_read(id);
+        api_hid_send_encrypt(command, key);
+        api_hid_read(key);
     }
 }
 
 
-static void api_format_send_cmd(const char *cmd, const char *val, PASSWORD_ID id)
+static void api_format_send_cmd(const char *cmd, const char *val, uint8_t *key)
 {
     char command[COMMANDER_REPORT_SIZE] = {0};
     strcpy(command, "{\"");
@@ -411,14 +412,14 @@ static void api_format_send_cmd(const char *cmd, const char *val, PASSWORD_ID id
         strcat(command, "\"");
     }
     strcat(command, "}");
-    api_send_cmd(command, id);
+    api_send_cmd(command, key);
 }
 
 
 static void api_reset_device(void)
 {
-    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE); // if not set
-    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), PASSWORD_STAND);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL); // if not set
+    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR___ERASE__), KEY_STANDARD);
 }
 
 
@@ -456,7 +457,7 @@ static const char *api_read_value_depth_2(int cmd, int cmd_2)
 }
 
 
-static char *api_read_value_decrypt(int cmd, PASSWORD_ID id)
+static char *api_read_value_decrypt(int cmd, uint8_t *key)
 {
     const char *val = api_read_value(cmd);
     static char val_dec[HID_REPORT_SIZE];
@@ -464,7 +465,7 @@ static char *api_read_value_decrypt(int cmd, PASSWORD_ID id)
 
     int decrypt_len;
     char *dec = aes_cbc_b64_decrypt((const unsigned char *)val, strlens(val),
-                                    &decrypt_len, memory_report_aeskey(id));
+                                    &decrypt_len, key);
 
     snprintf(val_dec, HID_REPORT_SIZE, "%.*s", decrypt_len, dec);
     free(dec);

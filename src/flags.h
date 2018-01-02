@@ -83,6 +83,7 @@ X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
 X(verifypass)     \
+X(session)        \
 X(led)            \
 X(xpub)           \
 X(name)           \
@@ -145,6 +146,8 @@ X(unlock)         \
 X(decrypt)        \
 X(encrypt)        \
 X(verify)         \
+X(set)            \
+X(off)            \
 X(true)           \
 X(false)          \
 X(erase)          \

@@ -53,7 +53,8 @@ before_script:
     - cd $TRAVIS_BUILD_DIR
     - if astyle --style=kr --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-braces --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=contrib --exclude=src/yajl --exclude=src/secp256k1 --exclude=tests/windows/hidapi --exclude=src/drivers --dry-run -Q | grep "Formatted" ; then exit 1 ; fi;
     - gpg --import contrib/contributors_gpg_keys/*
-    - if git log --pretty="format:%H   %aN   %s   %G?" f0a012e224fedac87b0393a161d4af1473fea74a..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
+    - if ! git show 6b6c1a3d388d57e140b9c983a64507e3238ed4e3; then exit 1 ; fi;
+    - if git log --pretty="format:%H   %aN   %s   %G?" 6b6c1a3d388d57e140b9c983a64507e3238ed4e3..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
 
 script: 
     - mkdir build && cd build

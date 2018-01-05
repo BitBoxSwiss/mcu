@@ -802,17 +802,17 @@ static void tests_input(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     api_send_cmd("{\"name\": \"na\\nme\"}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
     api_send_cmd("{\"name\": \"na\\r\\\\ \\/ \\f\\b\\tme\\\"\"}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 #endif
 
     api_send_cmd("{\"name\": null}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"na\\u0066me\\ufc00\\u0000\"}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
     int i;
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {

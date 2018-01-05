@@ -332,6 +332,13 @@ static void commander_process_name(yajl_val json_node)
 {
     const char *path[] = { cmd_str(CMD_name), NULL };
     const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, path, yajl_t_string));
+
+    if (strlens(value) &&
+            utils_limit_alphanumeric_hyphen_underscore_period(value) != DBB_OK) {
+        commander_fill_report(cmd_str(CMD_name), NULL, DBB_ERR_SD_BAD_CHAR);
+        return;
+    }
+
     commander_fill_report(cmd_str(CMD_name), (char *)memory_name(value), DBB_OK);
 }
 

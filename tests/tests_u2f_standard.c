@@ -1,5 +1,5 @@
 // Copyright 2014 Google Inc. All rights reserved.
-// Copyright 2017 Douglas J. Bakkum, Shift Devices AG
+// Copyright 2017-2018 Douglas J. Bakkum, Shift Devices AG
 //
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file or at
@@ -20,6 +20,7 @@
 #include "utils.h"
 #include "sha2.h"
 #include "ecc.h"
+#include "api.h"
 
 #include "u2f/u2f.h"
 #include "u2f/u2f_util_t.h"
@@ -117,7 +118,7 @@ static void test_WrongLength_U2F_REGISTER(void)
 }
 
 
-static void test_Enroll(int expectedSW12)
+static void test_Enroll(int expectedSW12, int printinfo)
 {
     // pick random origin and challenge.
     for (size_t i = 0; i < sizeof(regReq.challenge); ++i) {
@@ -152,25 +153,33 @@ static void test_Enroll(int expectedSW12)
     CHECK_EQ(regRsp.registerId, U2F_REGISTER_ID);
     CHECK_EQ(regRsp.pubKey.format, U2F_UNCOMPRESSED_POINT);
 
-    PRINT_INFO("Enroll: %lu bytes in %fs", rsp_len, U2Fob_deltaTime(&t));
+    if (printinfo) {
+        PRINT_INFO("Enroll: %lu bytes in %fs", rsp_len, U2Fob_deltaTime(&t));
+    }
 
     // Check crypto of enroll response.
     char cert[U2F_MAX_ATT_CERT_SIZE];
     size_t cert_len;
     CHECK_EQ(getCertificate(regRsp, cert, &cert_len), true);
-    PRINT_INFO("Certificate: %lu %s", cert_len, utils_uint8_to_hex((uint8_t *)cert,
-               cert_len));
+    if (printinfo) {
+        PRINT_INFO("Certificate: %lu %s", cert_len, utils_uint8_to_hex((uint8_t *)cert,
+                   cert_len));
+    }
 
     char pk[U2F_EC_POINT_SIZE];
     size_t pk_len;
     CHECK_EQ(getSubjectPublicKey(cert, cert_len, pk, &pk_len), true);
-    PRINT_INFO("Public key:  %lu %s", pk_len, utils_uint8_to_hex((uint8_t *)pk, pk_len));
+    if (printinfo) {
+        PRINT_INFO("Public key:  %lu %s", pk_len, utils_uint8_to_hex((uint8_t *)pk, pk_len));
+    }
     CHECK_EQ(pk_len, U2F_EC_POINT_SIZE);
 
     char sig[U2F_MAX_EC_SIG_SIZE];
     size_t sig_len;
     CHECK_EQ(getSignature(regRsp, sig, &sig_len), true);
-    PRINT_INFO("Signature:   %lu %s", sig_len, utils_uint8_to_hex((uint8_t *)sig, sig_len));
+    if (printinfo) {
+        PRINT_INFO("Signature:   %lu %s", sig_len, utils_uint8_to_hex((uint8_t *)sig, sig_len));
+    }
 
     // Parse signature into two integers.
     uint8_t signature[64];
@@ -272,6 +281,45 @@ static void check_Compilation(void)
 }
 
 
+static void check_CounterUpdate(void)
+{
+    // Update U2F counter using HWW interface `U2F_create`.
+    (void) KEY_HIDDEN;
+    char cmd[512];
+    uint32_t ctr;
+    uint32_t c = 0xFFFFFFFE;
+
+    sha256_Raw((const uint8_t *)tests_pwd, strlens(tests_pwd), KEY_STANDARD);
+    sha256_Raw(KEY_STANDARD, 32, KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    api_format_send_cmd(cmd_str(CMD_backup), "erase", KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"create\", \"filename\":\"hwwcountertest.pdf\", \"key\":\"key\"}");
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"U2F_create\", \"key\":\"key\", \"filename\":\"u2fcountertest.pdf\", \"U2F_counter\":%u}",
+             c);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+
+    // Ctr should be c + 1.
+    // Need to re-enroll after device reset
+    test_Enroll(0x9000, 0);
+    ctr = test_Sign(0x9000, false);
+    CHECK_EQ(ctr, c + 1);
+
+    // Update U2F counter using HWW interface `U2F_load`.
+    c = 0xF;
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"U2F_load\", \"key\":\"key\", \"filename\":\"u2fcountertest.pdf\", \"U2F_counter\":%u}",
+             c);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+
+    // Ctr should be c + 1.
+    ctr = test_Sign(0x9000, false);
+    CHECK_EQ(ctr, c + 1);
+}
+
+
 static void run_tests(void)
 {
     // Start of tests
@@ -292,10 +340,10 @@ static void run_tests(void)
             // Timeout
             fprintf(stderr, "Wait for device timeout.\n");
             fflush(stderr);
-            PASS(test_Enroll(0x6985));
+            PASS(test_Enroll(0x6985, 1));
         }
         WaitForUserPresence(device, arg_hasButton);
-        PASS(test_Enroll(0x9000));
+        PASS(test_Enroll(0x9000, 1));
 
         // Fob with button should have consumed touch.
         if (U2Fob_liveDeviceTesting() && arg_hasButton) {
@@ -338,6 +386,10 @@ static void run_tests(void)
 
         // Ctr should have incremented by 1.
         CHECK_EQ(ctr2, ctr1 + 1);
+
+        // Check if HWW interface updates U2F counter correctly
+        PASS(check_CounterUpdate());
+
     } else {
         printf("\n\nNot testing HID API. A device is not connected.\n\n");
         return;

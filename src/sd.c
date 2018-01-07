@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,8 @@
 
 
 #define f_close         fclose
-#define f_printf(a, b)  fprintf(a, "%s", b)
+#define f_printf(a, b)  fprintf(a, b)
+#define f_printf3(a, b) fprintf(a, "%s", b)
 #define f_putc          fputc
 #define f_gets          fgets
 #define f_mount(...)    {}
@@ -54,6 +55,7 @@ static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLi
 #include "mcu.h"
 
 
+#define f_printf3(a, b) f_printf(a, b)
 #define FO(a)           &a
 uint32_t sd_update = 0;
 uint32_t sd_fs_found = 0;
@@ -65,7 +67,7 @@ FATFS fs;
 
 
 uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_name,
-                 uint8_t replace, int cmd)
+                 const char *u2f_backup, uint8_t replace, int cmd)
 {
     char file[256];
     char buffer[256];
@@ -79,7 +81,6 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
     snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
 
 #ifdef TESTING
-    commander_fill_report(cmd_str(cmd), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     if (replace == DBB_SD_REPLACE) {
         if (sd_file_exists(fn) == DBB_OK) {
             commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_OPEN_FILE);
@@ -119,25 +120,105 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
 #endif
     {
         int len_1, len_2, len_3, len_4, len_total, len_xref, stream_len;
-        unsigned long n = 0;
+        unsigned long n;
 
-        stream_len = strlens(wallet_backup) +
-                     (strlens(wallet_backup) / (SD_PDF_LINE_BUF_SIZE / 2)) * strlens(SD_PDF_TEXT_CONT) +
-                     strlens(SD_PDF_TEXT_0) +
-                     strlens(SD_PDF_TEXT_1) +
-                     strlens(SD_PDF_TEXT_2) +
-                     strlens(wallet_name) * 2 +
-                     (strlens(wallet_name) / (SD_PDF_LINE_BUF_SIZE / 2)) * strlens(SD_PDF_TEXT_CONT) +
-                     strlens(SD_PDF_TEXT_3);
+        stream_len =
+            // Subtract 1 if the macro includes '%%' as it turns into '%' when printed
+            // Visible text len
+            strlens(SD_PDF_TEXT_BEGIN) +
+            strlens(SD_PDF_TEXT_NAME) +
 
+            strlens(wallet_name) +
+            (strlens(wallet_name) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * strlens(SD_PDF_TEXT_CONT) +
+            strlens(SD_PDF_TEXT_HWW) +
+
+            strlens(wallet_backup) +
+            (strlens(wallet_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * strlens(SD_PDF_TEXT_CONT) +
+            strlens(SD_PDF_TEXT_U2F) +
+
+            strlens(u2f_backup) +
+            (strlens(u2f_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * strlens(SD_PDF_TEXT_CONT) +
+            strlens(SD_PDF_TEXT_FOOT) +
+
+            // Commented text len
+            // Backup
+            strlens(SD_PDF_BACKUP_START) +
+            (strlens(SD_PDF_COMMENT_HEAD) - 1) +
+            (strlens(SD_PDF_COMMENT_CONT) - 1) +
+
+            strlens(wallet_backup) +
+            (strlens(wallet_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+            strlens(SD_PDF_DELIM_S) +
+
+            strlens(wallet_name) +
+            (strlens(wallet_name) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+            (strlens(u2f_backup) ? (strlens(SD_PDF_COMMENT_CONT) - 1 + strlens(
+                                        SD_PDF_DELIM2_S)) : 0) +
+            strlens(u2f_backup) +
+            (strlens(u2f_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+            strlens(SD_PDF_COMMENT_CLOSE) +
+            strlens(SD_PDF_BACKUP_END) +
+
+            // Redundancy
+            (strlens(SD_PDF_REDUNDANCY_START) - 1) +
+            (strlens(SD_PDF_COMMENT_HEAD) - 1) +
+            (strlens(SD_PDF_COMMENT_CONT) - 1) +
+
+            strlens(wallet_backup) +
+            (strlens(wallet_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+            strlens(SD_PDF_DELIM2_S) +
+            strlens(wallet_name) +
+            (strlens(wallet_name) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+            (strlens(u2f_backup) ? (strlens(SD_PDF_COMMENT_CONT) - 1 + strlens(
+                                        SD_PDF_DELIM2_S)) : 0) +
+            strlens(u2f_backup) +
+            (strlens(u2f_backup) / (SD_PDF_LINE_BUF_SIZE / 2 + 1)) * (strlens(
+                        SD_PDF_COMMENT_CONT) - 1) +
+
+
+            strlens(SD_PDF_COMMENT_CLOSE) +
+            (strlens(SD_PDF_REDUNDANCY_END) - 1) +
+            strlens(SD_PDF_TEXT_END) +
+            0;
+
+        // Sections 1, 2, 3
         len_1 = f_printf(FO(file_object), SD_PDF_HEAD);
         len_2 = f_printf(FO(file_object), SD_PDF_1_0);
         len_3 = f_printf(FO(file_object), SD_PDF_2_0);
         len_4 = f_printf(FO(file_object), SD_PDF_3_0);
 
+        // Section 4 (visible)
         snprintf(buffer, sizeof(buffer), SD_PDF_4_0_HEAD, stream_len);
-        len_xref = f_printf(FO(file_object), buffer);
-        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_0);
+        len_xref = f_printf3(FO(file_object), buffer);
+
+        n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_BEGIN);
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_NAME);
+        while (n < strlens(wallet_name)) {
+            if (EOF == f_putc(wallet_name[n], FO(file_object))) {
+                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                f_close(FO(file_object));
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                goto err;
+            }
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_TEXT_CONT);
+            }
+        }
+        len_xref += n;
+
+        n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_HWW);
         while (n < strlens(wallet_backup)) {
             if (EOF == f_putc(wallet_backup[n], FO(file_object))) {
                 commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
@@ -145,15 +226,67 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
                 goto err;
             }
-            if (++n % (SD_PDF_LINE_BUF_SIZE / 2) == 0) {
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
                 len_xref += f_printf(FO(file_object), SD_PDF_TEXT_CONT);
             }
         }
-
         len_xref += n;
-        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_1);
 
         n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_U2F);
+        while (n < strlens(u2f_backup)) {
+            if (EOF == f_putc(u2f_backup[n], FO(file_object))) {
+                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                f_close(FO(file_object));
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                goto err;
+            }
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_TEXT_CONT);
+            }
+        }
+        len_xref += n;
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_FOOT);
+
+        // Section 4 (commented)
+        // Parsed by sd_load  --  < seed | =u2f_key | -name >
+        n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_BACKUP_START);
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_HEAD);
+        while (n < strlens(wallet_backup)) {
+            if (EOF == f_putc(wallet_backup[n], FO(file_object))) {
+                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                f_close(FO(file_object));
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                goto err;
+            }
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+            }
+        }
+        len_xref += n;
+
+        if (strlens(u2f_backup)) {
+            n = 0;
+            len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+            len_xref += f_printf(FO(file_object), SD_PDF_DELIM2_S);
+            while (n < strlens(u2f_backup)) {
+                if (EOF == f_putc(u2f_backup[n], FO(file_object))) {
+                    commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                    f_close(FO(file_object));
+                    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                    goto err;
+                }
+                if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                    len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+                }
+            }
+            len_xref += n;
+        }
+
+        n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+        len_xref += f_printf(FO(file_object), SD_PDF_DELIM_S);
         while (n < strlens(wallet_name)) {
             if (EOF == f_putc(wallet_name[n], FO(file_object))) {
                 commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
@@ -161,15 +294,53 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
                 goto err;
             }
-            if (++n % (SD_PDF_LINE_BUF_SIZE / 2) == 0) {
-                len_xref += f_printf(FO(file_object), SD_PDF_TEXT_CONT);
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
             }
         }
-
         len_xref += n;
-        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_2);
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CLOSE);
+        len_xref += f_printf(FO(file_object), SD_PDF_BACKUP_END);
+
+        // Section 4 (commented)
+        // Redundancy  --  < seed | =u2f_key | =name >
+        n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_REDUNDANCY_START);
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_HEAD);
+        while (n < strlens(wallet_backup)) {
+            if (EOF == f_putc(wallet_backup[n], FO(file_object))) {
+                commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                f_close(FO(file_object));
+                f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                goto err;
+            }
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+            }
+        }
+        len_xref += n;
+
+        if (strlens(u2f_backup)) {
+            n = 0;
+            len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+            len_xref += f_printf(FO(file_object), SD_PDF_DELIM2_S);
+            while (n < strlens(u2f_backup)) {
+                if (EOF == f_putc(u2f_backup[n], FO(file_object))) {
+                    commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
+                    f_close(FO(file_object));
+                    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                    goto err;
+                }
+                if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                    len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+                }
+            }
+            len_xref += n;
+        }
 
         n = 0;
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
+        len_xref += f_printf(FO(file_object), SD_PDF_DELIM2_S);
         while (n < strlens(wallet_name)) {
             if (EOF == f_putc(wallet_name[n], FO(file_object))) {
                 commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_WRITE_FILE);
@@ -177,21 +348,25 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
                 goto err;
             }
-            if (++n % (SD_PDF_LINE_BUF_SIZE / 2) == 0) {
-                len_xref += f_printf(FO(file_object), SD_PDF_TEXT_CONT);
+            if (++n % (SD_PDF_LINE_BUF_SIZE / 2 + 1) == 0) {
+                len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CONT);
             }
         }
         len_xref += n;
-        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_3);
+        len_xref += f_printf(FO(file_object), SD_PDF_COMMENT_CLOSE);
+        len_xref += f_printf(FO(file_object), SD_PDF_REDUNDANCY_END);
+        len_xref += f_printf(FO(file_object), SD_PDF_TEXT_END);
         len_xref += f_printf(FO(file_object), SD_PDF_4_0_END);
 
+        // Final section
         snprintf(buffer, sizeof(buffer), SD_PDF_END,
                  len_1,
                  len_1 + len_2,
                  len_1 + len_2 + len_3,
                  len_1 + len_2 + len_3 + len_4,
                  len_1 + len_2 + len_3 + len_4 + len_xref);
-        len_total = f_printf(FO(file_object), buffer);
+        len_total = f_printf3(FO(file_object), buffer);
+        len_total += f_printf(FO(file_object), SD_PDF_EOF);
 
         if (len_1 == EOF || len_2 == EOF || len_3 == EOF || len_4 == EOF ||
                 len_xref == EOF || len_total == EOF) {
@@ -228,7 +403,6 @@ char *sd_load(const char *fn, int cmd)
     snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
 
 #ifdef TESTING
-    commander_fill_report(cmd_str(cmd), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     FILE *file_object = fopen(file, "r");
     if (!file_object) {
         goto err;
@@ -277,7 +451,7 @@ char *sd_load(const char *fn, int cmd)
 
         if (content_found) {
             char *t0 = strchr(line, '(');
-            char *t1 = strchr(line, ')');
+            char *t1 = strstr(line, ") Tj");
             if (t0 && t1 && (t1 > t0) && (sizeof(text) > text_p_index)) {
                 snprintf(text_p + text_p_index, sizeof(text) - text_p_index, "%s", t0 + 1);
                 text_p_index += t1 - t0 - 1;
@@ -308,7 +482,6 @@ uint8_t sd_list(int cmd)
     uint32_t pos = 1;
 
 #ifdef TESTING
-    commander_fill_report(cmd_str(cmd), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     uint32_t sd_listing_pos = 0;
     struct dirent *p_dirent;
     DIR *dir = opendir(ROOTDIR);
@@ -405,7 +578,6 @@ uint8_t sd_list(int cmd)
 uint8_t sd_card_inserted(void)
 {
 #ifdef TESTING
-    commander_fill_report(cmd_str(CMD_backup), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
 #else
     sd_mmc_init();
     sd_listing_pos = 0;
@@ -431,7 +603,6 @@ uint8_t sd_file_exists(const char *fn)
     snprintf(file, sizeof(file), "%s/%s", ROOTDIR, fn);
 
 #ifdef TESTING
-    commander_fill_report(cmd_str(CMD_backup), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     FILE *file_object = fopen(file, "r");
     if (file_object) {
         f_close(FO(file_object));

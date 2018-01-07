@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sd.h"
 #include "ecc.h"
 #include "sha2.h"
 #include "utest.h"
@@ -352,6 +353,7 @@ static void tests_seed_xpub_backup(void)
     // load backup
     api_format_send_cmd(cmd_str(CMD_seed), seed_b, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
     // verify xpub matches
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
@@ -456,7 +458,8 @@ static void tests_u2f(void)
     u_assert_str_has(api_read_decrypted_report(), "\"U2F_hijack\":true");
 
     api_format_send_cmd(cmd_str(CMD_seed),
-                        "{\"source\":\"create\", \"filename\":\"u.pdf\", \"key\":\"password\"}", KEY_STANDARD);
+                        "{\"source\":\"create\", \"filename\":\"u2f_test_0.pdf\", \"key\":\"password\"}",
+                        KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     // U2F command runs
@@ -550,12 +553,708 @@ static void tests_u2f(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    // Reset U2F
-    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), KEY_STANDARD);
+
+    //
+    // U2F counter updating tested in tests_u2f_standard.c
+    //
+
+
+    //
+    // U2F backup and recovery
+    //
+    char cmd[512];
+    char fn0[] = "u2ftest0.pdf";
+    char fn1[] = "u2ftest1.pdf";
+    char fn2[] = "u2ftest2.pdf";
+    char fn2c[] = "u2ftest2c.pdf";
+    char fn3[] = "u2ftest3.pdf";
+    char fn3h[] = "u2ftest3h.pdf";
+    char fn3u[] = "u2ftest3u.pdf";
+    char fn3a[] = "u2ftest3a.pdf";
+    char fn4[] = "u2ftest4.pdf";
+
+
+    // reset device
+    // set password
+    // erase sd
+    // reset u2f fail (would create backup `all` by default but cannot because not seeded)
+    api_reset_device();
+
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
+             attr_str(ATTR_U2F_create), fn0);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+
+    // seed0 (creates backup0 `all` by default)
+    // verify backup0 `u2f` success
+    // verify backup0 `hww` success
+    // verify backup0 ``    success (default hww)
+    // verify backup0 `all` success (invalid cmd)
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
 
-    // TODO - test that {reset: U2F} does reset U2F master by verifying U2F signatures
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"\"}",
+             fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_all));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    // verify error on invalid `source` command
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, "badcmd");
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // seed1 (creates backup1 `all` by default)
+    // verify backup0 `u2f` success
+    // verify backup0 `hww` fail
+    // verify backup0 ``    fail
+    // verify backup1 `u2f` success
+    // verify backup1 `hww` success
+    // verify backup1 ``    success
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn1);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn1,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn1, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn1);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // reset u2f (creates backup2 `all` by default)
+    // reset with invalid command (aborts reset)
+    // verify backup1 `u2f` fail
+    // verify backup2 `u2f` success
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
+             attr_str(ATTR_U2F_create), fn2c);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"U2F_counter\":100}",
+             attr_str(ATTR_U2F_create), fn2c);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_KEY));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"key\":\"password\", \"U2F_counter\":100}",
+             attr_str(ATTR_U2F_create));
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn1,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2c,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    // repeat reset u2f without counter field
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\"}",
+             attr_str(ATTR_U2F_create), fn2);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2c,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // create backup3 (no source specified -> `all` by default)
+    // create backup3h `hww`
+    // create backup3u `u2f`
+    // create backup3a `all`
+    snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\"}", fn3);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3h, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3a, attr_str(ATTR_all));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+
+    // verify backup0 `u2f` fail
+    // verify backup0 `hww` fail
+    // verify backup0 `all` fail
+    // verify backup0 ``    fail
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_all));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup2 `u2f` success
+    // verify backup2 `hww` success
+    // verify backup2 ``    success (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn2, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn2);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup3 `u2f` success
+    // verify backup3 `hww` success
+    // verify backup3 ``    success (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup3h `u2f` fail
+    // verify backup3h `hww` success
+    // verify backup3h `all` fail
+    // verify backup3h ``    success (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3h,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3h, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3h, attr_str(ATTR_all));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3h);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup3u `u2f` success
+    // verify backup3u `hww` fail
+    // verify backup3u ``    fail (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3u, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3u);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup3a `u2f` success
+    // verify backup3a `hww` success
+    // verify backup3a ``    success (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3a,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3a, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3a);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // recover backup0 u2f
+    // recover backup3u hww fail
+    // recover backup3u all fail (invalid cmd)
+    snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+             attr_str(ATTR_U2F_load), fn0);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
+             fn3u);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_all),
+             fn3u);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+
+    // verify backup3u `u2f` fail
+    // verify backup0 `u2f` success
+    // verify backup0 `hww` fail
+    // verify backup0 ``    fail (default hww)
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // recover backup3u u2f success [with counter set]
+    // verify backup3u `u2f` success
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"U2F_counter\":100}", attr_str(ATTR_U2F_load),
+             fn3u);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // recover backup0 hww
+    // recover backup3h u2f fail
+    // recover backup3h all fail (invalid cmd)
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
+             fn0);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_U2F_load),
+             fn3h);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_all),
+             fn3h);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+
+    // verify backup3h `hww` fail
+    // verify backup0 `u2f` fail
+    // verify backup0 `hww` success
+    // verify backup0 `all` fail
+    // verify backup0 ``    success
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn3h, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_all));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    // verify backup3u `u2f` success
+    // verify backup0  `hww` success
+    // reset u2f (fail; deprecated cmd)
+    // reset u2f (creates backup4 `all` by default)
+    // verify backup3u `u2f` fail
+    // verify backup4u `u2f` success
+    // verify backup0  `hww` success
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\"}",
+             attr_str(ATTR_U2F_create), fn4);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn4,
+             attr_str(ATTR_U2F));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+    snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
+             fn0, attr_str(ATTR_HWW));
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+    //
+    // u2f sample sd files
+    //
+    if (!TEST_LIVE_DEVICE) {
+
+        char *echo;
+        const char one_input[] =
+            "{\"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
+        const char hash_1_input[] =
+            "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
+        const char tb_v2_3a[] = "test_backup.pdf";
+        const char tb_v2_3h[] = "test_backup_hww.pdf";
+        const char tb_v2_3u[] = "test_backup_u2f.pdf";
+        const char tb_v2_2[] = "test_backup_v2.2.3.pdf";// backward compatability test
+
+
+        // copy test sd_files to sd card directory
+        system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
+
+
+        // verify  v23a u2f fail
+        // verify  v23a hww fail
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3a,
+                 attr_str(ATTR_U2F));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
+                 tb_v2_3a, attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+
+        // recover v23u u2f success
+        // recover v23u hww fail
+        // verify  v23u u2f success
+        // verify  v23u hww fail
+        // sign             fail
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_U2F_load), tb_v2_3u);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), tb_v2_3u);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3u,
+                 attr_str(ATTR_U2F));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
+                 tb_v2_3u, attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), hash_1_input);
+
+
+        // recover fn4  u2f success
+        // recover v23h hww success
+        // recover v23h u2f fail
+        // verify  fn4  u2f success
+        // verify  v23h hww success
+        // sign             success
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_U2F_load), fn4);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), tb_v2_3h);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_U2F_load), tb_v2_3h);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn4,
+                 attr_str(ATTR_U2F));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
+                 tb_v2_3h, attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), hash_1_input);
+
+
+        // recover fn4  hww success
+        // verify  fn4  hww success
+        // sign             fail
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), fn4);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}", fn4,
+                 attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), hash_1_input);
+
+
+        // recover v23a u2f success
+        // recover v23a hww success
+        // verify  v23a u2f success
+        // verify  v23u u2f success
+        // verify  v23a hww success
+        // verify  v23h hww success
+        // sign             success
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_U2F_load), tb_v2_3a);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), tb_v2_3a);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3a,
+                 attr_str(ATTR_U2F));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3u,
+                 attr_str(ATTR_U2F));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
+                 tb_v2_3a, attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
+                 tb_v2_3h, attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), hash_1_input);
+
+
+        // recover fn4  hww success
+        // verify  fn4  hww success
+        // sign             fail
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), fn4);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}", fn4,
+                 attr_str(ATTR_HWW));
+        api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), hash_1_input);
+
+
+        // recover v22  hww success
+        // recover v22  u2f fail
+        // sign             success
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), tb_v2_2);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
+                 attr_str(ATTR_U2F_load), tb_v2_2);
+        api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+
+        // sign
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            echo = api_read_value_decrypt(CMD_echo, memory_report_verification_key());
+            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        u_assert_str_has(api_read_decrypted_report(), hash_1_input);
+    }
+
+
+    // clean up sd card
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 }
 
 
@@ -812,6 +1511,9 @@ static void tests_input(void)
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"na\\u0066me\\ufc00\\u0000\"}", KEY_STANDARD);
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
+
+    api_send_cmd("{\"name\": \"shouldnotacceptdelim2" SD_PDF_DELIM2_S "\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
     int i;
@@ -1415,7 +2117,7 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
-    // remove backup file to keep SD card clean
+    // clean up sd card
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 

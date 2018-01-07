@@ -34,10 +34,10 @@ try:
     hid_send_encrypt(message, password)
 
 
-except IOError, ex:
-    print ex
-except (KeyboardInterrupt, SystemExit):
-    print "Exiting code"
+except IOError as ex:
+    print(ex)
+except(KeyboardInterrupt, SystemExit):
+    print("Exiting code")
 
 dbb_hid.close()
 

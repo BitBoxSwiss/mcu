@@ -1,7 +1,7 @@
 Digital Bitbox Python
 ============
 
-Python code supporting the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.
+Python (v2 or v3) code supporting the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.
 
 ### Developer interface
 
@@ -13,4 +13,4 @@ Dependencies:
 - [Cython](http://cython.org)
 - [HIDAPI](https://pypi.python.org/pypi/hidapi)
 
-The code uses the following additional Python libraries: `json`, `base64`, `aes` (slowaes), and `hashlib`.
+The code uses the following additional Python libraries: `os`, `sys`, `struct`, `json`, `base64`, `pyaes`, and `hashlib`.

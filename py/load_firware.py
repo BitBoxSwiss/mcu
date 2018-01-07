@@ -20,7 +20,7 @@ from dbb_utils import *
 
 
 if len(sys.argv) is not 3:
-    print '\n\nUsage:\n\tpython load_firmware.py firmware_name.bin firmware_version\n\n'
+    print('\n\nUsage:\n\tpython load_firmware.py firmware_name.bin firmware_version\n\n')
     sys.exit()
 else:
     fn = sys.argv[1]
@@ -29,7 +29,7 @@ else:
 
 # Private key signatures (order is important)
 if 'signed' in fn:
-    print '\n\nPlease load the unsigned firmware binfile. Signatures are added within this script.\n\n'
+    print('\n\nPlease load the unsigned firmware binfile. Signatures are added within this script.\n\n')
     sys.exit()
 elif '2.0.0' in version:
     sig = (
@@ -82,25 +82,24 @@ elif 'debug' in version:
         '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
         )
 else:
-    print '\n\nError: invalid firmware version ({}). Use the form \'vX.X.X\'\n\n'.format(version)
+    print('\n\nError: invalid firmware version ({}). Use the form \'vX.X.X\'\n\n'.format(version))
     sys.exit()
 
 
 def printFirmwareHash(filename):
     with open(filename, "rb") as f:
-        data = ""
-        while True:     
+        data = bytearray()
+        while True:
             d = f.read(chunksize)
-            if d == "":
+            if len(d) == 0:
                 break
-            data = data + d
-    data = data + '\xFF' * (applen - len(data)) 
-    print '\nHashed firmware', binascii.hexlify(Hash(data))
+            data = data + bytearray(d)
+    data = data + b'\xFF' * (applen - len(data)) 
+    print('\nHashed firmware', binascii.hexlify(Hash((data))))
 
 
 # ----------------------------------------------------------------------------------
 try:
-
     openHid()
 
     printFirmwareHash(fn)
@@ -111,15 +110,15 @@ try:
     sendBin(fn)        # send new firmware
 
     if sendPlainBoot("s" + "0" + sig) != '0': # verify new firmware
-        print 'ERROR: invalid firmware signature\n\n'
+        print('ERROR: invalid firmware signature\n\n')
     else:
-        print 'SUCCESS: valid firmware signature\n\n'
+        print('SUCCESS: valid firmware signature\n\n')
 
     sendPlainBoot("b") # blink led
 
-except IOError, ex:
-    print ex
+except IOError as ex:
+    print(ex)
 except (KeyboardInterrupt, SystemExit):
-    print "Exiting code"
+    print('Exiting code')
 
 

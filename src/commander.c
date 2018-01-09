@@ -41,10 +41,10 @@
 #include "aes.h"
 #include "led.h"
 #include "ecc.h"
+#include "sd.h"
 #ifndef TESTING
 #include "touch.h"
 #include "mcu.h"
-#include "sd.h"
 #else
 #include "sham.h"
 #endif

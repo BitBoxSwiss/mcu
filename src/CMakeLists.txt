@@ -27,6 +27,7 @@ set(DBB-FIRMWARE-SOURCES
         sha2.c
         u2f_device.c
         usb.c
+        sd.c
 )
 
 if(USE_SECP256K1_LIB)
@@ -44,17 +45,13 @@ set(DBB-BOOTLOADER-SOURCES
         uECC.c
         sha2.c
         utils.c
-        touch.c
         flags.c
-        random.c
-        ataes132.c
         usb.c
 )
 
 set(DBB-HARDWARE-SOURCES
         board_com.c
         ataes132.c
-        sd.c
         systick.c
         touch.c
 )

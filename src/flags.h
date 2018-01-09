@@ -54,7 +54,7 @@
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
-#define VERIFYPASS_FILENAME         "verification.txt"
+#define VERIFYPASS_FILENAME         "verification.pdf"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
 #define VERIFYPASS_LOCK_CODE_LEN    16// bytes
 #define DEVICE_DEFAULT_NAME         "My Digital Bitbox"

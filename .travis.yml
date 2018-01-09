@@ -63,7 +63,7 @@ script:
           make test;
       fi;
     - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
-          valgrind --leak-check=full --num-callers=40 --error-exitcode=1 bin/tests_api;
+          valgrind --leak-check=full --num-callers=40 --suppressions=../.valgrind.supp --error-exitcode=1 bin/tests_api;
       fi;
     - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --num-callers=40 --error-exitcode=1 bin/tests_u2f_hid;

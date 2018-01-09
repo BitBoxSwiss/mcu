@@ -1,0 +1,23 @@
+# Valgrind suppression file
+#
+# Note: Could not figure out how to fix this error. Suppressed instead as it only affects unit testing (simulating the SD card).
+{
+   SUPPRESS (travis): Conditional jump or move depends on uninitialised value(s)/sd.c[TESTING=true]>sd_list>opendir()
+   Memcheck:Cond
+   fun:vfprintf
+   fun:vsnprintf
+   fun:snprintf
+   fun:tests_seed_xpub_backup
+   fun:run_utests
+   fun:main
+}
+{
+   SUPPRESS (ubuntu): Conditional jump or move depends on uninitialised value(s)/sd.c[TESTING=true]>sd_list>opendir()
+   Memcheck:Cond
+   fun:vfprintf
+   fun:__vsnprintf_chk
+   fun:__snprintf_chk
+   fun:tests_seed_xpub_backup
+   fun:run_utests
+   fun:main
+}

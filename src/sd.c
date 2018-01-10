@@ -40,14 +40,14 @@
 
 
 #define f_close         fclose
-#define f_printf(a, b)  fprintf(a, b)
-#define f_printf3(a, b) fprintf(a, "%s", b)
+#define f_printf(a, b)  fprintf((a), (b))
+#define f_printf3(a, b) fprintf((a), "%s", (b))
 #define f_putc          fputc
 #define f_gets          fgets
 #define f_mount(...)    {}
 #define f_mkdir(...)    {}
 #define FRESULT         int
-#define FO(a)           a
+#define FO(a)           (a)
 static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLists.txt
 
 #else
@@ -55,8 +55,8 @@ static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLi
 #include "mcu.h"
 
 
-#define f_printf3(a, b) f_printf(a, b)
-#define FO(a)           &a
+#define f_printf3(a, b) f_printf((a), (b))
+#define FO(a)           (&a)
 uint32_t sd_update = 0;
 uint32_t sd_fs_found = 0;
 uint32_t sd_listing_pos = 0;

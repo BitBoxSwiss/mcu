@@ -39,6 +39,7 @@
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 #define strlens(s) (s == NULL ? 0 : strlen(s))
+#define STREQ(a, b) (strcmp((a), (b))  == 0)
 
 
 volatile void *utils_zero(volatile void *dst, size_t len);

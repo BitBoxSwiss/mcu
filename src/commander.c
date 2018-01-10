@@ -368,9 +368,7 @@ static int commander_process_backup_check(const char *key, const char *filename,
     backup_hex = sd_load(filename, CMD_backup);
 
     if (strlens(backup_hex) < MEM_PAGE_LEN * 2) {
-        if (strlens(backup_hex)) {
-            commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
-        } // else error reported in sd_load()
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_READ_FILE);
         utils_zero(backup_hex, strlens(backup_hex));
         return DBB_ERROR;
     }

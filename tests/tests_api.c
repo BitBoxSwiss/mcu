@@ -83,7 +83,7 @@ static void tests_seed_xpub_backup(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // rename
     api_format_send_cmd(cmd_str(CMD_name), name0, KEY_STANDARD);
@@ -119,18 +119,18 @@ static void tests_seed_xpub_backup(void)
 
     // backup
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
     u_assert_str_has_not(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_ERASE));
 
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // erase device
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // check has default name
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
@@ -160,27 +160,26 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
 
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), filename);
     u_assert_str_has_not(api_read_decrypted_report(), filename_create);
 
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
-
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_READ_FILE));
 
 
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -205,7 +204,7 @@ static void tests_seed_xpub_backup(void)
         snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
         api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+        ASSERT_SUCCESS
 
         api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
         u_assert_str_has_not(api_read_decrypted_report(), cmd_str(CMD_warning));
@@ -214,13 +213,13 @@ static void tests_seed_xpub_backup(void)
     snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
     snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_warning));
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111", KEY_STANDARD);
@@ -265,16 +264,15 @@ static void tests_seed_xpub_backup(void)
 
     snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"password\"}", filename_bad);
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_BAD_CHAR));
 
     snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", filename);
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"password\"}", filename);
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -295,7 +293,7 @@ static void tests_seed_xpub_backup(void)
     if (!TEST_LIVE_DEVICE) {
         // testing buffer gets overwritten by seed command, so reset it
         api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+        ASSERT_SUCCESS
     }
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
@@ -305,7 +303,7 @@ static void tests_seed_xpub_backup(void)
              filename);
 
     api_format_send_cmd(cmd_str(CMD_backup), erase_file, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
              filename_bad);
@@ -323,10 +321,10 @@ static void tests_seed_xpub_backup(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // seed with extra entropy from device
     api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
@@ -352,8 +350,7 @@ static void tests_seed_xpub_backup(void)
 
     // load backup
     api_format_send_cmd(cmd_str(CMD_seed), seed_b, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     // verify xpub matches
     api_format_send_cmd(cmd_str(CMD_xpub), "m/0", KEY_STANDARD);
@@ -364,7 +361,7 @@ static void tests_seed_xpub_backup(void)
 
     // clean up sd card
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 }
 
 
@@ -376,7 +373,7 @@ static void tests_random(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_random), attr_str(ATTR_pseudo), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -414,7 +411,7 @@ static void tests_name(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_name), name0, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -447,10 +444,10 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.bcntl, 0);
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // Seed
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -471,8 +468,7 @@ static void tests_u2f(void)
 
     // Disable U2F
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {
@@ -493,8 +489,7 @@ static void tests_u2f(void)
     // Enable U2F - Must be done through HWW interface.
     TEST_U2FAUTH_HIJACK = 0;
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":true}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -504,8 +499,7 @@ static void tests_u2f(void)
 
     // Disable U2F hijack
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":false}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {
@@ -525,8 +519,7 @@ static void tests_u2f(void)
     // Enable U2F hijack - Must be done through HWW interface.
     TEST_U2FAUTH_HIJACK = 0;
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":true}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -535,23 +528,19 @@ static void tests_u2f(void)
 
     // Send invalid commands
     api_format_send_cmd(cmd_str(CMD_feature_set), "{}", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"Foo\":false}", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"false\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":\"true\"}", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
 
     //
@@ -581,16 +570,16 @@ static void tests_u2f(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
              attr_str(ATTR_U2F_create), fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_KEY_MASTER));
 
 
     // seed0 (creates backup0 `all` by default)
@@ -606,21 +595,21 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"\"}",
              fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_all));
@@ -632,7 +621,6 @@ static void tests_u2f(void)
              fn0, "badcmd");
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
 
 
     // seed1 (creates backup1 `all` by default)
@@ -650,30 +638,30 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn1,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn1, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn1);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // reset u2f (creates backup2 `all` by default)
@@ -702,12 +690,12 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn1,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2c,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     // repeat reset u2f without counter field
     snprintf(cmd, sizeof(cmd),
@@ -719,12 +707,12 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2c,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // create backup3 (no source specified -> `all` by default)
@@ -733,22 +721,22 @@ static void tests_u2f(void)
     // create backup3a `all`
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\"}", fn3);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3h, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3a, attr_str(ATTR_all));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
 
@@ -759,21 +747,21 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_all));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
 
     // verify backup2 `u2f` success
@@ -782,16 +770,16 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn2,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn2, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn2);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // verify backup3 `u2f` success
@@ -800,16 +788,16 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // verify backup3h `u2f` fail
@@ -819,21 +807,21 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3h,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3h, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3h, attr_str(ATTR_all));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3h);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // verify backup3u `u2f` success
@@ -842,16 +830,16 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3u, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3u);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
 
     // verify backup3a `u2f` success
@@ -860,16 +848,16 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3a,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3a, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn3a);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // recover backup0 u2f
@@ -884,7 +872,7 @@ static void tests_u2f(void)
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
              fn3u);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_all),
@@ -900,21 +888,21 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
 
     // recover backup3u u2f success [with counter set]
@@ -923,12 +911,12 @@ static void tests_u2f(void)
              "{\"source\":\"%s\", \"filename\":\"%s\", \"U2F_counter\":100}", attr_str(ATTR_U2F_load),
              fn3u);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // recover backup0 hww
@@ -938,13 +926,13 @@ static void tests_u2f(void)
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
              fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_U2F_load),
              fn3h);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_all),
@@ -961,26 +949,26 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3h, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn0,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_all));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     // verify backup3u `u2f` success
@@ -993,18 +981,18 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\"}",
              attr_str(ATTR_U2F_create), fn4);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_reset), attr_str(ATTR_U2F), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
@@ -1012,17 +1000,17 @@ static void tests_u2f(void)
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+    u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn4,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
 
     //
@@ -1050,12 +1038,12 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3a,
                  attr_str(ATTR_U2F));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
                  tb_v2_3a, attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
 
         // recover v23u u2f success
@@ -1066,22 +1054,22 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_3u);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), tb_v2_3u);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3u,
                  attr_str(ATTR_U2F));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
                  tb_v2_3u, attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SD_NO_MATCH));
 
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
@@ -1102,27 +1090,27 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), fn4);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), tb_v2_3h);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_3h);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", fn4,
                  attr_str(ATTR_U2F));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
                  tb_v2_3h, attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
@@ -1140,12 +1128,12 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), fn4);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}", fn4,
                  attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
@@ -1167,32 +1155,32 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_3a);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), tb_v2_3a);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3a,
                  attr_str(ATTR_U2F));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"source\":\"%s\"}", tb_v2_3u,
                  attr_str(ATTR_U2F));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
                  tb_v2_3a, attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}",
                  tb_v2_3h, attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
@@ -1210,12 +1198,12 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), fn4);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"key\",\"source\":\"%s\"}", fn4,
                  attr_str(ATTR_HWW));
         api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         u_assert_str_has(api_read_decrypted_report(), cmd_str(CMD_echo));
@@ -1233,12 +1221,12 @@ static void tests_u2f(void)
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), tb_v2_2);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
 
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_2);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_success));
+        u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_SEED_INVALID));
 
         // sign
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
@@ -1254,7 +1242,7 @@ static void tests_u2f(void)
 
     // clean up sd card
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 }
 
 
@@ -1266,18 +1254,16 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_false));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_ping), "", NULL);
     u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_password));
 
     api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_abort), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_led), "invalid_cmd", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
@@ -1336,18 +1322,18 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1400,7 +1386,7 @@ static void tests_device(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1416,7 +1402,11 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    if (TEST_LIVE_DEVICE) {
+        ASSERT_SUCCESS
+    } else {
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    }
 
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -1424,7 +1414,11 @@ static void tests_device(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    if (TEST_LIVE_DEVICE) {
+        ASSERT_SUCCESS
+    } else {
+        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    }
 
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -1432,7 +1426,7 @@ static void tests_device(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     if (!TEST_LIVE_DEVICE) {
         commander_force_reset();
@@ -1453,13 +1447,13 @@ static void tests_input(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_send_cmd("{\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_send_cmd("{\"name\": \"name\"}", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1548,8 +1542,7 @@ static void tests_password(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
@@ -1594,21 +1587,20 @@ static void tests_password(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
     // Set hidden key
     api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Set hidden key with wrong length -> hidden key not reset
     api_format_send_cmd(cmd_str(CMD_hidden_password), "123", KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Change standard key to hidden key from standard wallet -> error collision
     // -> delete hidden key and set standard key to hidden key
     api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, KEY_STANDARD);
@@ -1623,30 +1615,28 @@ static void tests_password(void)
     // Reset standard password
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, KEY_HIDDEN);
     if (!TEST_U2FAUTH_HIJACK) {
-        u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-        u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+        ASSERT_SUCCESS
     }
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to standard wallet (hidden key)
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet -> error (hidden key not set)
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     // Reset hidden key
     api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1675,22 +1665,21 @@ static void tests_password(void)
     u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet -> error (hidden key not set)
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
 
     // Reset hidden key
     api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to standard wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     u_assert_str_has(api_read_decrypted_report(), DEVICE_DEFAULT_NAME);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1703,14 +1692,14 @@ static void tests_password(void)
     memset(xpub1, 0, sizeof(xpub1));
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Erase backups
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
     // Seed wallets
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"h.pdf\", \"key\":\"password\"}", KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
     // Get standard wallet xpub
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1718,7 +1707,7 @@ static void tests_password(void)
     u_assert_str_not_eq(xpub0, xpub1);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Get hidden wallet xpub and check that it is different
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1727,7 +1716,7 @@ static void tests_password(void)
 
     // Change key in hidden wallet
     api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, KEY_HIDDEN);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
     // Login to hidden wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1739,7 +1728,7 @@ static void tests_password(void)
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_HIDDEN);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to standard wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1755,7 +1744,7 @@ static void tests_password(void)
     memset(xpub1s, 0, sizeof(xpub1s));
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login standard wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1789,7 +1778,7 @@ static void tests_password(void)
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     // Set hidden key
     api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, sessionkey);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
     // Check standard wallet xpub is correct
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, sessionkey);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1797,7 +1786,7 @@ static void tests_password(void)
     u_assert_str_eq(xpub0, xpub0s);
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", sessionkey);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login hidden wallet
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
@@ -1825,7 +1814,7 @@ static void tests_password(void)
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_PW_COLLIDE));
     // Turn off session key to allow switching wallets
     api_format_send_cmd(cmd_str(CMD_session), "off", sessionkey);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
     // Login to hidden wallet -> error (hidden key not set)
     api_format_send_cmd(cmd_str(CMD_name), "", KEY_HIDDEN);
     u_assert_str_has(api_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
@@ -1834,7 +1823,7 @@ static void tests_password(void)
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
     // Turn off session key to avoid conflicts in next unit test
     api_format_send_cmd(cmd_str(CMD_session), "off", KEY_STANDARD);
-    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));
+    ASSERT_SUCCESS
 }
 
 
@@ -1851,7 +1840,7 @@ static void tests_echo_tfa(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign2, KEY_STANDARD);
     u_assert_int_eq((strstr(api_read_decrypted_report(), cmd_str(CMD_echo)) ||
@@ -1869,16 +1858,16 @@ static void tests_echo_tfa(void)
 
     // test verifypass
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has_not(api_read_decrypted_report(), VERIFYPASS_FILENAME);
 
     api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     u_assert_str_has(api_read_decrypted_report(), VERIFYPASS_FILENAME);
@@ -2105,11 +2094,11 @@ static void tests_sign(void)
     api_reset_device();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // backup
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
     // seed
     char seed[] =
@@ -2119,7 +2108,7 @@ static void tests_sign(void)
 
     // clean up sd card
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 
 
     // missing parameters
@@ -2349,7 +2338,7 @@ static void tests_memory_setup(void)
     memory_setup(); // run twice
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
-    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    ASSERT_SUCCESS
 }
 
 

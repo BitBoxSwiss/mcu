@@ -44,6 +44,11 @@
 #define HID_REPORT_SIZE COMMANDER_REPORT_SIZE
 #define API_READ_ERROR "ERROR: Unable to read report."
 
+#define ASSERT_SUCCESS do {\
+  u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));\
+  u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));\
+} while (0);
+
 
 #ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/

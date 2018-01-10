@@ -49,6 +49,14 @@
   u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));\
 } while (0);
 
+#define ASSERT_REPORT_HAS(a) do {\
+  u_assert_str_has(api_read_decrypted_report(), (a));\
+} while (0);
+
+#define ASSERT_REPORT_HAS_NOT(a) do {\
+  u_assert_str_has_not(api_read_decrypted_report(), (a));\
+} while (0);
+
 
 #ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/

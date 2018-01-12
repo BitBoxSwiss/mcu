@@ -84,40 +84,18 @@ int main (void)
     wdt_disable(WDT);
     irq_initialize_vectors();
     cpu_irq_enable();
-    sleepmgr_init();
     sysclk_init();
-    flash_init(FLASH_ACCESS_MODE_128, 6);
     board_com_init();
     __stack_chk_guard = random_uint32(0);
     pmc_enable_periph_clk(ID_PIOA);
     delay_init(F_CPU);
     systick_init();
-    touch_init();
-    ecc_context_init();
-    
-#ifdef ECC_USE_SECP256K1_LIB
-    /* only init the context if libsecp256k1 is present */
-    /* otherwise we would re-init the context of uECC */
-    bitcoin_ecc.ecc_context_init();
-#endif
-    memset(usb_serial_number, 0, sizeof(usb_serial_number));
-    snprintf(usb_serial_number, sizeof(usb_serial_number), "%s%s",
-             USB_DEVICE_SERIAL_NAME_TYPE, DIGITAL_BITBOX_VERSION_SHORT);
-
-    if (memory_read_erased()) {
-        usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 2] = '-';
-        usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 1] = '-';
-    }
-
-    usb_suspend_action();
-    udc_start();
-    memory_setup();
 
     while (1) {
         led_on();
-        delay_ms(300);
+        delay_ms(1000);
         led_off();
-        delay_ms(300);
+        delay_ms(1000);
         led_on();
     }
 }

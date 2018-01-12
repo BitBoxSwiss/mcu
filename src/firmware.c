@@ -58,27 +58,6 @@ void SysTick_Handler(void)
     systick_update_time();
 }
 
-
-void HardFault_Handler(void)
-{
-    while (1) {
-        led_toggle();
-        delay_ms(500);
-    }
-}
-
-
-void MemManage_Handler(void)
-{
-    while (1) {
-        led_toggle();
-        delay_ms(1000);
-    }
-}
-
-
-char usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
-
 int main (void)
 {
     wdt_disable(WDT);
@@ -98,4 +77,5 @@ int main (void)
         delay_ms(1000);
         led_on();
     }
+
 }

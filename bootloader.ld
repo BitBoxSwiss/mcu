@@ -5,11 +5,12 @@ SEARCH_DIR(.)
 /* Memory Spaces Definitions */
 MEMORY
 {
-	rom (rx)  : ORIGIN = 0x00400000, LENGTH = 0x00008000
-	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00010000
+  flash (rx) : ORIGIN = 0x00400000, LENGTH = 0x00200000 /* 2M */
+  ram (rwx)  : ORIGIN = 0x20000000, LENGTH = 0x28000 /* 160k */
 }
 
-__stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : 0x3000;
+/*  stack size was 0x3000 */
+__stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : ORIGIN(ram) + LENGTH(ram); 
 __ram_end__ = ORIGIN(ram) + LENGTH(ram) - 4;
 
 /* Section Definitions */

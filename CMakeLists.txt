@@ -155,14 +155,19 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_CURRENT_BINARY_DIR}/lib)
 #-----------------------------------------------------------------------------
 # Compiler
 
+if (CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL "7.1.0")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-expansion-to-defined")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
+endif ()
+
 if(BUILD_VALGRIND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O0 -g")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Os")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Werror -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
-
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
 
 if(BUILD_TYPE STREQUAL "test")
@@ -174,7 +179,7 @@ if(BUILD_TYPE STREQUAL "test")
 endif()
 
 if(NOT BUILD_TYPE STREQUAL "test")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -fdata-sections -fomit-frame-pointer -ffunction-sections -mlong-calls -mcpu=cortex-m4 -pipe -fno-strict-aliasing --param max-inline-insns-single=500 -D__SAM4S4A__ -DNDEBUG -DBOARD=USER_BOARD -DARM_MATH_CM4=true -DUDD_ENABLE -D_QTOUCH_ -Dscanf=iscanf -Dprintf=iprintf")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -fdata-sections -fomit-frame-pointer -ffunction-sections -mlong-calls -mcpu=cortex-m4 -pipe -fno-strict-aliasing --param max-inline-insns-single=500 -D__SAM4SD32C__ -DNDEBUG -DBOARD=USER_BOARD -DARM_MATH_CM4=true -DUDD_ENABLE -D_QTOUCH_ -Dscanf=iscanf -Dprintf=iprintf")
 endif()
 
 

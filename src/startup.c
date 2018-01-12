@@ -51,7 +51,6 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
     }
 }
 
-
 void SysTick_Handler(void)
 {
     systick_update_time();
@@ -75,7 +74,6 @@ void MemManage_Handler(void)
     }
 }
 
-
 static uint32_t mpu_region_size(uint32_t size)
 {
     uint32_t regionSize = 32;
@@ -91,7 +89,6 @@ static uint32_t mpu_region_size(uint32_t size)
     }
     return (ret << 1);
 }
-
 
 static void mpu_init(void)
 {
@@ -130,8 +127,8 @@ int main(void)
 {
     uint8_t rnd[SHA256_BLOCK_LENGTH];
 
-    wdt_disable(WDT);
-    irq_initialize_vectors();
+    wdt_disable(WDT); // Disable Watchdog Timer
+    irq_initialize_vectors(); 
     cpu_irq_enable();
     sysclk_init();
     board_com_init();
@@ -146,7 +143,9 @@ int main(void)
     mpu_init();
     bootloader_jump();
 
-    while (1) { }
+    while (1) {
+        led_on();
+    }
 
     return 0;
 }

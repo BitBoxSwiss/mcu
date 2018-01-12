@@ -94,6 +94,7 @@ int main (void)
     systick_init();
     touch_init();
     ecc_context_init();
+    
 #ifdef ECC_USE_SECP256K1_LIB
     /* only init the context if libsecp256k1 is present */
     /* otherwise we would re-init the context of uECC */
@@ -110,14 +111,13 @@ int main (void)
 
     usb_suspend_action();
     udc_start();
-
-    led_on();
-    delay_ms(300);
-    led_off();
-
     memory_setup();
 
     while (1) {
-        sleepmgr_enter_sleep();
+        led_on();
+        delay_ms(300);
+        led_off();
+        delay_ms(300);
+        led_on();
     }
 }

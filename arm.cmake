@@ -4,7 +4,7 @@ set(CMAKE_SYSTEM_NAME "Generic")
 
 include(CMakeForceCompiler)
 
-CMAKE_FORCE_C_COMPILER("arm-none-eabi-gcc" GNU)
+CMAKE_FORCE_C_COMPILER("/usr/local/gcc_arm/gcc-arm-none-eabi-5.4/bin/arm-none-eabi-gcc" GNU)
 
 set(CMAKE_AR "arm-none-eabi-ar" CACHE PATH "" FORCE)
 set(CMAKE_RANLIB "arm-none-eabi-ranlib" CACHE PATH "" FORCE)

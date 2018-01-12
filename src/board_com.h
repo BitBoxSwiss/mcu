@@ -42,7 +42,7 @@
 #define BOARD_MCK                   CHIP_FREQ_CPU_MAX
 #define BOARD_OSC_STARTUP_US        15625
 
-#define LED_0_PIN                   IOPORT_CREATE_PIN(PIOA, 16)
+#define LED_0_PIN                   IOPORT_CREATE_PIN(PIOC, 23)
 #define LED_0_ACTIVE                false
 #define LED_0_INACTIVE              !LED0_ACTIVE
 #define LED_COUNT 1

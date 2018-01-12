@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "gpio.h": "c",
+        "parts.h": "c",
+        "ioport.h": "c"
+    }
+}

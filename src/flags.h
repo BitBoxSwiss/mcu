@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -61,8 +61,6 @@
 #define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE * 4 / 7)
 #define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE * 4 / 7)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
-#define BACKUP_DELIM                '-'
-#define BACKUP_DELIM_S              "-"
 
 
 #define _STRINGIFY(S) #S
@@ -119,6 +117,7 @@ X(recid)          \
 X(pin)            \
 X(U2F)            \
 X(U2F_hijack)     \
+X(U2F_counter)    \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \
@@ -166,7 +165,11 @@ X(serial)         \
 X(version)        \
 X(password)       \
 X(TFA)            \
+X(all)            \
+X(HWW)            \
 X(U2F)            \
+X(U2F_load)       \
+X(U2F_create)     \
 X(U2F_hijack)     \
 X(__ERASE__)      \
 X(__FORCE__)      \

@@ -35,6 +35,8 @@
 #include "u2f/u2f_hid.h"
 #include "u2f/u2f.h"
 #include "u2f_device.h"
+#include "commander.h"
+#include "utest.h"
 #include "usb.h"
 
 

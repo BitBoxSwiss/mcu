@@ -128,6 +128,7 @@ uint16_t memory_pin_err_count(const uint8_t access);
 uint16_t memory_read_pin_err_count(void);
 
 uint32_t memory_u2f_count_iter(void);
+void memory_u2f_count_set(uint32_t c);
 uint32_t memory_u2f_count_read(void);
 
 

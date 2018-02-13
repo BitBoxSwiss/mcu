@@ -310,7 +310,7 @@ static void commander_process_reset(yajl_val json_node)
         return;
     }
 
-    if (!strncmp(value, attr_str(ATTR___ERASE__), strlens(attr_str(ATTR___ERASE__)))) {
+    if (STREQ(value, attr_str(ATTR___ERASE__))) {
         memory_reset_hww();
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_reset), attr_str(ATTR_success), DBB_OK);
@@ -358,9 +358,9 @@ static int commander_process_backup_check(const char *key, const char *filename,
     }
 
     if (
-        (strcmp(source, attr_str(ATTR_U2F)) != 0) &&
-        (strcmp(source, attr_str(ATTR_HWW)) != 0) &&
-        (strcmp(source, attr_str(ATTR_all)) != 0)) {
+        (!STREQ(source, attr_str(ATTR_U2F))) &&
+        (!STREQ(source, attr_str(ATTR_HWW))) &&
+        (!STREQ(source, attr_str(ATTR_all)))) {
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
@@ -368,15 +368,13 @@ static int commander_process_backup_check(const char *key, const char *filename,
     backup_hex = sd_load(filename, CMD_backup);
 
     if (strlens(backup_hex) < MEM_PAGE_LEN * 2) {
-        if (strlens(backup_hex)) {
-            commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_NO_MATCH);
-        } // else error reported in sd_load()
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_SD_READ_FILE);
         utils_zero(backup_hex, strlens(backup_hex));
         return DBB_ERROR;
     }
 
     // u2f | all
-    if (strcmp(source, attr_str(ATTR_U2F)) == 0 || strcmp(source, attr_str(ATTR_all)) == 0) {
+    if (STREQ(source, attr_str(ATTR_U2F)) || STREQ(source, attr_str(ATTR_all))) {
         backup_u2f_hex = strchr(backup_hex, SD_PDF_DELIM2);
         if (!strlens(backup_u2f_hex)) {
             ret = DBB_ERROR;
@@ -390,8 +388,8 @@ static int commander_process_backup_check(const char *key, const char *filename,
     }
 
     // hww | all
-    if ((ret == DBB_OK) && (strcmp(source, attr_str(ATTR_HWW)) == 0 ||
-                            strcmp(source, attr_str(ATTR_all)) == 0)) {
+    if ((ret == DBB_OK) && (STREQ(source, attr_str(ATTR_HWW)) ||
+                            STREQ(source, attr_str(ATTR_all)))) {
         memcpy(backup_hww, utils_hex_to_uint8(backup_hex), sizeof(backup_hww));
         if (!memcmp(backup_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
             ret = DBB_ERROR;
@@ -445,13 +443,13 @@ static int commander_process_backup_create(const char *key, const char *filename
         return DBB_ERROR;
     }
 
-    if (strcmp(source, attr_str(ATTR_HWW)) == 0 || strcmp(source, attr_str(ATTR_all)) == 0) {
+    if (STREQ(source, attr_str(ATTR_HWW)) || STREQ(source, attr_str(ATTR_all))) {
         memcpy(backup_hww, memory_master_hww_entropy(NULL), MEM_PAGE_LEN);
         snprintf(backup_hww_hex, sizeof(backup_hww_hex), "%s", utils_uint8_to_hex(backup_hww,
                  sizeof(backup_hww)));
     }
 
-    if (strcmp(source, attr_str(ATTR_U2F)) == 0 || strcmp(source, attr_str(ATTR_all)) == 0) {
+    if (STREQ(source, attr_str(ATTR_U2F)) || STREQ(source, attr_str(ATTR_all))) {
         memcpy(backup_u2f, memory_report_master_u2f(), MEM_PAGE_LEN);
         snprintf(backup_u2f_hex, sizeof(backup_u2f_hex), "%s", utils_uint8_to_hex(backup_u2f,
                  sizeof(backup_u2f)));
@@ -499,12 +497,12 @@ static void commander_process_backup(yajl_val json_node)
     }
 
     if (strlens(value)) {
-        if (strcmp(value, attr_str(ATTR_list)) == 0) {
+        if (STREQ(value, attr_str(ATTR_list))) {
             sd_list(CMD_backup);
             return;
         }
 
-        if (strcmp(value, attr_str(ATTR_erase)) == 0) {
+        if (STREQ(value, attr_str(ATTR_erase))) {
             // Erase all files
             sd_erase(CMD_backup, NULL);
             return;
@@ -528,7 +526,7 @@ static void commander_process_backup(yajl_val json_node)
         }
     }
 
-    if (!strlens(key) && (strcmp(source, attr_str(ATTR_U2F)) != 0)) {
+    if (!strlens(key) && !STREQ(source, attr_str(ATTR_U2F))) {
         // Exit if backing up HWW but no key given
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
         return;
@@ -536,7 +534,7 @@ static void commander_process_backup(yajl_val json_node)
 
     if (check) {
         // Verify existing backup
-        if (strcmp(source, attr_str(ATTR_all)) == 0) {
+        if (STREQ(source, attr_str(ATTR_all))) {
             commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_INVALID_CMD);
             return;
         }
@@ -585,7 +583,7 @@ static void commander_process_seed(yajl_val json_node)
         return;
     }
 
-    if (!strlens(key) && !(strcmp(source, attr_str(ATTR_U2F_load)) == 0)) {
+    if (!strlens(key) && !STREQ(source, attr_str(ATTR_U2F_load))) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
         return;
     }
@@ -600,7 +598,7 @@ static void commander_process_seed(yajl_val json_node)
         return;
     }
 
-    if (strcmp(source, attr_str(ATTR_create)) == 0) {
+    if (STREQ(source, attr_str(ATTR_create))) {
         // Generate a new wallet, optionally with entropy entered via USB
         uint8_t i, add_entropy, entropy_b[MEM_PAGE_LEN];
         char entropy_c[MEM_PAGE_LEN * 2 + 1];
@@ -623,7 +621,7 @@ static void commander_process_seed(yajl_val json_node)
         // Add extra entropy from device unless raw is set
         add_entropy = 1;
         if (strlens(entropy) && strlens(raw)) {
-            if (!strcmp(raw, attr_str(ATTR_true))) {
+            if (STREQ(raw, attr_str(ATTR_true))) {
                 add_entropy = 0;
             }
         }
@@ -653,7 +651,7 @@ static void commander_process_seed(yajl_val json_node)
         utils_zero(entropy_c, sizeof(entropy_c));
     }
 
-    else if (strcmp(source, attr_str(ATTR_U2F_create)) == 0) {
+    else if (STREQ(source, attr_str(ATTR_U2F_create))) {
         memory_reset_u2f();
         ret = commander_process_backup_create(key, filename, attr_str(ATTR_all));
         if (ret == DBB_OK && YAJL_IS_INTEGER(u2f_counter_data)) {
@@ -661,14 +659,14 @@ static void commander_process_seed(yajl_val json_node)
         }
     }
 
-    else if (strcmp(source, attr_str(ATTR_backup)) == 0 ||
-             strcmp(source, attr_str(ATTR_U2F_load)) == 0) {
+    else if (STREQ(source, attr_str(ATTR_backup)) ||
+             STREQ(source, attr_str(ATTR_U2F_load))) {
         char entropy_c[MEM_PAGE_LEN * 2 + 1];
         char *backup_hex = sd_load(filename, CMD_seed);
         char *name = strchr(backup_hex, SD_PDF_DELIM);
         char *u2f = strchr(backup_hex, SD_PDF_DELIM2);
 
-        if (strcmp(source, attr_str(ATTR_U2F_load)) == 0) {
+        if (STREQ(source, attr_str(ATTR_U2F_load))) {
             if (strlens(u2f)) {
                 uint8_t backup_u2f[MEM_PAGE_LEN];
                 memcpy(backup_u2f, utils_hex_to_uint8(u2f + strlens(SD_PDF_DELIM2_S)),
@@ -774,9 +772,9 @@ static void commander_process_random(yajl_val json_node)
         return;
     }
 
-    if (strcmp(value, attr_str(ATTR_true)) == 0) {
+    if (STREQ(value, attr_str(ATTR_true))) {
         update_seed = 1;
-    } else if (strcmp(value, attr_str(ATTR_pseudo)) == 0) {
+    } else if (STREQ(value, attr_str(ATTR_pseudo))) {
         update_seed = 0;
     } else {
         commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_IO_INVALID_CMD);
@@ -879,7 +877,7 @@ static void commander_process_verifypass(yajl_val json_node)
     }
 
     if (strlens(value)) {
-        if (strcmp(value, attr_str(ATTR_export)) == 0) {
+        if (STREQ(value, attr_str(ATTR_export))) {
             memcpy(text, utils_uint8_to_hex(memory_report_verification_key(), 32), 64 + 1);
             utils_clear_buffers();
             int ret = sd_write(VERIFYPASS_FILENAME, text, NULL,
@@ -902,7 +900,7 @@ static void commander_process_verifypass(yajl_val json_node)
     }
 
     if (strlens(value)) {
-        if (strcmp(value, attr_str(ATTR_create)) == 0) {
+        if (STREQ(value, attr_str(ATTR_create))) {
             int status = touch_button_press(DBB_TOUCH_LONG);
             if (status != DBB_TOUCHED) {
                 commander_fill_report(cmd_str(CMD_verifypass), NULL, status);
@@ -1014,14 +1012,14 @@ static void commander_process_session(yajl_val json_node)
         return;
     }
 
-    if (strcmp(value, attr_str(ATTR_set)) == 0) {
+    if (STREQ(value, attr_str(ATTR_set))) {
         commander_fill_report(cmd_str(CMD_session),
                               utils_uint8_to_hex(memory_session_key_update(),
                                       MEM_PAGE_LEN), DBB_OK);
         return;
     }
 
-    if (strcmp(value, attr_str(ATTR_off)) == 0) {
+    if (STREQ(value, attr_str(ATTR_off))) {
         memory_session_key_off();
         commander_fill_report(cmd_str(CMD_session), attr_str(ATTR_success), DBB_OK);
         return;
@@ -1041,7 +1039,7 @@ static void commander_process_device(yajl_val json_node)
         return;
     }
 
-    if (strcmp(value, attr_str(ATTR_lock)) == 0) {
+    if (STREQ(value, attr_str(ATTR_lock))) {
         if (wallet_seeded() == DBB_OK) {
             int status = touch_button_press(DBB_TOUCH_LONG);
             if (status == DBB_TOUCHED) {
@@ -1058,7 +1056,7 @@ static void commander_process_device(yajl_val json_node)
         return;
     }
 
-    if (!strcmp(value, attr_str(ATTR_info))) {
+    if (STREQ(value, attr_str(ATTR_info))) {
         char msg[1024];
         char id[65] = {0};
         char lock[6] = {0};
@@ -1154,10 +1152,10 @@ static void commander_process_led(yajl_val json_node)
         return;
     }
 
-    if (!strncmp(value, attr_str(ATTR_blink), strlens(attr_str(ATTR_blink)))) {
+    if (STREQ(value, attr_str(ATTR_blink))) {
         led_blink();
         commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
-    } else if (!strncmp(value, attr_str(ATTR_abort), strlens(attr_str(ATTR_abort)))) {
+    } else if (STREQ(value, attr_str(ATTR_abort))) {
         led_abort();
         commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
     } else {
@@ -1233,9 +1231,9 @@ static void commander_process_bootloader(yajl_val json_node)
     uint8_t sig[FLASH_SIG_LEN];
     memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
 
-    if (!strncmp(value, attr_str(ATTR_lock), strlens(attr_str(ATTR_lock)))) {
+    if (STREQ(value, attr_str(ATTR_lock))) {
         sig[FLASH_BOOT_LOCK_BYTE] = 0;
-    } else if (!strncmp(value, attr_str(ATTR_unlock), strlens(attr_str(ATTR_unlock)))) {
+    } else if (STREQ(value, attr_str(ATTR_unlock))) {
         sig[FLASH_BOOT_LOCK_BYTE] = 0xFF;
     } else {
         commander_fill_report(cmd_str(CMD_bootloader), NULL, DBB_ERR_IO_INVALID_CMD);
@@ -1405,7 +1403,7 @@ static int commander_tfa_check_pin(yajl_val json_node)
         return DBB_ERROR;
     }
 
-    if (strncmp(pin, TFA_PIN, sizeof(TFA_PIN))) {
+    if (!STREQ(pin, TFA_PIN)) {
         return DBB_ERROR;
     }
 
@@ -1441,7 +1439,7 @@ static int commander_echo_command(yajl_val json_node)
             const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
             const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
 
-            if (!hash || !keypath) {
+            if (!strlens(hash) || !strlens(keypath)) {
                 commander_clear_report();
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
                 memset(json_array, 0, COMMANDER_ARRAY_MAX);
@@ -1467,7 +1465,7 @@ static int commander_echo_command(yajl_val json_node)
             const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
             const char *pubkey = YAJL_GET_STRING(yajl_tree_get(obj, pubkey_path, yajl_t_string));
 
-            if (!pubkey || !keypath) {
+            if (!strlens(pubkey) || !strlens(keypath)) {
                 commander_clear_report();
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
                 return DBB_ERROR;

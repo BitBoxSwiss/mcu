@@ -89,7 +89,6 @@ X(ecdh)           \
 X(device)         \
 X(random)         \
 X(backup)         \
-X(aes256cbc)      \
 X(ping)           \
 X(feature_set)    \
 /*  child keys  */\

@@ -285,7 +285,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
     bitcoin_ecc.ecc_get_public_key33(node.private_key, pub_key, ECC_SECP256k1);
 
     utils_zero(&node, sizeof(HDNode));
-    if (strncmp(pubkey, utils_uint8_to_hex(pub_key, 33), 66)) {
+    if (!STREQ(pubkey, utils_uint8_to_hex(pub_key, 33))) {
         return DBB_KEY_ABSENT;
     } else {
         return DBB_KEY_PRESENT;

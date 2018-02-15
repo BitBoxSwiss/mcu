@@ -210,7 +210,7 @@ if(NOT BUILD_TYPE STREQUAL "test")
         set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/bootloader.ld")
     endif() 
         
-    set(CMAKE_C_LINK_FLAGS "-mthumb -Wl,-Map=\"../bin/${MYPROJECT}.map\" -Wl,--gc-sections -mcpu=cortex-m4 -Wl,--entry=Reset_Handler -Wl,--cref -mthumb -T\"${CMAKE_LINKER_SCRIPT}\"")
+    set(CMAKE_C_LINK_FLAGS "-mthumb -Wl,-Map=\"../bin/${MYPROJECT}.map\" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 -Wl,--entry=Reset_Handler -Wl,--cref -mthumb -T\"${CMAKE_LINKER_SCRIPT}\"")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")
     include_directories(${DRIVER-INCLUDES})
     include_directories(${DBB-INCLUDES})

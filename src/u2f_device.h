@@ -35,7 +35,7 @@
 #include "u2f/u2f.h"
 
 
-#define U2F_HIJACK_ORIGIN_TOTAL 2
+#define U2F_HIJACK_ORIGIN_TOTAL 3
 
 
 extern const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];

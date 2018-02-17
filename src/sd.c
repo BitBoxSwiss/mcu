@@ -563,6 +563,9 @@ uint8_t sd_list(int cmd)
         strcat(files, "]");
     } else {
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_OPEN_DIR);
+        f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+        utils_zero(files, sizeof(files));
+        return DBB_ERROR;
     }
 
     commander_fill_report(cmd_str(cmd), files, DBB_JSON_ARRAY);

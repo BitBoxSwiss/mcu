@@ -367,8 +367,8 @@ static void tests_seed_xpub_backup(void)
 
 static void tests_random(void)
 {
-    char number0[32] = {0};
-    char number1[32] = {0};
+    char number0[32 + 1] = {0};
+    char number1[32 + 1] = {0};
 
     api_reset_device();
 
@@ -1403,10 +1403,9 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), KEY_STANDARD);
     if (TEST_LIVE_DEVICE) {
-        ASSERT_SUCCESS
-    } else {
-        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+        ASSERT_REPORT_HAS(attr_str(ATTR_unlock));
     }
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
@@ -1415,10 +1414,9 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), KEY_STANDARD);
     if (TEST_LIVE_DEVICE) {
-        ASSERT_SUCCESS
-    } else {
-        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+        ASSERT_REPORT_HAS(attr_str(ATTR_lock));
     }
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);

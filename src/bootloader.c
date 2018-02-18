@@ -34,6 +34,7 @@
 #include "uECC.h"
 #include "sha2.h"
 #include "flags.h"
+#include "flash.h"
 #include "utils.h"
 #include "touch.h"
 #include "version.h"

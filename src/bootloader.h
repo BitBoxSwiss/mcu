@@ -32,17 +32,8 @@
 #include <stdint.h>
 
 
-#define MPU_REGION_VALID            (0x10)
-#define MPU_REGION_ENABLE           (0x01)
-#define MPU_REGION_NORMAL           (8 << 16)// TEX:0b001 S:0b0 C:0b0 B:0b0
-#define MPU_REGION_STATE_NA         (0x00 << 24)// No access
-#define MPU_REGION_STATE_PRIV_RW    (0x01 << 24)
-#define MPU_REGION_STATE_RW         (0x03 << 24)
-#define MPU_REGION_STATE_PRIV_RO    (0x05 << 24)
-#define MPU_REGION_STATE_RO         (0x06 << 24)
-#define MPU_REGION_STATE_XN         (0x01 << 28)
-
 #define BOOT_SIG_M 4
+
 
 typedef enum BOOT_OP_CODES {
     OP_WRITE = 'w',/* 0x77 */

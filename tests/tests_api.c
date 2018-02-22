@@ -1030,8 +1030,8 @@ static void tests_u2f(void)
 
 
         // copy test sd_files to sd card directory
-        system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
-
+        int ret = system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
+        u_assert(ret == 0);
 
         // verify  v23a u2f fail
         // verify  v23a hww fail

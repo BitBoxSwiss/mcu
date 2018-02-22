@@ -30,6 +30,15 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wswitch-default"
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
+#ifndef __has_warning // not defined in GCC
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#else
+#if __has_warning("-Wmaybe-uninitialized")
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+#endif
+
 #endif
 #ifdef __clang__
 #pragma clang diagnostic push

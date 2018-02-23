@@ -88,6 +88,9 @@ uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_n
         }
     }
     FILE *file_object = fopen(file, "w");
+    if (file_object == NULL) {
+        goto err;
+    }
 #else
 
     sd_mmc_init();

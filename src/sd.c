@@ -654,7 +654,7 @@ static uint8_t sd_delete_files(char *path)
     (void) path;
     struct dirent *p_dirent;
     DIR *p_dir = opendir(ROOTDIR);
-    char file[256];
+    char file[256 + sizeof(ROOTDIR) + 1];
     int ret = 0;
     if (p_dir) {
         while ((p_dirent = readdir(p_dir)) != NULL) {

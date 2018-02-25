@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# CmakeLists.txt for the Digital Bitbox 
+# CmakeLists.txt for the Digital Bitbox
 # Copyright (c) 2015-2016 Lucas Betschart, Douglas J. Bakkum
 # MIT License
 
@@ -104,7 +104,7 @@ if(BUILD_TYPE STREQUAL "bootloader")
 endif()
 
 add_definitions(-DuECC_OPTIMIZATION_LEVEL=4)
-    
+
 if(USE_SECP256K1_LIB)
     add_definitions(-DECC_USE_SECP256K1_LIB)
     add_definitions(-DSECP256K1_BUILD=1)
@@ -161,7 +161,12 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Os")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra -pedantic -Werror -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra -Wall -Wpedantic -Werror -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -std=gnu99 -ffunction-sections -fdata-sections -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return  -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls -Wnested-externs -Wmultichar -Wformat-nonliteral -Winit-self -Wformat-security -Wold-style-definition -Wmissing-include-dirs -Wswitch-default -Wattributes -Wcast-qual")
+
+if(BUILD_TYPE STREQUAL "test")
+  # Implicit-fallthrough not implemented in arm-none-eabi-gcc.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-fallthrough")
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
 
@@ -213,7 +218,7 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Build 
+# Build
 
 message(STATUS "C Flags:          ${CMAKE_C_FLAGS}")
 
@@ -245,7 +250,7 @@ else()
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
     )
     add_dependencies(binary_file ${ELF})
-    
+
     if(BUILD_TYPE STREQUAL "bootloader")
         add_custom_command(
             OUTPUT ${MYPROJECT}.pad.bin
@@ -264,7 +269,7 @@ endif()
 
 
 #-----------------------------------------------------------------------------
-# Clean 
+# Clean
 
 set(removefiles "bin/*.* lib/*.*")
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${removefiles}")

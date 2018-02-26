@@ -51,6 +51,7 @@ set(DBB-BOOTLOADER-SOURCES
 
 set(DBB-HARDWARE-SOURCES
         board_com.c
+        hw_version.c
         ataes132.c
         systick.c
         touch.c
@@ -73,40 +74,40 @@ set(YAJL-SOURCES
 )
 
 set(DRIVER-SOURCES
-        drivers/common/components/memory/sd_mmc/sd_mmc.c 
-        drivers/common/components/memory/sd_mmc/sd_mmc_mem.c 
-        drivers/common/components/memory/sd_mmc/sd_mmc_spi.c 
-        drivers/common/services/clock/sam4s/sysclk.c 
-        drivers/common/services/delay/sam/cycle_counter.c 
-        drivers/common/services/sleepmgr/sam/sleepmgr.c 
-        drivers/common/services/spi/sam_spi/spi_master.c 
-        drivers/common/services/storage/ctrl_access/ctrl_access.c 
-        drivers/common/services/usb/class/hid/device/udi_hid.c 
-        drivers/common/services/usb/class/hid/device/u2f/udi_hid_u2f.c 
-        drivers/common/services/usb/class/hid/device/hww/udi_hid_hww.c 
-        drivers/common/services/usb/class/composite/device/udi_composite_desc.c 
-        drivers/common/services/usb/udc/udc.c 
-        drivers/common/utils/interrupt/interrupt_sam_nvic.c 
-        drivers/common/utils/stdio/read.c 
-        drivers/common/utils/stdio/write.c 
-        drivers/sam/services/flash_efc/flash_efc.c 
-        drivers/sam/drivers/efc/efc.c 
-        drivers/sam/drivers/pio/pio.c 
-        drivers/sam/drivers/pio/pio_handler.c 
-        drivers/sam/drivers/pmc/pmc.c 
-        drivers/sam/drivers/pmc/sleep.c 
-        drivers/sam/drivers/rtc/rtc.c 
-        drivers/sam/drivers/spi/spi.c 
-        drivers/sam/drivers/twi/twi.c 
-        drivers/sam/drivers/udp/udp_device.c 
-        drivers/sam/drivers/wdt/wdt.c 
-        drivers/sam/utils/cmsis/sam4s/source/templates/gcc/startup_sam4s.c 
-        drivers/sam/utils/cmsis/sam4s/source/templates/system_sam4s.c 
-        drivers/sam/utils/syscalls/gcc/syscalls.c 
-        drivers/thirdparty/fatfs/fatfs-port-r0.09/diskio.c 
-        drivers/thirdparty/fatfs/fatfs-port-r0.09/sam/fattime_rtc.c 
+        drivers/common/components/memory/sd_mmc/sd_mmc.c
+        drivers/common/components/memory/sd_mmc/sd_mmc_mem.c
+        drivers/common/components/memory/sd_mmc/sd_mmc_spi.c
+        drivers/common/services/clock/sam4s/sysclk.c
+        drivers/common/services/delay/sam/cycle_counter.c
+        drivers/common/services/sleepmgr/sam/sleepmgr.c
+        drivers/common/services/spi/sam_spi/spi_master.c
+        drivers/common/services/storage/ctrl_access/ctrl_access.c
+        drivers/common/services/usb/class/hid/device/udi_hid.c
+        drivers/common/services/usb/class/hid/device/u2f/udi_hid_u2f.c
+        drivers/common/services/usb/class/hid/device/hww/udi_hid_hww.c
+        drivers/common/services/usb/class/composite/device/udi_composite_desc.c
+        drivers/common/services/usb/udc/udc.c
+        drivers/common/utils/interrupt/interrupt_sam_nvic.c
+        drivers/common/utils/stdio/read.c
+        drivers/common/utils/stdio/write.c
+        drivers/sam/services/flash_efc/flash_efc.c
+        drivers/sam/drivers/efc/efc.c
+        drivers/sam/drivers/pio/pio.c
+        drivers/sam/drivers/pio/pio_handler.c
+        drivers/sam/drivers/pmc/pmc.c
+        drivers/sam/drivers/pmc/sleep.c
+        drivers/sam/drivers/rtc/rtc.c
+        drivers/sam/drivers/spi/spi.c
+        drivers/sam/drivers/twi/twi.c
+        drivers/sam/drivers/udp/udp_device.c
+        drivers/sam/drivers/wdt/wdt.c
+        drivers/sam/utils/cmsis/sam4s/source/templates/gcc/startup_sam4s.c
+        drivers/sam/utils/cmsis/sam4s/source/templates/system_sam4s.c
+        drivers/sam/utils/syscalls/gcc/syscalls.c
+        drivers/thirdparty/fatfs/fatfs-port-r0.09/diskio.c
+        drivers/thirdparty/fatfs/fatfs-port-r0.09/sam/fattime_rtc.c
         drivers/thirdparty/fatfs/fatfs-r0.09/src/ff.c
-        drivers/thirdparty/fatfs/fatfs-r0.09/src/option/ccsbcs.c 
+        drivers/thirdparty/fatfs/fatfs-r0.09/src/option/ccsbcs.c
 )
 
 
@@ -192,24 +193,24 @@ endif()
 # Build embedded firmware
 
 if(NOT BUILD_TYPE STREQUAL "test")
-    
+
     if(BUILD_TYPE STREQUAL "firmware")
         set(SOURCES
-            ${DBB-HARDWARE-SOURCES} 
-            ${DBB-FIRMWARE-SOURCES} 
-            ${YAJL-SOURCES} 
+            ${DBB-HARDWARE-SOURCES}
+            ${DBB-FIRMWARE-SOURCES}
+            ${YAJL-SOURCES}
             ${DRIVER-SOURCES}
         )
         set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/firmware.ld")
     elseif(BUILD_TYPE STREQUAL "bootloader")
         set(SOURCES
-            ${DBB-HARDWARE-SOURCES} 
-            ${DBB-BOOTLOADER-SOURCES} 
+            ${DBB-HARDWARE-SOURCES}
+            ${DBB-BOOTLOADER-SOURCES}
             ${DRIVER-SOURCES}
         )
         set(CMAKE_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/bootloader.ld")
-    endif() 
-        
+    endif()
+
     set(CMAKE_C_LINK_FLAGS "-mthumb -Wl,-Map=\"../bin/${MYPROJECT}.map\" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 -Wl,--entry=Reset_Handler -Wl,--cref -mthumb -T\"${CMAKE_LINKER_SCRIPT}\"")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")
     include_directories(${DRIVER-INCLUDES})
@@ -221,13 +222,12 @@ if(NOT BUILD_TYPE STREQUAL "test")
     set_property(TARGET mathlib PROPERTY
                 IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/drivers/lib/libarm_cortexM4l_math.a)
     link_directories(${CMAKE_SOURCE_DIR}/src/drivers/lib)
-    
+
     if(BUILD_TYPE STREQUAL "firmware")
         add_executable(${ELF} ${SOURCES} firmware.c)
     elseif(BUILD_TYPE STREQUAL "bootloader")
         add_executable(${ELF} ${SOURCES})
-    endif() 
-    
+    endif()
+
     target_link_libraries(${ELF} qtouchlib mathlib)
 endif()
-

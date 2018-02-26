@@ -29,6 +29,7 @@
 #include "led.h"
 #include "flags.h"
 #include "touch.h"
+#include "hw_version.h"
 #include "systick.h"
 #include "commander.h"
 
@@ -70,6 +71,11 @@ uint8_t touch_button_press(uint8_t touch_type)
     int16_t touch_sns;
     uint16_t exit_time_ms;
     uint16_t qt_led_toggle_ms;
+    uint16_t touch_thresh = QTOUCH_TOUCH_THRESH;
+    if (report_hw_version() == HW_VERSION_V1_2) {
+        touch_thresh = QTOUCH_TOUCH_THRESH_HW_V1_2;
+    }
+
 
     if (touch_type != DBB_TOUCH_LONG &&
             touch_type != DBB_TOUCH_SHORT &&
@@ -113,7 +119,7 @@ uint8_t touch_button_press(uint8_t touch_type)
         touch_snks = qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL];
         touch_sns = qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL];
 
-        if ((touch_snks - touch_sns ) > QTOUCH_TOUCH_THRESH) {
+        if ((touch_snks - touch_sns ) > touch_thresh) {
             // Touched
             led_off();
             exit_time_ms = systick_current_time_ms + QTOUCH_TOUCH_TIMEOUT;
@@ -126,7 +132,7 @@ uint8_t touch_button_press(uint8_t touch_type)
                 touch_snks = qt_measure_data.channel_references[QTOUCH_TOUCH_CHANNEL];
                 touch_sns = qt_measure_data.channel_signals[QTOUCH_TOUCH_CHANNEL];
 
-                if ((touch_snks - touch_sns) < (QTOUCH_TOUCH_THRESH / 2)) {
+                if ((touch_snks - touch_sns) < (touch_thresh / 2)) {
                     // If released before exit_time_ms for:
                     //     - DBB_TOUCH_LONG_BLINK, answer is 'reject'
                     //     - DBB_TOUCH_LONG, answer is 'reject'

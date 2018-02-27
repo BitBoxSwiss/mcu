@@ -106,7 +106,7 @@ def hid_send_frame(data):
             # INIT frame
             write = data[idx : idx + min(data_len, usb_report_size - 7)]
             dbb_hid.write(b'\0' + struct.pack(">IBH",HWW_CID, HWW_CMD, data_len & 0xFFFF) + write + b'\xEE' * (usb_report_size - 7 - len(write)))
-        else: 
+        else:
             # CONT frame
             write = data[idx : idx + min(data_len, usb_report_size - 5)]
             dbb_hid.write(b'\0' + struct.pack(">IB", HWW_CID, seq) + write + b'\xEE' * (usb_report_size - 5 - len(write)))
@@ -180,37 +180,36 @@ def sendPlainBoot(msg):
     print("\nSending: {}".format(msg))
     if type(msg) == str:
         msg = msg.encode()
-    dbb_hid.write(b'\0' + bytearray(msg) + b'\0' * (boot_buf_size_send - len(msg))) 
+    dbb_hid.write(b'\0' + bytearray(msg) + b'\0' * (boot_buf_size_send - len(msg)))
     reply = []
-    while len(reply) < boot_buf_size_reply:    
+    while len(reply) < boot_buf_size_reply:
         reply = reply + dbb_hid.read(boot_buf_size_reply)
-    
+
     reply = bytearray(reply).rstrip(b' \t\r\n\0')
     reply = ''.join(chr(e) for e in reply)
     print("Reply:   {} {}\n\n".format(reply[:2], reply[2:]))
-    return reply[1]
+    return reply
 
 
 def sendChunk(chunknum, data):
     b = bytearray(b"\x77\x00")
     b[1] = chunknum % 0xFF
     b.extend(data)
-    dbb_hid.write(b'\0' + b + b'\xFF'*(boot_buf_size_send-len(b))) 
+    dbb_hid.write(b'\0' + b + b'\xFF'*(boot_buf_size_send-len(b)))
     reply = []
-    while len(reply) < boot_buf_size_reply:    
+    while len(reply) < boot_buf_size_reply:
         reply = reply + dbb_hid.read(boot_buf_size_reply)
     reply = bytearray(reply).rstrip(b' \t\r\n\0')
     reply = ''.join(chr(e) for e in reply)
     print("Loaded: {}  Code: {}".format(chunknum, reply))
 
 
-def sendBin(filename):    
+def sendBin(filename):
     with open(filename, "rb") as f:
         cnt = 0
-        while True:     
+        while True:
             data = f.read(chunksize)
             if len(data) == 0:
                 break
             sendChunk(cnt, data)
             cnt += 1
-

@@ -157,6 +157,15 @@ static void bootloader_firmware_erase(void)
     bootloader_report_status(OP_STATUS_OK);
 }
 
+static inline uint32_t bootloader_parse_app_version(uint8_t *start)
+{
+    uint32_t version = (*start << 24) | (*(start + 1) << 16) | (*(start + 2) << 8) | (*
+                       (start + 3));
+    if (version == 0xffffffff) {
+        version = 0;
+    }
+    return version;
+}
 
 static uint8_t bootloader_firmware_verified(void)
 {
@@ -174,15 +183,28 @@ static uint8_t bootloader_firmware_verified(void)
         pubkey++;
         cnt++;
     }
+    memcpy(report + 2, utils_uint8_to_hex(hash, 32), 64); // return double hash of app binary
 
     if (valid < BOOT_SIG_M) {
         bootloader_report_status(OP_STATUS_ERR);
-    } else {
-        bootloader_report_status(OP_STATUS_OK);
+        return 0;
     }
 
-    memcpy(report + 2, utils_uint8_to_hex(hash, 32), 64); // return double hash of app binary
-    return (valid < BOOT_SIG_M) ? 0 : 1;
+    uint32_t app_version = bootloader_parse_app_version((uint8_t *)FLASH_APP_VERSION_START);
+    uint32_t app_latest_version = bootloader_parse_app_version((uint8_t *)(
+                                      FLASH_SIG_START + FLASH_BOOT_LATEST_APP_VERSION_BYTES));
+    memcpy(report + 2 + 64, utils_uint8_to_hex((uint8_t *)(FLASH_SIG_START +
+            FLASH_BOOT_LATEST_APP_VERSION_BYTES), FLASH_APP_VERSION_LEN), 2 * FLASH_APP_VERSION_LEN);
+    memcpy(report + 2 + 64 + 2 * FLASH_APP_VERSION_LEN,
+           utils_uint8_to_hex((uint8_t *)FLASH_APP_VERSION_START, FLASH_APP_VERSION_LEN),
+           2 * FLASH_APP_VERSION_LEN);
+    if (app_version < app_latest_version) {
+        bootloader_report_status(OP_STATUS_ERR_VERSION);
+        return 0;
+    }
+
+    bootloader_report_status(OP_STATUS_OK);
+    return 1;
 }
 
 
@@ -207,7 +229,6 @@ static void bootloader_reboot(void)
 {
     NVIC_SystemReset();
 }
-
 
 void bootloader_command(const char *command)
 {
@@ -250,7 +271,7 @@ void bootloader_command(const char *command)
                 pubkey++;
                 cnt++;
             }
-            memset(sig, 0xFF, FLASH_SIG_LEN);
+            memcpy(sig, (uint8_t *)FLASH_SIG_START, FLASH_SIG_LEN);
             memcpy(sig, utils_hex_to_uint8(command + FLASH_BOOT_OP_LEN), cnt * 64);
 
             flash_unlock(FLASH_SIG_START, FLASH_SIG_START + FLASH_SIG_LEN, NULL, NULL);
@@ -264,10 +285,25 @@ void bootloader_command(const char *command)
                 break;
             }
 
-            bootloader_firmware_verified();
+            if (bootloader_firmware_verified()) {
+
+                memcpy((uint8_t *)sig + FLASH_BOOT_LATEST_APP_VERSION_BYTES,
+                       (uint8_t *)FLASH_APP_VERSION_START,
+                       FLASH_APP_VERSION_LEN);
+
+                if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
+                    bootloader_report_status(OP_STATUS_ERR_ERASE);
+                    break;
+                }
+
+                if (flash_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
+                    bootloader_report_status(OP_STATUS_ERR_WRITE);
+                    break;
+                }
+            }
+
             break;
         }
-
         default:
             bootloader_report_status(OP_STATUS_ERR_INVALID_CMD);
             bootloader_loading_ready = 0;

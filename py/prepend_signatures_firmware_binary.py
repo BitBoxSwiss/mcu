@@ -23,12 +23,12 @@ try:
     with file(binfile, 'r') as original:
         data = original.read()
 
-    if len(data) != 32768:
-        print '\n\nError: the binfile must be padded to 32768 bytes'
+    if len(data) != 225280:
+        print '\n\nError: the binfile must be padded to 220kB'
         sys.exit()
 
     with file(padfile, 'w') as modified:
         modified.write(sig + data)
 
 except:
-    print '\n\nUsage:\n    ./append_signatures_to_binary.py <binary_file> <output_file> <signature_blob>\n\n\n'
+    print '\n\nUsage:\n    ./prepend_signatures_firmware_binary.py <firmware_binary> <output_file> <signature_blob>\n\n\n'

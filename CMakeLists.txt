@@ -74,8 +74,16 @@ if(GIT_FOUND)
     list(GET VERSION_LIST 1 MINOR)
     list(GET VERSION_LIST 2 PATCH)
     string(REPLACE "v" "" MAJOR ${vMAJOR})
+
+    execute_process(COMMAND git "tag" "--list" OUTPUT_VARIABLE GIT_TAG_LIST WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE "\n" ";" GIT_TAG_LIST ${GIT_TAG_LIST})
+    list(LENGTH GIT_TAG_LIST VERSION_MONOTONIC)
 else()
     set(GIT_COMMIT_HASH "Git not found.")
+    set(VERSION_MONOTONIC $ENV{MONOTONIC_VERSION})
+endif()
+if(NOT VERSION_MONOTONIC)
+  message(FATAL_ERROR "firmware needs a monotonic version")
 endif()
 STRING(REGEX REPLACE "-.*$" "" PATCH ${PATCH})
 set(VERSION_STRING "${GIT_COMMIT_HASH}")
@@ -127,6 +135,7 @@ message(STATUS "Linker:                 ${CMAKE_LINKER}")
 message(STATUS "Archiver:               ${CMAKE_AR}")
 message(STATUS "            - Options -")
 message(STATUS "Build type:             ${BUILD_TYPE}")
+message(STATUS "Monotonic fw version:   ${VERSION_MONOTONIC}")
 message(STATUS "Verbose:                ${CMAKE_VERBOSE_MAKEFILE}")
 message(STATUS "Documentation:          ${BUILD_DOCUMENTATION}  (make doc)")
 message(STATUS "Coverage flags:         ${BUILD_COVERAGE}")
@@ -266,9 +275,9 @@ else()
     elseif(BUILD_TYPE STREQUAL "firmware")
       add_custom_command(
             OUTPUT ${MYPROJECT}.pad.bin
-            COMMAND python ../../py/pad_firmware_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin
+            COMMAND python ../../py/pad_firmware_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin "${VERSION_MONOTONIC}"
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
-            COMMENT "\nPadding binary"
+            COMMENT "\nPadding binary; adding monotonic version: ${VERSION_MONOTONIC}"
         )
         add_custom_target(padded_file ALL
             DEPENDS ${MYPROJECT}.pad.bin

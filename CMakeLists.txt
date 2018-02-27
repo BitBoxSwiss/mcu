@@ -263,6 +263,18 @@ else()
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
         )
         add_dependencies(padded_file binary_file)
+    elseif(BUILD_TYPE STREQUAL "firmware")
+      add_custom_command(
+            OUTPUT ${MYPROJECT}.pad.bin
+            COMMAND python ../../py/pad_firmware_binary.py ${MYPROJECT}.bin ${MYPROJECT}.pad.bin
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+            COMMENT "\nPadding binary"
+        )
+        add_custom_target(padded_file ALL
+            DEPENDS ${MYPROJECT}.pad.bin
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin
+        )
+        add_dependencies(padded_file binary_file)
     endif()
 
 endif()

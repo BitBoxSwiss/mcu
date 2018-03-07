@@ -55,6 +55,7 @@ typedef enum BOOT_OP_CODES {
 
 typedef enum BOOT_STATUS {
     OP_STATUS_ERR = 'Z',
+    OP_STATUS_ERR_VERSION = 'V',
     OP_STATUS_ERR_LEN = 'N',
     OP_STATUS_ERR_MACRO = 'M',
     OP_STATUS_ERR_WRITE = 'W',

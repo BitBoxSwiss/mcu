@@ -3,15 +3,15 @@
 # Load firmware onto the Digital Bitbox.
 #
 # The Digital Bitbox must be in bootloader mode to use this script:
-#   1- Unlock the bootloader using send_command.py to send '{"bootloader":"unlock"}' 
+#   1- Unlock the bootloader using send_command.py to send '{"bootloader":"unlock"}'
 #   2- Hold the touch button 3 seconds to permit unlocking.
-#   3- Replug the device, and briefly touch the touch button within 3 seconds. 
+#   3- Replug the device, and briefly touch the touch button within 3 seconds.
 #      The LED will flash a few times quickly when entering bootloader mode.
-# 
+#
 # Firmware signatures are valid for deterministically built firware releases (refer to the github readme for building).
 # Invalid firmware cannot be run.
 #
-# After loading new firmware, re-lock the bootloader using send_command.py to send '{"bootloader":"lock"}' 
+# After loading new firmware, re-lock the bootloader using send_command.py to send '{"bootloader":"lock"}'
 
 
 import sys
@@ -94,7 +94,7 @@ def printFirmwareHash(filename):
             if len(d) == 0:
                 break
             data = data + bytearray(d)
-    data = data + b'\xFF' * (applen - len(data)) 
+    data = data + b'\xFF' * (applen - len(data))
     print('\nHashed firmware', binascii.hexlify(Hash((data))))
 
 
@@ -109,7 +109,13 @@ try:
     sendPlainBoot("e") # erase existing firmware (required)
     sendBin(fn)        # send new firmware
 
-    if sendPlainBoot("s" + "0" + sig) != '0': # verify new firmware
+    # upload sigs and verify new firmware
+    load_result = sendPlainBoot("s" + "0" + sig)
+    if load_result[1] == 'V':
+        latest_version, = struct.unpack('>I', binascii.unhexlify(load_result[2+64:][:8]))
+        app_version, = struct.unpack('>I', binascii.unhexlify(load_result[2+64+8:][:8]))
+        print('ERROR: firmware downgrade not allowed. Got version %d, but must be equal or higher to %d' % (app_version, latest_version))
+    elif load_result[1] != '0':
         print('ERROR: invalid firmware signature\n\n')
     else:
         print('SUCCESS: valid firmware signature\n\n')
@@ -120,5 +126,3 @@ except IOError as ex:
     print(ex)
 except (KeyboardInterrupt, SystemExit):
     print('Exiting code')
-
-

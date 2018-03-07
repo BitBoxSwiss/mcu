@@ -12,7 +12,7 @@ try:
     if len(signatures) != 896:
         print '\n\nError:  The signature blob must be an 896-character hexadecimal string.'
         sys.exit()
-    
+
     sig = bytearray.fromhex(signatures)
 
     with open(padfile, 'ab') as f:
@@ -20,11 +20,15 @@ try:
         f.write(binfile)
         f.close()
 
-    with file(binfile, 'r') as original: 
+    with file(binfile, 'r') as original:
         data = original.read()
 
-    with file(padfile, 'w') as modified: 
+    if len(data) != 225280:
+        print '\n\nError: the binfile must be padded to 220kB'
+        sys.exit()
+
+    with file(padfile, 'w') as modified:
         modified.write(sig + data)
 
 except:
-    print '\n\nUsage:\n    ./append_signatures_to_binary.py <binary_file> <output_file> <signature_blob>\n\n\n'
+    print '\n\nUsage:\n    ./prepend_signatures_firmware_binary.py <firmware_binary> <output_file> <signature_blob>\n\n\n'

@@ -50,7 +50,8 @@ typedef enum BOOT_OP_CODES {
     OP_BLINK = 'b',/* 0x62 */
     OP_REBOOT = 'r',/* 0x72 */
     OP_VERIFY = 's',/* 0x73 */
-    OP_VERSION = 'v' /* 0x76 */
+    OP_VERSION = 'v', /* 0x76 */
+    OP_LOCK = 'l' /* 0x108 */
 } BOOT_OP_CODES;
 
 typedef enum BOOT_STATUS {

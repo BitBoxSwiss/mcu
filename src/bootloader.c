@@ -237,6 +237,26 @@ void bootloader_command(const char *command)
 
     switch (command[0]) {
 
+        case OP_LOCK: {
+            if (bootloader_firmware_verified()) {
+                uint8_t sig[FLASH_SIG_LEN];
+                memcpy(sig, (uint8_t *)FLASH_SIG_START, FLASH_SIG_LEN);
+                sig[FLASH_BOOT_LOCK_BYTE] = 0;
+
+                flash_unlock(FLASH_SIG_START, FLASH_SIG_START + FLASH_SIG_LEN, NULL, NULL);
+                if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
+                    bootloader_report_status(OP_STATUS_ERR_ERASE);
+                    break;
+                }
+
+                if (flash_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
+                    bootloader_report_status(OP_STATUS_ERR_WRITE);
+                    break;
+                }
+            }
+            break;
+        }
+
         case OP_VERSION: {
             char *r = report;
             memcpy(r + 2, DIGITAL_BITBOX_VERSION, sizeof(DIGITAL_BITBOX_VERSION));

@@ -120,6 +120,7 @@ try:
     else:
         print('SUCCESS: valid firmware signature\n\n')
 
+    sendPlainBoot("l") # lock bootloader
     sendPlainBoot("b") # blink led
 
 except IOError as ex:

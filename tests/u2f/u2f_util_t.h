@@ -39,6 +39,9 @@ typedef void hid_device;
                               printf(__VA_ARGS__); \
                               printf("\x1b[0m \n");\
                          } while(0)
+#define PRINT_MESSAGE(...)  do { fprintf(stderr, __VA_ARGS__); \
+                              fflush(stderr);\
+                         } while(0)
 
 
 

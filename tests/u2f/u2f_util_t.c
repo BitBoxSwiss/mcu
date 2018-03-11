@@ -62,7 +62,7 @@ static int hid_read_timeout(void *dev, uint8_t *r, size_t r_len, int to)
 }
 #endif
 
-static int TEST_LIVE_DEVICE = 0;
+static int U2F_TEST_LIVE_DEVICE = 0;
 
 #ifdef __APPLE__
 #ifndef CLOCK_MONOTONIC
@@ -90,13 +90,13 @@ static void clock_gettime(int which, struct timespec *ts)
 
 void U2Fob_testLiveDevice(uint8_t test)
 {
-    TEST_LIVE_DEVICE = test;
+    U2F_TEST_LIVE_DEVICE = test;
 }
 
 
 uint8_t U2Fob_liveDeviceTesting(void)
 {
-    return TEST_LIVE_DEVICE;
+    return U2F_TEST_LIVE_DEVICE;
 }
 
 
@@ -186,7 +186,7 @@ static char *U2Fob_path(void)
 
 int U2Fob_open(struct U2Fob *device)
 {
-    if (!TEST_LIVE_DEVICE) {
+    if (!U2F_TEST_LIVE_DEVICE) {
         return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
@@ -198,7 +198,7 @@ int U2Fob_open(struct U2Fob *device)
 
 void U2Fob_close(struct U2Fob *device)
 {
-    if (TEST_LIVE_DEVICE && device->dev) {
+    if (U2F_TEST_LIVE_DEVICE && device->dev) {
         hid_close(device->dev);
         device->dev = NULL;
     }
@@ -207,7 +207,7 @@ void U2Fob_close(struct U2Fob *device)
 
 int U2Fob_reopen(struct U2Fob *device)
 {
-    if (!TEST_LIVE_DEVICE) {
+    if (!U2F_TEST_LIVE_DEVICE) {
         return -U2FHID_ERR_NONE;
     }
     U2Fob_close(device);
@@ -226,7 +226,7 @@ int U2Fob_sendHidFrame(struct U2Fob *device, USB_FRAME *f)
     memcpy(d + 1, f, sizeof(USB_FRAME));
     f->cid = ntohl(f->cid);
 
-    if (TEST_LIVE_DEVICE) {
+    if (U2F_TEST_LIVE_DEVICE) {
         if (!device->dev) {
             return -U2FHID_ERR_OTHER;
         }
@@ -250,13 +250,13 @@ int U2Fob_receiveHidFrame(struct U2Fob *device, USB_FRAME *r, float to)
         return -U2FHID_ERR_MSG_TIMEOUT;
     }
 
-    if (TEST_LIVE_DEVICE && !device->dev) {
+    if (U2F_TEST_LIVE_DEVICE && !device->dev) {
         return -U2FHID_ERR_OTHER;
     }
     memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
 
     int res = 0;
-    if (TEST_LIVE_DEVICE) {
+    if (U2F_TEST_LIVE_DEVICE) {
         res = hid_read_timeout(device->dev,
                                (uint8_t *) r, sizeof(USB_FRAME),
                                (int) (to * 1000));
@@ -272,7 +272,7 @@ int U2Fob_receiveHidFrame(struct U2Fob *device, USB_FRAME *r, float to)
     }
 
     if (res == sizeof(USB_FRAME)) {
-        if (TEST_LIVE_DEVICE) {
+        if (U2F_TEST_LIVE_DEVICE) {
             r->cid = ntohl(r->cid);
         }
         return 0;

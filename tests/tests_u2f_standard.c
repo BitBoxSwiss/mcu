@@ -27,6 +27,7 @@
 
 
 static bool arg_hasButton = true;  // fob has button
+int U_TESTS_FAIL = 0;
 
 struct U2Fob *device;
 
@@ -40,7 +41,7 @@ static void WaitForUserPresence(struct U2Fob *dev, bool hasButton)
     U2Fob_close(dev);
     if (U2Fob_liveDeviceTesting()) {
         if (hasButton) {
-            printf("Hit enter then touch the device button...");
+            PRINT_MESSAGE("Hit enter then SHORT touch the device button...");
         }
         if (scanf("%c", msg)) {
             (void) msg;
@@ -291,31 +292,50 @@ static void check_CounterUpdate(void)
 
     sha256_Raw((const uint8_t *)tests_pwd, strlens(tests_pwd), KEY_STANDARD);
     sha256_Raw(KEY_STANDARD, 32, KEY_STANDARD);
+
+    PRINT_INFO("Resetting device...");
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     api_format_send_cmd(cmd_str(CMD_backup), "erase", KEY_STANDARD);
+
+    if (U2Fob_liveDeviceTesting()) {
+        PRINT_MESSAGE("Seeding device. LONG touch if LED is lit...\n");
+    }
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\", \"filename\":\"hwwcountertest.pdf\", \"key\":\"key\"}");
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    ASSERT_SUCCESS;
+
+    if (U2Fob_liveDeviceTesting()) {
+        PRINT_MESSAGE("Creating new U2F key. LONG touch to continue...\n");
+    }
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"U2F_create\", \"key\":\"key\", \"filename\":\"u2fcountertest.pdf\", \"U2F_counter\":%u}",
              c);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    ASSERT_SUCCESS;
 
     // Ctr should be c + 1.
     // Need to re-enroll after device reset
-    test_Enroll(0x9000, 0);
-    ctr = test_Sign(0x9000, false);
+    WaitForUserPresence(device, arg_hasButton);
+    PASS(test_Enroll(0x9000, 0));
+    WaitForUserPresence(device, arg_hasButton);
+    PASS(ctr = test_Sign(0x9000, false));
     CHECK_EQ(ctr, c + 1);
 
     // Update U2F counter using HWW interface `U2F_load`.
+    if (U2Fob_liveDeviceTesting()) {
+        PRINT_MESSAGE("Reloading previous U2F key. LONG touch to continue...\n");
+    }
     c = 0xF;
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"U2F_load\", \"key\":\"key\", \"filename\":\"u2fcountertest.pdf\", \"U2F_counter\":%u}",
              c);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    ASSERT_SUCCESS;
 
     // Ctr should be c + 1.
-    ctr = test_Sign(0x9000, false);
+    WaitForUserPresence(device, arg_hasButton);
+    PASS(ctr = test_Sign(0x9000, false));
     CHECK_EQ(ctr, c + 1);
 }
 
@@ -338,8 +358,7 @@ static void run_tests(void)
         // Fob with button should need touch.
         if (U2Fob_liveDeviceTesting() && arg_hasButton) {
             // Timeout
-            fprintf(stderr, "Wait for device timeout.\n");
-            fflush(stderr);
+            PRINT_MESSAGE("WAIT for device timeout.\n");
             PASS(test_Enroll(0x6985, 1));
         }
         WaitForUserPresence(device, arg_hasButton);
@@ -348,8 +367,7 @@ static void run_tests(void)
         // Fob with button should have consumed touch.
         if (U2Fob_liveDeviceTesting() && arg_hasButton) {
             // Timeout
-            fprintf(stderr, "Wait for device timeout.\n");
-            fflush(stderr);
+            PRINT_MESSAGE("WAIT for device timeout.\n");
             PASS(test_Sign(0x6985, false));
         }
 
@@ -374,8 +392,7 @@ static void run_tests(void)
         PASS(ctr1 = test_Sign(0x9000, false));
         if (U2Fob_liveDeviceTesting()) {
             // Timeout
-            fprintf(stderr, "Wait for device timeout.\n");
-            fflush(stderr);
+            PRINT_MESSAGE("WAIT for device timeout.\n");
             PASS(test_Sign(0x6985, false));
         }
 
@@ -391,7 +408,7 @@ static void run_tests(void)
         PASS(check_CounterUpdate());
 
     } else {
-        printf("\n\nNot testing HID API. A device is not connected.\n\n");
+        PRINT_MESSAGE("\n\nNot testing HID API. A device is not connected.\n\n");
         return;
     }
 
@@ -405,7 +422,7 @@ uint32_t __stack_chk_guard = 0;
 extern void __attribute__((noreturn)) __stack_chk_fail(void);
 void __attribute__((noreturn)) __stack_chk_fail(void)
 {
-    printf("\n\nError: stack smashing detected!\n\n");
+    PRINT_MESSAGE("\n\nError: stack smashing detected!\n\n");
     abort();
 }
 
@@ -417,23 +434,29 @@ int main(void)
 
     // Test the C code API
     U2Fob_testLiveDevice(0);
+    TEST_LIVE_DEVICE = 0;
     random_init();
     __stack_chk_guard = random_uint32(0);
     ecc_context_init();
     memory_setup();
     memory_setup(); // run twice
-    printf("\n\nInternal API Result:\n");
+    PRINT_MESSAGE("\n\nInternal API Result:\n");
     run_tests();
     ecc_context_destroy();
 
     // Live test of the HID API
 #ifndef CONTINUOUS_INTEGRATION
     U2Fob_testLiveDevice(1);
-    printf("\n\nHID API Result:\n");
-    run_tests();
+    TEST_LIVE_DEVICE = 1;
+    if (api_hid_init() == DBB_ERROR) {
+        PRINT_MESSAGE("\n\nNot testing HID API. A device is not connected.\n\n");
+    } else {
+        PRINT_MESSAGE("\n\nHID API Result:\n");
+        run_tests();
+    }
 #endif
 
-    printf("\nALL TESTS PASSED\n\n");
+    PRINT_MESSAGE("\nALL TESTS PASSED\n\n");
     return 0;
 }
 

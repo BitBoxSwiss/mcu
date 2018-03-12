@@ -1997,6 +1997,7 @@ static void tests_sign(void)
 {
     int i, res;
     char *echo;
+
     char one_input_msg[] = "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
     char one_input[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
@@ -2126,6 +2127,13 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
 
+    // sig using no inputs
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"_meta_data_\", \"data\":[]}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    // invalid data field
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"_meta_data_\", \"data\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // sign using one input
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);

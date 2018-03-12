@@ -730,7 +730,7 @@ static int commander_process_sign(yajl_val json_node)
     const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_array);
 
-    if (!data) {
+    if (!YAJL_IS_ARRAY(data) || data->u.array.len == 0) {
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
     }
@@ -1455,7 +1455,7 @@ static int commander_echo_command(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_meta), meta, DBB_OK);
     }
 
-    if (!YAJL_IS_ARRAY(data)) {
+    if (!YAJL_IS_ARRAY(data) || data->u.array.len == 0) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;

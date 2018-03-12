@@ -58,7 +58,7 @@
 #define SD_PDF_TEXT_END   "\nET\n"
 #define SD_PDF_4_0_END    "endstream\nendobj\n"
 #define SD_PDF_END        "xref\n0 5\n0000000000 65535 f \n%010i 00000 n \n%010i 00000 n \n%010i 00000 n \n%010i 00000 n \ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n%i\n"
-#define SD_PDF_EOF        "%%%%EOF"// FIXME - deleted 4 '%' signs - check if ok LIVE testing
+#define SD_PDF_EOF        "%%%%EOF"
 
 
 uint8_t sd_list(int cmd);

@@ -32,6 +32,7 @@
 #include "usb.h"
 #include "sha2.h"
 #include "flags.h"
+#include "flash.h"
 #include "touch.h"
 #include "systick.h"
 #include "bootloader.h"
@@ -45,6 +46,7 @@ uint32_t __stack_chk_guard = 0;
 extern void __attribute__((noreturn)) __stack_chk_fail(void);
 void __attribute__((noreturn)) __stack_chk_fail(void)
 {
+    udc_stop();
     while (1) {
         led_toggle();
         delay_ms(300);
@@ -60,6 +62,7 @@ void SysTick_Handler(void)
 
 void HardFault_Handler(void)
 {
+    udc_stop();
     while (1) {
         led_toggle();
         delay_ms(500);
@@ -69,27 +72,11 @@ void HardFault_Handler(void)
 
 void MemManage_Handler(void)
 {
+    udc_stop();
     while (1) {
         led_toggle();
         delay_ms(1000);
     }
-}
-
-
-static uint32_t mpu_region_size(uint32_t size)
-{
-    uint32_t regionSize = 32;
-    uint32_t ret = 4;
-
-    while (ret < 31) {
-        if (size <= regionSize) {
-            break;
-        } else {
-            ret++;
-        }
-        regionSize <<= 1;
-    }
-    return (ret << 1);
 }
 
 

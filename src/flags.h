@@ -29,27 +29,6 @@
 #define _FLAGS_H_
 
 
-// Flash: 256kB = 512 pages * 512B per page
-#ifndef IFLASH0_ADDR
-#define IFLASH0_ADDR                (0x00400000u)
-#endif
-#define FLASH_BOOT_START            (IFLASH0_ADDR)
-#define FLASH_BOOT_LEN              (0x00008000u)
-#define FLASH_SIG_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
-#define FLASH_SIG_LEN               (0x00001000u)// note: min flash erase size is 0x1000 (8 512-Byte pages)
-#define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN + FLASH_SIG_LEN)
-#define FLASH_APP_LEN               (IFLASH0_SIZE - FLASH_BOOT_LEN - FLASH_SIG_LEN)
-#define FLASH_APP_PAGE_NUM          (FLASH_APP_LEN / IFLASH0_PAGE_SIZE)
-#define FLASH_APP_VERSION_LEN       (4)// 4 byte big endian unsigned int
-#define FLASH_APP_VERSION_START     (FLASH_APP_START + FLASH_APP_LEN - FLASH_APP_VERSION_LEN)
-#define FLASH_BOOT_OP_LEN           (2)// 1 byte op code and 1 byte parameter
-#define FLASH_BOOT_PAGES_PER_CHUNK  (8)
-#define FLASH_BOOT_CHUNK_LEN        (IFLASH0_PAGE_SIZE * FLASH_BOOT_PAGES_PER_CHUNK)
-#define FLASH_BOOT_CHUNK_NUM        (FLASH_APP_LEN / FLASH_BOOT_CHUNK_LEN)// app len should be a multiple of chunk len
-#define FLASH_BOOT_LOCK_BYTE        (FLASH_SIG_LEN - 1)
-#define FLASH_BOOT_LATEST_APP_VERSION_BYTES (FLASH_BOOT_LOCK_BYTE - FLASH_APP_VERSION_LEN)
-
-
 #define COMMANDER_REPORT_SIZE       3584
 #define COMMANDER_NUM_SIG_MIN       14// Must be >= desktop app's `MAX_INPUTS_PER_SIGN` !!
 #define COMMANDER_SIG_LEN           154// sig + recid + json formatting
@@ -84,7 +63,6 @@ X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
 X(verifypass)     \
-X(session)        \
 X(led)            \
 X(xpub)           \
 X(name)           \
@@ -147,8 +125,6 @@ X(unlock)         \
 X(decrypt)        \
 X(encrypt)        \
 X(verify)         \
-X(set)            \
-X(off)            \
 X(true)           \
 X(false)          \
 X(erase)          \

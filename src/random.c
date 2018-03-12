@@ -30,6 +30,7 @@
 #include "random.h"
 #include "memory.h"
 #include "flags.h"
+#include "flash.h"
 #ifndef TESTING
 #include "ataes132.h"
 #include "sha2.h"
@@ -80,6 +81,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         if (ret == DBB_OK && ataes_ret[0]) {
             memcpy(buf + i, ataes_ret + 2, (len - i) < 16 ? (len - i) : 16);
         } else {
+            HardFault_Handler();
             return DBB_ERROR;
         }
         i += 16;

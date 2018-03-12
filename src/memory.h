@@ -52,6 +52,8 @@
 #define MEM_AESKEY_HIDDEN_ADDR          0x0800
 #define MEM_MASTER_ENTROPY_ADDR         0x0900
 #define MEM_MASTER_U2F_ADDR             0x0A00
+#define MEM_HIDDEN_BIP32_ADDR           0x0B00
+#define MEM_HIDDEN_BIP32_CHAIN_ADDR     0x0B80
 
 
 // Extension flags
@@ -76,32 +78,22 @@ typedef enum PASSWORD_ID {
 } PASSWORD_ID;
 
 
-typedef enum MEM_SESSION_KEY_STATE {
-    MEM_SESSION_KEY_STATE_OFF,
-    MEM_SESSION_KEY_STATE_STATIC,
-    MEM_SESSION_KEY_STATE_EPHEMERAL,
-    MEM_SESSION_KEY_STATE_UPDATING
-} MEM_SESSION_KEY_STATE;
-
-
 uint8_t memory_setup(void);
 void memory_reset_u2f(void);
 void memory_reset_hww(void);
 void memory_erase_hww_seed(void);
 void memory_random_password(PASSWORD_ID id);
-void memory_clear_passwords(void);
 void memory_clear(void);
 
-void memory_session_key_off(void);
-void memory_session_key_set(uint8_t *key);
-uint8_t *memory_session_key_update(void);
-uint8_t *memory_session_key_report(void);
-uint8_t memory_session_key_get_state(void);
+void memory_active_key_set(uint8_t *key);
+uint8_t *memory_active_key_get(void);
 uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
-uint8_t *memory_read_aeskey(PASSWORD_ID id);
-uint8_t *memory_report_verification_key(void);
+void memory_read_aeskeys(void);
+uint8_t *memory_report_aeskey(PASSWORD_ID id);
 uint8_t *memory_report_user_entropy(void);
 uint8_t *memory_name(const char *name);
+uint8_t *memory_hidden_hww(const uint8_t *master_priv_key);
+uint8_t *memory_hidden_hww_chaincode(const uint8_t *chain_code);
 uint8_t *memory_master_hww(const uint8_t *master_priv_key);
 uint8_t *memory_master_hww_chaincode(const uint8_t *chain_code);
 uint8_t *memory_master_hww_entropy(const uint8_t *master_entropy);

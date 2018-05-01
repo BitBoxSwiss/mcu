@@ -87,7 +87,7 @@ uint32_t flash_erase_page(uint32_t ul_address, uint8_t uc_page_num)
 
 
 uint32_t flash_write(uint32_t ul_address, const void *p_buffer,
-		uint32_t ul_size, uint32_t ul_erase_flag)
+                     uint32_t ul_size, uint32_t ul_erase_flag)
 {
     uint32_t i;
     uint8_t buf[FLASH_SIG_LEN];

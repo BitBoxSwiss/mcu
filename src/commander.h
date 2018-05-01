@@ -33,11 +33,6 @@
 #include "memory.h"
 
 
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
-                          const uint8_t *key);
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
-                          const uint8_t *key);
-
 void commander_clear_report(void);
 const char *commander_read_report(void);
 const char *commander_read_array(void);

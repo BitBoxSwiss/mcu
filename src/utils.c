@@ -37,6 +37,9 @@
 static uint8_t utils_buffer[UTILS_BUFFER_LEN];
 
 
+/**
+ * Sets len 0s into the given memory at address dst.
+ */
 volatile void *utils_zero(volatile void *dst, size_t len)
 {
     volatile char *buf;

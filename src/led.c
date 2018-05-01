@@ -74,7 +74,10 @@ void led_toggle(void)
     ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));
 }
 
-
+/**
+ * Blink the LED.
+ * Do not expose this function via API (to prevent possible security problems during TFA pairing).
+ */
 void led_blink(void)
 {
     led_on();
@@ -87,26 +90,23 @@ void led_abort(void)
 {
     led_off();
     delay_ms(300);
-    led_on();
-    delay_ms(100);
-    led_off();
-    delay_ms(100);
-    led_on();
-    delay_ms(100);
-    led_off();
+    for (int i = 0; i < 6; i++) {
+        led_on();
+        delay_ms(100);
+        led_off();
+        delay_ms(100);
+    }
 }
 
-void led_code(uint8_t *code, uint8_t len)
+void led_code(uint8_t code)
 {
-    uint8_t i, j;
+    uint8_t i;
     delay_ms(500);
-    for (i = 0; i < len; i++) {
-        for (j = 0; j < code[i]; j++) {
-            led_toggle();
-            delay_ms(300);
-            led_toggle();
-            delay_ms(300);
-        }
-        delay_ms(500);
+    for (i = 0; i < code; i++) {
+        led_toggle();
+        delay_ms(300);
+        led_toggle();
+        delay_ms(300);
     }
+    delay_ms(500);
 }

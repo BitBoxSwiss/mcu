@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum, Stephanie Stroka, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -24,24 +24,16 @@
 
 */
 
-
-#ifndef _LED_H_
-#define _LED_H_
-
+#ifndef _ECDH_H_
+#define _ECDH_H_
 
 #include <stdint.h>
 
+#include "yajl/src/api/yajl_tree.h"
 
-#define LED_MAX_CODE_BLINKS 4
-#define LED_MAX_BLINK_SETS  6
+#define SIZE_ECDH_SHARED_SECRET SHA256_DIGEST_LENGTH
 
-
-void led_on(void);
-void led_off(void);
-void led_toggle(void);
-void led_blink(void);
-void led_abort(void);
-void led_code(uint8_t code);
-
+void ecdh_dispatch_command(yajl_val json_node);
 
 #endif
+

@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -24,24 +24,20 @@
 
 */
 
-
-#ifndef _LED_H_
-#define _LED_H_
-
-
-#include <stdint.h>
+#ifndef _AESCBCB64_H_
+#define _AESCBCB64_H_
 
 
-#define LED_MAX_CODE_BLINKS 4
-#define LED_MAX_BLINK_SETS  6
+char *aescbcb64_hmac_encrypt(const unsigned char *in, int inlen,
+                             int *out_b64len, const uint8_t *shared_secret);
 
+char *aescbcb64_init_and_decrypt(uint8_t *ub64, int ub64len, int *decrypt_len,
+                                 const uint8_t *key);
 
-void led_on(void);
-void led_off(void);
-void led_toggle(void);
-void led_blink(void);
-void led_abort(void);
-void led_code(uint8_t code);
+char *aescbcb64_encrypt(const unsigned char *in, int inlen,
+                        int *out_b64len, const uint8_t *key);
 
+char *aescbcb64_decrypt(const unsigned char *in, int inlen,
+                        int *decrypt_len, const uint8_t *key);
 
 #endif

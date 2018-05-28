@@ -1792,13 +1792,6 @@ static int commander_check_init(const char *encrypted_command)
         return DBB_ERROR;
     }
 
-    if (memory_report_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
-        if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
-            commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_TOUCH_BUTTON);
-            return DBB_ERROR;
-        }
-    }
-
     if (!encrypted_command) {
         commander_access_err(DBB_ERR_IO_NO_INPUT, memory_access_err_count(DBB_ACCESS_ITERATE));
         return DBB_ERROR;
@@ -1826,6 +1819,13 @@ static int commander_check_init(const char *encrypted_command)
             }
         }
         yajl_tree_free(json_node);
+    }
+
+    if (memory_report_access_err_count() >= COMMANDER_TOUCH_ATTEMPTS) {
+        if (touch_button_press(DBB_TOUCH_LONG) != DBB_TOUCHED) {
+            commander_fill_report(cmd_str(CMD_input), NULL, DBB_ERR_IO_TOUCH_BUTTON);
+            return DBB_ERROR;
+        }
     }
 
     // Force setting a password before processing any other command.

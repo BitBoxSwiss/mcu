@@ -15,11 +15,6 @@ try:
 
     sig = bytearray.fromhex(signatures)
 
-    with open(padfile, 'ab') as f:
-        f.write(sig)
-        f.write(binfile)
-        f.close()
-
     with file(binfile, 'r') as original:
         data = original.read()
 
@@ -27,8 +22,10 @@ try:
         print '\n\nError: the binfile must be padded to 220kB'
         sys.exit()
 
-    with file(padfile, 'w') as modified:
-        modified.write(sig + data)
+    with file(padfile, 'w') as pf:
+        pf.write(sig)
+        pf.write(data)
+        pf.close()
 
 except:
     print '\n\nUsage:\n    ./prepend_signatures_firmware_binary.py <firmware_binary> <output_file> <signature_blob>\n\n\n'

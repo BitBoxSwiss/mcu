@@ -46,6 +46,11 @@
 #endif
 
 
+#if (MEM_PAGE_LEN != SHA256_DIGEST_LENGTH)
+#error "Incompatible macro values"
+#endif
+
+
 static uint8_t MEM_unlocked = DEFAULT_unlocked;
 static uint8_t MEM_erased = DEFAULT_erased;
 static uint8_t MEM_setup = DEFAULT_setup;
@@ -116,6 +121,7 @@ static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t ad
 
 
 // Encrypted storage
+// `write_b` and `read_b` must be length `MEM_PAGE_LEN`
 static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
                                    const int32_t addr)
 {
@@ -199,7 +205,9 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     if (!dec) {
         goto err;
     }
-    memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
+    if (read_b) {
+        memcpy(read_b, utils_hex_to_uint8(dec), MEM_PAGE_LEN);
+    }
     utils_zero(dec, dec_len);
     free(dec);
 
@@ -207,6 +215,10 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     utils_clear_buffers();
     return DBB_OK;
 err:
+    if (read_b) {
+        // Randomize return value on error
+        hmac_sha256(mempass, MEM_PAGE_LEN, read_b, MEM_PAGE_LEN, read_b);
+    }
     utils_zero(mempass, MEM_PAGE_LEN);
     utils_clear_buffers();
     return DBB_ERROR;
@@ -254,7 +266,7 @@ static void memory_scramble_rn(void)
 }
 
 
-uint8_t memory_setup(void)
+void memory_setup(void)
 {
     if (memory_read_setup()) {
         // One-time setup on factory install
@@ -264,7 +276,7 @@ uint8_t memory_setup(void)
         // Return packet [Count(1) || Return Code (1) || CRC (2)]
         uint8_t ataes_ret[4] = {0};
         if (ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
-            return DBB_ERROR;
+            HardFault_Handler();
         }
 #endif
         uint32_t c = 0x00000000;
@@ -280,7 +292,6 @@ uint8_t memory_setup(void)
         memory_u2f_count_read();
     }
     memory_scramble_default_aeskeys();
-    return DBB_OK;
 }
 
 

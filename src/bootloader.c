@@ -116,8 +116,8 @@ static void bootloader_write_chunk(const char *buf, uint8_t chunknum)
         return;
     }
 
-    if (!memcmp((uint32_t *)(FLASH_APP_START + (chunknum * FLASH_BOOT_CHUNK_LEN)), buf,
-                FLASH_BOOT_CHUNK_LEN)) {
+    if (MEMEQ((uint32_t *)(FLASH_APP_START + (chunknum * FLASH_BOOT_CHUNK_LEN)), buf,
+              FLASH_BOOT_CHUNK_LEN)) {
         bootloader_report_status(OP_STATUS_OK);
         bootloader_loading_ready = 1;
         return;
@@ -131,7 +131,7 @@ static void bootloader_write_chunk(const char *buf, uint8_t chunknum)
             return;
         }
 
-        if (memcmp((uint32_t *)(FLASH_APP_START + (chunknum * FLASH_BOOT_CHUNK_LEN) +
+        if (!MEMEQ((uint32_t *)(FLASH_APP_START + (chunknum * FLASH_BOOT_CHUNK_LEN) +
                                 (i * IFLASH0_PAGE_SIZE)), buf + (i * IFLASH0_PAGE_SIZE), IFLASH0_PAGE_SIZE)) {
             bootloader_report_status(OP_STATUS_ERR_CHECK);
             return;

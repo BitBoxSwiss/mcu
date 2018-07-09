@@ -84,9 +84,9 @@ uint8_t *wallet_get_chaincode(void)
 
 int wallet_seeded(void)
 {
-    if (!memcmp(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
-            !memcmp(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32) ||
-            !memcmp(memory_master_hww_entropy(NULL), MEM_PAGE_ERASE, 32)) {
+    if (MEMEQ(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
+            MEMEQ(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32) ||
+            MEMEQ(memory_master_hww_entropy(NULL), MEM_PAGE_ERASE, 32)) {
         return DBB_ERROR;
     } else {
         return DBB_OK;
@@ -95,11 +95,11 @@ int wallet_seeded(void)
 
 int wallet_erased(void)
 {
-    if (memcmp(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
-            memcmp(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32)  ||
-            memcmp(memory_hidden_hww(NULL), MEM_PAGE_ERASE_FE, 32)  ||
-            memcmp(memory_hidden_hww_chaincode(NULL), MEM_PAGE_ERASE_FE, 32)  ||
-            memcmp(memory_master_hww_entropy(NULL), MEM_PAGE_ERASE, 32)) {
+    if (!MEMEQ(memory_master_hww(NULL), MEM_PAGE_ERASE, 32)  ||
+            !MEMEQ(memory_master_hww_chaincode(NULL), MEM_PAGE_ERASE, 32)  ||
+            !MEMEQ(memory_hidden_hww(NULL), MEM_PAGE_ERASE_FE, 32)  ||
+            !MEMEQ(memory_hidden_hww_chaincode(NULL), MEM_PAGE_ERASE_FE, 32)  ||
+            !MEMEQ(memory_master_hww_entropy(NULL), MEM_PAGE_ERASE, 32)) {
         return DBB_ERROR;
     } else {
         return DBB_OK;

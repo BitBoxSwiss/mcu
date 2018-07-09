@@ -36,10 +36,11 @@
 
 #define UTILS_BUFFER_LEN COMMANDER_REPORT_SIZE
 #define VARINT_LEN 20
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-#define strlens(s) (s == NULL ? 0 : strlen(s))
-#define STREQ(a, b) (strcmp((a), (b))  == 0)
+#define MIN(a, b)      (((a) < (b)) ? (a) : (b))
+#define MAX(a, b)      (((a) > (b)) ? (a) : (b))
+#define strlens(s)     (s == NULL ? 0 : strlen(s))
+#define STREQ(a, b)    (strcmp((a), (b))  == 0)
+#define MEMEQ(a, b, c) (memcmp((a), (b), (c))  == 0)
 
 
 volatile void *utils_zero(volatile void *dst, size_t len);

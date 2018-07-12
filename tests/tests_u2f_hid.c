@@ -660,7 +660,6 @@ int main(void)
 
     // Test the C code API
     U2Fob_testLiveDevice(0);
-    random_init();
     __stack_chk_guard = random_uint32(0);
     ecc_context_init();
     memory_setup();

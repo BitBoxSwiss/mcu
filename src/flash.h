@@ -30,6 +30,8 @@
 
 
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 
 // Flash: 256kB = 512 pages * 512B per page
@@ -37,8 +39,11 @@
 //  bootloader area  [  32kB; last 2kB reserved for factory installed entropy ]
 //  firmware memory  [   4kB; contains firmaware signatures (7*64B), version (4B) and flags (1B); remaining RFU ]
 //  firmware code    [ 220kB ]
-#ifndef IFLASH0_ADDR
+#ifdef TESTING
 #define IFLASH0_ADDR                (0x00400000u)
+#define IFLASH0_PAGE_SIZE           (512u)
+#define IFLASH_ERASE_PAGES_8        (1u)// Defined in drivers/sam/services/flash_efc/flash_efc.h
+#define FLASH_RC_OK                 (0u)// Defined in drivers/sam/services/flash_efc/flash_efc.h
 #endif
 #define FLASH_PAGE_SIZE             (IFLASH0_PAGE_SIZE)
 #define FLASH_ERASE_SIZE            (FLASH_PAGE_SIZE * 8)// note: min flash erase size is 0x1000 (8 512-Byte pages)
@@ -88,6 +93,21 @@ static inline uint32_t mpu_region_size(uint32_t size)
     }
     return (ret << 1);
 }
+
+
+#ifdef TESTING
+static void HardFault_Handler(void) { exit(1); }
+static void MemManage_Handler(void) { exit(2); }
+
+uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
+uint32_t flash_erase_user_signature(void);
+uint32_t flash_write_user_signature(const void *p_buffer, uint32_t ul_size);
+uint32_t flash_read_user_signature(uint32_t *p_data, uint32_t ul_size);
+uint32_t flash_erase_page(uint32_t ul_address, uint8_t uc_page_num);
+uint32_t flash_write(uint32_t ul_address, const void *p_buffer,
+		uint32_t ul_size, uint32_t ul_erase_flag);
+#endif
+void flash_read_sig_area(uint8_t *sig, uint32_t ul_address, uint32_t len);
 
 
 #endif

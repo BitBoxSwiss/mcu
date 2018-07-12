@@ -1077,7 +1077,6 @@ int main(void)
 {
     ecc_context_init();
     bitcoin_ecc.ecc_context_init();
-    random_init();
 
     u_run_test(test_sign_speed);
     u_run_test(test_verify_speed);

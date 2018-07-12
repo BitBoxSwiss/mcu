@@ -33,6 +33,7 @@
 #include "commander.h"
 #include "flags.h"
 #include "utils.h"
+#include "drivers/config/mcu.h"
 
 
 #ifdef TESTING
@@ -52,7 +53,6 @@ static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLi
 
 #else
 #include <limits.h>
-#include "mcu.h"
 
 
 #define f_printf3(a, b) f_printf((a), (b))

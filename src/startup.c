@@ -27,7 +27,7 @@
 
 #include <string.h>
 
-#include "mcu.h"
+#include "drivers/config/mcu.h"
 #include "led.h"
 #include "usb.h"
 #include "sha2.h"

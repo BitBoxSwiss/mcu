@@ -1424,26 +1424,18 @@ static void tests_device(void)
     ASSERT_REPORT_HAS("\"U2F\":true");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), KEY_STANDARD);
-    if (TEST_LIVE_DEVICE) {
-        ASSERT_REPORT_HAS(attr_str(ATTR_unlock));
-    }
+    ASSERT_REPORT_HAS(attr_str(ATTR_unlock));
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
-    if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
-        ASSERT_REPORT_HAS("\"bootlock\":false");
-    }
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"bootlock\":false");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_lock), KEY_STANDARD);
-    if (TEST_LIVE_DEVICE) {
-        ASSERT_REPORT_HAS(attr_str(ATTR_lock));
-    }
+    ASSERT_REPORT_HAS(attr_str(ATTR_lock));
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
-    if (TEST_LIVE_DEVICE) {
-        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
-        ASSERT_REPORT_HAS("\"bootlock\":true");
-    }
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"bootlock\":true");
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     ASSERT_SUCCESS;
@@ -2383,7 +2375,6 @@ int main(void)
 {
     // Test the C code API
     TEST_LIVE_DEVICE = 0;
-    random_init();
     __stack_chk_guard = random_uint32(0);
     ecc_context_init();
 #ifdef ECC_USE_SECP256K1_LIB

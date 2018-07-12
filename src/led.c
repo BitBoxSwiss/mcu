@@ -26,12 +26,12 @@
 
 
 #include "led.h"
+#include "drivers/config/mcu.h"
 #ifndef TESTING
 #include <gpio.h>
 #include <delay.h>
 #include <ioport.h>
 #else
-#include "sham.h"
 
 
 #define LED_0_PIN               0

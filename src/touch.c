@@ -32,21 +32,22 @@
 #include "hw_version.h"
 #include "systick.h"
 #include "commander.h"
+#ifndef TESTING
+#include "drivers/config/mcu.h"
+#include "touch_api.h"
+#endif
 
 
 extern volatile uint16_t systick_current_time_ms;
-
-volatile uint16_t status_flag           = 0u;
-volatile uint16_t burst_flag            = 0u;
-
-
-#ifndef TESTING
-#include "mcu.h"
-#include "touch_api.h"
+volatile uint16_t status_flag = 0u;
+volatile uint16_t burst_flag = 0u;
 
 
 void touch_init(void)
 {
+#ifdef TESTING
+    // pass
+#else
     qt_reset_sensing();
     qt_enable_key(QTOUCH_TOUCH_CHANNEL, AKS_GROUP_1, 4u, HYST_6_25);
     qt_init_sensing();
@@ -60,12 +61,27 @@ void touch_init(void)
     qt_config_data.qt_pos_recal_delay = DEF_QT_POS_RECAL_DELAY;
 
     qt_filter_callback = 0;
-}
 #endif
+}
 
 
 uint8_t touch_button_press(uint8_t touch_type)
 {
+#ifdef TESTING
+    if (touch_type == DBB_TOUCH_REJECT_TIMEOUT) {
+        // Simulate touch sequence for ecdh led blink coding
+        static uint8_t touch_short_count = 0;
+        if (!touch_short_count) {
+            touch_short_count++;
+            return DBB_ERR_TOUCH_TIMEOUT;
+        } else {
+            touch_short_count = 0;
+            return DBB_ERR_TOUCH_ABORT;
+        }
+    }
+    commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
+    return DBB_TOUCHED;
+#else
     int pushed = DBB_NOT_TOUCHED;
     int16_t touch_snks;
     int16_t touch_sns;
@@ -180,4 +196,5 @@ uint8_t touch_button_press(uint8_t touch_type)
         led_off();
         return DBB_ERR_TOUCH_TIMEOUT;
     }
+#endif
 }

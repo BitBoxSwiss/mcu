@@ -30,7 +30,7 @@
 #include "board_com.h"
 #include "spi_master.h"
 #include "flags.h"
-#include "mcu.h"
+#include "drivers/config/mcu.h"
 
 
 #define board_com_build_word_address(p_u8, addr) \

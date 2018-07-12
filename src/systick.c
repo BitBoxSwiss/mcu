@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "systick.h"
-#include "mcu.h"
+#include "drivers/config/mcu.h"
 
 volatile uint16_t systick_current_time_ms   = 0u;
 volatile uint8_t systick_time_updated       = 0u;

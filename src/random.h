@@ -29,9 +29,7 @@
 #define _RANDOM_H_
 
 #include <stdint.h>
-#include <stdlib.h>
 
-void random_init(void);
 uint32_t random_uint32(uint8_t update_seed);
 int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed);
 

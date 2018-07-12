@@ -29,8 +29,8 @@
 
 #ifndef TESTING
 #include "conf_usb.h"
-#include "mcu.h"
 #endif
+#include "drivers/config/mcu.h"
 #include "bootloader.h"
 #include "utils.h"
 #include "usb.h"

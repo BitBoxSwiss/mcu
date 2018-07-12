@@ -140,7 +140,6 @@ int main(int argc, char *argv[])
     EC_GROUP *ecgroup;
     int err = 0;
 
-    random_init();
     bitcoin_ecc.ecc_context_init();
 
     unsigned long max_iterations = 1000;

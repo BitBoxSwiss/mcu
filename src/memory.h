@@ -35,11 +35,11 @@
 // User Zones: 0x0000 to 0x0FFF
 // Do NOT change address locations.
 // Otherwise problems will occur after a firmware update.
-#define MEM_ERASED_ADDR                 0x0000// Zone 0
-#define MEM_SETUP_ADDR                  0x0002
-#define MEM_ACCESS_ERR_ADDR             0x0004
-#define MEM_PIN_ERR_ADDR                0x0006
-#define MEM_UNLOCKED_ADDR               0x0008
+#define MEM_ERASED_ADDR                 0x0000// (uint8_t)  Zone 0
+#define MEM_SETUP_ADDR                  0x0002// (uint8_t)
+#define MEM_ACCESS_ERR_ADDR             0x0004// (uint16_t)
+#define MEM_PIN_ERR_ADDR                0x0006// (uint16_t)
+#define MEM_UNLOCKED_ADDR               0x0008// (uint8_t)
 #define MEM_EXT_FLAGS_ADDR              0x000A// (uint32_t) 32 possible extension flags
 #define MEM_U2F_COUNT_ADDR              0x0010// (uint32_t)
 #define MEM_NAME_ADDR                   0x0100// (32 bytes) Zone 1
@@ -78,7 +78,7 @@ typedef enum PASSWORD_ID {
 } PASSWORD_ID;
 
 
-uint8_t memory_setup(void);
+void memory_setup(void);
 void memory_reset_u2f(void);
 void memory_reset_hww(void);
 void memory_erase_hww_seed(void);

@@ -64,7 +64,7 @@ __extension__ static uint8_t MEM_user_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0x
 __extension__ static uint8_t MEM_aeskey_stand[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_hidden[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_aeskey_verify[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
-__extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
+__extension__ static uint8_t MEM_master_hww_entropy[] = {[0 ... MEM_PAGE_LEN - 1] = 0x00};
 __extension__ static uint8_t MEM_master_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_master_hww[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
 __extension__ static uint8_t MEM_hidden_hww_chain[] = {[0 ... MEM_PAGE_LEN - 1] = 0xFF};
@@ -91,7 +91,7 @@ static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t ad
 #ifndef TESTING
         // skip writing if memory does not change
         if (read_b) {
-            if (!memcmp(read_b, write_b, len)) {
+            if (MEMEQ(read_b, write_b, len)) {
                 return DBB_OK;
             }
         }
@@ -100,7 +100,7 @@ static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t ad
             return DBB_ERROR;
         }
         if (read_b) {
-            if (!memcmp(write_b, read_b, len)) {
+            if (MEMEQ(write_b, read_b, len)) {
                 return DBB_OK;
             } else {
                 // error
@@ -136,7 +136,7 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     uint8_t rn[FLASH_USERSIG_RN_LEN] = {0};
     sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, mempass);
     flash_read_user_signature((uint32_t *)rn, FLASH_USERSIG_RN_LEN / sizeof(uint32_t));
-    if (memcmp(rn, MEM_PAGE_ERASE, FLASH_USERSIG_RN_LEN)) {
+    if (!MEMEQ(rn, MEM_PAGE_ERASE, FLASH_USERSIG_RN_LEN)) {
         hmac_sha256(mempass, MEM_PAGE_LEN, rn, FLASH_USERSIG_RN_LEN, mempass);
     }
 #endif
@@ -377,7 +377,7 @@ uint8_t *memory_name(const char *name)
 uint8_t *memory_hidden_hww(const uint8_t *master)
 {
     memory_eeprom_crypt(NULL, MEM_hidden_hww, MEM_HIDDEN_BIP32_ADDR);
-    if ((master == NULL) && !memcmp(MEM_hidden_hww, MEM_PAGE_ERASE, 32)) {
+    if ((master == NULL) && MEMEQ(MEM_hidden_hww, MEM_PAGE_ERASE, 32)) {
         // Backward compatible with firmware <=2.2.3
         return memory_master_hww_chaincode(NULL);
     }
@@ -389,7 +389,7 @@ uint8_t *memory_hidden_hww(const uint8_t *master)
 uint8_t *memory_hidden_hww_chaincode(const uint8_t *chain)
 {
     memory_eeprom_crypt(NULL, MEM_hidden_hww_chain, MEM_HIDDEN_BIP32_CHAIN_ADDR);
-    if ((chain == NULL) && !memcmp(MEM_hidden_hww_chain, MEM_PAGE_ERASE, 32)) {
+    if ((chain == NULL) && MEMEQ(MEM_hidden_hww_chain, MEM_PAGE_ERASE, 32)) {
         // Backward compatible with firmware <=2.2.3
         return memory_master_hww(NULL);
     }

@@ -313,7 +313,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
     for (i = 0; i < U2F_HIJACK_ORIGIN_TOTAL; i++) {
         // As an alternative interface, hijack the U2F AUTH key handle data field.
         // Slower but works in browsers for specified sites without requiring an extension.
-        if (!memcmp(req->challenge, U2F_HIJACK_CODE[i], U2F_NONCE_LENGTH)) {
+        if (MEMEQ(req->challenge, U2F_HIJACK_CODE[i], U2F_NONCE_LENGTH)) {
             if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
                 // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
                 u2f_send_err_hid(cid, U2FHID_ERR_CHANNEL_BUSY);
@@ -333,7 +333,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
 
     u2f_keyhandle_gen(req->appId, nonce, privkey, mac);
 
-    if (memcmp(req->keyHandle, mac, SHA256_DIGEST_LENGTH) != 0) {
+    if (!MEMEQ(req->keyHandle, mac, SHA256_DIGEST_LENGTH)) {
         u2f_send_error(U2F_SW_WRONG_DATA);
         return;
     }

@@ -386,7 +386,7 @@ static int commander_process_backup_check(const char *key, const char *filename,
         } else {
             memcpy(backup_u2f, utils_hex_to_uint8(backup_u2f_hex + strlens(SD_PDF_DELIM2_S)),
                    sizeof(backup_u2f));
-            ret = memcmp(backup_u2f, memory_master_u2f(NULL), MEM_PAGE_LEN) ? DBB_ERROR : DBB_OK;
+            ret = !MEMEQ(backup_u2f, memory_master_u2f(NULL), MEM_PAGE_LEN) ? DBB_ERROR : DBB_OK;
         }
     } else {
         ret = DBB_OK;
@@ -396,9 +396,9 @@ static int commander_process_backup_check(const char *key, const char *filename,
     if ((ret == DBB_OK) && (STREQ(source, attr_str(ATTR_HWW)) ||
                             STREQ(source, attr_str(ATTR_all)))) {
         memcpy(backup_hww, utils_hex_to_uint8(backup_hex), sizeof(backup_hww));
-        if (!memcmp(backup_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
+        if (MEMEQ(backup_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN)) {
             ret = DBB_ERROR;
-        } else if (memcmp(backup_hww, memory_master_hww_entropy(NULL), MEM_PAGE_LEN)) {
+        } else if (!MEMEQ(backup_hww, memory_master_hww_entropy(NULL), MEM_PAGE_LEN)) {
             ret = DBB_ERROR;
         } else {
             // entropy matches, check if derived master and chaincodes match
@@ -406,8 +406,8 @@ static int commander_process_backup_check(const char *key, const char *filename,
             snprintf(seed, sizeof(seed), "%s", utils_uint8_to_hex(backup_hww, MEM_PAGE_LEN));
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 ret = DBB_ERROR;
-            } else if (memcmp(node.private_key, wallet_get_master(), MEM_PAGE_LEN) ||
-                       memcmp(node.chain_code, wallet_get_chaincode(), MEM_PAGE_LEN)) {
+            } else if (!MEMEQ(node.private_key, wallet_get_master(), MEM_PAGE_LEN) ||
+                       !MEMEQ(node.chain_code, wallet_get_chaincode(), MEM_PAGE_LEN)) {
                 ret = DBB_ERROR;
             } else {
                 ret = DBB_OK;
@@ -893,7 +893,7 @@ static void commander_process_verifypass(yajl_val json_node)
             if (ret == DBB_OK) {
                 l = sd_load(VERIFYPASS_FILENAME, CMD_verifypass);
                 if (l) {
-                    if (memcmp(text, l, strlens(text))) {
+                    if (!MEMEQ(text, l, strlens(text))) {
                         commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);
                     } else {
                         commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
@@ -1239,8 +1239,8 @@ err:
 
 static uint8_t commander_check_password_collision(void)
 {
-    if (!memcmp(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_HIDDEN),
-                MEM_PAGE_LEN)) {
+    if (MEMEQ(memory_report_aeskey(PASSWORD_STAND), memory_report_aeskey(PASSWORD_HIDDEN),
+              MEM_PAGE_LEN)) {
         memory_active_key_set(memory_report_aeskey(PASSWORD_STAND));
         memory_random_password(PASSWORD_HIDDEN);
         memory_hidden_hww_chaincode(MEM_PAGE_ERASE_FE);

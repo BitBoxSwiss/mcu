@@ -26,11 +26,15 @@
 
 
 #include <string.h>
-
-#include "board_com.h"
 #include "ataes132.h"
 #include "flags.h"
-#include "mcu.h"
+#include "drivers/config/mcu.h"
+#ifdef TESTING
+#include <stdlib.h>
+#include <time.h>
+#else
+#include "board_com.h"
+#endif
 
 
 static void ataes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *crc)
@@ -59,6 +63,16 @@ static void ataes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *cr
     crc[0] = crcHigh;
     crc[1] = crcLow;
 }
+
+
+#ifdef TESTING
+
+
+static int random_seeded = 0;
+__extension__ static uint8_t ataes_eeprom_simulation[] = {[0 ... 0x0FFF] = 0xFF};
+
+
+#else
 
 
 static uint8_t ataes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length,
@@ -107,6 +121,9 @@ static uint32_t ataes_eeprom_read(uint32_t u32_start_address, uint16_t u16_lengt
 }
 
 
+#endif
+
+
 /*
  Sending command:     OP   MODE  PARAMETER1  PARAMETER2  DATA ... DATA
                      0xXX  0xXX  0xXX  0xXX  0xXX  0xXX  0xXX ... 0xXX
@@ -115,6 +132,34 @@ static uint32_t ataes_eeprom_read(uint32_t u32_start_address, uint16_t u16_lengt
 int ataes_process(uint8_t const *command, uint16_t cmd_len,
                   uint8_t *response_block, uint16_t response_len)
 {
+#ifdef TESTING
+    (void) cmd_len;
+    if (!random_seeded++) {
+        srand(time(NULL));
+    }
+    switch (command[0]) {
+        case ATAES_CMD_RAND: {
+            // Use standard libary for off chip RNG
+            int i = 0, r = 16;
+            response_block[i++] = response_len;// count
+            response_block[i++] = 0x00;// success code
+            while (r--) {
+                response_block[i++] = rand();
+            }
+            ataes_calculate_crc(i, response_block, response_block + i);
+            return DBB_OK;
+        }
+        case ATAES_CMD_LOCK: {
+            int i = 0;
+            response_block[i++] = response_len;// count
+            response_block[i++] = 0x00;// success code
+            ataes_calculate_crc(i, response_block, response_block + i);
+            return DBB_OK;
+        }
+        default:
+            break;
+    }
+#else
     uint32_t ret = 0;
     uint8_t ataes_status = 0;
     uint8_t delay = 2; // msec
@@ -222,7 +267,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
             return DBB_ERROR;
         }
     }
-
+#endif
     return DBB_OK;
 }
 
@@ -231,6 +276,14 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
 int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
                  uint8_t *userdata_write)
 {
+#ifdef TESTING
+    if (userdata_write != NULL) {
+        memcpy(ataes_eeprom_simulation + ADDR, userdata_write, LEN);
+    }
+    if (userdata_read != NULL) {
+        memcpy(userdata_read, ataes_eeprom_simulation + ADDR, LEN);
+    }
+#else
     int ret;
     uint8_t ataes_status = 0;
     uint8_t delay = 2; // msec
@@ -268,7 +321,6 @@ int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
             delay_ms(delay);
         }
     }
-
+#endif
     return DBB_OK;
 }
-

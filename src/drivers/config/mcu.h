@@ -50,6 +50,10 @@
  *
  */
 
+#ifdef TESTING
+#define delay_ms(a) (void)a;
+#else
+
 // From module: Atmel QTouch Library 5.0 for Atmel SAM4S devices
 #include <touch_api.h>
 
@@ -148,4 +152,5 @@
 // From module: pio_handler support enabled
 #include <pio_handler.h>
 
+#endif
 #endif // MCU_H

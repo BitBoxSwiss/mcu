@@ -32,6 +32,11 @@
 #include <stdint.h>
 
 
+#define ATAES_RAND_LEN 0x10
+#define ATAES_CMD_RAND 0x02
+#define ATAES_CMD_LOCK 0x0D
+
+
 int ataes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block,
                   uint16_t response_len);
 int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,

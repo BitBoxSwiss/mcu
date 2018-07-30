@@ -29,7 +29,7 @@
 
 #include "sam4s4a.h"
 #include "conf_usb.h"
-#include "mcu.h"
+#include "drivers/config/mcu.h"
 #include "led.h"
 #include "uECC.h"
 #include "sha2.h"

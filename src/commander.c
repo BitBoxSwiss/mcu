@@ -35,6 +35,7 @@
 #include "random.h"
 #include "base64.h"
 #include "wallet.h"
+#include "touch.h"
 #include "utils.h"
 #include "flash.h"
 #include "flags.h"
@@ -43,12 +44,7 @@
 #include "led.h"
 #include "ecc.h"
 #include "sd.h"
-#ifndef TESTING
-#include "touch.h"
-#include "mcu.h"
-#else
-#include "sham.h"
-#endif
+#include "drivers/config/mcu.h"
 
 
 #define BRACED(x) (strlens(x) ? (((x[0]) == '{') && ((x[strlens(x) - 1]) == '}')) : 0)
@@ -999,13 +995,9 @@ static void commander_process_xpub(yajl_val json_node)
 
 static uint8_t commander_bootloader_unlocked(void)
 {
-#ifdef TESTING
-    return 0;
-#else
     uint8_t sig[FLASH_SIG_LEN];
-    memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
+    flash_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
     return sig[FLASH_BOOT_LOCK_BYTE];
-#endif
 }
 
 
@@ -1205,11 +1197,8 @@ static void commander_process_bootloader(yajl_val json_node)
         return;
     }
 
-#ifdef TESTING
-    commander_fill_report(cmd_str(CMD_bootloader), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
-#else
     uint8_t sig[FLASH_SIG_LEN];
-    memcpy(sig, (uint8_t *)(FLASH_SIG_START), FLASH_SIG_LEN);
+    flash_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
 
     if (STREQ(value, attr_str(ATTR_lock))) {
         sig[FLASH_BOOT_LOCK_BYTE] = 0;
@@ -1233,7 +1222,6 @@ static void commander_process_bootloader(yajl_val json_node)
 
 err:
     commander_fill_report(cmd_str(CMD_bootloader), NULL, DBB_ERR_MEM_FLASH);
-#endif
 }
 
 

@@ -30,6 +30,7 @@
 #include <stdlib.h>
 
 #include "commander.h"
+#include "ataes132.h"
 #include "memory.h"
 #include "random.h"
 #include "utils.h"
@@ -37,13 +38,8 @@
 #include "flash.h"
 #include "hmac.h"
 #include "sha2.h"
-#ifndef TESTING
-#include <gpio.h>
-#include <delay.h>
-#include <ioport.h>
-#include "ataes132.h"
-#include "mcu.h"
-#endif
+#include "aes.h"
+#include "drivers/config/mcu.h"
 
 
 #if (MEM_PAGE_LEN != SHA256_DIGEST_LENGTH)
@@ -80,15 +76,12 @@ __extension__ const uint8_t MEM_PAGE_ERASE_FE[] = {[0 ... MEM_PAGE_LEN - 1] = 0x
 static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t addr,
                              const uint16_t len)
 {
-#ifndef TESTING
     // read current memory
     if (ataes_eeprom(len, addr, read_b, NULL) != DBB_OK) {
         commander_fill_report(cmd_str(CMD_ataes), NULL, DBB_ERR_MEM_ATAES);
         return DBB_ERROR;
     }
-#endif
     if (write_b) {
-#ifndef TESTING
         // skip writing if memory does not change
         if (read_b) {
             if (MEMEQ(read_b, write_b, len)) {
@@ -110,11 +103,6 @@ static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, const int32_t ad
                 return DBB_ERROR;
             }
         }
-#else
-        memcpy(read_b, write_b, len);
-        (void) addr;
-        return DBB_OK;
-#endif
     }
     return DBB_OK;
 }
@@ -132,28 +120,18 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
     // Encrypt data saved to memory using an AES key obfuscated by the
     // bootloader bytes.
     memset(mempass, 0, sizeof(mempass));
-#ifndef TESTING
     uint8_t rn[FLASH_USERSIG_RN_LEN] = {0};
+#ifndef TESTING
     sha256_Raw((uint8_t *)(FLASH_BOOT_START), FLASH_BOOT_LEN, mempass);
+#endif
     flash_read_user_signature((uint32_t *)rn, FLASH_USERSIG_RN_LEN / sizeof(uint32_t));
     if (!MEMEQ(rn, MEM_PAGE_ERASE, FLASH_USERSIG_RN_LEN)) {
         hmac_sha256(mempass, MEM_PAGE_LEN, rn, FLASH_USERSIG_RN_LEN, mempass);
     }
-#endif
     sha256_Raw(mempass, MEM_PAGE_LEN, mempass);
     sha256_Raw((const uint8_t *)(utils_uint8_to_hex(mempass, MEM_PAGE_LEN)), MEM_PAGE_LEN * 2,
                mempass);
     sha256_Raw(mempass, MEM_PAGE_LEN, mempass);
-
-    if (read_b) {
-        enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(read_b, MEM_PAGE_LEN),
-                                  MEM_PAGE_LEN * 2, &enc_len, mempass);
-        if (!enc) {
-            goto err;
-        }
-        snprintf(enc_r, sizeof(enc_r), "%.*s", enc_len, enc);
-        free(enc);
-    }
 
     if (write_b) {
         char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
@@ -251,7 +229,6 @@ static void memory_scramble_default_aeskeys(void)
 
 static void memory_scramble_rn(void)
 {
-#ifndef TESTING
     uint32_t i = 0;
     uint8_t usersig[FLASH_USERSIG_SIZE];
     uint8_t number[FLASH_USERSIG_RN_LEN] = {0};
@@ -262,7 +239,6 @@ static void memory_scramble_rn(void)
     }
     flash_erase_user_signature();
     flash_write_user_signature((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
-#endif
 }
 
 
@@ -270,15 +246,14 @@ void memory_setup(void)
 {
     if (memory_read_setup()) {
         // One-time setup on factory install
-#ifndef TESTING
-        // Lock Config Memory:        OP   MODE  PARAMETER1  PARAMETER2
-        const uint8_t ataes_cmd[] = {0x0D, 0x02, 0x00, 0x00, 0x00, 0x00};
+        // Lock Config Memory:              OP       MODE  PARAMETER1  PARAMETER2
+        const uint8_t ataes_cmd[] = {ATAES_CMD_LOCK, 0x02, 0x00, 0x00, 0x00, 0x00};
         // Return packet [Count(1) || Return Code (1) || CRC (2)]
         uint8_t ataes_ret[4] = {0};
-        if (ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, 4) != DBB_OK) {
+        uint8_t ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
+        if (ret != DBB_OK || !ataes_ret[0] || ataes_ret[1]) {
             HardFault_Handler();
         }
-#endif
         uint32_t c = 0x00000000;
         memory_reset_hww();
         memory_reset_u2f();
@@ -349,15 +324,12 @@ void memory_random_password(PASSWORD_ID id)
 
 void memory_clear(void)
 {
-#ifndef TESTING
     // Zero important variables in RAM on embedded MCU.
-    // Do not clear for testing routines (i.e. not embedded).
     memcpy(MEM_hidden_hww_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_hidden_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_hww_chain, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_hww, MEM_PAGE_ERASE, MEM_PAGE_LEN);
     memcpy(MEM_master_hww_entropy, MEM_PAGE_ERASE, MEM_PAGE_LEN);
-#endif
 }
 
 

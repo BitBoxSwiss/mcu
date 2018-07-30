@@ -28,6 +28,9 @@ set(DBB-FIRMWARE-SOURCES
         u2f_device.c
         usb.c
         sd.c
+        ataes132.c
+        flash.c
+        touch.c
 )
 
 if(USE_SECP256K1_LIB)
@@ -47,18 +50,13 @@ set(DBB-BOOTLOADER-SOURCES
         utils.c
         flags.c
         usb.c
+        touch.c
 )
 
 set(DBB-HARDWARE-SOURCES
         board_com.c
         hw_version.c
-        ataes132.c
         systick.c
-        touch.c
-)
-
-set(DBB-TEST-SOURCES
-        sham.c
 )
 
 set(YAJL-SOURCES
@@ -183,7 +181,6 @@ if(BUILD_TYPE STREQUAL "test")
     add_library(bitbox
         STATIC
         ${DBB-FIRMWARE-SOURCES}
-        ${DBB-TEST-SOURCES}
         ${YAJL-SOURCES}
     )
 endif()

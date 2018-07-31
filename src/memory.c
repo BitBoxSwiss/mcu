@@ -31,6 +31,7 @@
 
 #include "commander.h"
 #include "ataes132.h"
+#include "aescbcb64.h"
 #include "memory.h"
 #include "random.h"
 #include "utils.h"
@@ -135,8 +136,8 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
 
     if (write_b) {
         char enc_w[MEM_PAGE_LEN * 4 + 1] = {0};
-        enc = aes_cbc_b64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN),
-                                  MEM_PAGE_LEN * 2, &enc_len, mempass);
+        enc = aescbcb64_encrypt((unsigned char *)utils_uint8_to_hex(write_b, MEM_PAGE_LEN),
+                                MEM_PAGE_LEN * 2, &enc_len, mempass);
         if (!enc) {
             goto err;
         }
@@ -178,8 +179,8 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
         }
     }
 
-    dec = aes_cbc_b64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len,
-                              mempass);
+    dec = aescbcb64_decrypt((unsigned char *)enc_r, MEM_PAGE_LEN * 4, &dec_len,
+                            mempass);
     if (!dec) {
         goto err;
     }
@@ -288,7 +289,7 @@ void memory_reset_hww(void)
     memory_scramble_rn();
     memory_master_u2f(u2f);
     memory_random_password(PASSWORD_STAND);
-    memory_random_password(PASSWORD_VERIFY);
+    memory_random_password(TFA_SHARED_SECRET);
     memory_random_password(PASSWORD_HIDDEN);
     memory_erase_hww_seed();
     memory_name(DEVICE_DEFAULT_NAME);
@@ -417,6 +418,16 @@ uint8_t *memory_active_key_get(void)
     return MEM_active_key;
 }
 
+uint8_t memory_write_tfa_shared_secret(const uint8_t *secret)
+{
+    int ret = memory_eeprom_crypt(secret, MEM_aeskey_verify,
+                                  MEM_AESKEY_SHARED_SECRET_ADDR) - DBB_OK;
+    if (ret) {
+        return DBB_ERR_MEM_ATAES;
+    } else {
+        return DBB_OK;
+    }
+}
 
 uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
 {
@@ -438,9 +449,6 @@ uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
         case PASSWORD_HIDDEN:
             memcpy(MEM_aeskey_hidden, password_b, MEM_PAGE_LEN);
             break;
-        case PASSWORD_VERIFY:
-            memcpy(MEM_aeskey_verify, password_b, MEM_PAGE_LEN);
-            break;
         default: {
             /* never reached */
         }
@@ -450,8 +458,6 @@ uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id)
                                MEM_AESKEY_STAND_ADDR) - DBB_OK;
     ret |= memory_eeprom_crypt(MEM_aeskey_hidden, MEM_aeskey_hidden,
                                MEM_AESKEY_HIDDEN_ADDR) - DBB_OK;
-    ret |= memory_eeprom_crypt(MEM_aeskey_verify, MEM_aeskey_verify,
-                               MEM_AESKEY_VERIFY_ADDR) - DBB_OK;
 
     utils_zero(password_b, MEM_PAGE_LEN);
 
@@ -469,7 +475,7 @@ void memory_read_aeskeys(void)
     if (!read) {
         memory_eeprom_crypt(NULL, MEM_aeskey_stand, MEM_AESKEY_STAND_ADDR);
         memory_eeprom_crypt(NULL, MEM_aeskey_hidden, MEM_AESKEY_HIDDEN_ADDR);
-        memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_VERIFY_ADDR);
+        memory_eeprom_crypt(NULL, MEM_aeskey_verify, MEM_AESKEY_SHARED_SECRET_ADDR);
         sha256_Raw(MEM_aeskey_stand, MEM_PAGE_LEN, MEM_user_entropy);
         read++;
     }
@@ -483,7 +489,7 @@ uint8_t *memory_report_aeskey(PASSWORD_ID id)
             return MEM_aeskey_stand;
         case PASSWORD_HIDDEN:
             return MEM_aeskey_hidden;
-        case PASSWORD_VERIFY:
+        case TFA_SHARED_SECRET:
             return MEM_aeskey_verify;
         default:
             return NULL;

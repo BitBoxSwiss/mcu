@@ -36,10 +36,9 @@
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define COMMANDER_TOUCH_ATTEMPTS    10// number of attempts until touch button hold required to login
-#define VERIFYPASS_FILENAME         "verification.pdf"
 #define VERIFYPASS_CRYPT_TEST       "Digital Bitbox 2FA"
-#define VERIFYPASS_LOCK_CODE_LEN    16// bytes
-#define DEVICE_DEFAULT_NAME         "My Digital Bitbox"
+#define TFA_PIN_LEN                 16// bytes
+#define DEVICE_DEFAULT_NAME         "My BitBox"
 #define SD_FILEBUF_LEN_MAX          (COMMANDER_REPORT_SIZE * 4 / 7)
 #define AES_DATA_LEN_MAX            (COMMANDER_REPORT_SIZE * 4 / 7)// base64 increases size by ~4/3; AES encryption by max 32 char
 #define PASSWORD_LEN_MIN            4
@@ -67,6 +66,9 @@ X(led)            \
 X(xpub)           \
 X(name)           \
 X(ecdh)           \
+X(hash_pubkey)    \
+X(abort)          \
+X(challenge)      \
 X(device)         \
 X(random)         \
 X(backup)         \
@@ -180,6 +182,7 @@ X(JSON_STRING,           0, 0)\
 X(JSON_BOOL,             0, 0)\
 X(JSON_ARRAY,            0, 0)\
 X(JSON_NUMBER,           0, 0)\
+X(JSON_OBJECT,           0, 0)\
 X(JSON_NONE,             0, 0)\
 /* placeholder don't move  */ \
 X(FLAG_ERROR_START,      0, 0)\
@@ -205,6 +208,9 @@ X(ERR_KEY_MASTER,      250, "Master key not present.")\
 X(ERR_KEY_CHILD,       251, "Could not generate key.")\
 X(ERR_KEY_ECDH,        252, "Could not generate ECDH secret.")\
 X(ERR_KEY_ECDH_LEN,    253, "Incorrect serialized pubkey length. A 33-byte hexadecimal value (66 characters) is expected.")\
+X(ERR_KEY_HASH_ECDH_LEN, 254, "Incorrect serialized pubkey hash length. A 32-byte hexadecimal value (64 characters) is expected.")\
+X(ERR_TFA_HASH_MISSING, 255, "Failed to pair with second factor, because the hash of the public key was not received.")\
+X(ERR_TFA_HASH_MATCH,  256, "Failed to pair with second factor, because the previously received hash of the public key does not match the computed hash of the public key.")\
 X(ERR_SIGN_PUBKEY_LEN, 300, "Incorrect pubkey length. A 33-byte hexadecimal value (66 characters) is expected.")\
 X(ERR_SIGN_HASH_LEN,   301, "Incorrect hash length. A 32-byte hexadecimal value (64 characters) is expected.")\
 X(ERR_SIGN_DESERIAL,   302, "Could not deserialize outputs or wrong change keypath.")\

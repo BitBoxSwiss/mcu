@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2018 Douglas J. Bakkum
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -24,24 +24,24 @@
 
 */
 
-
-#ifndef _LED_H_
-#define _LED_H_
-
-
 #include <stdint.h>
 
+#include "sha2.h"
+#include "utils.h"
+#include "sharedsecret.h"
 
-#define LED_MAX_CODE_BLINKS 4
-#define LED_MAX_BLINK_SETS  6
+void sharedsecret_derive_keys(const uint8_t *shared_secret, uint8_t *encryption_key,
+                              uint8_t *authentication_key)
+{
+    uint8_t encryption_and_authentication_key[SHA512_DIGEST_LENGTH];
+    sha512_Raw(shared_secret, SHA256_DIGEST_LENGTH, encryption_and_authentication_key);
+
+    int KEY_SIZE = SHA512_DIGEST_LENGTH / 2;
+
+    memcpy(encryption_key, encryption_and_authentication_key, KEY_SIZE);
+    memcpy(authentication_key, encryption_and_authentication_key + KEY_SIZE, KEY_SIZE);
+
+    utils_zero(encryption_and_authentication_key, SHA512_DIGEST_LENGTH);
+}
 
 
-void led_on(void);
-void led_off(void);
-void led_toggle(void);
-void led_blink(void);
-void led_abort(void);
-void led_code(uint8_t code);
-
-
-#endif

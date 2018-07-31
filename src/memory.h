@@ -46,7 +46,7 @@
 #define MEM_MASTER_BIP32_ADDR           0x0200
 #define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
 #define MEM_AESKEY_STAND_ADDR           0x0400
-#define MEM_AESKEY_VERIFY_ADDR          0x0500
+#define MEM_AESKEY_SHARED_SECRET_ADDR   0x0500
 #define MEM_AESKEY_Z6_ADDR              0x0600// Zone 6 reserved first 32*4 bytes
 #define MEM_AESKEY_Z7_ADDR              0x0700// Zone 7 reserved
 #define MEM_AESKEY_HIDDEN_ADDR          0x0800
@@ -57,7 +57,7 @@
 
 
 // Extension flags
-#define MEM_EXT_MASK_U2F         0x00000001// Mask of bit to enable (1) or disable (0) U2F functions 
+#define MEM_EXT_MASK_U2F         0x00000001// Mask of bit to enable (1) or disable (0) U2F functions
 // Will override and disable U2F_HIJACK bit when disabled
 #define MEM_EXT_MASK_U2F_HIJACK  0x00000002// Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
 
@@ -73,7 +73,7 @@
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
     PASSWORD_HIDDEN,
-    PASSWORD_VERIFY,
+    TFA_SHARED_SECRET,
     PASSWORD_NONE  /* keep last */
 } PASSWORD_ID;
 
@@ -87,6 +87,7 @@ void memory_clear(void);
 
 void memory_active_key_set(uint8_t *key);
 uint8_t *memory_active_key_get(void);
+uint8_t memory_write_tfa_shared_secret(const uint8_t *secret);
 uint8_t memory_write_aeskey(const char *password, int len, PASSWORD_ID id);
 void memory_read_aeskeys(void);
 uint8_t *memory_report_aeskey(PASSWORD_ID id);

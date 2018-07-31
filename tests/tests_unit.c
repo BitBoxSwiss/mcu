@@ -30,8 +30,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include "commander.h"
+#include "aescbcb64.h"
 #include "wallet.h"
 #include "random.h"
 #include "base64.h"
@@ -46,6 +48,7 @@
 #include "uECC.h"
 #include "ecc.h"
 #include "aes.h"
+#include "hmac_check.h"
 
 
 int U_TESTS_RUN = 0;
@@ -687,6 +690,46 @@ static void test_aes_cbc(void)
     }
 }
 
+static void test_aes_encrypt_decrypt_hmac(void)
+{
+    const char *msg = "A test msg.\n";
+    int b64_length = 0;
+    const uint8_t *shared_secret =
+        utils_hex_to_uint8("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4");
+    char *encrypted_msg = aescbcb64_hmac_encrypt((const unsigned char *)msg, strlen(msg),
+                          &b64_length, shared_secret);
+    u_assert_int_eq(b64_length, strlen(encrypted_msg));
+
+    int out_length = 0;
+    uint8_t hmac[SHA256_DIGEST_LENGTH];
+    char *decrypted_msg = decrypt_and_check_hmac((const unsigned char *)encrypted_msg,
+                          b64_length, &out_length,
+                          shared_secret, hmac);
+    u_assert(decrypted_msg);
+    u_assert_str_eq(decrypted_msg, msg);
+    u_assert_int_eq(out_length, strlen(msg) + 1);
+
+    int ub64_length = 0;
+    unsigned char *ub64 = unbase64((const char *)encrypted_msg, b64_length, &ub64_length);
+    u_assert(ub64);
+
+    unsigned char corrupted_encrypted_ub64_msg[ub64_length];
+    memcpy(corrupted_encrypted_ub64_msg, ub64, ub64_length);
+    // corrupt it...
+    corrupted_encrypted_ub64_msg[ub64_length - 1]++;
+    char *corrupted_encrypted_b64_msg = base64(corrupted_encrypted_ub64_msg, ub64_length,
+                                        &b64_length);
+
+    char *corrupted_decrypted_msg = decrypt_and_check_hmac((const unsigned char *)
+                                    corrupted_encrypted_b64_msg, b64_length, &out_length,
+                                    shared_secret, hmac);
+    u_assert(corrupted_decrypted_msg == NULL);
+    free(encrypted_msg);
+    free(decrypted_msg);
+    free(corrupted_encrypted_b64_msg);
+    free(ub64);
+}
+
 
 static void test_address(void)
 {
@@ -1092,6 +1135,7 @@ int main(void)
     u_run_test(test_aes_cbc);
     u_run_test(test_buffer_overflow);
     u_run_test(test_utils);
+    u_run_test(test_aes_encrypt_decrypt_hmac);
 
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);

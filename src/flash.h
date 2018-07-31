@@ -96,8 +96,14 @@ static inline uint32_t mpu_region_size(uint32_t size)
 
 
 #ifdef TESTING
-static void HardFault_Handler(void) { exit(1); }
-static void MemManage_Handler(void) { exit(2); }
+static void HardFault_Handler(void)
+{
+    exit(1);
+}
+static void MemManage_Handler(void)
+{
+    exit(2);
+}
 
 uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
 uint32_t flash_erase_user_signature(void);
@@ -105,7 +111,7 @@ uint32_t flash_write_user_signature(const void *p_buffer, uint32_t ul_size);
 uint32_t flash_read_user_signature(uint32_t *p_data, uint32_t ul_size);
 uint32_t flash_erase_page(uint32_t ul_address, uint8_t uc_page_num);
 uint32_t flash_write(uint32_t ul_address, const void *p_buffer,
-		uint32_t ul_size, uint32_t ul_erase_flag);
+                     uint32_t ul_size, uint32_t ul_erase_flag);
 #endif
 void flash_read_sig_area(uint8_t *sig, uint32_t ul_address, uint32_t len);
 

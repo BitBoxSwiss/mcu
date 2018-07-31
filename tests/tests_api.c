@@ -30,19 +30,21 @@
 #include <string.h>
 
 #include "sd.h"
+#include "ecdh.h"
 #include "ecc.h"
 #include "sha2.h"
 #include "utest.h"
 #include "utils.h"
 #include "flags.h"
 #include "random.h"
+#include "aescbcb64.h"
 #include "commander.h"
 #include "yajl/src/api/yajl_tree.h"
 #include "secp256k1/include/secp256k1.h"
 #include "secp256k1/include/secp256k1_recovery.h"
 
 #include "api.h"
-
+#include "hmac_check.h"
 
 int U_TESTS_RUN = 0;
 int U_TESTS_FAIL = 0;
@@ -52,7 +54,7 @@ static void tests_seed_xpub_backup(void)
 {
     char name0[] = "name0";
     char key[] = "password";
-    char xpub0[112], xpub1[112], *echo;
+    char xpub0[112], xpub1[112];
     char seed_usb[512], seed_c[512], seed_b[512], back[512], check[512], erase_file[512];
     char filename[] = "tests_backup.pdf";
     char filename2[] = "tests_backup2.pdf";
@@ -109,8 +111,14 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_not_eq(xpub0, xpub1);
 
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_eq(xpub0, echo);
+        free(echo);
     }
 
     // check backup list and erase
@@ -147,8 +155,14 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_eq(xpub0, echo);
+        free(echo);
     }
 
     // check xpubs
@@ -198,7 +212,8 @@ static void tests_seed_xpub_backup(void)
     char lbn[SD_FILEBUF_LEN_MAX / 8];
     size_t i;
 
-    memset(long_backup_name, '-', sizeof(long_backup_name));
+    memset(long_backup_name, '-', sizeof(long_backup_name) - 1);
+    long_backup_name[(SD_FILEBUF_LEN_MAX / 8) - 1] = 0;
 
     for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
         snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
@@ -1040,7 +1055,6 @@ static void tests_u2f(void)
     //
     if (!TEST_LIVE_DEVICE) {
 
-        char *echo;
         const char one_input[] =
             "{\"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
         const char hash_1_input[] =
@@ -1096,8 +1110,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(hash_1_input);
@@ -1137,8 +1157,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(hash_1_input);
@@ -1160,8 +1186,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(hash_1_input);
@@ -1207,8 +1239,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(hash_1_input);
@@ -1230,8 +1268,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(hash_1_input);
@@ -1254,8 +1298,14 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+            int len;
+            uint8_t hmac[SHA256_DIGEST_LENGTH];
+            const char *val = api_read_value(CMD_echo);
+            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            u_assert(echo);
             u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(hash_1_input);
@@ -1282,9 +1332,6 @@ static void tests_device(void)
     ASSERT_REPORT_HAS(attr_str(ATTR_password));
 
     api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
-    api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_abort), KEY_STANDARD);
     ASSERT_SUCCESS;
 
     api_format_send_cmd(cmd_str(CMD_led), "invalid_cmd", KEY_STANDARD);
@@ -1333,8 +1380,7 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_device), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), "", KEY_STANDARD);
-
+    api_format_send_cmd(cmd_str(CMD_ecdh), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -1350,8 +1396,10 @@ static void tests_device(void)
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_ecdh),
+                        "{ \"hash_ecdh\" : \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" }",
+                        KEY_STANDARD);
+    ASSERT_REPORT_HAS(cmd_str(CMD_ecdh));
 
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
@@ -1364,7 +1412,9 @@ static void tests_device(void)
                         "{\"source\":\"create\", \"filename\":\"l.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_ecdh),
+                        "{ \"hash_ecdh\" : \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" }",
+                        KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.pdf\", \"key\":\"password\"}",
@@ -1396,8 +1446,11 @@ static void tests_device(void)
                                  yajl_t_string));
         u_assert_int_eq(!ciphertext, 0);
         int decrypt_len;
-        char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                        &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        char *dec = decrypt_and_check_hmac((const unsigned char *)ciphertext,
+                                           strlens(ciphertext),
+                                           &decrypt_len, memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(dec);
         u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
         free(dec);
         yajl_tree_free(json_node);
@@ -1567,31 +1620,82 @@ static void tests_password(void)
 
 
     //
-    // Test ECDH verifypass
+    // Test ECDH
     //
+    const char *ecdh_priv_hex =
+        "769a3f70c6f4820e717fd50477e218f0c7456013ded246043b40ac49e9accd5f";
+    const char *ecdh_pub_hex =
+        "035f40a5dcd64074194b3f88767dbf7a527ddd227d7734b68dd2e9d25c2d20d080";
+    char ecdh_cmd[256];
+    snprintf(ecdh_cmd, 256, "{\"pubkey\":\"%s\"}", ecdh_pub_hex);
 
-    char ecdh[] =
-        "{\"ecdh\":\"028d3bce812ac027fdea0e4ad98b2549a90bb9aa996396eec6bb1a8ed56e6976b8\"}";
-    api_format_send_cmd(cmd_str(CMD_verifypass), ecdh, KEY_STANDARD);
+    uint8_t ecdh_priv[32];
+    memcpy(ecdh_priv, utils_hex_to_uint8(ecdh_priv_hex), 32);
+    uint8_t ecdh_pub[33];
+    memcpy(ecdh_pub, utils_hex_to_uint8(ecdh_pub_hex), 33);
+
+    uint8_t hash_ecdh[SHA256_DIGEST_LENGTH];
+    sha256_Raw(ecdh_pub, 33, hash_ecdh);
+
+    char hash_ecdh_hex[65];
+    memcpy(hash_ecdh_hex, utils_uint8_to_hex(hash_ecdh, SHA256_DIGEST_LENGTH), 65);
+
+    char ecdh_hash_cmd[256];
+    snprintf(ecdh_hash_cmd, 256, "{\"hash_pubkey\":\"%s\"}", hash_ecdh_hex);
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
-    ASSERT_REPORT_HAS(cmd_str(CMD_ecdh));
-    ASSERT_REPORT_HAS(cmd_str(CMD_ciphertext));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
 
-    if (!TEST_LIVE_DEVICE) {
-        yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
-        const char *ciphertext_path[] = { cmd_str(CMD_verifypass), cmd_str(CMD_ciphertext), (const char *) 0 };
-        const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
-                                 yajl_t_string));
-        if (ciphertext) {
-            int decrypt_len;
-            char *dec = aes_cbc_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                            &decrypt_len, memory_report_aeskey(PASSWORD_VERIFY));
-            u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
-            free(dec);
-        }
-        yajl_tree_free(json_node);
-    }
+    const char *response_hash_ecdh = api_read_decrypted_report();
 
+    yajl_val json_node_0 = yajl_tree_parse(response_hash_ecdh, NULL, 0);
+    u_assert(json_node_0);
+    u_assert(YAJL_IS_OBJECT(json_node_0));
+
+    const char *path[] = { cmd_str(CMD_ecdh), NULL };
+    yajl_val ecdh_node = yajl_tree_get(json_node_0, path, yajl_t_any);
+    const char *path_hash_ecdh[] = { cmd_str(CMD_hash_pubkey), NULL };
+    const char *out_hash_ecdh_hex = YAJL_GET_STRING(yajl_tree_get(ecdh_node,
+                                    path_hash_ecdh, yajl_t_string));
+
+    // we should have received a hex representation of the hashed ECDH public key of the bitbox.
+    u_assert(out_hash_ecdh_hex);
+
+    uint8_t out_hash_ecdh[32];
+    memcpy(out_hash_ecdh, utils_hex_to_uint8(out_hash_ecdh_hex), 32 * sizeof(uint8_t));
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_pubkey));
+    // TODO: assert that hash of response is the same as the hash received above.
+
+    const char *response_ecdh = api_read_decrypted_report();
+
+    yajl_val json_node_1 = yajl_tree_parse(response_ecdh, NULL, 0);
+    u_assert(json_node_1);
+    u_assert(YAJL_IS_OBJECT(json_node_1));
+
+    ecdh_node = yajl_tree_get(json_node_1, path, yajl_t_any);
+    const char *path_ecdh[] = { cmd_str(CMD_pubkey), NULL };
+    const char *out_ecdh_pub_hex = YAJL_GET_STRING(yajl_tree_get(ecdh_node, path_ecdh,
+                                   yajl_t_string));
+    u_assert(out_ecdh_pub_hex);
+
+    uint8_t out_ecdh_pub[33];
+    memcpy(out_ecdh_pub, utils_hex_to_uint8(out_ecdh_pub_hex), 33);
+
+    uint8_t calculated_hash[32];
+    sha256_Raw(out_ecdh_pub, 33, calculated_hash);
+    u_assert_mem_eq(out_hash_ecdh, calculated_hash, SHA256_DIGEST_LENGTH);
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), cmd_str(CMD_challenge), KEY_STANDARD);
+
+    yajl_tree_free(json_node_0);
+    yajl_tree_free(json_node_1);
+
+    // TODO: test blinking by writing the number that has been blinked into a buffer and read from
+    // this buffer to compare it with the calculated shared secret.
 
     //
     // Test hidden password
@@ -1798,10 +1902,8 @@ static void tests_password(void)
     u_assert_str_not_eq(xpub_hdn, xpub_tst);
 }
 
-
 static void tests_echo_tfa(void)
 {
-    char *echo;
     char hash_sign[] =
         "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/44'/0'/0'/1/7\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign2[] =
@@ -1828,23 +1930,41 @@ static void tests_echo_tfa(void)
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
-    // test verifypass
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_create), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    //
+    // Test ECDH
+    //
+    const char *ecdh_pub_hex =
+        "028d3bce812ac027fdea0e4ad98b2549a90bb9aa996396eec6bb1a8ed56e6976b8";
+    char ecdh_cmd[256];
+    snprintf(ecdh_cmd, 256, "{\"pubkey\":\"%s\"}", ecdh_pub_hex);
+
+    uint8_t ecdh_pub[34];
+    memcpy(ecdh_pub, utils_hex_to_uint8(ecdh_pub_hex), 33);
+    ecdh_pub[33] = 0;
+
+    uint8_t hash_ecdh[SHA256_DIGEST_LENGTH];
+    sha256_Raw(ecdh_pub, 33, hash_ecdh);
+
+    char hash_ecdh_hex[65];
+    memcpy(hash_ecdh_hex, utils_uint8_to_hex(hash_ecdh, SHA256_DIGEST_LENGTH), 64);
+    hash_ecdh_hex[64] = 0;
+
+    char ecdh_hash_cmd[256];
+    snprintf(ecdh_hash_cmd, 256, "{\"hash_pubkey\":\"%s\"}", hash_ecdh_hex);
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_ecdh));
+    // end test ECDH
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    ASSERT_SUCCESS
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
-    ASSERT_REPORT_HAS_NOT(VERIFYPASS_FILENAME);
-
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
-    ASSERT_REPORT_HAS(VERIFYPASS_FILENAME);
-
-    api_format_send_cmd(cmd_str(CMD_verifypass), "invalid_cmd", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_ecdh), "invalid_cmd", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // test echo
@@ -1884,8 +2004,14 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has(echo, cmd_str(CMD_pin));
+        free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -1894,8 +2020,14 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has(echo, cmd_str(CMD_pin));
+        free(echo);
     }
 
     // correct pin
@@ -1910,9 +2042,6 @@ static void tests_echo_tfa(void)
 
     api_format_send_cmd(cmd_str(CMD_seed), "{\"source\":\"create\", \"key\":\"password\"}",
                         KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
-
-    api_format_send_cmd(cmd_str(CMD_verifypass), attr_str(ATTR_export), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
@@ -1988,8 +2117,6 @@ const char hash_2_input_2[] =
 static void tests_sign(void)
 {
     int i, res;
-    char *echo;
-
     char one_input_msg[] = "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
     char one_input[] =
         "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
@@ -2114,7 +2241,7 @@ static void tests_sign(void)
 
     // sign 1 more than max number of hashes per sign command
     api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, KEY_STANDARD);
-    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
@@ -2133,10 +2260,16 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -2150,10 +2283,16 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/8");
+        free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -2173,11 +2312,17 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "\"meta\":");
         u_assert_str_has(echo, check_1);
         u_assert_str_has(echo, check_2);
+        free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -2207,11 +2352,17 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
         u_assert_str_has(echo, cmd_str(CMD_pin));
+        free(echo);
     }
 
     // skip sending pin
@@ -2225,11 +2376,17 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
         u_assert_str_has(echo, cmd_str(CMD_pin));
+        free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", KEY_STANDARD);
@@ -2239,11 +2396,17 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/7");
         u_assert_str_has(echo, cmd_str(CMD_pin));
+        free(echo);
     } else {
         pin_err_count++;
     }
@@ -2266,10 +2429,16 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        echo = api_read_value_decrypt(CMD_echo, memory_report_aeskey(PASSWORD_VERIFY));
+        int len;
+        uint8_t hmac[SHA256_DIGEST_LENGTH];
+        const char *val = api_read_value(CMD_echo);
+        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
+                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
         u_assert_str_has(echo, "m/44'/0'/0'/1/8");
+        free(echo);
     }
 
     // send correct pin

@@ -9,6 +9,8 @@
 
 set(DBB-FIRMWARE-SOURCES
         aes.c
+        sharedsecret.c
+        aescbcb64.c
         base58.c
         base64.c
         pbkdf2.c
@@ -31,6 +33,7 @@ set(DBB-FIRMWARE-SOURCES
         ataes132.c
         flash.c
         touch.c
+        ecdh.c
 )
 
 if(USE_SECP256K1_LIB)

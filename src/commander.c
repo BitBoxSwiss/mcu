@@ -41,10 +41,13 @@
 #include "flags.h"
 #include "sha2.h"
 #include "aes.h"
+#include "aescbcb64.h"
+#include "hmac.h"
 #include "led.h"
 #include "ecc.h"
 #include "sd.h"
 #include "drivers/config/mcu.h"
+#include "ecdh.h"
 
 
 #define BRACED(x) (strlens(x) ? (((x[0]) == '{') && ((x[strlens(x) - 1]) == '}')) : 0)
@@ -57,103 +60,8 @@ static int REPORT_BUF_OVERFLOW = 0;
 __extension__ static char json_array[] = {[0 ... COMMANDER_ARRAY_MAX] = 0};
 __extension__ static char json_report[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 __extension__ static char sign_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
-static char TFA_PIN[VERIFYPASS_LOCK_CODE_LEN * 2 + 1];
+static char TFA_PIN[TFA_PIN_LEN * 2 + 1];
 static int TFA_VERIFY = 0;
-
-// Must free() returned value (allocated inside base64() function)
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
-                          const uint8_t *key)
-{
-    int  pads;
-    int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
-    unsigned char inpad[inpadlen];
-    unsigned char enc[inpadlen];
-    unsigned char iv[N_BLOCK];
-    unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
-    aes_context ctx[1];
-
-    // Set cipher key
-    memset(ctx, 0, sizeof(ctx));
-    aes_set_key(key, 32, ctx);
-
-    // PKCS7 padding
-    memcpy(inpad, in, inlen);
-    for (pads = 0; pads < N_BLOCK - inlen % N_BLOCK; pads++ ) {
-        inpad[inlen + pads] = (N_BLOCK - inlen % N_BLOCK);
-    }
-
-    // Make a random initialization vector
-    if (random_bytes((uint8_t *)iv, N_BLOCK, 0) == DBB_ERROR) {
-        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
-        utils_zero(inpad, inpadlen);
-        utils_zero(ctx, sizeof(ctx));
-        return NULL;
-    }
-    memcpy(enc_cat, iv, N_BLOCK);
-
-    // CBC encrypt multiple blocks
-    aes_cbc_encrypt( inpad, enc, inpadlen / N_BLOCK, iv, ctx );
-    memcpy(enc_cat + N_BLOCK, enc, inpadlen);
-
-    // base64 encoding
-    int b64len;
-    char *b64;
-    b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
-    *out_b64len = b64len;
-    utils_zero(inpad, inpadlen);
-    utils_zero(ctx, sizeof(ctx));
-    return b64;
-}
-
-
-// Must free() returned value
-char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
-                          const uint8_t *key)
-{
-    *decrypt_len = 0;
-
-    if (!in || inlen == 0) {
-        return NULL;
-    }
-
-    // Unbase64
-    int ub64len;
-    unsigned char *ub64 = unbase64((const char *)in, inlen, &ub64len);
-    if (!ub64 || (ub64len % N_BLOCK) || ub64len < N_BLOCK) {
-        free(ub64);
-        return NULL;
-    }
-
-    // Set cipher key
-    aes_context ctx[1];
-    memset(ctx, 0, sizeof(ctx));
-    aes_set_key(key, 32, ctx);
-
-    unsigned char dec_pad[ub64len - N_BLOCK];
-    aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
-    memset(ub64, 0, ub64len);
-    free(ub64);
-
-    // Strip PKCS7 padding
-    int padlen = dec_pad[ub64len - N_BLOCK - 1];
-    if (ub64len - N_BLOCK - padlen <= 0) {
-        utils_zero(dec_pad, sizeof(dec_pad));
-        utils_zero(ctx, sizeof(ctx));
-        return NULL;
-    }
-    char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
-    if (!dec) {
-        utils_zero(dec_pad, sizeof(dec_pad));
-        utils_zero(ctx, sizeof(ctx));
-        return NULL;
-    }
-    memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
-    dec[ub64len - N_BLOCK - padlen] = '\0';
-    *decrypt_len = ub64len - N_BLOCK - padlen + 1;
-    utils_zero(dec_pad, sizeof(dec_pad));
-    utils_zero(ctx, sizeof(ctx));
-    return dec;
-}
 
 
 //
@@ -193,7 +101,8 @@ void commander_fill_report(const char *cmd, const char *msg, int flag)
                      "\"%s\":{\"message\":\"%s\",\"code\":%s,\"command\":\"%s\"}",
                      attr_str(ATTR_error), flag_msg(flag), flag_code(flag), cmd);
         }
-    } else if (flag == DBB_JSON_BOOL || flag == DBB_JSON_ARRAY || flag == DBB_JSON_NUMBER) {
+    } else if (flag == DBB_JSON_BOOL || flag == DBB_JSON_ARRAY || flag == DBB_JSON_NUMBER ||
+               flag == DBB_JSON_OBJECT) {
         snprintf(p + strlens(json_report), COMMANDER_REPORT_SIZE - strlens(json_report),
                  "\"%s\":%s", cmd, msg);
     } else {
@@ -792,10 +701,11 @@ static void commander_process_random(yajl_val json_node)
 
     snprintf(echo_number, sizeof(echo_number), "{\"random\":\"%s\"}",
              utils_uint8_to_hex(number, sizeof(number)));
-    encoded_report = aes_cbc_b64_encrypt((unsigned char *)echo_number,
-                                         strlens(echo_number),
-                                         &encrypt_len,
-                                         memory_report_aeskey(PASSWORD_VERIFY));
+
+    encoded_report = aescbcb64_hmac_encrypt((unsigned char *) echo_number,
+                                            strlens(echo_number),
+                                            &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
+
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
         free(encoded_report);
@@ -806,155 +716,14 @@ static void commander_process_random(yajl_val json_node)
 }
 
 
-static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
-                                  uint8_t *out_pubkey)
+static void commander_process_ecdh(yajl_val json_node)
 {
-    uint8_t rand_privkey[32], ecdh_secret[32], rand_led, ret, i = 0;
-
-    do {
-        if (random_bytes(rand_privkey, sizeof(rand_privkey), 0) == DBB_ERROR) {
-            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
-            return DBB_ERROR;
-        }
-    } while (!bitcoin_ecc.ecc_isValid(rand_privkey, ECC_SECP256k1));
-
-    if (bitcoin_ecc.ecc_ecdh(pair_pubkey, rand_privkey, ecdh_secret, ECC_SECP256k1)) {
-        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_KEY_ECDH);
-        return DBB_ERROR;
-    }
-
-    // Use a 'second channel' LED blink code to avoid MITM
-    do {
-        if (random_bytes(&rand_led, sizeof(rand_led), 0) == DBB_ERROR) {
-            commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_MEM_ATAES);
-            return DBB_ERROR;
-        }
-
-        rand_led %= LED_MAX_CODE_BLINKS;
-        rand_led++; // min 1 blink
-        led_code(&rand_led, sizeof(rand_led));
-
-        // Xor ECDH secret
-        ecdh_secret[i % sizeof(ecdh_secret)] ^= rand_led;
-        i++;
-    } while ((touch_button_press(DBB_TOUCH_REJECT_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) &&
-             (i < LED_MAX_BLINK_SETS));
-
-    if (i == 0) {
-        // While loop not entered
-        commander_fill_report(cmd_str(CMD_touchbutton), NULL, DBB_ERR_TOUCH_ABORT);
-        return DBB_ERROR;
-    }
-
-    // Save to eeprom
-    ret = commander_process_aes_key(utils_uint8_to_hex(ecdh_secret, 32), 64,
-                                    PASSWORD_VERIFY);
-    if (ret != DBB_OK) {
-        commander_fill_report(cmd_str(cmd), NULL, ret);
-        return ret;
-    }
-
-    bitcoin_ecc.ecc_get_public_key33(rand_privkey, out_pubkey, ECC_SECP256k1);
-    utils_zero(rand_privkey, sizeof(rand_privkey));
-    utils_zero(ecdh_secret, sizeof(ecdh_secret));
-    utils_clear_buffers();
-    return DBB_OK;
-}
-
-
-static void commander_process_verifypass(yajl_val json_node)
-{
-    uint8_t number[32] = {0};
-    char *l, text[64 + 1];
-
-    const char *value_path[] = { cmd_str(CMD_verifypass), NULL };
-    const char *value = YAJL_GET_STRING(yajl_tree_get(json_node, value_path, yajl_t_string));
-
-    const char *pair_pubkey_path[] = { cmd_str(CMD_verifypass), cmd_str(CMD_ecdh), NULL };
-    const char *pair_pubkey = YAJL_GET_STRING(yajl_tree_get(json_node, pair_pubkey_path,
-                              yajl_t_string));
-
     if (wallet_is_locked()) {
-        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_LOCKED);
+        commander_fill_report(cmd_str(CMD_ecdh), NULL, DBB_ERR_IO_LOCKED);
         return;
     }
 
-    if (strlens(value)) {
-        if (STREQ(value, attr_str(ATTR_export))) {
-            memcpy(text, utils_uint8_to_hex(memory_report_aeskey(PASSWORD_VERIFY), 32), 64 + 1);
-            utils_clear_buffers();
-            int ret = sd_write(VERIFYPASS_FILENAME, text, NULL,
-                               NULL, DBB_SD_REPLACE, CMD_verifypass);
-
-            if (ret == DBB_OK) {
-                l = sd_load(VERIFYPASS_FILENAME, CMD_verifypass);
-                if (l) {
-                    if (!MEMEQ(text, l, strlens(text))) {
-                        commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_SD_CORRUPT_FILE);
-                    } else {
-                        commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
-                    }
-                    utils_zero(l, strlens(l));
-                }
-            }
-            utils_zero(text, sizeof(text));
-            return;
-        }
-    }
-
-    if (strlens(value)) {
-        if (STREQ(value, attr_str(ATTR_create))) {
-            int status = touch_button_press(DBB_TOUCH_LONG);
-            if (status != DBB_TOUCHED) {
-                commander_fill_report(cmd_str(CMD_verifypass), NULL, status);
-                return;
-            }
-
-            if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
-                commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_MEM_ATAES);
-                return;
-            }
-            status = commander_process_aes_key(utils_uint8_to_hex(number, sizeof(number)),
-                                               sizeof(number) * 2, PASSWORD_VERIFY);
-            if (status != DBB_OK) {
-                commander_fill_report(cmd_str(CMD_verifypass), NULL, status);
-                return;
-            }
-            commander_fill_report(cmd_str(CMD_verifypass), attr_str(ATTR_success), DBB_OK);
-            return;
-        }
-    }
-
-    if (strlens(pair_pubkey)) {
-        if (strlens(pair_pubkey) != 66) {
-            commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_KEY_ECDH_LEN);
-            return;
-        }
-
-        uint8_t out_pubkey[33];
-        if (commander_process_ecdh(CMD_verifypass, utils_hex_to_uint8(pair_pubkey),
-                                   out_pubkey) == DBB_OK) {
-            char msg[256];
-            int encrypt_len;
-            char *enc = aes_cbc_b64_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
-                                            strlens(VERIFYPASS_CRYPT_TEST),
-                                            &encrypt_len,
-                                            memory_report_aeskey(PASSWORD_VERIFY));
-            if (enc) {
-                snprintf(msg, sizeof(msg), "{\"%s\":\"%s\", \"%s\":\"%s\"}",
-                         cmd_str(CMD_ecdh), utils_uint8_to_hex(out_pubkey, sizeof(out_pubkey)),
-                         cmd_str(CMD_ciphertext), enc);
-                commander_fill_report(cmd_str(CMD_verifypass), msg, DBB_JSON_ARRAY);
-                free(enc);
-            } else {
-                commander_clear_report();
-                commander_fill_report(cmd_str(CMD_ecdh), NULL, DBB_ERR_MEM_ENCRYPT);
-            }
-        }
-        return;
-    }
-
-    commander_fill_report(cmd_str(CMD_verifypass), NULL, DBB_ERR_IO_INVALID_CMD);
+    ecdh_dispatch_command(json_node);
 }
 
 
@@ -975,11 +744,9 @@ static void commander_process_xpub(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_xpub), xpub, DBB_OK);
 
         int encrypt_len;
-        char *encoded_report;
-        encoded_report = aes_cbc_b64_encrypt((unsigned char *)xpub,
-                                             strlens(xpub),
-                                             &encrypt_len,
-                                             memory_report_aeskey(PASSWORD_VERIFY));
+        char *encoded_report = aescbcb64_hmac_encrypt((unsigned char *) xpub, strlens(xpub),
+                               &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
+
         if (encoded_report) {
             commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
             free(encoded_report);
@@ -1081,10 +848,11 @@ static void commander_process_device(yajl_val json_node)
         }
 
         int tfa_len;
-        char *tfa = aes_cbc_b64_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
-                                        strlens(VERIFYPASS_CRYPT_TEST),
-                                        &tfa_len,
-                                        memory_report_aeskey(PASSWORD_VERIFY));
+
+        char *tfa = aescbcb64_hmac_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
+                                           strlens(VERIFYPASS_CRYPT_TEST),
+                                           &tfa_len,
+                                           memory_report_aeskey(TFA_SHARED_SECRET));
         if (!tfa) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_ENCRYPT);
@@ -1125,9 +893,6 @@ static void commander_process_led(yajl_val json_node)
     }
 
     if (STREQ(value, attr_str(ATTR_blink))) {
-        led_blink();
-        commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
-    } else if (STREQ(value, attr_str(ATTR_abort))) {
         led_abort();
         commander_fill_report(cmd_str(CMD_led), attr_str(ATTR_success), DBB_OK);
     } else {
@@ -1334,8 +1099,8 @@ static int commander_process(int cmd, yajl_val json_node)
             commander_process_password(json_node);
             break;
 
-        case CMD_verifypass:
-            commander_process_verifypass(json_node);
+        case CMD_ecdh:
+            commander_process_ecdh(json_node);
             break;
 
         case CMD_led:
@@ -1390,9 +1155,9 @@ static int commander_tfa_append_pin(void)
 {
     if (wallet_is_locked()) {
         // Create one-time PIN
-        uint8_t pin_b[VERIFYPASS_LOCK_CODE_LEN];
+        uint8_t pin_b[TFA_PIN_LEN];
         memset(TFA_PIN, 0, sizeof(TFA_PIN));
-        if (random_bytes(pin_b, VERIFYPASS_LOCK_CODE_LEN, 0) == DBB_ERROR) {
+        if (random_bytes(pin_b, TFA_PIN_LEN, 0) == DBB_ERROR) {
             commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
             return DBB_ERROR;
         }
@@ -1401,7 +1166,7 @@ static int commander_tfa_append_pin(void)
         snprintf(TFA_PIN, sizeof(TFA_PIN), "0001");
 #else
         snprintf(TFA_PIN, sizeof(TFA_PIN), "%s",
-                 utils_uint8_to_hex(pin_b, VERIFYPASS_LOCK_CODE_LEN));
+                 utils_uint8_to_hex(pin_b, TFA_PIN_LEN));
 #endif
 
         // Append PIN to echo
@@ -1427,7 +1192,6 @@ static int commander_tfa_check_pin(yajl_val json_node)
 
     return DBB_OK;
 }
-
 
 static int commander_echo_command(yajl_val json_node)
 {
@@ -1515,12 +1279,9 @@ static int commander_echo_command(yajl_val json_node)
         return DBB_ERROR;
     }
 
-    int encrypt_len;
-    char *encoded_report;
-    encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-                                         strlens(json_report),
-                                         &encrypt_len,
-                                         memory_report_aeskey(PASSWORD_VERIFY));
+    int length;
+    char *encoded_report = aescbcb64_hmac_encrypt((unsigned char *) json_report,
+                           strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
     commander_clear_report();
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
@@ -1647,10 +1408,10 @@ static void commander_parse(char *command)
     }
 
 exit:
-    encoded_report = aes_cbc_b64_encrypt((unsigned char *)json_report,
-                                         strlens(json_report),
-                                         &encrypt_len,
-                                         memory_active_key_get());
+    encoded_report = aescbcb64_encrypt((unsigned char *)json_report,
+                                       strlens(json_report),
+                                       &encrypt_len,
+                                       memory_active_key_get());
 
     commander_clear_report();
     if (encoded_report) {
@@ -1674,13 +1435,13 @@ static uint8_t commander_find_active_key(const char *encrypted_command)
     key_std = memory_report_aeskey(PASSWORD_STAND);
     key_hdn = memory_report_aeskey(PASSWORD_HIDDEN);
 
-    cmd_std = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
-                                  strlens(encrypted_command),
-                                  &len_std, key_std);
+    cmd_std = aescbcb64_decrypt((const unsigned char *)encrypted_command,
+                                strlens(encrypted_command),
+                                &len_std, key_std);
 
-    cmd_hdn = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
-                                  strlens(encrypted_command),
-                                  &len_hdn, key_hdn);
+    cmd_hdn = aescbcb64_decrypt((const unsigned char *)encrypted_command,
+                                strlens(encrypted_command),
+                                &len_hdn, key_hdn);
 
     if (strlens(cmd_std)) {
         if (BRACED(cmd_std)) {
@@ -1724,10 +1485,10 @@ static char *commander_decrypt(const char *encrypted_command)
     size_t json_object_len = 0;
 
     if (commander_find_active_key(encrypted_command) == DBB_OK) {
-        command = aes_cbc_b64_decrypt((const unsigned char *)encrypted_command,
-                                      strlens(encrypted_command),
-                                      &command_len,
-                                      memory_active_key_get());
+        command = aescbcb64_decrypt((const unsigned char *)encrypted_command,
+                                    strlens(encrypted_command),
+                                    &command_len,
+                                    memory_active_key_get());
     }
 
     err_count = memory_report_access_err_count();

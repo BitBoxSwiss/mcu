@@ -176,11 +176,24 @@ def hid_send_encrypt(msg, password):
 # Bootloader io
 #
 
+def sendBoot(msg):
+    msg = bytearray(msg) + b'\0' * (boot_buf_size_send - len(msg))
+    serial_number = dbb_hid.get_serial_number_string()
+    if 'v1.' in serial_number or 'v2.' in serial_number:
+        dbb_hid.write(b'\0' + msg)
+    else:
+        # Split `msg` into 64-byte packets
+        n = 0
+        while n < len(msg):
+            dbb_hid.write(b'\0' + msg[n : n + usb_report_size])
+            n = n + usb_report_size
+
+
 def sendPlainBoot(msg):
     print("\nSending: {}".format(msg))
     if type(msg) == str:
         msg = msg.encode()
-    dbb_hid.write(b'\0' + bytearray(msg) + b'\0' * (boot_buf_size_send - len(msg)))
+    sendBoot(msg)
     reply = []
     while len(reply) < boot_buf_size_reply:
         reply = reply + dbb_hid.read(boot_buf_size_reply)
@@ -195,7 +208,7 @@ def sendChunk(chunknum, data):
     b = bytearray(b"\x77\x00")
     b[1] = chunknum % 0xFF
     b.extend(data)
-    dbb_hid.write(b'\0' + b + b'\xFF'*(boot_buf_size_send-len(b)))
+    sendBoot(b)
     reply = []
     while len(reply) < boot_buf_size_reply:
         reply = reply + dbb_hid.read(boot_buf_size_reply)

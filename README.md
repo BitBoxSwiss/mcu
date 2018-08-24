@@ -55,6 +55,29 @@ Build:
     vagrant up # Creates: build-vagrant/bin/firmware.bin
     vagrant halt
     
+### Stable build environment with Docker:
+
+Requires:
+
+- [Docker CE](https://download.docker.com/)
+
+To build the base image:
+
+    docker build --tag shift/mcu-base -f Dockerfile.dev .
+
+To build and run the full set of tests:
+
+    docker build --tag shift/mcu-ci -f Dockerfile.travis .
+
+To use the base container:
+
+    docker run -it shift/mcu-base
+
+To use the contious integration container:
+
+    docker run -it shift/mcu-ci
+
+This build process is an alternative to the Vagrant build process and uses Debian Stable (Stretch) rather than Ubuntu.
 
 ## Contributing
 Please do not use an editor that automatically reformats.

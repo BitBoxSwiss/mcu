@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # Run with Docker:
-# docker build --tag shift/mcu-base -f Dockerfile.travis .
+# docker build --tag shift/mcu-base -f Dockerfile.dev .
 #
 
 FROM debian:stretch
@@ -21,9 +21,11 @@ ENV DEBIAN_FRONTEND noninteractive
 WORKDIR /app
 COPY . /app
 
-RUN apt update && apt-get install -y cmake git gcc-arm-none-eabi locales python
-RUN apt install -y lib32bz2-1.0 lib32ncurses5 lib32z1 valgrind astyle clang
+RUN apt update && apt-get install -y cmake git gcc-arm-none-eabi locales python python-pip
+RUN apt install -y libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3 libssl1.0-dev
+RUN apt install -y libbz2-dev libbz2-dev libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3
+RUN pip install --prefix /usr/local  cpp-coveralls
 RUN locale-gen UTF-8
-RUN cd /app/ && mkdir docker-build && cd docker-build && cmake .. -DBUILD_TYPE=firmware && make
-
+ENV CC gcc
+RUN cd /app/ && mkdir docker-build && cd docker-build && cmake .. -DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=ON && make TEST=yes
 RUN sha256sum docker-build/bin/*

@@ -44,17 +44,29 @@ Build:
 
 #### Deterministic build of firmware:
 
+### Build environment with Docker and Debian Stretch:
+
 Requires:
 
-- [Vagrant](http://www.vagrantup.com/downloads)
-- [Virtual Box](https://www.virtualbox.org/wiki/Downloads)
+- [Docker CE](https://download.docker.com/)
 
-Build:
+To build the base image:
 
-    git clone https://github.com/digitalbitbox/mcu && cd mcu
-    vagrant up # Creates: build-vagrant/bin/firmware.bin
-    vagrant halt
-    
+    docker build --tag shift/mcu-base -f Dockerfile.dev .
+
+To build and run the full set of tests with both gcc and clang:
+
+    docker build --tag shift/mcu-base-ci -f Dockerfile.tests .
+
+To use the base container:
+
+    docker run -it shift/mcu-base
+
+To use the contious integration container:
+
+    docker run -it shift/mcu-base-ci
+
+This build process Debian Stable (Stretch).
 
 ## Contributing
 Please do not use an editor that automatically reformats.

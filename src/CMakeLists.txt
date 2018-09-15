@@ -9,8 +9,7 @@
 
 set(DBB-FIRMWARE-SOURCES
         aes.c
-        sharedsecret.c
-        aescbcb64.c
+        cipher.c
         base58.c
         base64.c
         pbkdf2.c

@@ -41,7 +41,7 @@
 #include "flags.h"
 #include "sha2.h"
 #include "aes.h"
-#include "aescbcb64.h"
+#include "cipher.h"
 #include "hmac.h"
 #include "led.h"
 #include "ecc.h"
@@ -546,6 +546,7 @@ static void commander_process_seed(yajl_val json_node)
             uint8_t number[MEM_PAGE_LEN];
             if (random_bytes(number, sizeof(number), 1) == DBB_ERROR) {
                 commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_MEM_ATAES);
+                utils_zero(entropy_b, sizeof(entropy_b));
                 return;
             }
             for (i = 0; i < MEM_PAGE_LEN; i++) {
@@ -560,6 +561,8 @@ static void commander_process_seed(yajl_val json_node)
         if (ret == DBB_OK) {
             if (commander_process_backup_create(key, filename, attr_str(ATTR_all)) != DBB_OK) {
                 memory_erase_hww_seed();
+                utils_zero(entropy_b, sizeof(entropy_b));
+                utils_zero(entropy_c, sizeof(entropy_c));
                 return;
             }
         }
@@ -611,6 +614,14 @@ static void commander_process_seed(yajl_val json_node)
                 }
                 snprintf(entropy_c, sizeof(entropy_c), "%s", backup_hex);
                 ret = wallet_create(key, entropy_c);
+                if (ret == DBB_OK) {
+                    if (commander_process_backup_check(key, filename, attr_str(ATTR_HWW)) != DBB_OK) {
+                        memory_erase_hww_seed();
+                        utils_zero(backup_hex, strlens(backup_hex));
+                        utils_zero(entropy_c, sizeof(entropy_c));
+                        return;
+                    }
+                }
             }
         }
         utils_zero(backup_hex, strlens(backup_hex));
@@ -709,9 +720,9 @@ static void commander_process_random(yajl_val json_node)
     snprintf(echo_number, sizeof(echo_number), "{\"random\":\"%s\"}",
              utils_uint8_to_hex(number, sizeof(number)));
 
-    encoded_report = aescbcb64_hmac_encrypt((unsigned char *) echo_number,
-                                            strlens(echo_number),
-                                            &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
+    encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) echo_number,
+                     strlens(echo_number), &encrypt_len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
 
     if (encoded_report) {
         commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
@@ -751,7 +762,7 @@ static void commander_process_xpub(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_xpub), xpub, DBB_OK);
 
         int encrypt_len;
-        char *encoded_report = aescbcb64_hmac_encrypt((unsigned char *) xpub, strlens(xpub),
+        char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) xpub, strlens(xpub),
                                &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
 
         if (encoded_report) {
@@ -770,7 +781,7 @@ static void commander_process_xpub(yajl_val json_node)
 static uint8_t commander_bootloader_unlocked(void)
 {
     uint8_t sig[FLASH_SIG_LEN];
-    flash_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
+    flash_wrapper_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
     return sig[FLASH_BOOT_LOCK_BYTE];
 }
 
@@ -813,7 +824,7 @@ static void commander_process_device(yajl_val json_node)
         char u2f_hijack_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
-        flash_read_unique_id(serial, 4);
+        flash_wrapper_read_unique_id(serial, 4);
 
         if (wallet_is_locked()) {
             snprintf(lock, sizeof(lock), "%s", attr_str(ATTR_true));
@@ -856,10 +867,9 @@ static void commander_process_device(yajl_val json_node)
 
         int tfa_len;
 
-        char *tfa = aescbcb64_hmac_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
-                                           strlens(VERIFYPASS_CRYPT_TEST),
-                                           &tfa_len,
-                                           memory_report_aeskey(TFA_SHARED_SECRET));
+        char *tfa = cipher_aes_b64_hmac_encrypt((const unsigned char *)VERIFYPASS_CRYPT_TEST,
+                                                strlens(VERIFYPASS_CRYPT_TEST), &tfa_len,
+                                                memory_report_aeskey(TFA_SHARED_SECRET));
         if (!tfa) {
             commander_clear_report();
             commander_fill_report(cmd_str(CMD_device), NULL, DBB_ERR_MEM_ENCRYPT);
@@ -970,7 +980,7 @@ static void commander_process_bootloader(yajl_val json_node)
     }
 
     uint8_t sig[FLASH_SIG_LEN];
-    flash_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
+    flash_wrapper_read_sig_area(sig, FLASH_SIG_START, FLASH_SIG_LEN);
 
     if (STREQ(value, attr_str(ATTR_lock))) {
         sig[FLASH_BOOT_LOCK_BYTE] = 0;
@@ -981,11 +991,11 @@ static void commander_process_bootloader(yajl_val json_node)
         return;
     }
 
-    if (flash_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
+    if (flash_wrapper_erase_page(FLASH_SIG_START, IFLASH_ERASE_PAGES_8) != FLASH_RC_OK) {
         goto err;
     }
 
-    if (flash_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
+    if (flash_wrapper_write(FLASH_SIG_START, sig, FLASH_SIG_LEN, 0) != FLASH_RC_OK) {
         goto err;
     }
 
@@ -1287,7 +1297,7 @@ static int commander_echo_command(yajl_val json_node)
     }
 
     int length;
-    char *encoded_report = aescbcb64_hmac_encrypt((unsigned char *) json_report,
+    char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) json_report,
                            strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
     commander_clear_report();
     if (encoded_report) {
@@ -1415,10 +1425,9 @@ static void commander_parse(char *command)
     }
 
 exit:
-    encoded_report = aescbcb64_encrypt((unsigned char *)json_report,
-                                       strlens(json_report),
-                                       &encrypt_len,
-                                       memory_active_key_get());
+    encoded_report = cipher_aes_b64_encrypt((unsigned char *)json_report,
+                                            strlens(json_report), &encrypt_len,
+                                            memory_active_key_get());
 
     commander_clear_report();
     if (encoded_report) {
@@ -1442,13 +1451,11 @@ static uint8_t commander_find_active_key(const char *encrypted_command)
     key_std = memory_report_aeskey(PASSWORD_STAND);
     key_hdn = memory_report_aeskey(PASSWORD_HIDDEN);
 
-    cmd_std = aescbcb64_decrypt((const unsigned char *)encrypted_command,
-                                strlens(encrypted_command),
-                                &len_std, key_std);
+    cmd_std = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
+                                     strlens(encrypted_command), &len_std, key_std);
 
-    cmd_hdn = aescbcb64_decrypt((const unsigned char *)encrypted_command,
-                                strlens(encrypted_command),
-                                &len_hdn, key_hdn);
+    cmd_hdn = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
+                                     strlens(encrypted_command), &len_hdn, key_hdn);
 
     if (strlens(cmd_std)) {
         if (BRACED(cmd_std)) {
@@ -1492,10 +1499,9 @@ static char *commander_decrypt(const char *encrypted_command)
     size_t json_object_len = 0;
 
     if (commander_find_active_key(encrypted_command) == DBB_OK) {
-        command = aescbcb64_decrypt((const unsigned char *)encrypted_command,
-                                    strlens(encrypted_command),
-                                    &command_len,
-                                    memory_active_key_get());
+        command = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
+                                         strlens(encrypted_command), &command_len,
+                                         memory_active_key_get());
     }
 
     err_count = memory_report_access_err_count();

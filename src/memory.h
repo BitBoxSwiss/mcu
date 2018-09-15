@@ -31,43 +31,15 @@
 #include <stdint.h>
 
 #define MEM_PAGE_LEN      32
-
-// User Zones: 0x0000 to 0x0FFF
-// Do NOT change address locations.
-// Otherwise problems will occur after a firmware update.
-#define MEM_ERASED_ADDR                 0x0000// (uint8_t)  Zone 0
-#define MEM_SETUP_ADDR                  0x0002// (uint8_t)
-#define MEM_ACCESS_ERR_ADDR             0x0004// (uint16_t)
-#define MEM_PIN_ERR_ADDR                0x0006// (uint16_t)
-#define MEM_UNLOCKED_ADDR               0x0008// (uint8_t)
-#define MEM_EXT_FLAGS_ADDR              0x000A// (uint32_t) 32 possible extension flags
-#define MEM_U2F_COUNT_ADDR              0x0010// (uint32_t)
-#define MEM_NAME_ADDR                   0x0100// (32 bytes) Zone 1
-#define MEM_MASTER_BIP32_ADDR           0x0200
-#define MEM_MASTER_BIP32_CHAIN_ADDR     0x0300
-#define MEM_AESKEY_STAND_ADDR           0x0400
-#define MEM_AESKEY_SHARED_SECRET_ADDR   0x0500
-#define MEM_AESKEY_Z6_ADDR              0x0600// Zone 6 reserved first 32*4 bytes
-#define MEM_AESKEY_Z7_ADDR              0x0700// Zone 7 reserved
-#define MEM_AESKEY_HIDDEN_ADDR          0x0800
-#define MEM_MASTER_ENTROPY_ADDR         0x0900
-#define MEM_MASTER_U2F_ADDR             0x0A00
-#define MEM_HIDDEN_BIP32_ADDR           0x0B00
-#define MEM_HIDDEN_BIP32_CHAIN_ADDR     0x0B80
-
-
-// Extension flags
-#define MEM_EXT_MASK_U2F         0x00000001// Mask of bit to enable (1) or disable (0) U2F functions
-// Will override and disable U2F_HIJACK bit when disabled
-#define MEM_EXT_MASK_U2F_HIJACK  0x00000002// Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
-
-
+#define MEM_EXT_MASK_U2F         0x00000001 // Mask of bit to enable (1) or disable (0) U2F functions; will override and disable U2F_HIJACK bit when disabled
+#define MEM_EXT_MASK_U2F_HIJACK  0x00000002 // Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
 // Default settings
-#define DEFAULT_unlocked  0xFF
-#define DEFAULT_erased    0xFF
-#define DEFAULT_setup     0xFF
-#define DEFAULT_u2f_count 0xFFFFFFFF
-#define DEFAULT_ext_flags 0xFFFFFFFF// U2F and U2F_hijack enabled by default
+#define MEM_DEFAULT_unlocked            0xFF
+#define MEM_DEFAULT_erased              0xFF
+#define MEM_DEFAULT_setup               0xFF
+#define MEM_DEFAULT_u2f_count           0xFFFFFFFF
+#define MEM_DEFAULT_ext_flags           0xFFFFFFFF// U2F and U2F_hijack enabled by default
+#define MEM_DEFAULT_memory_map_version  0xFFFFFFFF
 
 
 typedef enum PASSWORD_ID {
@@ -78,7 +50,9 @@ typedef enum PASSWORD_ID {
 } PASSWORD_ID;
 
 
+void memory_write_memory_map_version(uint32_t v);
 void memory_setup(void);
+void memory_update_memory_map(void);
 void memory_reset_u2f(void);
 void memory_reset_hww(void);
 void memory_erase_hww_seed(void);

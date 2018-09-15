@@ -31,8 +31,7 @@
 
 #include <stdint.h>
 #include "yajl/src/api/yajl_tree.h"
-#include "sharedsecret.h"
-#include "aescbcb64.h"
+#include "cipher.h"
 #include "base64.h"
 #include "flags.h"
 #include "utils.h"
@@ -42,38 +41,19 @@
 #include "aes.h"
 
 
-/**
- * Performs an hmac sha256 message integrity check and returns 0 if the integrity check
- * failed and 1 if it succeeded.
- */
-static int check_hmac_sha256(const uint8_t *key, const uint32_t keylen,
-                             const unsigned char *in,
-                             const unsigned int length, const uint8_t *hmac)
+static char *cipher_aes_b64_hmac_decrypt(const unsigned char *in, int inlen,
+        int *out_msg_len, const uint8_t *secret)
 {
-    uint8_t verify_hmac[SHA256_DIGEST_LENGTH];
-    hmac_sha256(key, keylen, in, length, verify_hmac);
-    if (MEMEQ(hmac, verify_hmac, SHA256_DIGEST_LENGTH)) {
-        return 1;
-    }
-    return 0;
-}
+    unsigned char *ub64;
+    char *decrypted;
+    int ub64len;
 
-
-static char *decrypt_and_check_hmac(const unsigned char *in, int inlen, int *out_msg_len,
-                                    const uint8_t *shared_secret, uint8_t *out_hmac)
-{
-    if (!in || inlen == 0) {
+    if (!in || inlen == 0 || !secret) {
         return NULL;
     }
 
-    uint8_t encryption_key[SHA256_DIGEST_LENGTH];
-    uint8_t authentication_key[SHA256_DIGEST_LENGTH];
-
-    sharedsecret_derive_keys(shared_secret, encryption_key, authentication_key);
-
     // Unbase64
-    int ub64len;
-    unsigned char *ub64 = unbase64((const char *)in, inlen, &ub64len);
+    ub64 = unbase64((const char *)in, inlen, &ub64len);
     if (!ub64) {
         return NULL;
     }
@@ -83,22 +63,10 @@ static char *decrypt_and_check_hmac(const unsigned char *in, int inlen, int *out
         return NULL;
     }
 
-    memcpy(out_hmac, ub64 + (ub64len - SHA256_DIGEST_LENGTH), SHA256_DIGEST_LENGTH);
-    int hmac_len = ub64len - SHA256_DIGEST_LENGTH;
-
-    char *decrypted = NULL;
-    if (check_hmac_sha256(authentication_key, SHA256_DIGEST_LENGTH, ub64, hmac_len,
-                          out_hmac)) {
-        decrypted = aescbcb64_init_and_decrypt(ub64,
-                                               ub64len - SHA256_DIGEST_LENGTH,
-                                               out_msg_len,
-                                               encryption_key);
-    }
+    decrypted = cipher_aes_hmac_decrypt(ub64, ub64len, out_msg_len, secret);
 
     memset(ub64, 0, ub64len);
     free(ub64);
-    utils_zero(encryption_key, sizeof(encryption_key));
-    utils_zero(authentication_key, sizeof(authentication_key));
     return decrypted;
 }
 

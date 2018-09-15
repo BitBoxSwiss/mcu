@@ -38,7 +38,7 @@
 #include "utils.h"
 #include "flags.h"
 #include "random.h"
-#include "aescbcb64.h"
+#include "cipher.h"
 #include "commander.h"
 #include "yajl/src/api/yajl_tree.h"
 #include "secp256k1/include/secp256k1.h"
@@ -133,10 +133,9 @@ static void tests_seed_xpub_backup(void)
 
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_eq(xpub0, echo);
         free(echo);
@@ -177,10 +176,9 @@ static void tests_seed_xpub_backup(void)
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_eq(xpub0, echo);
         free(echo);
@@ -1146,10 +1144,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1193,10 +1190,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1222,10 +1218,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1275,10 +1270,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1304,10 +1298,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1334,10 +1327,9 @@ static void tests_u2f(void)
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
             int len;
-            uint8_t hmac[SHA256_DIGEST_LENGTH];
             const char *val = api_read_value(CMD_echo);
-            char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                                memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                         memory_report_aeskey(TFA_SHARED_SECRET));
             u_assert(echo);
             u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
@@ -1481,10 +1473,9 @@ static void tests_device(void)
                                  yajl_t_string));
         u_assert_int_eq(!ciphertext, 0);
         int decrypt_len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
-        char *dec = decrypt_and_check_hmac((const unsigned char *)ciphertext,
-                                           strlens(ciphertext),
-                                           &decrypt_len, memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *dec = cipher_aes_b64_hmac_decrypt((const unsigned char *)ciphertext,
+                                                strlens(ciphertext),
+                                                &decrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(dec);
         u_assert_str_eq(dec, VERIFYPASS_CRYPT_TEST);
         free(dec);
@@ -2043,10 +2034,9 @@ static void tests_echo_tfa(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
@@ -2059,10 +2049,9 @@ static void tests_echo_tfa(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
@@ -2305,10 +2294,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2358,10 +2346,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2423,10 +2410,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "\"meta\":");
@@ -2490,10 +2476,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2514,10 +2499,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2534,10 +2518,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2567,10 +2550,9 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
         int len;
-        uint8_t hmac[SHA256_DIGEST_LENGTH];
         const char *val = api_read_value(CMD_echo);
-        char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
-                                            memory_report_aeskey(TFA_SHARED_SECRET), hmac);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
@@ -2629,8 +2611,10 @@ static void tests_memory_setup(void)
         ASSERT_REPORT_HAS(flag_msg(DBB_ERR_MEM_SETUP));
     }
 
+    // Run twice, first time accesses one-time factory install code
+    // Memory map updating tested in unit_test.c
     memory_setup();
-    memory_setup(); // run twice
+    memory_setup();
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
@@ -2649,9 +2633,9 @@ static void tests_memory_setup(void)
 static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
+    u_run_test(tests_name);
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
-    u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);
     u_run_test(tests_device);

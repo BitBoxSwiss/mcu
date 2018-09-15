@@ -50,6 +50,11 @@
 #include "ecdh.h"
 
 
+#if defined(TESTING) && defined(__SAM4S4A__)
+#error TESTING should not be defined for embedded code
+#endif
+
+
 #define BRACED(x) (strlens(x) ? (((x[0]) == '{') && ((x[strlens(x) - 1]) == '}')) : 0)
 
 
@@ -467,13 +472,11 @@ static void commander_process_seed(yajl_val json_node)
     int ret;
 
     const char *key_path[] = { cmd_str(CMD_seed), cmd_str(CMD_key), NULL };
-    const char *raw_path[] = { cmd_str(CMD_seed), cmd_str(CMD_raw), NULL };
     const char *source_path[] = { cmd_str(CMD_seed), cmd_str(CMD_source), NULL };
     const char *entropy_path[] = { cmd_str(CMD_seed), cmd_str(CMD_entropy), NULL };
     const char *filename_path[] = { cmd_str(CMD_seed), cmd_str(CMD_filename), NULL };
     const char *u2f_counter_path[] = { cmd_str(CMD_seed), cmd_str(CMD_U2F_counter), NULL };
     const char *key = YAJL_GET_STRING(yajl_tree_get(json_node, key_path, yajl_t_string));
-    const char *raw = YAJL_GET_STRING(yajl_tree_get(json_node, raw_path, yajl_t_string));
     const char *source = YAJL_GET_STRING(yajl_tree_get(json_node, source_path,
                                          yajl_t_string));
     const char *entropy = YAJL_GET_STRING(yajl_tree_get(json_node, entropy_path,
@@ -510,7 +513,7 @@ static void commander_process_seed(yajl_val json_node)
 
     if (STREQ(source, attr_str(ATTR_create))) {
         // Generate a new wallet, optionally with entropy entered via USB
-        uint8_t i, add_entropy, entropy_b[MEM_PAGE_LEN];
+        uint8_t i, add_entropy = 1, entropy_b[MEM_PAGE_LEN];
         char entropy_c[MEM_PAGE_LEN * 2 + 1];
 
         memset(entropy_b, 0, sizeof(entropy_b));
@@ -521,20 +524,23 @@ static void commander_process_seed(yajl_val json_node)
         }
 
         if (strlens(entropy)) {
-            if (strlens(entropy) == MEM_PAGE_LEN * 2 && utils_is_hex(entropy)) {
-                // Allows recover from a Digital Bitbox backup text entered via USB
-                memcpy(entropy_b, utils_hex_to_uint8(entropy), sizeof(entropy_b));
+            if (strlens(entropy) != SHA256_DIGEST_LENGTH * 2) {
+                commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_IO_INVALID_CMD);
+                return;
             }
             sha256_Raw((const uint8_t *)entropy, strlens(entropy), entropy_b);
         }
 
+#ifdef TESTING
         // Add extra entropy from device unless raw is set
-        add_entropy = 1;
+        const char *raw_path[] = { cmd_str(CMD_seed), cmd_str(CMD_raw), NULL };
+        const char *raw = YAJL_GET_STRING(yajl_tree_get(json_node, raw_path, yajl_t_string));
         if (strlens(entropy) && strlens(raw)) {
             if (STREQ(raw, attr_str(ATTR_true))) {
                 add_entropy = 0;
             }
         }
+#endif
 
         if (add_entropy) {
             uint8_t number[MEM_PAGE_LEN];
@@ -545,6 +551,7 @@ static void commander_process_seed(yajl_val json_node)
             for (i = 0; i < MEM_PAGE_LEN; i++) {
                 entropy_b[i] ^= number[i];
             }
+            sha256_Raw(entropy_b, sizeof(entropy_b), entropy_b);
         }
 
         snprintf(entropy_c, sizeof(entropy_c), "%s", utils_uint8_to_hex(entropy_b,

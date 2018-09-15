@@ -474,6 +474,30 @@ static const char *api_read_value_depth_2(int cmd, int cmd_2)
 }
 
 
+static const char *api_read_array_value(int cmd, int cmd_2, int index)
+{
+    const char *path[] = { cmd_str(cmd), NULL };
+    const char *a_path[] = { cmd_str(cmd_2), NULL };
+    static char value[HID_REPORT_SIZE];
+    memset(value, 0, sizeof(value));
+
+    yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
+    if (json_node && YAJL_IS_OBJECT(json_node)) {
+        yajl_val data = yajl_tree_get(json_node, path, yajl_t_array);
+        if (YAJL_IS_ARRAY(data) && data->u.array.len != 0) {
+            yajl_val obj = data->u.array.values[index];
+            const char *a = YAJL_GET_STRING(yajl_tree_get(obj, a_path, yajl_t_string));
+            if (a) {
+                snprintf(value, sizeof(value), "%s", a);
+            }
+        }
+    }
+
+    yajl_tree_free(json_node);
+    return value;
+}
+
+
 static char *api_read_value_decrypt(int cmd, uint8_t *key)
 {
     const char *val = api_read_value(cmd);

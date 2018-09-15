@@ -33,6 +33,7 @@
 #include "ecdh.h"
 #include "ecc.h"
 #include "sha2.h"
+#include "bip32.h"
 #include "utest.h"
 #include "utils.h"
 #include "flags.h"
@@ -45,6 +46,23 @@
 
 #include "api.h"
 #include "hmac_check.h"
+
+
+#define HASH_DEFAULT       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+#define HASH_INPUT_ONE     "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a"
+#define HASH_INPUT_TWO_1   "c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d"
+#define HASH_INPUT_TWO_2   "3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790"
+#define KEYPATH_BASE       "m/44p"
+#define KEYPATH_ONE        "m/44'/0'/0'/1/7"
+#define KEYPATH_TWO        "m/44'/0'/0'/1/8"
+#define KEYPATH_THREE      "m/44'/0'/0'/0/5"
+#define PUBKEY_INPUT_ONE   "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154"
+#define PUBKEY_INPUT_TWO_1 "035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704"
+#define PUBKEY_INPUT_TWO_2 "03cc673784d8dfe97ded72c91ebb1b87a52761e4be20f6229e56fd61fdf28ae3f2"
+#define PUBKEY_ZERO        "000000000000000000000000000000000000000000000000000000000000000000"
+#define RECID_01           "01"
+#define RECID_EE           "ee"
+
 
 int U_TESTS_RUN = 0;
 int U_TESTS_FAIL = 0;
@@ -67,7 +85,10 @@ static void tests_seed_xpub_backup(void)
         "{\"source\":\"create\", \"filename\":\"seed_create_2.pdf\", \"key\":\"password\"}";
     char seed_create_bad[] =
         "{\"source\":\"create\", \"filename\":\"../seed_create_bad.pdf\", \"key\":\"password\"}";
-    char seed_entropy[] = "entropy9s21ZrQkmL8hdy";
+    char seed_entropy[] = "entropy_><?.$#`}0123456789abcdef0123456789abcdef0123456789abcdef";
+    char seed_entropy_short[] = "entropy_tooshort";
+    char seed_entropy_long[] =
+        "entropy_><?.$#`0123456789abcdef0123456789abcdef0123456789abcdef_toolong";
 
     snprintf(seed_c, sizeof(seed_c),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"%s\"}", attr_str(ATTR_create),
@@ -371,6 +392,20 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     memcpy(xpub0, api_read_value(CMD_xpub), sizeof(xpub0));
     u_assert_str_not_eq(xpub0, xpub1);
+
+    // seed with extra entropy from device (entropy too short)
+    snprintf(seed_usb, sizeof(seed_usb),
+             "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
+             seed_entropy_short, filename2, key);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    // seed with extra entropy from device (entropy too long)
+    snprintf(seed_usb, sizeof(seed_usb),
+             "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
+             seed_entropy_long, filename2, key);
+    api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // seed with extra entropy from device
     snprintf(seed_usb, sizeof(seed_usb),
@@ -1056,8 +1091,8 @@ static void tests_u2f(void)
     if (!TEST_LIVE_DEVICE) {
 
         const char one_input[] =
-            "{\"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
-        const char hash_1_input[] =
+            "{\"data\":[{\"hash\":\"" HASH_INPUT_ONE "\", \"keypath\":\"" KEYPATH_ONE "\"}]}";
+        const char sig_1_input[] =
             "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
         const char tb_v2_3a[] = "test_backup.pdf";
         const char tb_v2_3h[] = "test_backup_hww.pdf";
@@ -1116,11 +1151,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS_NOT(hash_1_input);
+        ASSERT_REPORT_HAS_NOT(sig_1_input);
 
 
         // recover fn4  u2f success
@@ -1163,11 +1198,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS(hash_1_input);
+        ASSERT_REPORT_HAS(sig_1_input);
 
 
         // recover fn4  hww success
@@ -1192,11 +1227,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS_NOT(hash_1_input);
+        ASSERT_REPORT_HAS_NOT(sig_1_input);
 
 
         // recover v23a u2f success
@@ -1245,11 +1280,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS(hash_1_input);
+        ASSERT_REPORT_HAS(sig_1_input);
 
 
         // recover fn4  hww success
@@ -1274,11 +1309,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS_NOT(hash_1_input);
+        ASSERT_REPORT_HAS_NOT(sig_1_input);
 
 
         // recover v22  hww success
@@ -1304,11 +1339,11 @@ static void tests_u2f(void)
             char *echo = decrypt_and_check_hmac((const unsigned char *)val, strlens(val), &len,
                                                 memory_report_aeskey(TFA_SHARED_SECRET), hmac);
             u_assert(echo);
-            u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+            u_assert_str_has(echo, KEYPATH_ONE);
             free(echo);
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-        ASSERT_REPORT_HAS(hash_1_input);
+        ASSERT_REPORT_HAS(sig_1_input);
     }
 
 
@@ -1905,11 +1940,14 @@ static void tests_password(void)
 static void tests_echo_tfa(void)
 {
     char hash_sign[] =
-        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/44'/0'/0'/1/7\", \"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"" KEYPATH_ONE "\", \"hash\":\"" HASH_DEFAULT
+        "\"}] }";
     char hash_sign2[] =
-        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/44'/0'/0'/1/7\", \"hash\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"" KEYPATH_ONE
+        "\", \"hash\":\"ffff456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
     char hash_sign3[] =
-        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"m/44'/0'/0'/1/7\", \"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
+        "{\"meta\":\"hash\", \"data\":[{\"keypath\":\"" KEYPATH_ONE
+        "\", \"hash\":\"456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}] }";
 
     api_reset_device();
 
@@ -2066,7 +2104,7 @@ static int recover_public_key_verify_sig(const char *sig, const char *hash,
     memcpy(hash_b, utils_hex_to_uint8(hash), 32);
     memcpy(sig_b, utils_hex_to_uint8(sig), 64);
     memcpy(&recid_b, utils_hex_to_uint8(recid), 1);
-    memset(pubkey_33, 0, 33);
+    memset(pubkey_33, 0, public_key_len);
 
     if (!ctx) {
         ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -2105,42 +2143,26 @@ static int recover_public_key_verify_sig(const char *sig, const char *hash,
 }
 
 
-// hash_1_input is normalized (low-S). The non-normalized value is "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
-const char hash_1_input[] =
+// sig_1_input is normalized (low-S). The non-normalized value is "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
+const char sig_1_input[] =
     "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
-const char hash_2_input_1[] =
+const char sig_2_input_1[] =
     "e26c9b19c927d7e6e374d7f1734dd0a4e1ee266a164b2f282d95a0d07dbf04f0486594e9d853cbfab1cc556e76e8212d2db6c871c8c775876525d20acc478439";
-const char hash_2_input_2[] =
+const char sig_2_input_2[] =
     "529e01807f073dd80a0c9c2b3cc9130a06b88c033577ccc426a383eaadac5b7201923aef70ded7509adfa6282fcb6ff9f0fba16f87c82d5c9810c3da3029cc7d";
 
 
 static void tests_sign(void)
 {
     int i, res;
-    char one_input_msg[] = "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
-    char one_input[] =
-        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44'/0'/0'/1/7\"}]}";
-    char pubkey_1_input[] =
-        "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154";
-    char recid_1_input[] = "01";
-
-    char two_input_msg_1[] =
-        "c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d";
-    char two_input_msg_2[] =
-        "3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790";
-    char two_inputs[] =
-        "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"c12d791451bb41fd4b5145bcef25f794ca33c0cf4fe9d24f956086c5aa858a9d\", \"keypath\":\"m/44'/0'/0'/1/8\"},{\"hash\":\"3dfc3b1ed349e9b361b31c706fbf055ebf46ae725740f6739e2dfa87d2a98790\", \"keypath\":\"m/44'/0'/0'/0/5\"}]}";
-    char pubkey_2_input_1[] =
-        "035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704";
-    char pubkey_2_input_2[] =
-        "03cc673784d8dfe97ded72c91ebb1b87a52761e4be20f6229e56fd61fdf28ae3f2";
-    char recid_2_input_1[] = "01";
-    char recid_2_input_2[] = "01";
-
-    char hashstr[] =
-        "{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p/0p/0p/0/9999\"}";
-    char hashstart[] =
-        "{\"meta\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/9999\"}], \"data\": [";
+    char one_input[] = "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_ONE
+                       "\", \"keypath\":\"" KEYPATH_ONE "\"}]}";
+    char two_inputs[] = "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                        "\", \"keypath\":\"" KEYPATH_TWO "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
+                        KEYPATH_THREE "\"}]}";
+    char hashstr[] = "{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\"m/44p/0p/0p/0/9999\"}";
+    char hashstart[] = "{\"meta\":\"" HASH_DEFAULT "\", \"checkpub\":[{\"pubkey\":\""
+                       PUBKEY_ZERO "\", \"keypath\":\"m/44p/0p/0p/1/9999\"}], \"data\": [";
     char maxhashes[COMMANDER_REPORT_SIZE];
     char hashoverflow[COMMANDER_REPORT_SIZE];
 
@@ -2164,16 +2186,16 @@ static void tests_sign(void)
     u_assert_int_eq(i >= COMMANDER_NUM_SIG_MIN, 1);
 
 
-    char checkpub_msg_1[] =
-        "c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a";
-    char checkpub_msg_2[] =
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     char checkpub[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
+        KEYPATH_TWO"\"}]}";
     char check_1[] =
-        "\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"present\":false";
+        "\"pubkey\":\"" PUBKEY_ZERO "\", \"present\":false";
     char check_2[] =
-        "\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"present\":true";
+        "\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"present\":true";
     // check_sig_1 is normalized (low-S). The non-normalized value is "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9"
     char check_sig_1[] =
         "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba6db1ae33539aafdbe9a44cfd2ffe8b2677c946d9d0bc5bb155425165d2021158";
@@ -2181,14 +2203,26 @@ static void tests_sign(void)
         "3323b353e9974ab1eb452eca19e1dc4dad0556dba668089c8c1214ca09b58ad12c82da6671a65f9b3803c1fe7a14f35d885caebce701f972641748738275782b";
     char check_pubkey[] =
         "02df86355b162c942b89e297c1e919f40943834d448b0b6b4538556e805ea4e18c";
-    char check_recid_1[] = "01";
-    char check_recid_2[] = "01";
 
     char checkpub_wrong_addr_len[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"" KEYPATH_TWO
+        "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\"" KEYPATH_TWO "\"}]}";
 
     char checkpub_missing_parameter[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\"}]}";
+
+    char sig_device_1[64 * 2 + 1];
+    char sig_device_2[64 * 2 + 1];
+    char recid_device_1[2 + 1];
+    char recid_device_2[2 + 1];
+    char pubkey_device_1[33 * 2 + 1];
+    char pubkey_device_2[33 * 2 + 1];
+    HDNode node;
+    memset(&node, 0, sizeof(HDNode));
 
 
     api_reset_device();
@@ -2200,9 +2234,14 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     ASSERT_SUCCESS;
 
-    // seed
-    char seed[] =
-        "{\"key\":\"key\", \"source\":\"create\", \"entropy\":\"entropy_rawH13ucR3\", \"raw\":\"true\", \"filename\":\"s.pdf\"}";
+    // copy test sd_files to sd card directory
+    int ret = system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
+    u_assert(ret == 0);
+
+    // seed from backup file
+    char seed[512];
+    snprintf(seed, sizeof(seed), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+             attr_str(ATTR_backup), "test_backup.pdf");
     api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
@@ -2257,6 +2296,11 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // sign using one input
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_ONE, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
+    snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
@@ -2268,18 +2312,48 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, KEYPATH_ONE);
         free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_recid));
-    ASSERT_REPORT_HAS(hash_1_input);
-    res = recover_public_key_verify_sig(hash_1_input, one_input_msg, recid_1_input,
-                                        pubkey_1_input);
-    u_assert_int_eq(res, 0);
+
+    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
+    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
+           sizeof(recid_device_1));
+
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
+                    recid_device_1, pubkey_device_1));
+
+    if (!TEST_LIVE_DEVICE) {
+        // If TESTING, a deterministic seed is loaded when 'raw' is specified
+        ASSERT_REPORT_HAS(sig_1_input);
+        u_assert_str_eq(sig_device_1, sig_1_input);
+        u_assert_str_eq(pubkey_device_1, PUBKEY_INPUT_ONE);
+#ifdef ECC_USE_SECP256K1_LIB
+        u_assert_str_eq(recid_device_1, RECID_01);
+#else
+        u_assert_str_eq(recid_device_1, RECID_EE);
+#endif
+    } else {
+        // Random seed generated on device
+        ASSERT_REPORT_HAS_NOT(sig_1_input);
+        u_assert_str_not_eq(sig_device_1, sig_1_input);
+        u_assert_str_not_eq(pubkey_device_1, PUBKEY_INPUT_ONE);
+    }
 
     // sign using two inputs
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_TWO, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
+    snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_THREE, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
+    snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
@@ -2291,24 +2365,60 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/8");
+        u_assert_str_has(echo, KEYPATH_TWO);
         free(echo);
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-    ASSERT_REPORT_HAS(hash_2_input_1);
-    ASSERT_REPORT_HAS(hash_2_input_2);
-    ASSERT_REPORT_HAS(cmd_str(CMD_recid));
-    res = recover_public_key_verify_sig(hash_2_input_1, two_input_msg_1, recid_2_input_1,
-                                        pubkey_2_input_1);
-    u_assert_int_eq(res, 0);
-    res = recover_public_key_verify_sig(hash_2_input_2, two_input_msg_2, recid_2_input_2,
-                                        pubkey_2_input_2);
-    u_assert_int_eq(res, 0);
 
+    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
+    memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
+    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
+           sizeof(recid_device_1));
+    memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
+           sizeof(recid_device_2));
+
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_TWO_1,
+                    recid_device_1, pubkey_device_1));
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_INPUT_TWO_2,
+                    recid_device_2, pubkey_device_2));
+
+    if (!TEST_LIVE_DEVICE) {
+        // If TESTING, a deterministic seed is loaded when 'raw' is specified
+        ASSERT_REPORT_HAS(sig_2_input_1);
+        ASSERT_REPORT_HAS(sig_2_input_2);
+        ASSERT_REPORT_HAS(cmd_str(CMD_recid));
+        u_assert_str_eq(sig_device_1, sig_2_input_1);
+        u_assert_str_eq(sig_device_2, sig_2_input_2);
+        u_assert_str_eq(pubkey_device_1, PUBKEY_INPUT_TWO_1);
+        u_assert_str_eq(pubkey_device_2, PUBKEY_INPUT_TWO_2);
+#ifdef ECC_USE_SECP256K1_LIB
+        u_assert_str_eq(recid_device_1, RECID_01);
+        u_assert_str_eq(recid_device_2, RECID_01);
+#else
+        u_assert_str_eq(recid_device_1, RECID_EE);
+        u_assert_str_eq(recid_device_2, RECID_EE);
+#endif
+    } else {
+        // Random seed generated on device
+        ASSERT_REPORT_HAS_NOT(sig_2_input_1);
+        ASSERT_REPORT_HAS_NOT(sig_2_input_2);
+        ASSERT_REPORT_HAS(cmd_str(CMD_recid));
+        u_assert_str_not_eq(sig_device_1, sig_2_input_1);
+        u_assert_str_not_eq(sig_device_2, sig_2_input_2);
+        u_assert_str_not_eq(pubkey_device_1, PUBKEY_INPUT_TWO_1);
+        u_assert_str_not_eq(pubkey_device_2, PUBKEY_INPUT_TWO_2);
+    }
 
     // test checkpub
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_BASE, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
+    snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+    snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+
     api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
@@ -2327,14 +2437,41 @@ static void tests_sign(void)
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-    ASSERT_REPORT_HAS(check_sig_1);
-    ASSERT_REPORT_HAS(check_sig_2);
-    res = recover_public_key_verify_sig(check_sig_1, checkpub_msg_1, check_recid_1,
-                                        check_pubkey);
-    u_assert_int_eq(res, 0);
-    res = recover_public_key_verify_sig(check_sig_2, checkpub_msg_2, check_recid_2,
-                                        check_pubkey);
-    u_assert_int_eq(res, 0);
+
+    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
+    memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
+    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
+           sizeof(recid_device_1));
+    memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
+           sizeof(recid_device_1));
+
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
+                    recid_device_1, pubkey_device_1));
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
+                    recid_device_2, pubkey_device_2));
+
+    if (!TEST_LIVE_DEVICE) {
+        // If TESTING, a deterministic seed is loaded when 'raw' is specified
+        ASSERT_REPORT_HAS(check_sig_1);
+        ASSERT_REPORT_HAS(check_sig_2);
+        u_assert_str_eq(sig_device_1, check_sig_1);
+        u_assert_str_eq(sig_device_2, check_sig_2);
+        u_assert_str_eq(pubkey_device_1, check_pubkey);
+#ifdef ECC_USE_SECP256K1_LIB
+        u_assert_str_eq(recid_device_1, RECID_01);
+        u_assert_str_eq(recid_device_2, RECID_01);
+#else
+        u_assert_str_eq(recid_device_1, RECID_EE);
+        u_assert_str_eq(recid_device_2, RECID_EE);
+#endif
+    } else {
+        // Random seed generated on device
+        ASSERT_REPORT_HAS_NOT(check_sig_1);
+        ASSERT_REPORT_HAS_NOT(check_sig_2);
+        u_assert_str_not_eq(sig_device_1, check_sig_1);
+        u_assert_str_not_eq(sig_device_2, check_sig_2);
+        u_assert_str_not_eq(pubkey_device_1, check_pubkey);
+    }
 
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
@@ -2360,7 +2497,7 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
     }
@@ -2384,7 +2521,7 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
     }
@@ -2404,7 +2541,7 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/7");
+        u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
     } else {
@@ -2415,10 +2552,10 @@ static void tests_sign(void)
     if (!TEST_LIVE_DEVICE) {
         ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
         ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-        ASSERT_REPORT_HAS(hash_1_input);
+        ASSERT_REPORT_HAS(sig_1_input);
         ASSERT_REPORT_HAS(cmd_str(CMD_recid));
-        res = recover_public_key_verify_sig(hash_1_input, one_input_msg, recid_1_input,
-                                            pubkey_1_input);
+        res = recover_public_key_verify_sig(sig_1_input, HASH_INPUT_ONE, RECID_01,
+                                            PUBKEY_INPUT_ONE);
         u_assert_int_eq(res, 0);
     } else {
         pin_err_count++;
@@ -2437,7 +2574,7 @@ static void tests_sign(void)
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
         u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, "m/44'/0'/0'/1/8");
+        u_assert_str_has(echo, KEYPATH_TWO);
         free(echo);
     }
 
@@ -2446,14 +2583,14 @@ static void tests_sign(void)
     if (!TEST_LIVE_DEVICE) {
         ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
         ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-        ASSERT_REPORT_HAS(hash_2_input_1);
-        ASSERT_REPORT_HAS(hash_2_input_2);
+        ASSERT_REPORT_HAS(sig_2_input_1);
+        ASSERT_REPORT_HAS(sig_2_input_2);
         ASSERT_REPORT_HAS(cmd_str(CMD_recid));
-        res = recover_public_key_verify_sig(hash_2_input_1, two_input_msg_1, recid_2_input_1,
-                                            pubkey_2_input_1);
+        res = recover_public_key_verify_sig(sig_2_input_1, HASH_INPUT_TWO_1, RECID_01,
+                                            PUBKEY_INPUT_TWO_1);
         u_assert_int_eq(res, 0);
-        res = recover_public_key_verify_sig(hash_2_input_2, two_input_msg_2, recid_2_input_2,
-                                            pubkey_2_input_2);
+        res = recover_public_key_verify_sig(sig_2_input_2, HASH_INPUT_TWO_2, RECID_01,
+                                            PUBKEY_INPUT_TWO_2);
         u_assert_int_eq(res, 0);
     } else {
         pin_err_count++;

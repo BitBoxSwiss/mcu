@@ -134,8 +134,13 @@ typedef uint64_t sha2_word64;   /* Exactly 8 bytes */
     } \
 }
 
-#define MEMSET_BZERO(p,l)   memset((p), 0, (l))
 #define MEMCPY_BCOPY(d,s,l) memcpy((d), (s), (l))
+static volatile void *MEMSET_BZERO(volatile void *dst, size_t len)
+{
+    volatile char *buf;
+    for (buf = (volatile char *)dst; len; buf[--len] = 0);
+    return dst;
+}
 
 /*** THE SIX LOGICAL FUNCTIONS ****************************************/
 /*

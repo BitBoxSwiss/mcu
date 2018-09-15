@@ -43,7 +43,7 @@ static uint8_t utils_buffer[UTILS_BUFFER_LEN];
 volatile void *utils_zero(volatile void *dst, size_t len)
 {
     volatile char *buf;
-    for (buf = (volatile char *)dst;  len;  buf[--len] = 0);
+    for (buf = (volatile char *)dst; len; buf[--len] = 0);
     return dst;
 }
 

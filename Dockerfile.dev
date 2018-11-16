@@ -17,9 +17,6 @@
 #
 
 FROM debian:stretch
-ENV DEBIAN_FRONTEND noninteractive
-WORKDIR /app
-COPY . /app
 
 RUN apt update && apt-get install -y cmake git gcc-arm-none-eabi locales python python-pip
 RUN apt install -y libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3 libssl1.0-dev
@@ -27,5 +24,5 @@ RUN apt install -y libbz2-dev libbz2-dev libbz2-1.0 libncurses5 libz1 valgrind a
 RUN pip install --prefix /usr/local  cpp-coveralls
 RUN locale-gen UTF-8
 ENV CC gcc
-RUN cd /app/ && mkdir docker-build && cd docker-build && cmake .. -DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=ON && make TEST=yes
-RUN sha256sum docker-build/bin/*
+
+CMD ["bash"]

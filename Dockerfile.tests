@@ -21,7 +21,6 @@ ENV DEBIAN_FRONTEND noninteractive
 WORKDIR /app
 COPY . /app
 
-
 RUN gcc -v
 RUN clang -v
 ENV CC gcc

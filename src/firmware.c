@@ -47,7 +47,9 @@ uint32_t __stack_chk_guard = 0;
 extern void __attribute__((noreturn)) __stack_chk_fail(void);
 void __attribute__((noreturn)) __stack_chk_fail(void)
 {
+    memory_clear();
     udc_stop();
+    board_com_deinit();
     while (1) {
         led_toggle();
         delay_ms(300);
@@ -63,7 +65,9 @@ void SysTick_Handler(void)
 
 void HardFault_Handler(void)
 {
+    memory_clear();
     udc_stop();
+    board_com_deinit();
     while (1) {
         led_toggle();
         delay_ms(500);
@@ -73,7 +77,9 @@ void HardFault_Handler(void)
 
 void MemManage_Handler(void)
 {
+    memory_clear();
     udc_stop();
+    board_com_deinit();
     while (1) {
         led_toggle();
         delay_ms(1000);

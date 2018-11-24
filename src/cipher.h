@@ -24,24 +24,28 @@
 
 */
 
+
+#ifndef _CIPHER_H_
+#define _CIPHER_H_
+
+
 #include <stdint.h>
 
-#include "sha2.h"
-#include "utils.h"
-#include "sharedsecret.h"
 
-void sharedsecret_derive_keys(const uint8_t *shared_secret, uint8_t *encryption_key,
-                              uint8_t *authentication_key)
-{
-    uint8_t encryption_and_authentication_key[SHA512_DIGEST_LENGTH];
-    sha512_Raw(shared_secret, SHA256_DIGEST_LENGTH, encryption_and_authentication_key);
+char *cipher_aes_b64_hmac_encrypt(const unsigned char *in, int inlen,
+                                  int *out_b64len, const uint8_t *secret);
 
-    int KEY_SIZE = SHA512_DIGEST_LENGTH / 2;
+uint8_t *cipher_aes_hmac_encrypt(const unsigned char *in, int inlen,
+                                 int *out_b64len, const uint8_t *secret);
 
-    memcpy(encryption_key, encryption_and_authentication_key, KEY_SIZE);
-    memcpy(authentication_key, encryption_and_authentication_key + KEY_SIZE, KEY_SIZE);
+char *cipher_aes_b64_encrypt(const unsigned char *in, int inlen,
+                             int *out_b64len, const uint8_t *key);
 
-    utils_zero(encryption_and_authentication_key, SHA512_DIGEST_LENGTH);
-}
+char *cipher_aes_b64_decrypt(const unsigned char *in, int inlen,
+                             int *outlen, const uint8_t *key);
+
+char *cipher_aes_hmac_decrypt(const uint8_t *in, int inlen,
+                              int *outlen, const uint8_t *key);
 
 
+#endif

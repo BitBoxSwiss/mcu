@@ -36,7 +36,7 @@
 #include "u2f/u2f.h"
 #include "u2f_device.h"
 #include "commander.h"
-#include "aescbcb64.h"
+#include "cipher.h"
 #include "random.h"
 #include "utest.h"
 #include "usb.h"
@@ -107,8 +107,8 @@ static void api_decrypt_report(const char *report, uint8_t *key)
         const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
                                  yajl_t_string));
         if (ciphertext) {
-            dec = aescbcb64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                    &decrypt_len, key);
+            dec = cipher_aes_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
+                                         &decrypt_len, key);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 goto exit;
@@ -393,7 +393,8 @@ static void api_hid_send(const char *cmd)
 static void api_hid_send_encrypt(const char *cmd, uint8_t *key)
 {
     int enc_len;
-    char *enc = aescbcb64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len, key);
+    char *enc = cipher_aes_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len,
+                                       key);
     api_hid_send_len(enc, enc_len);
     free(enc);
 }
@@ -505,8 +506,8 @@ static char *api_read_value_decrypt(int cmd, uint8_t *key)
     memset(val_dec, 0, sizeof(val_dec));
 
     int decrypt_len;
-    char *dec = aescbcb64_decrypt((const unsigned char *)val, strlens(val),
-                                  &decrypt_len, key);
+    char *dec = cipher_aes_b64_decrypt((const unsigned char *)val, strlens(val),
+                                       &decrypt_len, key);
 
     snprintf(val_dec, HID_REPORT_SIZE, "%.*s", decrypt_len, dec);
     free(dec);

@@ -72,7 +72,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     memset(buf, 0, len);
 
     // Add entropy from second chip (MCU UID)
-    flash_read_unique_id(serial, 4);
+    flash_wrapper_read_unique_id(serial, 4);
     sha256_Raw((uint8_t *)serial, sizeof(serial), entropy);
     for (i = 0; i < MIN(len, MEM_PAGE_LEN); i++) {
         buf[i] ^= entropy[i];
@@ -90,13 +90,13 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         buf[i] ^= entropy[i];
     }
     // Add entropy from the random number stored in the MCU's 'user signature' memory area
-    flash_read_user_signature((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
+    flash_wrapper_read_usersig((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
     sha256_Raw(usersig, FLASH_USERSIG_SIZE, entropy);
     for (i = 0; i < MIN(len, MEM_PAGE_LEN); i++) {
         buf[i] ^= entropy[i];
     }
     for (i = 0; i < MAX(FLASH_USERSIG_RN_LEN, MEM_PAGE_LEN); i++) {
-        usersig[i % FLASH_USERSIG_RN_LEN] = entropy[i % MEM_PAGE_LEN];
+        usersig[(i + FLASH_USERSIG_RN_START) % FLASH_USERSIG_SIZE] = entropy[i % MEM_PAGE_LEN];
     }
     // Add entropy from ataes RNG
     const uint8_t ataes_cmd[] = {ATAES_CMD_RAND, 0x02, 0x00, 0x00, 0x00, 0x00}; // Pseudo RNG
@@ -114,8 +114,9 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
                 buf[(n + i)] ^= entropy[i];
             }
         } else {
-            flash_erase_user_signature();
-            flash_write_user_signature((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
+            flash_wrapper_erase_usersig();
+            flash_wrapper_write_usersig((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
+            utils_zero(usersig, FLASH_USERSIG_SIZE);
             HardFault_Handler();
             return DBB_ERROR;
         }

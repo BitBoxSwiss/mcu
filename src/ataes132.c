@@ -69,14 +69,32 @@ static void ataes_calculate_crc(uint8_t length, const uint8_t *data, uint8_t *cr
 
 
 static int random_seeded = 0;
-__extension__ static uint8_t ataes_eeprom_simulation[] = {[0 ... 0x0FFF] = 0xFF};
+__extension__ static uint8_t ataes_eeprom_simulation[] = {[0 ... (ATAES_EEPROM_LEN - 1)] = 0xFF};
+
+
+uint8_t *ataes_eeprom_simulation_report(void)
+{
+    return ataes_eeprom_simulation;
+}
+
+
+void ataes_eeprom_simulation_clear(void)
+{
+    memset(ataes_eeprom_simulation, 0xFF, sizeof(ataes_eeprom_simulation));
+}
+
+
+void ataes_eeprom_simulation_write(const uint8_t *data, uint16_t start, uint16_t len)
+{
+    memcpy(ataes_eeprom_simulation + start, data, len);
+}
 
 
 #else
 
 
 static uint8_t ataes_eeprom_write(uint32_t u32_start_address, uint16_t u16_length,
-                                  uint8_t *p_wr_buffer)
+                                  const uint8_t *p_wr_buffer)
 {
     switch (board_com_report_ataes_mode()) {
         case BOARD_COM_ATAES_MODE_SPI: {
@@ -90,7 +108,9 @@ static uint8_t ataes_eeprom_write(uint32_t u32_start_address, uint16_t u16_lengt
             return board_com_spi_write(BOARD_COM_SPI_DEV_ATAES, spi_cmd, sizeof(spi_cmd));
         }
         case BOARD_COM_ATAES_MODE_TWI: {
-            return board_com_twi_write(u32_start_address, p_wr_buffer, u16_length);
+            uint8_t twi_buf[u16_length];
+            memcpy(twi_buf, p_wr_buffer, u16_length);
+            return board_com_twi_write(u32_start_address, twi_buf, u16_length);
         }
         default: {
             return 1;
@@ -274,7 +294,7 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
 
 // Pass NULL to read only or write only
 int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
-                 uint8_t *userdata_write)
+                 const uint8_t *userdata_write)
 {
 #ifdef TESTING
     if (userdata_write != NULL) {

@@ -36,11 +36,18 @@
 #define ATAES_CMD_RAND 0x02
 #define ATAES_CMD_LOCK 0x0D
 
-
+#ifdef TESTING
+#define ATAES_EEPROM_LEN 0x1000
+#define ATAES_EEPROM_ZONE_LEN 0x100
+#define ATAES_EEPROM_ZONE_NUM (ATAES_EEPROM_LEN / ATAES_EEPROM_ZONE_LEN)
+uint8_t *ataes_eeprom_simulation_report(void);
+void ataes_eeprom_simulation_clear(void);
+void ataes_eeprom_simulation_write(const uint8_t *data, uint16_t start, uint16_t len);
+#endif
 int ataes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block,
                   uint16_t response_len);
 int ataes_eeprom(uint16_t LEN, uint32_t ADDR, uint8_t *userdata_read,
-                 uint8_t *userdata_write);
+                 const uint8_t *userdata_write);
 
 
 #endif

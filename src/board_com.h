@@ -104,6 +104,7 @@ uint8_t board_com_spi_write_read(BOARD_COM_SPI_DEV d, uint8_t *ins, uint32_t ins
                                  uint8_t *reply, uint32_t reply_len);
 uint8_t board_com_spi_write(BOARD_COM_SPI_DEV d, uint8_t *cmd, uint32_t len);
 void board_com_init(void);
+void board_com_deinit(void);
 
 
 #endif

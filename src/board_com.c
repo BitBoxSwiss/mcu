@@ -164,3 +164,8 @@ void board_com_init(void)
 }
 
 
+void board_com_deinit(void)
+{
+    spi_disable(SPI);
+    twi_disable_master_mode(BOARD_COM_ATAES_TWI);
+}

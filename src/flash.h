@@ -57,6 +57,9 @@
 #define FLASH_USERSIG_START         (0x00400000u)
 #define FLASH_USERSIG_SIZE          (0x200u)
 #define FLASH_USERSIG_RN_LEN        (0x20u)
+#define FLASH_USERSIG_RN_START      (0x00u)
+#define FLASH_USERSIG_FLAG_LEN      (0x20u)
+#define FLASH_USERSIG_FLAG_START    (FLASH_USERSIG_RN_START + FLASH_USERSIG_RN_LEN)
 #define FLASH_SIG_START             (IFLASH0_ADDR + FLASH_BOOT_LEN)
 #define FLASH_SIG_LEN               (FLASH_ERASE_SIZE)
 #define FLASH_APP_START             (IFLASH0_ADDR + FLASH_BOOT_LEN + FLASH_SIG_LEN)
@@ -96,24 +99,18 @@ static inline uint32_t mpu_region_size(uint32_t size)
 
 
 #ifdef TESTING
-static void HardFault_Handler(void)
-{
-    exit(1);
-}
-static void MemManage_Handler(void)
-{
-    exit(2);
-}
-
-uint8_t flash_read_unique_id(uint32_t *serial, uint32_t len);
-uint32_t flash_erase_user_signature(void);
-uint32_t flash_write_user_signature(const void *p_buffer, uint32_t ul_size);
-uint32_t flash_read_user_signature(uint32_t *p_data, uint32_t ul_size);
-uint32_t flash_erase_page(uint32_t ul_address, uint8_t uc_page_num);
-uint32_t flash_write(uint32_t ul_address, const void *p_buffer,
-                     uint32_t ul_size, uint32_t ul_erase_flag);
+void HardFault_Handler(void);
+void MemManage_Handler(void);
 #endif
-void flash_read_sig_area(uint8_t *sig, uint32_t ul_address, uint32_t len);
+uint8_t flash_wrapper_read_unique_id(uint32_t *serial, uint32_t len);
+uint32_t flash_wrapper_erase_usersig(void);
+uint32_t flash_wrapper_write_usersig(const void *p_buffer, uint32_t ul_size);
+uint32_t flash_wrapper_read_usersig(uint32_t *p_data, uint32_t ul_size);
+uint32_t flash_wrapper_erase_page(uint32_t ul_address, uint8_t uc_page_num);
+uint32_t flash_wrapper_write(uint32_t ul_address, void *p_buffer,
+                             uint32_t ul_size, uint32_t ul_erase_flag);
+void flash_wrapper_read_sig_area(uint8_t *sig, uint32_t ul_address,
+                                 uint32_t len);
 
 
 #endif

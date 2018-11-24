@@ -89,7 +89,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     for (i = 0; i < MIN(len, MEM_PAGE_LEN); i++) {
         buf[i] ^= entropy[i];
     }
-    // Add entropy from usersig
+    // Add entropy from the random number stored in the MCU's 'user signature' memory area
     flash_read_user_signature((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
     sha256_Raw(usersig, FLASH_USERSIG_SIZE, entropy);
     for (i = 0; i < MIN(len, MEM_PAGE_LEN); i++) {
@@ -105,13 +105,13 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
     while (len > n) {
         if (update_seed) {
             ret = ataes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
-            update_seed = 0;
         } else {
             ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ret == DBB_OK && ataes_ret[0] && !ataes_ret[1]) {
-            for (i = 0; i < MIN(len - n, ATAES_RAND_LEN); i++) {
-                buf[(n + i) % len] ^= ataes_ret[(2 + i) % sizeof(ataes_ret)];
+            sha256_Raw(ataes_ret + 2, ATAES_RAND_LEN, entropy);
+            for (i = 0; i < MIN(len - n, MEM_PAGE_LEN); i++) {
+                buf[(n + i)] ^= entropy[i];
             }
         } else {
             flash_erase_user_signature();
@@ -121,6 +121,11 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         }
         n += ATAES_RAND_LEN;
     }
+    // Replaces up to the first 32B of the random number with a SHA256 hash
+    // Helps protect against a backdoored HRNG
+    sha256_Raw(buf, len, entropy);
+    memcpy(buf, entropy, MIN(len, MEM_PAGE_LEN));
+    utils_zero(entropy, sizeof(entropy));
 #endif
     return DBB_OK;
 }

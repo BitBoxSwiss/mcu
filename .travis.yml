@@ -15,11 +15,11 @@ compiler:
 matrix:
     exclude:
         # MCU build uses its own ARM compiler, so run with just one travis 'compiler'
-        - compiler: clang 
+        - compiler: clang
           env: ENV="-DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=ON" TEST=no
-        - compiler: clang 
+        - compiler: clang
           env: ENV="-DBUILD_TYPE=firmware -DUSE_SECP256K1_LIB=OFF" TEST=no
-        - compiler: clang 
+        - compiler: clang
           env: ENV="-DBUILD_TYPE=bootloader -DUSE_SECP256K1_LIB=OFF" TEST=no
     fast_finish:
         - true
@@ -38,11 +38,11 @@ install:
     - tar xfv astyle_3.0_linux.tar.gz;
           cd astyle/build/gcc && make;
           export PATH=$PATH:$PWD/bin/;
-          cd ../../..; 
-    - if [ "$TEST" = "no" ]; then		
-          wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/6_1-2017q1/gcc-arm-none-eabi-6-2017-q1-update-linux.tar.bz2;
-          tar -xf gcc-arm-none-eabi-6-2017-q1-update-linux.tar.bz2;
-          export PATH=$PATH:$PWD/gcc-arm-none-eabi-6-2017-q1-update/bin;		
+          cd ../../..;
+    - if [ "$TEST" = "no" ]; then
+          wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/7-2018q2/gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2;
+          tar -xf gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2;
+          export PATH=$PATH:$PWD/gcc-arm-none-eabi-7-2018-q2-update/bin;
       fi;
     - if [ "$TEST" = "yes" ]; then
           sudo apt-get update;
@@ -56,7 +56,7 @@ before_script:
     - if ! git show 6b6c1a3d388d57e140b9c983a64507e3238ed4e3; then exit 1 ; fi;
     - if git log --pretty="format:%H   %aN   %s   %G?" 6b6c1a3d388d57e140b9c983a64507e3238ed4e3..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
 
-script: 
+script:
     - mkdir build && cd build
     - cmake .. $ENV -DCONTINUOUS_INTEGRATION=1 && make
     - if [ "$TEST" = "yes" ]; then
@@ -74,6 +74,6 @@ script:
     - if [ "$TEST" = "yes" ] && [ "${CC}" = "gcc" ]; then
           valgrind --leak-check=full --num-callers=40 --error-exitcode=1 bin/tests_unit;
       fi;
-      
+
 after_success:
     - coveralls --verbose -i src -x c --exclude $TRAVIS_BUILD_DIR/src/secp256k1/src --exclude $TRAVIS_BUILD_DIR/src/yajl/src --exclude $TRAVIS_BUILD_DIR/build/src/CMakeFiles/bitbox.dir/yajl/src -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR/build/src/CMakeFiles/bitbox.dir --gcov-options '\-lp'

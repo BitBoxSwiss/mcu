@@ -177,7 +177,7 @@ if(BUILD_TYPE STREQUAL "test")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-fallthrough")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long -Wno-expansion-to-defined")
 
 if(BUILD_TYPE STREQUAL "test")
     if(APPLE)

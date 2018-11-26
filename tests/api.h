@@ -107,8 +107,8 @@ static void api_decrypt_report(const char *report, uint8_t *key)
         const char *ciphertext = YAJL_GET_STRING(yajl_tree_get(json_node, ciphertext_path,
                                  yajl_t_string));
         if (ciphertext) {
-            dec = cipher_aes_b64_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
-                                         &decrypt_len, key);
+            dec = cipher_aes_b64_hmac_decrypt((const unsigned char *)ciphertext, strlens(ciphertext),
+                                              &decrypt_len, key);
             if (!dec) {
                 strcpy(decrypted_report, "/* error: Failed to decrypt. */");
                 goto exit;
@@ -393,8 +393,9 @@ static void api_hid_send(const char *cmd)
 static void api_hid_send_encrypt(const char *cmd, uint8_t *key)
 {
     int enc_len;
-    char *enc = cipher_aes_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len,
-                                       key);
+    char *enc = cipher_aes_b64_hmac_encrypt((const unsigned char *)cmd, strlens(cmd),
+                                            &enc_len,
+                                            key);
     api_hid_send_len(enc, enc_len);
     free(enc);
 }

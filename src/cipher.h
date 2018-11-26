@@ -41,6 +41,9 @@ uint8_t *cipher_aes_hmac_encrypt(const unsigned char *in, int inlen,
 char *cipher_aes_b64_encrypt(const unsigned char *in, int inlen,
                              int *out_b64len, const uint8_t *key);
 
+char *cipher_aes_b64_hmac_decrypt(const unsigned char *in, int inlen, int *out_msg_len,
+                                  const uint8_t *secret);
+
 char *cipher_aes_b64_decrypt(const unsigned char *in, int inlen,
                              int *outlen, const uint8_t *key);
 

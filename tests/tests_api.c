@@ -45,7 +45,6 @@
 #include "secp256k1/include/secp256k1_recovery.h"
 
 #include "api.h"
-#include "hmac_check.h"
 
 
 #define HASH_DEFAULT       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"

@@ -41,7 +41,6 @@ int commander_fill_signature_array(const uint8_t *sig, uint8_t recid);
 int commander_fill_json_array(const char **key, const char **value, int *type,
                               int cmd);
 void commander_force_reset(void);
-void commander_create_verifypass(void);
 char *commander(const char *command);
 
 

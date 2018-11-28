@@ -61,7 +61,6 @@ X(hidden_password)\
 X(REQUIRE_TOUCH)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
-X(verifypass)     \
 X(led)            \
 X(xpub)           \
 X(name)           \

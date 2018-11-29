@@ -566,7 +566,10 @@ uint8_t *memory_hidden_hww(const uint8_t *master)
 {
     memory_eeprom_crypt(NULL, MEM_hidden_hww, MEM_HIDDEN_BIP32_ADDR_IDX,
                         MEM_memory_map_version);
-    if ((master == NULL) && MEMEQ(MEM_hidden_hww, MEM_PAGE_ERASE, 32)) {
+
+    uint32_t ext_flags = memory_report_ext_flags();
+    uint8_t legacy = !(ext_flags & MEM_EXT_MASK_NEW_HIDDEN_WALLET);
+    if ((master == NULL) && (legacy || MEMEQ(MEM_hidden_hww, MEM_PAGE_ERASE, 32))) {
         // Backward compatible with firmware <=2.2.3
         return memory_master_hww_chaincode(NULL);
     }
@@ -580,7 +583,9 @@ uint8_t *memory_hidden_hww_chaincode(const uint8_t *chain)
 {
     memory_eeprom_crypt(NULL, MEM_hidden_hww_chain, MEM_HIDDEN_BIP32_CHAIN_ADDR_IDX,
                         MEM_memory_map_version);
-    if ((chain == NULL) && MEMEQ(MEM_hidden_hww_chain, MEM_PAGE_ERASE, 32)) {
+    uint32_t ext_flags = memory_report_ext_flags();
+    uint8_t legacy = !(ext_flags & MEM_EXT_MASK_NEW_HIDDEN_WALLET);
+    if ((chain == NULL) && (legacy || MEMEQ(MEM_hidden_hww_chain, MEM_PAGE_ERASE, 32))) {
         // Backward compatible with firmware <=2.2.3
         return memory_master_hww(NULL);
     }

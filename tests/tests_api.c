@@ -2223,15 +2223,23 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     ASSERT_SUCCESS;
 
-    // copy test sd_files to sd card directory
-    int ret = system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
-    u_assert(ret == 0);
+    if (!TEST_LIVE_DEVICE) {
+        // copy test sd_files to sd card directory
+        // some files have seeds with known high-S signatures
+        // and the code should normalize these (low-S; tested below)
+        int ret = system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
+        u_assert(ret == 0);
 
-    // seed from backup file
-    char seed[512];
-    snprintf(seed, sizeof(seed), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
-             attr_str(ATTR_backup), "test_backup.pdf");
-    api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
+        // seed from backup file
+        char seed[512];
+        snprintf(seed, sizeof(seed), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), "test_backup.pdf");
+        api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
+    } else {
+        api_format_send_cmd(cmd_str(CMD_seed),
+                            "{\"source\":\"create\", \"filename\":\"temp.pdf\", \"key\":\"key\"}",
+                            KEY_STANDARD);
+    }
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
     // clean up sd card

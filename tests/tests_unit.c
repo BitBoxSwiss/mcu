@@ -51,7 +51,6 @@
 #include "uECC.h"
 #include "ecc.h"
 #include "aes.h"
-#include "hmac_check.h"
 
 
 int U_TESTS_RUN = 0;

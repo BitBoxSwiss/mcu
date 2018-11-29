@@ -9,6 +9,7 @@ import pyaes
 import hid # hidapi (requires cython)
 import hashlib
 import struct
+import hmac
 
 
 # ----------------------------------------------------------------------------------
@@ -21,6 +22,7 @@ report_buf_size = 4096 # firmware v2.0.0
 boot_buf_size_send = 4098
 boot_buf_size_reply = 256
 
+sha256_byte_len = 32
 
 # ----------------------------------------------------------------------------------
 # Crypto
@@ -40,28 +42,33 @@ def aes_decrypt_with_iv(key, iv, data):
     return s
 
 
-def EncodeAES(secret, s):
+def encrypt_aes(key, s):
     iv = bytes(os.urandom(16))
-    ct = aes_encrypt_with_iv(secret, iv, s)
+    ct = aes_encrypt_with_iv(key, iv, s)
     e = iv + ct
-    return base64.b64encode(e)
+    return e
 
 
-def DecodeAES(secret, e):
-    e = bytes(base64.b64decode(e))
+def decrypt_aes(key, e):
     iv, e = e[:16], e[16:]
-    s = aes_decrypt_with_iv(secret, iv, e)
+    s = aes_decrypt_with_iv(key, iv, e)
     return s
 
 
 def sha256(x):
     return hashlib.sha256(x).digest()
 
+def sha512(x):
+    return hashlib.sha512(x).digest()
 
-def Hash(x):
+def double_hash(x):
     if type(x) is not bytearray: x=x.encode('utf-8')
     return sha256(sha256(x))
 
+def derive_keys(x):
+    h = double_hash(x)
+    h = sha512(h)
+    return (h[:len(h)/2],h[len(h)/2:])
 
 # ----------------------------------------------------------------------------------
 # HID
@@ -152,16 +159,22 @@ def hid_send_plain(msg):
         print('Exception caught ' + str(e))
     return reply
 
-
 def hid_send_encrypt(msg, password):
     print("Sending: {}".format(msg))
     reply = ""
     try:
-        secret = Hash(password)
-        msg = EncodeAES(secret, msg)
-        reply = hid_send_plain(msg)
+        encryption_key, authentication_key = derive_keys(password)
+        msg = encrypt_aes(encryption_key, msg)
+        hmac_digest = hmac.new(authentication_key, msg, digestmod=hashlib.sha256).digest()
+        authenticated_msg = base64.b64encode(msg + hmac_digest)
+        reply = hid_send_plain(authenticated_msg)
         if 'ciphertext' in reply:
-            reply = DecodeAES(secret, ''.join(reply["ciphertext"]))
+            b64_unencoded = bytes(base64.b64decode(''.join(reply["ciphertext"])))
+            reply_hmac = b64_unencoded[-sha256_byte_len:]
+            hmac_calculated = hmac.new(authentication_key, b64_unencoded[:-sha256_byte_len], digestmod=hashlib.sha256).digest()
+            if not hmac.compare_digest(reply_hmac, hmac_calculated):
+                raise Exception("Failed to validate HMAC")
+            reply = decrypt_aes(encryption_key, b64_unencoded[:-sha256_byte_len])
             print("Reply:   {}\n".format(reply))
             reply = json.loads(reply)
         if 'error' in reply:

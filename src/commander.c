@@ -1425,9 +1425,9 @@ static void commander_parse(char *command)
     }
 
 exit:
-    encoded_report = cipher_aes_b64_encrypt((unsigned char *)json_report,
-                                            strlens(json_report), &encrypt_len,
-                                            memory_active_key_get());
+    encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *)json_report,
+                     strlens(json_report), &encrypt_len,
+                     memory_active_key_get());
 
     commander_clear_report();
     if (encoded_report) {
@@ -1451,11 +1451,11 @@ static uint8_t commander_find_active_key(const char *encrypted_command)
     key_std = memory_report_aeskey(PASSWORD_STAND);
     key_hdn = memory_report_aeskey(PASSWORD_HIDDEN);
 
-    cmd_std = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
-                                     strlens(encrypted_command), &len_std, key_std);
+    cmd_std = cipher_aes_b64_hmac_decrypt((const unsigned char *)encrypted_command,
+                                          strlens(encrypted_command), &len_std, key_std);
 
-    cmd_hdn = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
-                                     strlens(encrypted_command), &len_hdn, key_hdn);
+    cmd_hdn = cipher_aes_b64_hmac_decrypt((const unsigned char *)encrypted_command,
+                                          strlens(encrypted_command), &len_hdn, key_hdn);
 
     if (strlens(cmd_std)) {
         if (BRACED(cmd_std)) {
@@ -1499,9 +1499,9 @@ static char *commander_decrypt(const char *encrypted_command)
     size_t json_object_len = 0;
 
     if (commander_find_active_key(encrypted_command) == DBB_OK) {
-        command = cipher_aes_b64_decrypt((const unsigned char *)encrypted_command,
-                                         strlens(encrypted_command), &command_len,
-                                         memory_active_key_get());
+        command = cipher_aes_b64_hmac_decrypt((const unsigned char *)encrypted_command,
+                                              strlens(encrypted_command), &command_len,
+                                              memory_active_key_get());
     }
 
     err_count = memory_report_access_err_count();

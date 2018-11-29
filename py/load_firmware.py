@@ -105,7 +105,7 @@ def printFirmwareHash(filename):
                 break
             data = data + bytearray(d)
     data = data + b'\xFF' * (applen - len(data))
-    print('\nHashed firmware', binascii.hexlify(Hash((data))))
+    print('\nHashed firmware', binascii.hexlify(double_hash((data))))
 
 
 # ----------------------------------------------------------------------------------

@@ -101,7 +101,6 @@ static uint8_t *cipher_aes_encrypt(const unsigned char *in, int inlen,
     return enc_cat;
 }
 
-
 // Encrypts a given constant char array of length inlen using the AES algorithm with CBC mode
 // and base64 encodes the result.
 //
@@ -212,7 +211,6 @@ static char *cipher_aes_decrypt(const uint8_t *in, int inlen, int *outlen,
     return dec;
 }
 
-
 char *cipher_aes_hmac_decrypt(const uint8_t *in, int inlen,
                               int *outlen, const uint8_t *key)
 {
@@ -242,6 +240,38 @@ char *cipher_aes_hmac_decrypt(const uint8_t *in, int inlen,
     return ret;
 }
 
+// Decrypts a given constant char array of length inlen using the AES algorithm with CBC mode
+// and base64 decodes the result.
+//
+// Must free() returned value (allocated inside base64() function)
+char *cipher_aes_b64_hmac_decrypt(const unsigned char *in, int inlen, int *out_msg_len,
+                                  const uint8_t *secret)
+{
+    unsigned char *ub64;
+    char *decrypted;
+    int ub64len;
+
+    if (!in || inlen == 0 || !secret) {
+        return NULL;
+    }
+
+    // Unbase64
+    ub64 = unbase64((const char *)in, inlen, &ub64len);
+    if (!ub64) {
+        return NULL;
+    }
+    if ((ub64len % N_BLOCK) || ub64len < N_BLOCK) {
+        memset(ub64, 0, ub64len);
+        free(ub64);
+        return NULL;
+    }
+
+    decrypted = cipher_aes_hmac_decrypt(ub64, ub64len, out_msg_len, secret);
+
+    memset(ub64, 0, ub64len);
+    free(ub64);
+    return decrypted;
+}
 
 // Must free() returned value
 char *cipher_aes_b64_decrypt(const unsigned char *in, int inlen, int *outlen,

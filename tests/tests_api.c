@@ -45,6 +45,7 @@
 #include "secp256k1/include/secp256k1_recovery.h"
 
 #include "api.h"
+#include "version.h"
 
 
 #define HASH_DEFAULT       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -1350,12 +1351,18 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_ping), "", NULL);
     ASSERT_REPORT_HAS(attr_str(ATTR_false));
+    ASSERT_REPORT_HAS(cmd_str(CMD_device));
+    ASSERT_REPORT_HAS(attr_str(ATTR_version));
+    ASSERT_REPORT_HAS(DIGITAL_BITBOX_VERSION);
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
     api_format_send_cmd(cmd_str(CMD_ping), "", NULL);
     ASSERT_REPORT_HAS(attr_str(ATTR_password));
+    ASSERT_REPORT_HAS(cmd_str(CMD_device));
+    ASSERT_REPORT_HAS(attr_str(ATTR_version));
+    ASSERT_REPORT_HAS(DIGITAL_BITBOX_VERSION);
 
     api_format_send_cmd(cmd_str(CMD_led), attr_str(ATTR_blink), KEY_STANDARD);
     ASSERT_SUCCESS;

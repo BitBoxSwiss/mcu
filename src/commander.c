@@ -1576,6 +1576,10 @@ static int commander_check_init(const char *encrypted_command)
                 } else {
                     commander_fill_report(cmd_str(CMD_ping), attr_str(ATTR_password), DBB_OK);
                 }
+                char device_info[100];
+                snprintf(device_info, sizeof(device_info),
+                        "{\"%s\":\"%s\"}", attr_str(ATTR_version), DIGITAL_BITBOX_VERSION);
+                commander_fill_report(cmd_str(CMD_device), device_info, DBB_JSON_OBJECT);
                 yajl_tree_free(json_node);
                 return DBB_ERROR;
             }

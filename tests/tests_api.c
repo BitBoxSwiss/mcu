@@ -326,9 +326,25 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     ASSERT_SUCCESS;
 
+
     snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"password\"}", filename);
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     ASSERT_SUCCESS;
+
+    {
+        // Check backup should also work with the hidden password.
+        char set_hidden_wallet_cmd[512];
+        snprintf(set_hidden_wallet_cmd, sizeof(set_hidden_wallet_cmd), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+                 hidden_pwd, cmd_str(CMD_key), "hiddenpassword");
+        api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd, KEY_STANDARD);
+        ASSERT_SUCCESS;
+
+
+        snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"hiddenpassword\"}", filename);
+        api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
+        ASSERT_SUCCESS;
+    }
+
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));

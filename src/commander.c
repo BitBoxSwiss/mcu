@@ -822,6 +822,7 @@ static void commander_process_device(yajl_val json_node)
         char bootlock[6] = {0};
         char u2f_enabled[6] = {0};
         char u2f_hijack_enabled[6] = {0};
+        char new_hidden_wallet_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_wrapper_read_unique_id(serial, 4);
@@ -859,6 +860,14 @@ static void commander_process_device(yajl_val json_node)
             snprintf(u2f_hijack_enabled, sizeof(u2f_hijack_enabled), "%s", attr_str(ATTR_false));
         }
 
+        if (ext_flags & MEM_EXT_MASK_NEW_HIDDEN_WALLET) {
+            // Bit is set == enabled
+            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s", attr_str(ATTR_true));
+        } else {
+            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s", attr_str(ATTR_false));
+        }
+
+
         if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
         } else {
@@ -877,7 +886,7 @@ static void commander_process_device(yajl_val json_node)
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":\"%s\",\"%s\":%s,\"%s\":%s}",
+                 "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
@@ -888,7 +897,8 @@ static void commander_process_device(yajl_val json_node)
                  attr_str(ATTR_sdcard), sdcard,
                  attr_str(ATTR_TFA), tfa,
                  attr_str(ATTR_U2F), u2f_enabled,
-                 attr_str(ATTR_U2F_hijack), u2f_hijack_enabled);
+                 attr_str(ATTR_U2F_hijack), u2f_hijack_enabled,
+                 attr_str(ATTR_new_hidden_wallet), new_hidden_wallet_enabled);
 
         free(tfa);
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
@@ -930,10 +940,12 @@ static void commander_process_feature_set(yajl_val json_node)
         uint32_t flags = memory_report_ext_flags();
         const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
         const char *u2f_hijack_path[] = { cmd_str(CMD_U2F_hijack), NULL };
+        const char *new_hidden_wallet_path[] = { attr_str(ATTR_new_hidden_wallet), NULL };
         yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
         yajl_val u2f_hijack = yajl_tree_get(data, u2f_hijack_path, yajl_t_any);
+        yajl_val new_hidden_wallet = yajl_tree_get(data, new_hidden_wallet_path, yajl_t_any);
 
-        if (!u2f && !u2f_hijack) {
+        if (!u2f && !u2f_hijack && !new_hidden_wallet) {
             goto err;
         }
 
@@ -954,6 +966,22 @@ static void commander_process_feature_set(yajl_val json_node)
                 flags |= MEM_EXT_MASK_U2F_HIJACK;
             } else if (YAJL_IS_FALSE(u2f_hijack)) {
                 flags &= ~(MEM_EXT_MASK_U2F_HIJACK);
+            } else {
+                goto err;
+            }
+        }
+
+        // Set the bit == enabled
+        if (new_hidden_wallet) {
+            if (wallet_is_locked()) {
+                commander_fill_report(cmd_str(CMD_feature_set), NULL, DBB_ERR_IO_LOCKED);
+                return;
+            }
+
+            if (YAJL_IS_TRUE(new_hidden_wallet)) {
+                flags |= MEM_EXT_MASK_NEW_HIDDEN_WALLET;
+            } else if (YAJL_IS_FALSE(new_hidden_wallet)) {
+                flags &= ~(MEM_EXT_MASK_NEW_HIDDEN_WALLET);
             } else {
                 goto err;
             }

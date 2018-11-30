@@ -496,6 +496,141 @@ static void tests_name(void)
     u_assert_str_eq(name1, api_read_value(CMD_name));
 }
 
+static void tests_legacy_hidden_wallet(void)
+{
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
+
+    // Disable new hidden wallet
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"U2F\":true");
+    ASSERT_REPORT_HAS("\"U2F_hijack\":true");
+    ASSERT_REPORT_HAS("\"new_hidden_wallet\":false");
+
+    // Enable new hidden wallet
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
+
+    char set_hidden_wallet_cmd_1[512];
+    snprintf(set_hidden_wallet_cmd_1, sizeof(set_hidden_wallet_cmd_1), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+             hidden_pwd, cmd_str(CMD_key), "key1");
+    char set_hidden_wallet_cmd_2[512];
+    snprintf(set_hidden_wallet_cmd_2, sizeof(set_hidden_wallet_cmd_2), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+             hidden_pwd, cmd_str(CMD_key), "key2");
+    char keypath[] = "m/44'/0'/0'/0/0";
+
+    if (!TEST_LIVE_DEVICE) {
+        // copy test sd_files to sd card directory
+        int ret = system("cp ../tests/sd_files/*.pdf tests/digitalbitbox/");
+        u_assert(ret == 0);
+
+        // seed from backup file
+        char seed[512];
+        snprintf(seed, sizeof(seed), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
+                 attr_str(ATTR_backup), "test_backup_hww.pdf");
+        api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
+        ASSERT_SUCCESS;
+    } else {
+        api_format_send_cmd(cmd_str(CMD_seed),
+                            "{\"source\":\"create\", \"filename\":\"legacy_hidden_wallet_test.pdf\", \"key\":\"key\"}",
+                            KEY_STANDARD);
+        ASSERT_SUCCESS;
+    }
+
+    // clean up sd card
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
+    ASSERT_SUCCESS;
+
+
+    api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_1, KEY_STANDARD);
+    ASSERT_SUCCESS;
+
+    // can't modify new_hidden_wallet when the device is locked
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_HIDDEN);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_HIDDEN);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    char xpub_main[112];
+    memcpy(xpub_main, api_read_value(CMD_xpub), sizeof(xpub_main));
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    char xpub_hidden[112];
+    memcpy(xpub_hidden, api_read_value(CMD_xpub), sizeof(xpub_hidden));
+
+    // Disable new hidden wallet (activate legacy)
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    char xpub_hidden_legacy[112];
+    memcpy(xpub_hidden_legacy, api_read_value(CMD_xpub), sizeof(xpub_hidden_legacy));
+
+    // Re-enable new hidden wallet, check that it produces the same as before.
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+
+    api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    char xpub_hidden_2[112];
+    memcpy(xpub_hidden_2, api_read_value(CMD_xpub), sizeof(xpub_hidden_2));
+    u_assert_str_eq(xpub_hidden_2, xpub_hidden);
+
+    if (!TEST_LIVE_DEVICE) {
+        u_assert_str_eq(xpub_main, "xpub6GddvKfUWU9VV4mbUCsz6C97rzvL7kdEfKsR7akEhM964mceXkXnv9FkCxnELYkc3rKybg4fyrqzE5GpUw1j45a3tejwCsFCs3c4oFiRgn9");
+        u_assert_str_eq(xpub_hidden, "xpub6G8MNx3mFXKh6i6rf1JpW7Aqu5aoexLq6yw3sUCZwukDi2Ghzg7PE1n4tQPTeZS2j9cm28HFHYBu4D1iqCwBN1Jt5t4cCP5GWgbzhBAMYXB");
+        u_assert_str_eq(xpub_hidden_legacy, "xpub6FhGYqMLDAHdheptxhErzFd2F13h16AE6fWTMd2voqijUU2TWjjKnKdiCucgDnh18R46Jkrq5i6rHrjXGds87CU6y69NzKFBDqN3cUPDXzg");
+    } else {
+        u_assert_str_not_eq(xpub_main, xpub_hidden);
+        u_assert_str_not_eq(xpub_main, xpub_hidden_legacy);
+        u_assert_str_not_eq(xpub_hidden, xpub_hidden_legacy);
+    }
+
+    {
+        // when legacy mode is enabled, hww reset and setting a hidden wallet still needs to work.
+        // do this by setting a new hidden wallet while in legacy mode and checking.
+        api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_1, KEY_STANDARD);
+        ASSERT_SUCCESS;
+
+        api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+        char xpub[112];
+        memcpy(xpub, api_read_value(CMD_xpub), sizeof(xpub));
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+        ASSERT_SUCCESS;
+
+        api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_2, KEY_STANDARD);
+        ASSERT_SUCCESS;
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+        ASSERT_SUCCESS;
+        api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+        u_assert_str_not_eq(api_read_value(CMD_xpub), xpub);
+
+        // Check that the legacy hidden wallet has not changed despite the new
+        // hidden wallet having been changed.
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+        ASSERT_SUCCESS;
+        api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
+        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+        u_assert_str_eq(api_read_value(CMD_xpub), xpub_hidden_legacy);
+
+    }
+}
 
 static void tests_u2f(void)
 {
@@ -527,7 +662,7 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"u2f_test_0.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
-    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_SUCCESS;
 
     // U2F command runs
     api_hid_send_frame(&f);
@@ -2648,6 +2783,7 @@ static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_name);
+    u_run_test(tests_legacy_hidden_wallet);
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_password);

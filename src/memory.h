@@ -31,8 +31,9 @@
 #include <stdint.h>
 
 #define MEM_PAGE_LEN      32
-#define MEM_EXT_MASK_U2F         0x00000001 // Mask of bit to enable (1) or disable (0) U2F functions; will override and disable U2F_HIJACK bit when disabled
-#define MEM_EXT_MASK_U2F_HIJACK  0x00000002 // Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
+#define MEM_EXT_MASK_U2F               0x00000001 // Mask of bit to enable (1) or disable (0) U2F functions; will override and disable U2F_HIJACK bit when disabled
+#define MEM_EXT_MASK_U2F_HIJACK        0x00000002 // Mask of bit to enable (1) or disable (0) U2F_HIJACK interface
+#define MEM_EXT_MASK_NEW_HIDDEN_WALLET 0x00000004 // Mask of bit to enable (1) or disable (0) the new hidden wallet derivation
 // Default settings
 #define MEM_DEFAULT_unlocked            0xFF
 #define MEM_DEFAULT_erased              0xFF

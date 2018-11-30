@@ -316,11 +316,10 @@ static int commander_process_backup_check(const char *key, const char *filename,
             snprintf(seed, sizeof(seed), "%s", utils_uint8_to_hex(backup_hww, MEM_PAGE_LEN));
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 ret = DBB_ERROR;
-            } else if (!MEMEQ(node.private_key, wallet_get_master(), MEM_PAGE_LEN) ||
-                       !MEMEQ(node.chain_code, wallet_get_chaincode(), MEM_PAGE_LEN)) {
-                ret = DBB_ERROR;
             } else {
-                ret = DBB_OK;
+                uint8_t main_ok = MEMEQ(node.private_key, memory_master_hww(NULL), MEM_PAGE_LEN) && MEMEQ(node.chain_code, memory_master_hww_chaincode(NULL), MEM_PAGE_LEN);
+                uint8_t hidden_ok = MEMEQ(node.private_key, memory_hidden_hww(NULL), MEM_PAGE_LEN) && MEMEQ(node.chain_code, memory_hidden_hww_chaincode(NULL), MEM_PAGE_LEN);
+                ret = (main_ok | hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
             }
             utils_zero(seed, sizeof(seed));
         }

@@ -59,6 +59,7 @@ set(DBB-HARDWARE-SOURCES
         board_com.c
         hw_version.c
         systick.c
+        mpu.c
 )
 
 set(YAJL-SOURCES

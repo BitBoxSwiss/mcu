@@ -39,6 +39,7 @@
 #include "touch.h"
 #include "version.h"
 #include "bootloader.h"
+#include "mpu.h"
 
 
 static char report[UDI_HID_REPORT_IN_SIZE];
@@ -333,7 +334,6 @@ void bootloader_command(const char *command)
 
     usb_reply((uint8_t *)report);
 }
-
 
 void bootloader_jump(void)
 {

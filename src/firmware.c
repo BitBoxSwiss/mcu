@@ -41,6 +41,8 @@
 #include "commander.h"
 #include "board_com.h"
 
+#include "mpu.h"
+
 
 uint32_t __stack_chk_guard = 0;
 
@@ -86,28 +88,13 @@ void MemManage_Handler(void)
     }
 }
 
-
-static void enable_usersig_area(void)
-{
-    __DSB();
-    __ISB();
-    MPU->CTRL = 0;
-    MPU->RBAR = FLASH_USERSIG_START | MPU_REGION_VALID | 1;
-    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
-                    FLASH_USERSIG_SIZE) | MPU_REGION_STATE_RW;
-    MPU->CTRL = 0x1 | MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk;
-    __DSB();
-    __ISB();
-}
-
-
 char usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
 
 
 int main (void)
 {
+    mpu_firmware_init();
     wdt_disable(WDT);
-    enable_usersig_area();
     irq_initialize_vectors();
     cpu_irq_enable();
     sleepmgr_init();

@@ -52,7 +52,7 @@
 #define APDU_LEN(A)              (uint32_t)(((A).lc1 << 16) + ((A).lc2 << 8) + ((A).lc3))
 #define U2F_TIMEOUT              500// [msec]
 #define U2F_KEYHANDLE_LEN        (U2F_NONCE_LENGTH + SHA256_DIGEST_LENGTH)
-#define U2F_READBUF_MAX_LEN      COMMANDER_REPORT_SIZE// Max allowed by U2F specification = (57 + 128 * 59) = 7609. 
+#define U2F_READBUF_MAX_LEN      COMMANDER_REPORT_SIZE// Max allowed by U2F specification = (57 + 128 * 59) = 7609.
 // In practice, U2F commands do not need this much space.
 // Therefore, reduce to save MCU memory.
 
@@ -452,6 +452,7 @@ static void u2f_device_init(const USB_FRAME *in)
     f.init.bcnth = 0;
     f.init.bcntl = U2FHID_INIT_RESP_SIZE;
 
+    utils_zero(&resp, sizeof(resp));
     memcpy(resp.nonce, init_req->nonce, sizeof(init_req->nonce));
     resp.cid = in->cid == U2FHID_CID_BROADCAST ? next_cid() : in->cid;
     resp.versionInterface = U2FHID_IF_VERSION;

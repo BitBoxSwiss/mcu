@@ -151,6 +151,7 @@ X(U2F_load)       \
 X(U2F_create)     \
 X(U2F_hijack)     \
 X(new_hidden_wallet)    \
+X(pairing)        \
 X(__ERASE__)      \
 X(__FORCE__)      \
 X(NUM)             /* keep last */

@@ -66,6 +66,10 @@ int wallet_is_locked(void)
     return HIDDEN || !memory_read_unlocked();
 }
 
+int wallet_is_paired(void)
+{
+    return wallet_is_locked() || !(memory_report_ext_flags() & MEM_EXT_MASK_NOTPAIRED);
+}
 
 uint8_t *wallet_get_master(void)
 {

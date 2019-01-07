@@ -123,6 +123,12 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
 
+    char erase_cmd[100];
+    snprintf(erase_cmd, sizeof(erase_cmd),
+             "{\"erase\":\"%s\"}", filename_create);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        erase_cmd,
+                        KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
@@ -147,9 +153,7 @@ static void tests_seed_xpub_backup(void)
 
     // backup
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-    ASSERT_REPORT_HAS_NOT(filename_create);
-    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_ERR_SD_ERASE));
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     ASSERT_SUCCESS;
@@ -188,6 +192,11 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_eq(xpub0, xpub1);
 
     // check backup list and erase
+    snprintf(erase_cmd, sizeof(erase_cmd),
+             "{\"erase\":\"%s\"}", filename_create);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        erase_cmd,
+                        KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(filename);
     ASSERT_REPORT_HAS_NOT(filename_create);
@@ -195,9 +204,11 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
+    snprintf(erase_cmd, sizeof(erase_cmd),
+             "{\"erase\":\"%s\"}", filename);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        erase_cmd,
+                        KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(filename);
     ASSERT_REPORT_HAS_NOT(filename_create);
@@ -211,8 +222,7 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    sd_erase(CMD_backup, NULL);
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -251,9 +261,6 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_warning));
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
 
     // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111'", KEY_STANDARD);
@@ -395,9 +402,6 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
     // seed with extra entropy from device
     api_format_send_cmd(cmd_str(CMD_seed), seed_usb, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -443,11 +447,6 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     u_assert_str_eq(xpub0, xpub1);
-
-
-    // clean up sd card
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
 }
 
 
@@ -615,11 +614,6 @@ static void tests_legacy_hidden_wallet(void)
         ASSERT_SUCCESS;
     }
 
-    // clean up sd card
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
-
     api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_1, KEY_STANDARD);
     ASSERT_SUCCESS;
 
@@ -721,14 +715,14 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
     // Seed
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     ASSERT_REPORT_HAS("\"U2F\":true");
     ASSERT_REPORT_HAS("\"U2F_hijack\":true");
 
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"u2f_test_0.pdf\"}",
+                        KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"u2f_test_0.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
@@ -847,9 +841,6 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
              attr_str(ATTR_U2F_create), fn0);
@@ -862,6 +853,12 @@ static void tests_u2f(void)
     // verify backup0 `hww` success
     // verify backup0 ``    success (default hww)
     // verify backup0 `all` success (invalid cmd)
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"erase\":\"%s\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        cmd,
+                        KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -905,6 +902,11 @@ static void tests_u2f(void)
     // verify backup1 `u2f` success
     // verify backup1 `hww` success
     // verify backup1 ``    success
+    snprintf(cmd, sizeof(cmd),
+             "{\"erase\":\"%s\"}", fn1);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        cmd,
+                        KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn1);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1506,11 +1508,6 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(sig_1_input);
     }
-
-
-    // clean up sd card
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
 }
 
 
@@ -1591,10 +1588,11 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_bootloader), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"c.pdf\"}",
 
-    api_format_send_cmd(cmd_str(CMD_seed),
+                        KEY_STANDARD);
+        api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_SUCCESS;
 
@@ -1690,9 +1688,6 @@ static void tests_device(void)
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     ASSERT_REPORT_HAS("\"bootlock\":true");
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
 
     if (!TEST_LIVE_DEVICE) {
         commander_force_reset();
@@ -1910,9 +1905,9 @@ static void tests_password(void)
              hidden_pwd, cmd_str(CMD_key), hidden_pwd);
     api_format_send_cmd(cmd_str(CMD_hidden_password), cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_MASTER));
-    // Erase backups
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"h.pdf\"}",
+                        KEY_STANDARD);
     // Seed wallets
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\",\"filename\":\"h.pdf\",\"key\":\"%s\"}", tests_pwd);
@@ -2130,6 +2125,9 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_MASTER));
 
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"c.pdf\"}",
+                        KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -2164,9 +2162,6 @@ static void tests_echo_tfa(void)
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     ASSERT_REPORT_HAS(cmd_str(CMD_ecdh));
     // end test ECDH
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS
 
     api_format_send_cmd(cmd_str(CMD_ecdh), "invalid_cmd", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
@@ -2395,9 +2390,6 @@ static void tests_sign(void)
     ASSERT_SUCCESS;
 
     // backup
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
     if (!TEST_LIVE_DEVICE) {
         // copy test sd_files to sd card directory
         // some files have seeds with known high-S signatures
@@ -2416,11 +2408,6 @@ static void tests_sign(void)
                             KEY_STANDARD);
     }
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
-
-    // clean up sd card
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
-    ASSERT_SUCCESS;
-
 
     // missing parameters
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_missing_parameter, KEY_STANDARD);
@@ -2901,7 +2888,6 @@ int main(void)
     printf("\nInternal API result via hijack interface:\n");
     TEST_U2FAUTH_HIJACK = 1;
     run_utests();
-
 #ifndef CONTINUOUS_INTEGRATION
     // Live test of the HID API
     // Requires the hidapi library to be installed:

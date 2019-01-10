@@ -512,6 +512,56 @@ static void tests_name(void)
     u_assert_str_eq(name1, api_read_value(CMD_name));
 }
 
+static void tests_pairing(void)
+{
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
+    // Pairing off by default.
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":false");
+
+    // Can turn on, but not turn off.
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"pairing\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":true");
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"pairing\":false}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":true");
+
+    // Reset turns it off again.
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+    // Pairing off by default.
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":false");
+
+    // Forcabily turned on if device is locked.
+    char seed_c[512];
+    snprintf(seed_c, sizeof(seed_c),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"%s\"}", attr_str(ATTR_create),
+             "test_pairing.pdf", "key");
+    api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
+
+    // lock device
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":true");
+
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"pairing\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"pairing\":true");
+
+
+}
+
 static void tests_legacy_hidden_wallet(void)
 {
     api_reset_device();
@@ -555,6 +605,10 @@ static void tests_legacy_hidden_wallet(void)
         api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
         ASSERT_SUCCESS;
     } else {
+        api_format_send_cmd(cmd_str(CMD_backup),
+                            "{\"erase\":\"legacy_hidden_wallet_test.pdf\"}",
+                            KEY_STANDARD);
+
         api_format_send_cmd(cmd_str(CMD_seed),
                             "{\"source\":\"create\", \"filename\":\"legacy_hidden_wallet_test.pdf\", \"key\":\"key\"}",
                             KEY_STANDARD);
@@ -1294,13 +1348,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(sig_1_input);
@@ -1340,13 +1388,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(sig_1_input);
@@ -1368,13 +1410,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(sig_1_input);
@@ -1420,13 +1456,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(sig_1_input);
@@ -1448,13 +1478,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS_NOT(sig_1_input);
@@ -1477,13 +1501,7 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
         if (!TEST_LIVE_DEVICE) {
-            int len;
-            const char *val = api_read_value(CMD_echo);
-            char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                         memory_report_aeskey(TFA_SHARED_SECRET));
-            u_assert(echo);
-            u_assert_str_has(echo, KEYPATH_ONE);
-            free(echo);
+            u_assert_str_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(sig_1_input);
@@ -2424,21 +2442,6 @@ static void tests_sign(void)
                         KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-
-    // sign max number of hashes per sign command
-    api_format_send_cmd(cmd_str(CMD_sign), maxhashes, KEY_STANDARD);
-    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
-
-    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
-
-    // sign 1 more than max number of hashes per sign command
-    api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
-
-    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
-
     // sig using no inputs
     api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"_meta_data_\", \"data\":[]}",
                         KEY_STANDARD);
@@ -2458,15 +2461,7 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        int len;
-        const char *val = api_read_value(CMD_echo);
-        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                     memory_report_aeskey(TFA_SHARED_SECRET));
-        u_assert(echo);
-        u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, KEYPATH_ONE);
-        free(echo);
+        u_assert_str_eq(api_read_value(CMD_echo), "");
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -2510,15 +2505,7 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
     if (!TEST_LIVE_DEVICE) {
-        int len;
-        const char *val = api_read_value(CMD_echo);
-        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                     memory_report_aeskey(TFA_SHARED_SECRET));
-        u_assert(echo);
-        u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
-        u_assert_str_has(echo, KEYPATH_TWO);
-        free(echo);
+        u_assert_str_eq(api_read_value(CMD_echo), "");
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
@@ -2562,74 +2549,6 @@ static void tests_sign(void)
         u_assert_str_not_eq(pubkey_device_1, PUBKEY_INPUT_TWO_1);
         u_assert_str_not_eq(pubkey_device_2, PUBKEY_INPUT_TWO_2);
     }
-
-    // test checkpub
-    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_BASE, KEY_STANDARD);
-    hdnode_deserialize(api_read_value(CMD_xpub), &node);
-    snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
-             utils_uint8_to_hex(node.public_key, 33));
-    snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
-             utils_uint8_to_hex(node.public_key, 33));
-
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
-    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        int len;
-        const char *val = api_read_value(CMD_echo);
-        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
-                     memory_report_aeskey(TFA_SHARED_SECRET));
-        u_assert(echo);
-        u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "\"meta\":");
-        u_assert_str_has(echo, check_1);
-        u_assert_str_has(echo, check_2);
-        free(echo);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
-    ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-
-    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
-    memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
-    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
-           sizeof(recid_device_1));
-    memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
-           sizeof(recid_device_1));
-
-    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
-                    recid_device_1, pubkey_device_1));
-    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
-                    recid_device_2, pubkey_device_2));
-
-    if (!TEST_LIVE_DEVICE) {
-        // If TESTING, a deterministic seed is loaded when 'raw' is specified
-        ASSERT_REPORT_HAS(check_sig_1);
-        ASSERT_REPORT_HAS(check_sig_2);
-        u_assert_str_eq(sig_device_1, check_sig_1);
-        u_assert_str_eq(sig_device_2, check_sig_2);
-        u_assert_str_eq(pubkey_device_1, check_pubkey);
-#ifdef ECC_USE_SECP256K1_LIB
-        u_assert_str_eq(recid_device_1, RECID_01);
-        u_assert_str_eq(recid_device_2, RECID_01);
-#else
-        u_assert_str_eq(recid_device_1, RECID_EE);
-        u_assert_str_eq(recid_device_2, RECID_EE);
-#endif
-    } else {
-        // Random seed generated on device
-        ASSERT_REPORT_HAS_NOT(check_sig_1);
-        ASSERT_REPORT_HAS_NOT(check_sig_2);
-        u_assert_str_not_eq(sig_device_1, check_sig_1);
-        u_assert_str_not_eq(sig_device_2, check_sig_2);
-        u_assert_str_not_eq(pubkey_device_1, check_pubkey);
-    }
-
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
-
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
-
 
     // lock to get TFA PINs
     int pin_err_count = 0;
@@ -2709,6 +2628,76 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
+    // test checkpub
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_BASE, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
+    snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+    snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
+             utils_uint8_to_hex(node.public_key, 33));
+
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+    if (!TEST_LIVE_DEVICE) {
+        int len;
+        const char *val = api_read_value(CMD_echo);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
+        u_assert(echo);
+        u_assert_str_has_not(echo, cmd_str(CMD_recid));
+        u_assert_str_has(echo, "\"meta\":");
+        u_assert_str_has(echo, check_1);
+        u_assert_str_has(echo, check_2);
+        free(echo);
+    }
+
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(cmd_str(CMD_sign));
+
+
+    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
+    memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
+    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
+           sizeof(recid_device_1));
+    memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
+           sizeof(recid_device_1));
+
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
+                    recid_device_1, pubkey_device_1));
+    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
+                    recid_device_2, pubkey_device_2));
+
+    if (!TEST_LIVE_DEVICE) {
+        // If TESTING, a deterministic seed is loaded when 'raw' is specified
+        ASSERT_REPORT_HAS(check_sig_1);
+        ASSERT_REPORT_HAS(check_sig_2);
+        u_assert_str_eq(sig_device_1, check_sig_1);
+        u_assert_str_eq(sig_device_2, check_sig_2);
+        u_assert_str_eq(pubkey_device_1, check_pubkey);
+#ifdef ECC_USE_SECP256K1_LIB
+        u_assert_str_eq(recid_device_1, RECID_01);
+        u_assert_str_eq(recid_device_2, RECID_01);
+#else
+        u_assert_str_eq(recid_device_1, RECID_EE);
+        u_assert_str_eq(recid_device_2, RECID_EE);
+#endif
+    } else {
+        // Random seed generated on device
+        ASSERT_REPORT_HAS_NOT(check_sig_1);
+        ASSERT_REPORT_HAS_NOT(check_sig_2);
+        u_assert_str_not_eq(sig_device_1, check_sig_1);
+        u_assert_str_not_eq(sig_device_2, check_sig_2);
+        u_assert_str_not_eq(pubkey_device_1, check_pubkey);
+    }
+
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
+
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
+
+
+
 
     // sign using two inputs
     api_format_send_cmd(cmd_str(CMD_sign), two_inputs, KEY_STANDARD);
@@ -2743,6 +2732,49 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
+
+    // sign max number of hashes per sign command
+    api_format_send_cmd(cmd_str(CMD_sign), maxhashes, KEY_STANDARD);
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+
+    // sign 1 more than max number of hashes per sign command
+    api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
+
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
+
+    { // Check exception for ETH/ETC.
+        api_format_send_cmd(cmd_str(CMD_sign),
+                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "\", \"keypath\":\"" "m/44'/60'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
+                            "m/44'/61'/" "\"}]}",
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            u_assert_str_eq(api_read_value(CMD_echo), "");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+
+        // exception only applies if all keypaths are eth/etc, not if others are
+        // present too:
+        api_format_send_cmd(cmd_str(CMD_sign),
+                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "\", \"keypath\":\"" "m/44'/1'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
+                            "m/44'/61'/" "\"}]}",
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+    }
+
     for (; pin_err_count < COMMANDER_MAX_ATTEMPTS - 1; pin_err_count++) {
         api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
@@ -2757,6 +2789,26 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_RESET));
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_NO_PASSWORD));
+
+    { // if pairing=true, locked=false, check that a wrong PIN does not work.
+        api_reset_device();
+
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"pairing\":true}", KEY_STANDARD);
+        ASSERT_SUCCESS;
+
+        api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
+        ASSERT_REPORT_HAS("\"pairing\":true");
+        ASSERT_REPORT_HAS("\"lock\":false");
+
+        api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"000\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_TFA_PIN));
+        ASSERT_REPORT_HAS(flag_msg(DBB_WARN_RESET));
+    }
 }
 
 
@@ -2799,6 +2851,7 @@ static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
     u_run_test(tests_name);
+    u_run_test(tests_pairing);
     u_run_test(tests_legacy_hidden_wallet);
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);

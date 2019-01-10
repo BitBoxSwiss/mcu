@@ -37,6 +37,7 @@
 void wallet_set_hidden(int hide);
 int wallet_is_hidden(void);
 int wallet_is_locked(void);
+int wallet_is_paired(void);
 uint8_t *wallet_get_master(void);
 uint8_t *wallet_get_chaincode(void);
 int wallet_split_seed(char **seed_words, const char *message);

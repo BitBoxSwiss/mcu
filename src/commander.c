@@ -822,6 +822,7 @@ static void commander_process_device(yajl_val json_node)
         char u2f_enabled[6] = {0};
         char u2f_hijack_enabled[6] = {0};
         char new_hidden_wallet_enabled[6] = {0};
+        char pairing_enabled[6] = {0};
         uint32_t serial[4] = {0};
 
         flash_wrapper_read_unique_id(serial, 4);
@@ -866,6 +867,12 @@ static void commander_process_device(yajl_val json_node)
             snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s", attr_str(ATTR_false));
         }
 
+        if (wallet_is_paired()) {
+            snprintf(pairing_enabled, sizeof(pairing_enabled), "%s", attr_str(ATTR_true));
+        } else {
+            snprintf(pairing_enabled, sizeof(pairing_enabled), "%s", attr_str(ATTR_false));
+        }
+
 
         if (sd_card_inserted() == DBB_OK) {
             snprintf(sdcard, sizeof(sdcard), "%s", attr_str(ATTR_true));
@@ -885,7 +892,7 @@ static void commander_process_device(yajl_val json_node)
         }
 
         snprintf(msg, sizeof(msg),
-                 "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s}",
+                 "{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":\"%s\",\"%s\":%s,\"%s\":%s,\"%s\":%s,\"%s\":%s}",
                  attr_str(ATTR_serial), utils_uint8_to_hex((uint8_t *)serial, sizeof(serial)),
                  attr_str(ATTR_version), DIGITAL_BITBOX_VERSION,
                  attr_str(ATTR_name), (char *)memory_name(""),
@@ -897,7 +904,8 @@ static void commander_process_device(yajl_val json_node)
                  attr_str(ATTR_TFA), tfa,
                  attr_str(ATTR_U2F), u2f_enabled,
                  attr_str(ATTR_U2F_hijack), u2f_hijack_enabled,
-                 attr_str(ATTR_new_hidden_wallet), new_hidden_wallet_enabled);
+                 attr_str(ATTR_new_hidden_wallet), new_hidden_wallet_enabled,
+                 attr_str(ATTR_pairing), pairing_enabled);
 
         free(tfa);
         commander_fill_report(cmd_str(CMD_device), msg, DBB_JSON_ARRAY);
@@ -940,11 +948,13 @@ static void commander_process_feature_set(yajl_val json_node)
         const char *u2f_path[] = { cmd_str(CMD_U2F), NULL };
         const char *u2f_hijack_path[] = { cmd_str(CMD_U2F_hijack), NULL };
         const char *new_hidden_wallet_path[] = { attr_str(ATTR_new_hidden_wallet), NULL };
+        const char *pairing_path[] = { attr_str(ATTR_pairing), NULL };
         yajl_val u2f = yajl_tree_get(data, u2f_path, yajl_t_any);
         yajl_val u2f_hijack = yajl_tree_get(data, u2f_hijack_path, yajl_t_any);
         yajl_val new_hidden_wallet = yajl_tree_get(data, new_hidden_wallet_path, yajl_t_any);
+        yajl_val pairing = yajl_tree_get(data, pairing_path, yajl_t_any);
 
-        if (!u2f && !u2f_hijack && !new_hidden_wallet) {
+        if (!u2f && !u2f_hijack && !new_hidden_wallet && !pairing) {
             goto err;
         }
 
@@ -981,6 +991,15 @@ static void commander_process_feature_set(yajl_val json_node)
                 flags |= MEM_EXT_MASK_NEW_HIDDEN_WALLET;
             } else if (YAJL_IS_FALSE(new_hidden_wallet)) {
                 flags &= ~(MEM_EXT_MASK_NEW_HIDDEN_WALLET);
+            } else {
+                goto err;
+            }
+        }
+
+        // Set the bit == enabled
+        if (pairing) {
+            if (YAJL_IS_TRUE(pairing)) {
+                flags &= ~(MEM_EXT_MASK_NOTPAIRED);
             } else {
                 goto err;
             }
@@ -1197,26 +1216,26 @@ static int commander_process(int cmd, yajl_val json_node)
 
 static int commander_tfa_append_pin(void)
 {
-    if (wallet_is_locked()) {
-        // Create one-time PIN
-        uint8_t pin_b[TFA_PIN_LEN];
-        memset(TFA_PIN, 0, sizeof(TFA_PIN));
-        if (random_bytes(pin_b, TFA_PIN_LEN, 0) == DBB_ERROR) {
-            commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
-            return DBB_ERROR;
-        }
+    // Create one-time PIN
+    uint8_t pin_b[TFA_PIN_LEN];
+    memset(TFA_PIN, 0, sizeof(TFA_PIN));
+    if (random_bytes(pin_b, TFA_PIN_LEN, 0) == DBB_ERROR) {
+        commander_fill_report(cmd_str(CMD_random), NULL, DBB_ERR_MEM_ATAES);
+        return DBB_ERROR;
+    }
 
+    // Note: if you change this to binary, be sure to update the TFA_PIN check
+    // in commander_parse().
 #ifdef TESTING
-        snprintf(TFA_PIN, sizeof(TFA_PIN), "0001");
+    snprintf(TFA_PIN, sizeof(TFA_PIN), "0001");
 #else
-        snprintf(TFA_PIN, sizeof(TFA_PIN), "%s",
-                 utils_uint8_to_hex(pin_b, TFA_PIN_LEN));
+
+    snprintf(TFA_PIN, sizeof(TFA_PIN), "%s",
+             utils_uint8_to_hex(pin_b, TFA_PIN_LEN));
 #endif
 
-        // Append PIN to echo
-        commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);
-
-    }
+    // Append PIN to echo
+    commander_fill_report(cmd_str(CMD_pin), TFA_PIN, DBB_OK);
     return DBB_OK;
 }
 
@@ -1237,6 +1256,18 @@ static int commander_tfa_check_pin(yajl_val json_node)
     return DBB_OK;
 }
 
+static uint8_t check_disable_pairing(const char* keypath)
+{
+    if (keypath == NULL) {
+        return 0;
+    }
+    const char* eth_keypath = "m/44'/60'/";
+    const char* etc_keypath = "m/44'/61'/";
+    // check if keypath starts with eth_keypath or etc_keypath.
+    return !strncmp(keypath, eth_keypath, strlen(eth_keypath)) ||
+        !strncmp(keypath, etc_keypath, strlen(etc_keypath));
+}
+
 static int commander_echo_command(yajl_val json_node)
 {
     const char *meta_path[] = { cmd_str(CMD_sign), cmd_str(CMD_meta), NULL };
@@ -1246,6 +1277,7 @@ static int commander_echo_command(yajl_val json_node)
     const char *meta = YAJL_GET_STRING(yajl_tree_get(json_node, meta_path, yajl_t_string));
     yajl_val check = yajl_tree_get(json_node, check_path, yajl_t_array);
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_any);
+    const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
 
     if (meta) {
         commander_fill_report(cmd_str(CMD_meta), meta, DBB_OK);
@@ -1258,7 +1290,6 @@ static int commander_echo_command(yajl_val json_node)
     } else {
         memset(json_array, 0, COMMANDER_ARRAY_MAX);
         for (size_t i = 0; i < data->u.array.len; i++) {
-            const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
             const char *hash_path[] = { cmd_str(CMD_hash), NULL };
 
             yajl_val obj = data->u.array.values[i];
@@ -1284,7 +1315,6 @@ static int commander_echo_command(yajl_val json_node)
         int ret;
         memset(json_array, 0, COMMANDER_ARRAY_MAX);
         for (size_t i = 0; i < check->u.array.len; i++) {
-            const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
             const char *pubkey_path[] = { cmd_str(CMD_pubkey), NULL };
 
             yajl_val obj = check->u.array.values[i];
@@ -1319,20 +1349,33 @@ static int commander_echo_command(yajl_val json_node)
     memset(json_report, 0, COMMANDER_REPORT_SIZE);
     commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
 
-    if (commander_tfa_append_pin() != DBB_OK) {
-        return DBB_ERROR;
+    uint8_t disable_pairing = 1;
+    for (size_t i = 0; i < data->u.array.len; i++) {
+        const char *keypath = YAJL_GET_STRING(yajl_tree_get(data->u.array.values[i], keypath_path, yajl_t_string));
+        if (!check_disable_pairing(keypath)) {
+            disable_pairing = 0;
+            break;
+        }
     }
 
-    int length;
-    char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) json_report,
-                           strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
-    commander_clear_report();
-    if (encoded_report) {
-        commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
+    if (!disable_pairing && wallet_is_paired()) {
+        if (commander_tfa_append_pin() != DBB_OK) {
+            return DBB_ERROR;
+        }
+        int length;
+        char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) json_report,
+                                                           strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
+        commander_clear_report();
+        if (encoded_report) {
+            commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
+        } else {
+            commander_fill_report(cmd_str(CMD_echo), NULL, DBB_ERR_MEM_ENCRYPT);
+        }
+        free(encoded_report);
     } else {
-        commander_fill_report(cmd_str(CMD_echo), NULL, DBB_ERR_MEM_ENCRYPT);
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_echo), "", DBB_OK);
     }
-    free(encoded_report);
 
     return DBB_OK;
 }
@@ -1404,12 +1447,12 @@ static void commander_parse(char *command)
                 goto other;
             }
 
-            if (wallet_is_locked()) {
+            if (TFA_PIN[0]) {
                 if (commander_tfa_check_pin(json_node) != DBB_OK) {
-                    memset(TFA_PIN, 0, sizeof(TFA_PIN));
                     commander_access_err(DBB_ERR_SIGN_TFA_PIN, memory_read_pin_err_count() + 1);
                     memory_pin_err_count(DBB_ACCESS_ITERATE);
                     memset(sign_command, 0, COMMANDER_REPORT_SIZE);
+                    memset(TFA_PIN, 0, sizeof(TFA_PIN));
                     goto exit;
                 } else {
                     memory_pin_err_count(DBB_ACCESS_INITIALIZE);
@@ -1431,9 +1474,9 @@ static void commander_parse(char *command)
         // Verification 'echo' for signing
         if (found_cmd == CMD_sign) {
             if (commander_echo_command(json_node) == DBB_OK) {
-                TFA_VERIFY = 1;
                 memset(sign_command, 0, COMMANDER_REPORT_SIZE);
                 snprintf(sign_command, COMMANDER_REPORT_SIZE, "%s", command);
+                TFA_VERIFY = 1;
             }
             goto exit;
         }

@@ -540,11 +540,15 @@ static void tests_pairing(void)
     ASSERT_REPORT_HAS("\"pairing\":false");
 
     // Forcabily turned on if device is locked.
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"test_pairing.pdf\"}",
+                        KEY_STANDARD);
     char seed_c[512];
     snprintf(seed_c, sizeof(seed_c),
              "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"%s\"}", attr_str(ATTR_create),
              "test_pairing.pdf", "key");
     api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
     // lock device
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
@@ -946,6 +950,11 @@ static void tests_u2f(void)
     // verify backup1 `u2f` fail
     // verify backup2 `u2f` success
 
+    snprintf(cmd, sizeof(cmd),
+             "{\"erase\":\"%s\"}", fn2c);
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        cmd,
+                        KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
              attr_str(ATTR_U2F_create), fn2c);

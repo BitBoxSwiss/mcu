@@ -416,16 +416,18 @@ static void commander_process_backup(yajl_val json_node)
             return;
         }
 
-        if (STREQ(value, attr_str(ATTR_erase))) {
-            // Erase all files
-            sd_erase(CMD_backup, NULL);
-            return;
-        }
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_INVALID_CMD);
+        return;
     }
 
     if (strlens(erase)) {
         // Erase single file
-        sd_erase(CMD_backup, erase);
+        int status = touch_button_press(DBB_TOUCH_LONG);
+        if (status == DBB_TOUCHED) {
+            sd_erase(CMD_backup, erase);
+        } else {
+            commander_fill_report(cmd_str(CMD_backup), NULL, status);
+        }
         return;
     }
 

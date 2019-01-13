@@ -178,7 +178,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Build bitbox static lib for tests
 
-if(BUILD_TYPE STREQUAL "test")
+if(BUILD_TYPE STREQUAL "test" OR BUILD_TYPE STREQUAL "simulator")
     message(STATUS "C link flags:     ${CMAKE_C_LINK_FLAGS}\n")
     include_directories(${DBB-INCLUDES})
     add_library(bitbox
@@ -190,9 +190,24 @@ endif()
 
 
 #-----------------------------------------------------------------------------
+# Build simulator
+
+if(BUILD_TYPE STREQUAL "simulator")
+    add_executable(
+        simulator
+        simulator.c
+    )
+    target_link_libraries(simulator bitbox)
+
+    # Location for sham SD files
+    execute_process(COMMAND mkdir "-p" "digitalbitbox" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+
+#-----------------------------------------------------------------------------
 # Build embedded firmware
 
-if(NOT BUILD_TYPE STREQUAL "test")
+if(NOT BUILD_TYPE STREQUAL "test" AND NOT BUILD_TYPE STREQUAL "simulator")
 
     if(BUILD_TYPE STREQUAL "firmware")
         set(SOURCES

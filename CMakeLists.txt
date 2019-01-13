@@ -108,6 +108,10 @@ if(BUILD_TYPE STREQUAL "test" OR BUILD_TYPE STREQUAL "simulator")
   add_definitions(-DTESTING)
 endif()
 
+if(BUILD_TYPE STREQUAL "simulator")
+    add_definitions(-DSIMULATOR)
+endif()
+
 if(BUILD_TYPE STREQUAL "bootloader")
     add_definitions(-DBOOTLOADER)
 endif()

@@ -198,9 +198,6 @@ if(BUILD_TYPE STREQUAL "simulator")
         simulator.c
     )
     target_link_libraries(simulator bitbox)
-
-    # Location for sham SD files
-    execute_process(COMMAND mkdir "-p" "digitalbitbox" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 

@@ -3,6 +3,7 @@
 #include "ecc.h"
 #include "flags.h"
 #include "memory.h"
+#include "sd.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +12,18 @@
 #define PORT 35345
 #define BUF_SIZE COMMANDER_REPORT_SIZE
 
-int main(void)
+int main(int argc, char* argv[])
 {
+    // Get and set the root directory
+    if (argc < 2) {
+        fprintf(stderr, "The directory to be used for the sd card files must be specified\n");
+        exit(1);
+    } else if (argc > 2) {
+        fprintf(stderr, "Too many arguments\n");
+        exit(1);
+    }
+    set_root_dir(argv[1]);
+
     // Init device
     ecc_context_init();
 #ifdef ECC_USE_SECP256K1_LIB

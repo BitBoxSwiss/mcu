@@ -13,7 +13,7 @@ MEMORY
 	ram (rw) : ORIGIN = 0x200000fc, LENGTH = 0x0000FF04
 }
 
-__stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : 0x3000;
+__stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : 0x2800;
 __ram_end__ = ORIGIN(ram) + LENGTH(ram) - 4;
 
 /* Section Definitions */

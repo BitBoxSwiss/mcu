@@ -124,11 +124,8 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
 
     char erase_cmd[100];
-    snprintf(erase_cmd, sizeof(erase_cmd),
-             "{\"erase\":\"%s\"}", filename_create);
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        erase_cmd,
-                        KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", filename_create);
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
 
@@ -155,6 +152,8 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_erase), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", filename);
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     ASSERT_SUCCESS;
 
@@ -192,11 +191,8 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_eq(xpub0, xpub1);
 
     // check backup list and erase
-    snprintf(erase_cmd, sizeof(erase_cmd),
-             "{\"erase\":\"%s\"}", filename_create);
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        erase_cmd,
-                        KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", filename_create);
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(filename);
     ASSERT_REPORT_HAS_NOT(filename_create);
@@ -222,7 +218,8 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
-    sd_erase(CMD_backup, NULL);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -246,6 +243,11 @@ static void tests_seed_xpub_backup(void)
 
     for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
         snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
+
+        snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
+                 lbn);
+        api_format_send_cmd(cmd_str(CMD_backup), erase_file, KEY_STANDARD);
+
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
         api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
         ASSERT_SUCCESS;
@@ -261,6 +263,15 @@ static void tests_seed_xpub_backup(void)
 
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_warning));
+
+    for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name) + 1; i++) {
+        snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
+        snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
+
+        snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
+                 lbn);
+        api_format_send_cmd(cmd_str(CMD_backup), erase_file, KEY_STANDARD);
+    }
 
     // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111'", KEY_STANDARD);
@@ -447,6 +458,18 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     u_assert_str_eq(xpub0, xpub1);
+
+    // cleanup
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create_2.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup2.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_c.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 }
 
 
@@ -549,7 +572,9 @@ static void tests_pairing(void)
              "test_pairing.pdf", "key");
     api_format_send_cmd(cmd_str(CMD_seed), seed_c, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
-
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"test_pairing.pdf\"}",
+                        KEY_STANDARD);
     // lock device
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -616,6 +641,10 @@ static void tests_legacy_hidden_wallet(void)
                             "{\"source\":\"create\", \"filename\":\"legacy_hidden_wallet_test.pdf\", \"key\":\"key\"}",
                             KEY_STANDARD);
         ASSERT_SUCCESS;
+        api_format_send_cmd(cmd_str(CMD_backup),
+                            "{\"erase\":\"legacy_hidden_wallet_test.pdf\"}",
+                            KEY_STANDARD);
+
     }
 
     api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_1, KEY_STANDARD);
@@ -731,7 +760,9 @@ static void tests_u2f(void)
                         "{\"source\":\"create\", \"filename\":\"u2f_test_0.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
     ASSERT_SUCCESS;
-
+    api_format_send_cmd(cmd_str(CMD_backup),
+                        "{\"erase\":\"u2f_test_0.pdf\"}",
+                        KEY_STANDARD);
     // U2F command runs
     api_hid_send_frame(&f);
     api_hid_read_frame(&r);
@@ -845,6 +876,8 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
              attr_str(ATTR_U2F_create), fn0);
@@ -858,11 +891,8 @@ static void tests_u2f(void)
     // verify backup0 ``    success (default hww)
     // verify backup0 `all` success (invalid cmd)
 
-    snprintf(cmd, sizeof(cmd),
-             "{\"erase\":\"%s\"}", fn0);
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        cmd,
-                        KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -906,11 +936,8 @@ static void tests_u2f(void)
     // verify backup1 `u2f` success
     // verify backup1 `hww` success
     // verify backup1 ``    success
-    snprintf(cmd, sizeof(cmd),
-             "{\"erase\":\"%s\"}", fn1);
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        cmd,
-                        KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn1);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\", \"filename\":\"%s\", \"key\":\"password\"}", fn1);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -950,6 +977,8 @@ static void tests_u2f(void)
     // verify backup1 `u2f` fail
     // verify backup2 `u2f` success
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn2c);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"erase\":\"%s\"}", fn2c);
     api_format_send_cmd(cmd_str(CMD_backup),
@@ -984,6 +1013,8 @@ static void tests_u2f(void)
     ASSERT_SUCCESS;
 
     // repeat reset u2f without counter field
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn2);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\"}",
              attr_str(ATTR_U2F_create), fn2);
@@ -1005,20 +1036,28 @@ static void tests_u2f(void)
     // create backup3h `hww`
     // create backup3u `u2f`
     // create backup3a `all`
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\"}", fn3);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3h);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3h, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3u);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"source\":\"%s\"}", fn3u,
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3a);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd), "{\"filename\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn3a, attr_str(ATTR_all));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
@@ -1034,7 +1073,6 @@ static void tests_u2f(void)
              attr_str(ATTR_U2F));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SD_NO_MATCH));
-
     snprintf(cmd, sizeof(cmd), "{\"check\":\"%s\",\"key\":\"password\",\"source\":\"%s\"}",
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
@@ -1274,6 +1312,8 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
 
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn4);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\"}",
              attr_str(ATTR_U2F_create), fn4);
@@ -1297,7 +1337,6 @@ static void tests_u2f(void)
              fn0, attr_str(ATTR_HWW));
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
-
 
     //
     // u2f sample sd files
@@ -1517,6 +1556,25 @@ static void tests_u2f(void)
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(sig_1_input);
     }
+    // cleanup
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn0);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn1);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn2);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn2c);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3h);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3u);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn3a);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
+    snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn4);
+    api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
 }
 
 
@@ -1597,13 +1655,11 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_bootloader), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        "{\"erase\":\"c.pdf\"}",
-
-                        KEY_STANDARD);
-        api_format_send_cmd(cmd_str(CMD_seed),
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"c.pdf\"}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"c.pdf\"}", KEY_STANDARD);
 
     api_format_send_cmd(cmd_str(CMD_ecdh),
                         "{ \"hash_ecdh\" : \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" }",
@@ -1613,6 +1669,7 @@ static void tests_device(void)
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
     ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"b.pdf\"}", KEY_STANDARD);
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -1914,9 +1971,7 @@ static void tests_password(void)
              hidden_pwd, cmd_str(CMD_key), hidden_pwd);
     api_format_send_cmd(cmd_str(CMD_hidden_password), cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_MASTER));
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        "{\"erase\":\"h.pdf\"}",
-                        KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"h.pdf\"}", KEY_STANDARD);
     // Seed wallets
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"create\",\"filename\":\"h.pdf\",\"key\":\"%s\"}", tests_pwd);
@@ -2098,6 +2153,7 @@ static void tests_password(void)
              "{\"source\":\"backup\",\"filename\":\"h.pdf\",\"key\":\"%s\"}", tests_pwd);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"h.pdf\"}", KEY_STANDARD);
     // Get standard wallet xpub
     // xpubs equal
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_STANDARD);
@@ -2134,12 +2190,11 @@ static void tests_echo_tfa(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_MASTER));
 
-    api_format_send_cmd(cmd_str(CMD_backup),
-                        "{\"erase\":\"c.pdf\"}",
-                        KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"c.pdf\"}", KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_seed),
                         "{\"source\":\"create\", \"filename\":\"c.pdf\", \"key\":\"password\"}", KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"c.pdf\"}", KEY_STANDARD);
 
     //
     // Test ECDH
@@ -2412,8 +2467,14 @@ static void tests_sign(void)
                  attr_str(ATTR_backup), "test_backup.pdf");
         api_format_send_cmd(cmd_str(CMD_seed), seed, KEY_STANDARD);
     } else {
+        api_format_send_cmd(cmd_str(CMD_backup),
+                            "{\"erase\":\"temp.pdf\"}",
+                            KEY_STANDARD);
         api_format_send_cmd(cmd_str(CMD_seed),
                             "{\"source\":\"create\", \"filename\":\"temp.pdf\", \"key\":\"key\"}",
+                            KEY_STANDARD);
+        api_format_send_cmd(cmd_str(CMD_backup),
+                            "{\"erase\":\"temp.pdf\"}",
                             KEY_STANDARD);
     }
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -2456,9 +2517,7 @@ static void tests_sign(void)
 
     api_format_send_cmd(cmd_str(CMD_sign), one_input, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
-    if (!TEST_LIVE_DEVICE) {
-        u_assert_str_eq(api_read_value(CMD_echo), "");
-    }
+    u_assert_str_eq(api_read_value(CMD_echo), "");
 
     api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_recid));
@@ -2648,22 +2707,22 @@ static void tests_sign(void)
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
-    ASSERT_REPORT_HAS(cmd_str(CMD_sign));
-
-
-    memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
-    memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
-    memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
-           sizeof(recid_device_1));
-    memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
-           sizeof(recid_device_1));
-
-    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
-                    recid_device_1, pubkey_device_1));
-    u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
-                    recid_device_2, pubkey_device_2));
-
     if (!TEST_LIVE_DEVICE) {
+        ASSERT_REPORT_HAS(cmd_str(CMD_sign));
+
+
+        memcpy(sig_device_1, api_read_array_value(CMD_sign, CMD_sig, 0), sizeof(sig_device_1));
+        memcpy(sig_device_2, api_read_array_value(CMD_sign, CMD_sig, 1), sizeof(sig_device_2));
+        memcpy(recid_device_1, api_read_array_value(CMD_sign, CMD_recid, 0),
+               sizeof(recid_device_1));
+        memcpy(recid_device_2, api_read_array_value(CMD_sign, CMD_recid, 1),
+               sizeof(recid_device_1));
+
+        u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
+                                                         recid_device_1, pubkey_device_1));
+        u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
+                                                         recid_device_2, pubkey_device_2));
+
         // If TESTING, a deterministic seed is loaded when 'raw' is specified
         ASSERT_REPORT_HAS(check_sig_1);
         ASSERT_REPORT_HAS(check_sig_2);
@@ -2678,12 +2737,7 @@ static void tests_sign(void)
         u_assert_str_eq(recid_device_2, RECID_EE);
 #endif
     } else {
-        // Random seed generated on device
-        ASSERT_REPORT_HAS_NOT(check_sig_1);
-        ASSERT_REPORT_HAS_NOT(check_sig_2);
-        u_assert_str_not_eq(sig_device_1, check_sig_1);
-        u_assert_str_not_eq(sig_device_2, check_sig_2);
-        u_assert_str_not_eq(pubkey_device_1, check_pubkey);
+        pin_err_count++;
     }
 
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
@@ -2734,14 +2788,22 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
 
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
-    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    if (!TEST_LIVE_DEVICE) {
+        ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    } else {
+        pin_err_count++;
+    }
 
     // sign 1 more than max number of hashes per sign command
     api_format_send_cmd(cmd_str(CMD_sign), hashoverflow, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
+    if (!TEST_LIVE_DEVICE) {
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_REPORT_BUF));
+    } else {
+        pin_err_count++;
+    }
 
     { // Check exception for ETH/ETC.
         api_format_send_cmd(cmd_str(CMD_sign),
@@ -2768,7 +2830,11 @@ static void tests_sign(void)
             u_assert_str_not_eq(api_read_value(CMD_echo), "");
         }
         api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
-        ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+        if (!TEST_LIVE_DEVICE) {
+            ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+        } else {
+            pin_err_count++;
+        }
     }
 
     for (; pin_err_count < COMMANDER_MAX_ATTEMPTS - 1; pin_err_count++) {

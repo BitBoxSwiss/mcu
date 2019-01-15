@@ -49,7 +49,17 @@
 #define f_mkdir(...)    {}
 #define FRESULT         int
 #define FO(a)           (a)
+#ifndef SIMULATOR
 static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLists.txt
+#else
+static char ROOTDIR[256]; // 255 char path
+
+void set_root_dir(const char* path)
+{
+    memset(ROOTDIR, 0, sizeof(ROOTDIR));
+    snprintf(ROOTDIR, sizeof(ROOTDIR), "%s", path);
+}
+#endif
 
 #else
 #include <limits.h>

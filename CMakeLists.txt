@@ -9,9 +9,10 @@ cmake_minimum_required(VERSION 2.8.5)
 if(BUILD_TYPE STREQUAL "firmware")
 elseif(BUILD_TYPE STREQUAL "bootloader")
 elseif(BUILD_TYPE STREQUAL "test")
+elseif(BUILD_TYPE STREQUAL "simulator")
 else()
     message(FATAL_ERROR "Invalid build type: ${BUILD_TYPE}. Build with:
-    cmake .. -DBUILD_TYPE=type   # 'type' can be 'test', 'firmware', or 'bootloader'
+    cmake .. -DBUILD_TYPE=type   # 'type' can be 'test', 'firmware', 'bootloader', or 'simulator'
     ")
 endif()
 
@@ -33,7 +34,7 @@ option(BUILD_DOCUMENTATION "Build the Doxygen documentation." OFF)
 option(CMAKE_VERBOSE_MAKEFILE "Verbose build." OFF)
 
 
-if(NOT BUILD_TYPE STREQUAL "test")
+if(NOT BUILD_TYPE STREQUAL "test" AND NOT BUILD_TYPE STREQUAL "simulator")
     set(ELF ${MYPROJECT}.elf)
     set(CMAKE_TOOLCHAIN_FILE arm.cmake)
     include(${CMAKE_TOOLCHAIN_FILE})
@@ -103,8 +104,12 @@ if(CONTINUOUS_INTEGRATION)
   add_definitions(-DCONTINUOUS_INTEGRATION)
 endif()
 
-if(BUILD_TYPE STREQUAL "test")
+if(BUILD_TYPE STREQUAL "test" OR BUILD_TYPE STREQUAL "simulator")
   add_definitions(-DTESTING)
+endif()
+
+if(BUILD_TYPE STREQUAL "simulator")
+    add_definitions(-DSIMULATOR)
 endif()
 
 if(BUILD_TYPE STREQUAL "bootloader")
@@ -187,7 +192,7 @@ if(BUILD_TYPE STREQUAL "test")
     endif()
 endif()
 
-if(NOT BUILD_TYPE STREQUAL "test")
+if(NOT BUILD_TYPE STREQUAL "test" AND NOT BUILD_TYPE STREQUAL "simulator")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -fdata-sections -fomit-frame-pointer -ffunction-sections -mlong-calls -mcpu=cortex-m4 -pipe -fno-strict-aliasing --param max-inline-insns-single=500 -D__SAM4S4A__ -DNDEBUG -DBOARD=USER_BOARD -DARM_MATH_CM4=true -DUDD_ENABLE -D_QTOUCH_ -Dscanf=iscanf -Dprintf=iprintf")
 endif()
 
@@ -245,7 +250,7 @@ if(BUILD_TYPE STREQUAL "test")
     endif()
     enable_testing()
 
-else()
+elseif(NOT BUILD_TYPE STREQUAL "simulator")
     add_custom_command(
         OUTPUT ${MYPROJECT}.bin
         COMMAND ${CMAKE_SIZE} ${ELF}

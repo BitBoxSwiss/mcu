@@ -9,8 +9,8 @@ SEARCH_DIR(.)
 MEMORY
 {
 	rom (rx)  : ORIGIN = 0x00409000, LENGTH = 0x00037000
-	ramf (rx) : ORIGIN = 0x20000000, LENGTH = 0x000000fc
-	ram (rw) : ORIGIN = 0x200000fc, LENGTH = 0x0000FF04
+	ramf (rx) : ORIGIN = 0x20000000, LENGTH = 0x000000f8
+	ram (rw) : ORIGIN = 0x200000f8, LENGTH = 0x0000FF08
 }
 
 __stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : 0x2800;

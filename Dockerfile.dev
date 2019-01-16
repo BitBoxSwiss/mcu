@@ -21,7 +21,10 @@ ENV DEBIAN_FRONTEND noninteractive
 WORKDIR /app
 COPY . /app
 
-RUN apt update && apt-get install -y cmake git gcc-arm-none-eabi locales python python-pip
+RUN apt update && apt-get install -y cmake git wget locales python python-pip
+RUN mkdir ~/Downloads && cd ~/Downloads && wget -O gcc.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/7-2018q2/gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2?revision=bc2c96c0-14b5-4bb4-9f18-bceb4050fee7?product=GNU%20Arm%20Embedded%20Toolchain,64-bit,,Linux,7-2018-q2-update
+RUN cd ~/Downloads && tar -xjvf gcc.tar.bz2
+RUN cd ~/Downloads && rsync -a gcc-arm-none-eabi-7-2018-q2-update/ /usr/local/
 RUN apt install -y libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3 libssl1.0-dev
 RUN apt install -y libbz2-dev libbz2-dev libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3
 RUN pip install --prefix /usr/local  cpp-coveralls

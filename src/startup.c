@@ -39,7 +39,6 @@
 #include "board_com.h"
 #include "sam4s4a.h"
 #include "core_cm4.h"
-#include "mpu.h"
 
 
 uint32_t __stack_chk_guard = 0;
@@ -84,6 +83,37 @@ void MemManage_Handler(void)
 }
 
 
+static void mpu_init(void)
+{
+    int i = 0;
+
+    __disable_irq();
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICER[i] = 0xFFFFFFFF;
+    }
+    for (i = 0; i < 8; i ++) {
+        NVIC->ICPR[i] = 0xFFFFFFFF;
+    }
+    __DSB();
+    __ISB();
+    MPU->CTRL = 0;
+
+    // Configure flash region
+    MPU->RBAR = IFLASH0_ADDR | MPU_REGION_VALID | 0;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    IFLASH0_SIZE) | MPU_REGION_STATE_RW;
+
+    // Configure boot region
+    MPU->RBAR = IFLASH0_ADDR | MPU_REGION_VALID | 1;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    FLASH_BOOT_LEN) | MPU_REGION_STATE_RO;
+
+    SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;
+    MPU->CTRL = 0x1 | MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk;
+    __DSB();
+    __ISB();
+    __enable_irq();
+}
 
 
 int main(void)
@@ -103,7 +133,7 @@ int main(void)
     delay_init(F_CPU);
     systick_init();
     touch_init();
-    mpu_bootloader_init();
+    mpu_init();
     bootloader_jump();
 
     while (1) { }

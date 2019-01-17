@@ -1446,6 +1446,7 @@ static void commander_parse(char *command)
             TFA_VERIFY = 0;
 
             if (found_cmd != CMD_sign) {
+                memset(TFA_PIN, 0, sizeof(TFA_PIN));
                 goto other;
             }
 

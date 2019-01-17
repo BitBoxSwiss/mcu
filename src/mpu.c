@@ -82,30 +82,28 @@ extern uint32_t _ebss;
 extern uint32_t _sbss;
 extern uint32_t _sdata;
 extern uint32_t _sstack;
+extern uint32_t __stack_size__;
 
 /**
  * Enables execution protection for the SRAM region.
  */
 static void mpu_sram_nx(void)
 {
-    // Configure SRAM region, protect from execution
     MPU->RBAR = IRAM_ADDR | MPU_REGION_VALID | rn_sram;
     MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
                     IRAM_SIZE) | MPU_REGION_STATE_RO;
+
     MPU->RBAR = (uint32_t) &_sdata | MPU_REGION_VALID | rn_data;
-    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size((
-                    uint32_t) &_erelocate -
-                (uint32_t) &_sdata) | MPU_REGION_STATE_RW | MPU_REGION_STATE_XN;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    (uint32_t) &_sbss - (uint32_t) &_sdata) | MPU_REGION_STATE_RW | MPU_REGION_STATE_XN;
 
     MPU->RBAR = (uint32_t) &_sbss | MPU_REGION_VALID | rn_bss;
-    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL |
-                mpu_region_size((uint32_t) &_ebss - (uint32_t) &_sbss) |
-                MPU_REGION_STATE_RW;
+    MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size(
+                    (uint32_t) &_sstack - (uint32_t) &_sbss) | MPU_REGION_STATE_RW | MPU_REGION_STATE_XN;
 
     MPU->RBAR = (uint32_t) &_sstack | MPU_REGION_VALID | rn_stack;
     MPU->RASR = MPU_REGION_ENABLE | MPU_REGION_NORMAL | mpu_region_size((
-                    IRAM_ADDR + IRAM_SIZE) -
-                (uint32_t) &_sstack) | MPU_REGION_STATE_RW | MPU_REGION_STATE_XN;
+                    uint32_t) __stack_size__) | MPU_REGION_STATE_RW;
 }
 
 /**

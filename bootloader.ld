@@ -3,12 +3,10 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 /* Memory Spaces Definitions */
-/*ram (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00010000*/
 MEMORY
 {
 	rom (rx)  : ORIGIN = 0x00400000, LENGTH = 0x00007FE0
-	ramf (rx) : ORIGIN = 0x20000000, LENGTH = 0x000000fc
-	ram (rw) : ORIGIN = 0x200000fc, LENGTH = 0x0000FF04
+	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00010000
 }
 
 __stack_size__ = DEFINED(__stack_size__) ? __stack_size__ : 0x3000;
@@ -82,12 +80,6 @@ SECTIONS
         . = ALIGN(4);
         _srelocate = .;
         *(.ramfunc .ramfunc.*);
-    } > ramf
-
-    .data : AT (_etext + SIZEOF(.relocate))
-    {
-        . = ALIGN(4);
-        _sdata = .;
         *(.data .data.*);
         . = ALIGN(4);
         _erelocate = .;

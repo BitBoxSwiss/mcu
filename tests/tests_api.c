@@ -1666,6 +1666,7 @@ static void tests_device(void)
                         KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_ecdh));
 
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"b.pdf\"}", KEY_STANDARD);
     api_format_send_cmd(cmd_str(CMD_backup), "{\"filename\":\"b.pdf\", \"key\":\"password\"}",
                         KEY_STANDARD);
     ASSERT_SUCCESS;

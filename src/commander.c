@@ -317,8 +317,10 @@ static int commander_process_backup_check(const char *key, const char *filename,
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 ret = DBB_ERROR;
             } else {
-                uint8_t main_ok = MEMEQ(node.private_key, memory_master_hww(NULL), MEM_PAGE_LEN) && MEMEQ(node.chain_code, memory_master_hww_chaincode(NULL), MEM_PAGE_LEN);
-                uint8_t hidden_ok = MEMEQ(node.private_key, memory_hidden_hww(NULL), MEM_PAGE_LEN) && MEMEQ(node.chain_code, memory_hidden_hww_chaincode(NULL), MEM_PAGE_LEN);
+                uint8_t main_ok = MEMEQ(node.private_key, memory_master_hww(NULL), MEM_PAGE_LEN) &&
+                                  MEMEQ(node.chain_code, memory_master_hww_chaincode(NULL), MEM_PAGE_LEN);
+                uint8_t hidden_ok = MEMEQ(node.private_key, memory_hidden_hww(NULL), MEM_PAGE_LEN) &&
+                                    MEMEQ(node.chain_code, memory_hidden_hww_chaincode(NULL), MEM_PAGE_LEN);
                 ret = (main_ok | hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
             }
             utils_zero(seed, sizeof(seed));
@@ -509,6 +511,13 @@ static void commander_process_seed(yajl_val json_node)
 
     if (utils_limit_alphanumeric_hyphen_underscore_period(filename) != DBB_OK) {
         commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_BAD_CHAR);
+        return;
+    }
+
+    if (wallet_seeded() == DBB_OK &&
+            !STREQ(source, attr_str(ATTR_U2F_load)) &&
+            !STREQ(source, attr_str(ATTR_U2F_create))) {
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SEED_SEEDED);
         return;
     }
 
@@ -757,21 +766,24 @@ static void commander_process_xpub(yajl_val json_node)
         return;
     }
 
-    wallet_report_xpub(value, xpub);
+    int ret = wallet_report_xpub(value, xpub);
 
     if (xpub[0]) {
         commander_fill_report(cmd_str(CMD_xpub), xpub, DBB_OK);
 
-        int encrypt_len;
-        char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) xpub, strlens(xpub),
-                               &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
-
-        if (encoded_report) {
-            commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
-            free(encoded_report);
-        } else {
-            commander_clear_report();
-            commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_MEM_ENCRYPT);
+        if (ret == DBB_WARN_KEYPATH) {
+            commander_fill_report(cmd_str(CMD_warning), flag_msg(DBB_WARN_KEYPATH), DBB_OK);
+        } else if (ret == DBB_OK) {
+            int encrypt_len;
+            char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) xpub, strlens(xpub),
+                                   &encrypt_len, memory_report_aeskey(TFA_SHARED_SECRET));
+            if (encoded_report) {
+                commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
+                free(encoded_report);
+            } else {
+                commander_clear_report();
+                commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_MEM_ENCRYPT);
+            }
         }
     } else {
         commander_fill_report(cmd_str(CMD_xpub), NULL, DBB_ERR_KEY_CHILD);
@@ -864,9 +876,11 @@ static void commander_process_device(yajl_val json_node)
 
         if (ext_flags & MEM_EXT_MASK_NEW_HIDDEN_WALLET) {
             // Bit is set == enabled
-            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s", attr_str(ATTR_true));
+            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s",
+                     attr_str(ATTR_true));
         } else {
-            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s", attr_str(ATTR_false));
+            snprintf(new_hidden_wallet_enabled, sizeof(new_hidden_wallet_enabled), "%s",
+                     attr_str(ATTR_false));
         }
 
         if (wallet_is_paired()) {
@@ -1258,16 +1272,16 @@ static int commander_tfa_check_pin(yajl_val json_node)
     return DBB_OK;
 }
 
-static uint8_t check_disable_pairing(const char* keypath)
+static uint8_t check_disable_pairing(const char *keypath)
 {
     if (keypath == NULL) {
         return 0;
     }
-    const char* eth_keypath = "m/44'/60'/";
-    const char* etc_keypath = "m/44'/61'/";
+    const char *eth_keypath = "m/44'/60'/";
+    const char *etc_keypath = "m/44'/61'/";
     // check if keypath starts with eth_keypath or etc_keypath.
     return !strncmp(keypath, eth_keypath, strlen(eth_keypath)) ||
-        !strncmp(keypath, etc_keypath, strlen(etc_keypath));
+           !strncmp(keypath, etc_keypath, strlen(etc_keypath));
 }
 
 static int commander_echo_command(yajl_val json_node)
@@ -1353,7 +1367,8 @@ static int commander_echo_command(yajl_val json_node)
 
     uint8_t disable_pairing = 1;
     for (size_t i = 0; i < data->u.array.len; i++) {
-        const char *keypath = YAJL_GET_STRING(yajl_tree_get(data->u.array.values[i], keypath_path, yajl_t_string));
+        const char *keypath = YAJL_GET_STRING(yajl_tree_get(data->u.array.values[i], keypath_path,
+                                              yajl_t_string));
         if (!check_disable_pairing(keypath)) {
             disable_pairing = 0;
             break;
@@ -1366,7 +1381,7 @@ static int commander_echo_command(yajl_val json_node)
         }
         int length;
         char *encoded_report = cipher_aes_b64_hmac_encrypt((unsigned char *) json_report,
-                                                           strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
+                               strlens(json_report), &length, memory_report_aeskey(TFA_SHARED_SECRET));
         commander_clear_report();
         if (encoded_report) {
             commander_fill_report(cmd_str(CMD_echo), encoded_report, DBB_OK);
@@ -1651,7 +1666,7 @@ static int commander_check_init(const char *encrypted_command)
                 }
                 char device_info[100];
                 snprintf(device_info, sizeof(device_info),
-                        "{\"%s\":\"%s\"}", attr_str(ATTR_version), DIGITAL_BITBOX_VERSION);
+                         "{\"%s\":\"%s\"}", attr_str(ATTR_version), DIGITAL_BITBOX_VERSION);
                 commander_fill_report(cmd_str(CMD_device), device_info, DBB_JSON_OBJECT);
                 yajl_tree_free(json_node);
                 return DBB_ERROR;

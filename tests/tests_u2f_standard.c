@@ -304,7 +304,8 @@ static void check_CounterUpdate(void)
              "{\"source\":\"create\", \"filename\":\"hwwcountertest.pdf\", \"key\":\"key\"}");
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
-    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"hwwcountertest.pdf\"}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"hwwcountertest.pdf\"}",
+                        KEY_STANDARD);
 
     if (U2Fob_liveDeviceTesting()) {
         PRINT_MESSAGE("Creating new U2F key. LONG touch to continue...\n");
@@ -333,7 +334,8 @@ static void check_CounterUpdate(void)
              c);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
     ASSERT_SUCCESS;
-    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"u2fcountertest.pdf\"}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_backup), "{\"erase\":\"u2fcountertest.pdf\"}",
+                        KEY_STANDARD);
 
     // Ctr should be c + 1.
     WaitForUserPresence(device, arg_hasButton);

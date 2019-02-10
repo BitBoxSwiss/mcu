@@ -69,7 +69,7 @@ char *sd_load(const char *fn, int cmd);
 uint8_t sd_write(const char *fn, const char *wallet_backup, const char *wallet_name,
                  const char *u2f_backup, uint8_t replace, int cmd);
 #ifdef SIMULATOR
-void set_root_dir(const char* path);
+void set_root_dir(const char *path);
 #endif
 
 

@@ -33,6 +33,23 @@
 #include "bip32.h"
 
 
+// BIP44 keypath whitelist for the xpub command
+// m / purpose' / coin_type' / account' / change / address_index
+#define BIP44_PURPOSE_HARDENED true
+#define BIP44_PURPOSE_P2PKH 44 // BIP44 legacy
+#define BIP44_PURPOSE_P2WPKH_P2SH 49 // BIP49 segwit nested in pay to script hash
+#define BIP44_PURPOSE_P2WPKH 84 // BIP84 native segwit
+#define BIP44_COIN_TYPE_HARDENED true
+#define BIP44_COIN_TYPE_BTC 0
+#define BIP44_COIN_TYPE_TESTNET 1
+#define BIP44_COIN_TYPE_LTC 2
+#define BIP44_ACCOUNT_HARDENED true
+#define BIP44_ACCOUNT_MAX 9// 10 accounts (0:9)
+#define BIP44_CHANGE_HARDENED false
+#define BIP44_CHANGE_MAX 0// A client is not expected to request an xpub on a change path
+#define BIP44_ADDRESS_HARDENED false
+#define BIP44_ADDRESS_MAX 999999// 1M accounts (0:999999)
+
 /* BIP32 */
 void wallet_set_hidden(int hide);
 int wallet_is_hidden(void);
@@ -46,7 +63,7 @@ int wallet_erased(void);
 int wallet_create(const char *passphrase, const char *entropy_in);
 int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
-void wallet_report_xpub(const char *keypath, char *xpub);
+int wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincode);

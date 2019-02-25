@@ -25,8 +25,8 @@ try:
     message = '{"bootloader":"lock"}'
     message = '{"bootloader":"unlock"}'
     message = '{"feature_set":{"U2F":false}}'
-    message = '{"seed":{\"source\":\"create\", \"filename\":\"testing.pdf\", \"key\":\"password\"}}'
-    message = '{"sign":{"meta":"hash", "data":[{"keypath":"m/1/1/1/0", "hash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},{"keypath":"m/1/1/1/1", "hash":"123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"}]}}'
+    message = '{"seed":{"source":"create", "filename":"testing.pdf", "key":"password"}}'
+    message = '{"sign":{"meta":"hash", "data":[{"keypath":"m/1p/1/1/0", "hash":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},{"keypath":"m/1p/1/1/1", "hash":"123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"}]}}'
     message = '{"led":"blink"}'
     
 

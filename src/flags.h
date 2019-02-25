@@ -205,6 +205,7 @@ X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic enc
 X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
 X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\
 X(ERR_SEED_INVALID,    204, "Invalid seed.")\
+X(ERR_SEED_SEEDED,     205, "Wallet is seeded. Reset to continue.")\
 X(ERR_KEY_MASTER,      250, "Master key not present.")\
 X(ERR_KEY_CHILD,       251, "Could not generate key.")\
 X(ERR_KEY_ECDH,        252, "Could not generate ECDH secret.")\
@@ -240,6 +241,7 @@ X(WARN_RESET,          900, "attempts remain before the device is reset.")\
 X(WARN_NO_MCU,         901, "Ignored for non-embedded testing.")\
 X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncated.")\
 X(WARN_RESET_TOUCH,    903, "attempts remain before the device is reset. The next login requires holding the touch button.")\
+X(WARN_KEYPATH,        904, "Non-standard keypath.")\
 X(FLAG_NUM,              0, 0)/* keep last */
 
 

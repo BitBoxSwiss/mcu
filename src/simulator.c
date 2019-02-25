@@ -12,7 +12,7 @@
 #define PORT 35345
 #define BUF_SIZE COMMANDER_REPORT_SIZE
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     // Get and set the root directory
     if (argc < 2) {
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     sock.sin_port = htons(PORT);
 
     // Bind socket
-    if (bind(s, (struct sockaddr*)&sock, sizeof(sock)) == -1) {
+    if (bind(s, (struct sockaddr *)&sock, sizeof(sock)) == -1) {
         fprintf(stderr, "Could not bind socket\n");
         exit(1);
     }
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 
     // Wait for connections and handle
     char buf[BUF_SIZE];
-    char* result;
+    char *result;
     struct sockaddr_in in_sock;
     int recv_len;
     socklen_t in_sock_len = sizeof(in_sock);
@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
         int rc;
         // Receive
         memset(buf, 0, BUF_SIZE);
-        if ((recv_len = recvfrom(s, buf, BUF_SIZE, 0, (struct sockaddr*)&in_sock, &in_sock_len)) < 0) {
+        if ((recv_len = recvfrom(s, buf, BUF_SIZE, 0, (struct sockaddr *)&in_sock,
+                                 &in_sock_len)) < 0) {
             fprintf(stderr, "Failed to receive udp data, error %d\n", recv_len);
             exit(1);
         }
@@ -72,7 +73,8 @@ int main(int argc, char* argv[])
         result = commander(buf);
 
         // Send result to socket
-        if ((rc = sendto(s, result, strlen(result), 0, (struct sockaddr*)&in_sock, in_sock_len)) < 0) {
+        if ((rc = sendto(s, result, strlen(result), 0, (struct sockaddr *)&in_sock,
+                         in_sock_len)) < 0) {
             fprintf(stderr, "Failed to send udp data, error %d\n", rc);
             exit(1);
         }

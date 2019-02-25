@@ -131,7 +131,7 @@ uint32_t flash_wrapper_erase_page(uint32_t ul_address, uint8_t uc_page_num)
 
 
 uint32_t flash_wrapper_write(uint32_t ul_address, void *p_buffer,
-                  uint32_t ul_size, uint32_t ul_erase_flag)
+                             uint32_t ul_size, uint32_t ul_erase_flag)
 {
 #ifdef TESTING
     uint32_t i;

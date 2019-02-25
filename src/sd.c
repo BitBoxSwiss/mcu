@@ -54,7 +54,7 @@ static char ROOTDIR[] = "tests/digitalbitbox";// If change, update tests/CMakeLi
 #else
 static char ROOTDIR[256]; // 255 char path
 
-void set_root_dir(const char* path)
+void set_root_dir(const char *path)
 {
     memset(ROOTDIR, 0, sizeof(ROOTDIR));
     snprintf(ROOTDIR, sizeof(ROOTDIR), "%s", path);

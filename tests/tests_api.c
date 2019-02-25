@@ -39,6 +39,7 @@
 #include "flags.h"
 #include "random.h"
 #include "cipher.h"
+#include "wallet.h"
 #include "commander.h"
 #include "yajl/src/api/yajl_tree.h"
 #include "secp256k1/include/secp256k1.h"
@@ -214,12 +215,17 @@ static void tests_seed_xpub_backup(void)
 
 
     api_reset_device();
-
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
     snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_bad, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SD_BAD_CHAR));
+
+    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT("../seed_create_bad.pdf");
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -227,11 +233,21 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS("seed_create.pdf");
 
-    api_format_send_cmd(cmd_str(CMD_seed), seed_create_bad, KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SD_BAD_CHAR));
-
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
-    ASSERT_REPORT_HAS_NOT("../seed_create_bad.pdf");
+    // cleanup
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create_2.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup2.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_hww.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_u2f.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_v2.2.3.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 
     // test sd list overflow
     char long_backup_name[SD_FILEBUF_LEN_MAX / 8];
@@ -276,48 +292,248 @@ static void tests_seed_xpub_backup(void)
     // test keypath
     api_format_send_cmd(cmd_str(CMD_xpub), "m/111'", KEY_STANDARD);
     ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+
     api_format_send_cmd(cmd_str(CMD_xpub), "m/1/2'/3/4", KEY_STANDARD);
     ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/1/2/3", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "111", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "/111", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m111", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/a", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/!", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/-111", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/'0", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/'", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m//", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
     api_format_send_cmd(cmd_str(CMD_xpub), "m/ ", KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_CHILD));
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
 
+
+    // Test xpub whitelist
+    char kp[128];
+    char xpub[112];
+
+    // Legacy BTC
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+    memcpy(xpub, api_read_value(CMD_xpub), sizeof(xpub));
+    if (!TEST_LIVE_DEVICE) {
+        int len;
+        const char *val = api_read_value(CMD_echo);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
+        u_assert(echo);
+        u_assert_str_has(echo, "xpub");
+        u_assert_str_has_not(echo, flag_msg(DBB_WARN_KEYPATH));
+        u_assert_str_eq(xpub, echo);
+        free(echo);
+    }
+
+    // P2WPKH
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2WPKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
+    // P2WPKH_P2SH
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2WPKH_P2SH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
+    // Exceeds account max
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX + 1, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Exceeds change max
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX + 1, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Exceeds address max
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX + 1, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Purpose not hardened
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, !BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Coin type not hardened
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, !BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Account not hardened
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, !BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Change hardened
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, !BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Address hardened
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, !BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // LTC
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_LTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
+    // TESTNET
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_TESTNET, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
+    // ETH (not supported, so should not give an echo)
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             60, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
 
 
     // test create seeds differ
@@ -352,17 +568,25 @@ static void tests_seed_xpub_backup(void)
     {
         // Check backup should also work with the hidden password.
         char set_hidden_wallet_cmd[512];
-        snprintf(set_hidden_wallet_cmd, sizeof(set_hidden_wallet_cmd), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+        snprintf(set_hidden_wallet_cmd, sizeof(set_hidden_wallet_cmd),
+                 "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
                  hidden_pwd, cmd_str(CMD_key), "hiddenpassword");
         api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd, KEY_STANDARD);
         ASSERT_SUCCESS;
 
 
-        snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"hiddenpassword\"}", filename);
+        snprintf(check, sizeof(check), "{\"check\":\"%s\", \"key\":\"hiddenpassword\"}",
+                 filename);
         api_format_send_cmd(cmd_str(CMD_backup), check, KEY_STANDARD);
         ASSERT_SUCCESS;
     }
 
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create_2.pdf");
+    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 
     api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -377,15 +601,16 @@ static void tests_seed_xpub_backup(void)
 
     // test cannot overwrite existing backup file
     api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SEED_SEEDED));
+
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
+    api_format_send_cmd(cmd_str(CMD_seed), seed_create_2, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SD_OPEN_FILE));
 
     // test erase single backup file
-    if (!TEST_LIVE_DEVICE) {
-        // testing buffer gets overwritten by seed command, so reset it
-        api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
-        ASSERT_SUCCESS;
-    }
-
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(filename);
 
@@ -409,7 +634,6 @@ static void tests_seed_xpub_backup(void)
     memset(xpub1, 0, sizeof(xpub1));
 
     api_reset_device();
-
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
@@ -423,6 +647,10 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_not_eq(xpub0, xpub1);
 
     // seed with extra entropy from device (entropy too short)
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(seed_usb, sizeof(seed_usb),
              "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
              seed_entropy_short, filename2, key);
@@ -430,6 +658,10 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // seed with extra entropy from device (entropy too long)
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(seed_usb, sizeof(seed_usb),
              "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
              seed_entropy_long, filename2, key);
@@ -437,6 +669,10 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // seed with extra entropy from device
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(seed_usb, sizeof(seed_usb),
              "{\"source\":\"create\",\"entropy\":\"%s\",\"filename\":\"%s\",\"key\":\"%s\"}",
              seed_entropy, filename2, key);
@@ -450,6 +686,10 @@ static void tests_seed_xpub_backup(void)
     u_assert_str_not_eq(xpub0, xpub1);
 
     // load backup
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     api_format_send_cmd(cmd_str(CMD_seed), seed_b, KEY_STANDARD);
     ASSERT_SUCCESS;
 
@@ -600,7 +840,8 @@ static void tests_legacy_hidden_wallet(void)
     ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
 
     // Disable new hidden wallet
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}",
+                        KEY_STANDARD);
     ASSERT_SUCCESS;
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     ASSERT_REPORT_HAS("\"U2F\":true");
@@ -608,16 +849,19 @@ static void tests_legacy_hidden_wallet(void)
     ASSERT_REPORT_HAS("\"new_hidden_wallet\":false");
 
     // Enable new hidden wallet
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}",
+                        KEY_STANDARD);
     ASSERT_SUCCESS;
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
 
     char set_hidden_wallet_cmd_1[512];
-    snprintf(set_hidden_wallet_cmd_1, sizeof(set_hidden_wallet_cmd_1), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+    snprintf(set_hidden_wallet_cmd_1, sizeof(set_hidden_wallet_cmd_1),
+             "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
              hidden_pwd, cmd_str(CMD_key), "key1");
     char set_hidden_wallet_cmd_2[512];
-    snprintf(set_hidden_wallet_cmd_2, sizeof(set_hidden_wallet_cmd_2), "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
+    snprintf(set_hidden_wallet_cmd_2, sizeof(set_hidden_wallet_cmd_2),
+             "{\"%s\":\"%s\",\"%s\":\"%s\"}", cmd_str(CMD_password),
              hidden_pwd, cmd_str(CMD_key), "key2");
     char keypath[] = "m/44'/0'/0'/0/0";
 
@@ -653,7 +897,8 @@ static void tests_legacy_hidden_wallet(void)
     // can't modify new_hidden_wallet when the device is locked
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_HIDDEN);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_HIDDEN);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}",
+                        KEY_HIDDEN);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     ASSERT_REPORT_HAS("\"new_hidden_wallet\":true");
@@ -669,7 +914,8 @@ static void tests_legacy_hidden_wallet(void)
     memcpy(xpub_hidden, api_read_value(CMD_xpub), sizeof(xpub_hidden));
 
     // Disable new hidden wallet (activate legacy)
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}",
+                        KEY_STANDARD);
     ASSERT_SUCCESS;
 
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
@@ -678,7 +924,8 @@ static void tests_legacy_hidden_wallet(void)
     memcpy(xpub_hidden_legacy, api_read_value(CMD_xpub), sizeof(xpub_hidden_legacy));
 
     // Re-enable new hidden wallet, check that it produces the same as before.
-    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+    api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}",
+                        KEY_STANDARD);
     ASSERT_SUCCESS;
 
     api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
@@ -688,9 +935,12 @@ static void tests_legacy_hidden_wallet(void)
     u_assert_str_eq(xpub_hidden_2, xpub_hidden);
 
     if (!TEST_LIVE_DEVICE) {
-        u_assert_str_eq(xpub_main, "xpub6GddvKfUWU9VV4mbUCsz6C97rzvL7kdEfKsR7akEhM964mceXkXnv9FkCxnELYkc3rKybg4fyrqzE5GpUw1j45a3tejwCsFCs3c4oFiRgn9");
-        u_assert_str_eq(xpub_hidden, "xpub6G8MNx3mFXKh6i6rf1JpW7Aqu5aoexLq6yw3sUCZwukDi2Ghzg7PE1n4tQPTeZS2j9cm28HFHYBu4D1iqCwBN1Jt5t4cCP5GWgbzhBAMYXB");
-        u_assert_str_eq(xpub_hidden_legacy, "xpub6FhGYqMLDAHdheptxhErzFd2F13h16AE6fWTMd2voqijUU2TWjjKnKdiCucgDnh18R46Jkrq5i6rHrjXGds87CU6y69NzKFBDqN3cUPDXzg");
+        u_assert_str_eq(xpub_main,
+                        "xpub6GddvKfUWU9VV4mbUCsz6C97rzvL7kdEfKsR7akEhM964mceXkXnv9FkCxnELYkc3rKybg4fyrqzE5GpUw1j45a3tejwCsFCs3c4oFiRgn9");
+        u_assert_str_eq(xpub_hidden,
+                        "xpub6G8MNx3mFXKh6i6rf1JpW7Aqu5aoexLq6yw3sUCZwukDi2Ghzg7PE1n4tQPTeZS2j9cm28HFHYBu4D1iqCwBN1Jt5t4cCP5GWgbzhBAMYXB");
+        u_assert_str_eq(xpub_hidden_legacy,
+                        "xpub6FhGYqMLDAHdheptxhErzFd2F13h16AE6fWTMd2voqijUU2TWjjKnKdiCucgDnh18R46Jkrq5i6rHrjXGds87CU6y69NzKFBDqN3cUPDXzg");
     } else {
         u_assert_str_not_eq(xpub_main, xpub_hidden);
         u_assert_str_not_eq(xpub_main, xpub_hidden_legacy);
@@ -707,12 +957,14 @@ static void tests_legacy_hidden_wallet(void)
         ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
         char xpub[112];
         memcpy(xpub, api_read_value(CMD_xpub), sizeof(xpub));
-        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}",
+                            KEY_STANDARD);
         ASSERT_SUCCESS;
 
         api_format_send_cmd(cmd_str(CMD_hidden_password), set_hidden_wallet_cmd_2, KEY_STANDARD);
         ASSERT_SUCCESS;
-        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}", KEY_STANDARD);
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":true}",
+                            KEY_STANDARD);
         ASSERT_SUCCESS;
         api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
         ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -720,7 +972,8 @@ static void tests_legacy_hidden_wallet(void)
 
         // Check that the legacy hidden wallet has not changed despite the new
         // hidden wallet having been changed.
-        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}", KEY_STANDARD);
+        api_format_send_cmd(cmd_str(CMD_feature_set), "{\"new_hidden_wallet\":false}",
+                            KEY_STANDARD);
         ASSERT_SUCCESS;
         api_format_send_cmd(cmd_str(CMD_xpub), keypath, KEY_HIDDEN);
         ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
@@ -872,7 +1125,6 @@ static void tests_u2f(void)
     // erase sd
     // reset u2f fail (would create backup `all` by default but cannot because not seeded)
     api_reset_device();
-
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
@@ -936,6 +1188,10 @@ static void tests_u2f(void)
     // verify backup1 `u2f` success
     // verify backup1 `hww` success
     // verify backup1 ``    success
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(cmd, sizeof(cmd), "{\"erase\":\"%s\"}", fn1);
     api_format_send_cmd(cmd_str(CMD_backup), cmd, KEY_STANDARD);
     snprintf(cmd, sizeof(cmd),
@@ -1187,6 +1443,10 @@ static void tests_u2f(void)
     // recover backup0 u2f
     // recover backup3u hww fail
     // recover backup3u all fail (invalid cmd)
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
              attr_str(ATTR_U2F_load), fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1246,10 +1506,8 @@ static void tests_u2f(void)
     // recover backup0 hww
     // recover backup3h u2f fail
     // recover backup3h all fail (invalid cmd)
-    snprintf(cmd, sizeof(cmd),
-             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
-             fn0);
-    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
 
     snprintf(cmd, sizeof(cmd),
@@ -1263,6 +1521,12 @@ static void tests_u2f(void)
              fn3h);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
+
+    snprintf(cmd, sizeof(cmd),
+             "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"password\"}", attr_str(ATTR_backup),
+             fn0);
+    api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
+    ASSERT_SUCCESS;
 
 
     // verify backup3h `hww` fail
@@ -1375,6 +1639,10 @@ static void tests_u2f(void)
         // verify  v23u u2f success
         // verify  v23u hww fail
         // sign             fail
+        api_reset_device();
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_3u);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1447,6 +1715,10 @@ static void tests_u2f(void)
         // recover fn4  hww success
         // verify  fn4  hww success
         // sign             fail
+        api_reset_device();
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), fn4);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1473,6 +1745,10 @@ static void tests_u2f(void)
         // verify  v23a hww success
         // verify  v23h hww success
         // sign             success
+        api_reset_device();
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\"}",
                  attr_str(ATTR_U2F_load), tb_v2_3a);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1515,6 +1791,10 @@ static void tests_u2f(void)
         // recover fn4  hww success
         // verify  fn4  hww success
         // sign             fail
+        api_reset_device();
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), fn4);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -1537,6 +1817,10 @@ static void tests_u2f(void)
         // recover v22  hww success
         // recover v22  u2f fail
         // sign             success
+        api_reset_device();
+        api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+        ASSERT_SUCCESS;
+
         snprintf(cmd, sizeof(cmd), "{\"source\":\"%s\", \"filename\":\"%s\", \"key\":\"key\"}",
                  attr_str(ATTR_backup), tb_v2_2);
         api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -2134,6 +2418,10 @@ static void tests_password(void)
     // Use hidden key to seed from backup
     // -> puts the hidden wallet into a standard wallet
     // -> erases hidden wallet
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"backup\",\"filename\":\"h.pdf\",\"key\":\"%s\"}", hidden_pwd);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -2150,6 +2438,10 @@ static void tests_password(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_JSON_PARSE));
     // Use standard key to seed from backup
     // -> get the original standard wallet
+    api_reset_device();
+    api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
+    ASSERT_SUCCESS;
+
     snprintf(cmd, sizeof(cmd),
              "{\"source\":\"backup\",\"filename\":\"h.pdf\",\"key\":\"%s\"}", tests_pwd);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
@@ -2720,9 +3012,9 @@ static void tests_sign(void)
                sizeof(recid_device_1));
 
         u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_1, HASH_INPUT_ONE,
-                                                         recid_device_1, pubkey_device_1));
+                        recid_device_1, pubkey_device_1));
         u_assert_int_eq(0, recover_public_key_verify_sig(sig_device_2, HASH_DEFAULT,
-                                                         recid_device_2, pubkey_device_2));
+                        recid_device_2, pubkey_device_2));
 
         // If TESTING, a deterministic seed is loaded when 'raw' is specified
         ASSERT_REPORT_HAS(check_sig_1);
@@ -2806,7 +3098,8 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
-    { // Check exception for ETH/ETC.
+    {
+        // Check exception for ETH/ETC.
         api_format_send_cmd(cmd_str(CMD_sign),
                             "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/60'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
@@ -2853,7 +3146,8 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_NO_PASSWORD));
 
-    { // if pairing=true, locked=false, check that a wrong PIN does not work.
+    {
+        // if pairing=true, locked=false, check that a wrong PIN does not work.
         api_reset_device();
 
         api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);

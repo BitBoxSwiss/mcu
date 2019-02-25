@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <inttypes.h>
 
 #include "commander.h"
@@ -39,6 +40,15 @@
 #include "flags.h"
 #include "sha2.h"
 #include "ecc.h"
+
+
+typedef enum BIP44_LEVELS {
+    BIP44_LEVEL_PURPOSE,
+    BIP44_LEVEL_COIN_TYPE,
+    BIP44_LEVEL_ACCOUNT,
+    BIP44_LEVEL_CHANGE,
+    BIP44_LEVEL_ADDRESS,
+} BIP44_LEVELS;
 
 
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
@@ -139,6 +149,11 @@ exit:
 }
 
 
+/*
+ Returns DBB_OK if successful and keypath is whitelisted
+ Returns DBB_WARN_KEYPATH if successful but keypath is not whitelisted
+ Returns DBB_ERROR if could not generate a key
+*/
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincode)
 {
@@ -171,23 +186,24 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
     if (pch == NULL) {
         goto err;
     }
-    int has_prm = 0;
+    uint8_t path_level = 0;
+    bool has_prime = false, whitelisted_keypath = true;
     while (pch != NULL) {
         size_t i = 0;
-        int prm = 0;
+        bool is_prime = false;
         size_t pch_len = strlens(pch);
         for ( ; i < pch_len; i++) {
             if (strchr(prime, pch[i])) {
                 if (i != pch_len - 1) {
                     goto err;
                 }
-                prm = 1;
-                has_prm = 1;
+                is_prime = true;
+                has_prime = true;
             } else if (!strchr(digits, pch[i])) {
                 goto err;
             }
         }
-        if (prm && pch_len == 1) {
+        if (is_prime && pch_len == 1) {
             goto err;
         }
         idx = strtoull(pch, NULL, 10);
@@ -195,21 +211,69 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
             goto err;
         }
 
-        if (prm) {
+        if (is_prime) {
             if (hdnode_private_ckd_prime(node, idx) != DBB_OK) {
                 goto err;
             }
         } else {
+            // Note: if `idx` >= 0x80000000, prime derivation still occurs
+            // even if the `keypath` does not have a `prime` marker, following
+            // the BIP32 standard.
             if (hdnode_private_ckd(node, idx) != DBB_OK) {
                 goto err;
             }
         }
+
+        // Check if the keypath is whitelisted
+        if (whitelisted_keypath) {
+            switch (path_level) {
+                case (BIP44_LEVEL_PURPOSE):
+                    if (is_prime != BIP44_PURPOSE_HARDENED || (
+                                idx != BIP44_PURPOSE_P2PKH &&
+                                idx != BIP44_PURPOSE_P2WPKH_P2SH &&
+                                idx != BIP44_PURPOSE_P2WPKH
+                            )) {
+                        whitelisted_keypath = false;
+                    }
+                    break;
+                case (BIP44_LEVEL_COIN_TYPE):
+                    if (is_prime != BIP44_COIN_TYPE_HARDENED || (
+                                idx != BIP44_COIN_TYPE_BTC &&
+                                idx != BIP44_COIN_TYPE_LTC &&
+                                idx != BIP44_COIN_TYPE_TESTNET
+                            )) {
+                        whitelisted_keypath = false;
+                    }
+                    break;
+                case (BIP44_LEVEL_ACCOUNT):
+                    if (is_prime != BIP44_ACCOUNT_HARDENED || idx > BIP44_ACCOUNT_MAX) {
+                        whitelisted_keypath = false;
+                    }
+                    break;
+                case (BIP44_LEVEL_CHANGE):
+                    if (is_prime != BIP44_CHANGE_HARDENED || idx > BIP44_CHANGE_MAX) {
+                        whitelisted_keypath = false;
+                    }
+                    break;
+                case (BIP44_LEVEL_ADDRESS):
+                    if (is_prime != BIP44_ADDRESS_HARDENED || idx > BIP44_ADDRESS_MAX) {
+                        whitelisted_keypath = false;
+                    }
+                    break;
+                default:
+                    whitelisted_keypath = false;
+            }
+        }
         pch = strtok(NULL, delim);
+        path_level++;
     }
-    if (!has_prm) {
+    if (!has_prime) {
         goto err;
     }
     free(kp);
+    if (!whitelisted_keypath) {
+        return DBB_WARN_KEYPATH;
+    }
     return DBB_OK;
 
 err:
@@ -244,16 +308,18 @@ int wallet_generate_node(const char *passphrase, const char *entropy, HDNode *no
 }
 
 
-void wallet_report_xpub(const char *keypath, char *xpub)
+int wallet_report_xpub(const char *keypath, char *xpub)
 {
     HDNode node;
+    int ret = DBB_ERROR;
     if (wallet_seeded() == DBB_OK) {
-        if (wallet_generate_key(&node, keypath, wallet_get_master(),
-                                wallet_get_chaincode()) == DBB_OK) {
+        ret = wallet_generate_key(&node, keypath, wallet_get_master(), wallet_get_chaincode());
+        if (ret != DBB_ERROR) {
             hdnode_serialize_public(&node, xpub, 112);
         }
     }
     utils_zero(&node, sizeof(HDNode));
+    return ret;
 }
 
 
@@ -288,7 +354,7 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath)
     }
 
     if (wallet_generate_key(&node, keypath, wallet_get_master(),
-                            wallet_get_chaincode()) != DBB_OK) {
+                            wallet_get_chaincode()) == DBB_ERROR) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_checkpub), NULL, DBB_ERR_KEY_CHILD);
         goto err;
@@ -329,7 +395,7 @@ int wallet_sign(const char *message, const char *keypath)
     }
 
     if (wallet_generate_key(&node, keypath, wallet_get_master(),
-                            wallet_get_chaincode()) != DBB_OK) {
+                            wallet_get_chaincode()) == DBB_ERROR) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_CHILD);
         goto err;

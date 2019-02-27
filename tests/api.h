@@ -73,7 +73,7 @@ static const char hidden_pwd[] = "hide";
 static uint8_t KEY_STANDARD[MEM_PAGE_LEN];
 static uint8_t KEY_HIDDEN[MEM_PAGE_LEN];
 static char command_sent[COMMANDER_REPORT_SIZE] = {0};
-const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];// extern
+const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE];// extern
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 static char decrypted_report[COMMANDER_REPORT_SIZE];
 
@@ -375,7 +375,7 @@ static void api_hid_send_len(const char *cmd, int cmdlen)
             auth_req->keyHandle[1] = idx;
             memcpy(auth_req->keyHandle + 2, cmd + idx * kh_max_len, MIN(kh_max_len, MAX(0,
                     cmdlen - idx * kh_max_len)));
-            memcpy(auth_req->challenge, U2F_HIJACK_CODE, U2F_NONCE_LENGTH);
+            memcpy(auth_req->appId, U2F_HIJACK_CODE, U2F_APPID_SIZE);
             api_hid_send_frames(HWW_CID, U2FHID_MSG, buf, sizeof(buf));
         }
     } else {

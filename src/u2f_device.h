@@ -35,10 +35,10 @@
 #include "u2f/u2f.h"
 
 
-#define U2F_HIJACK_ORIGIN_TOTAL 3
+#define U2F_HIJACK_ORIGIN_TOTAL 4
 
 
-extern const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_NONCE_LENGTH];
+extern const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE];
 
 
 void u2f_send_message(const uint8_t *data, const uint32_t len);

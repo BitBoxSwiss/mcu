@@ -48,7 +48,7 @@
 #define BIP44_CHANGE_HARDENED false
 #define BIP44_CHANGE_MAX 0// A client is not expected to request an xpub on a change path
 #define BIP44_ADDRESS_HARDENED false
-#define BIP44_ADDRESS_MAX 999999// 1M accounts (0:999999)
+#define BIP44_ADDRESS_MAX 9999// 10k addresses (0:9999)
 
 /* BIP32 */
 void wallet_set_hidden(int hide);

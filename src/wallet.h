@@ -49,6 +49,17 @@
 #define BIP44_CHANGE_MAX 0// A client is not expected to request an xpub on a change path
 #define BIP44_ADDRESS_HARDENED false
 #define BIP44_ADDRESS_MAX 9999// 10k addresses (0:9999)
+#define BIP44_KEYPATH_ADDRESS_DEPTH 5
+#define BIP44_PRIME 0x80000000
+
+typedef enum BIP44_LEVELS {
+    BIP44_LEVEL_PURPOSE,
+    BIP44_LEVEL_COIN_TYPE,
+    BIP44_LEVEL_ACCOUNT,
+    BIP44_LEVEL_CHANGE,
+    BIP44_LEVEL_ADDRESS,
+} BIP44_LEVELS;
+
 
 /* BIP32 */
 void wallet_set_hidden(int hide);
@@ -65,8 +76,17 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
 int wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
+int wallet_check_bip44_keypath_prefix(const uint32_t
+                                      keypath0[BIP44_KEYPATH_ADDRESS_DEPTH],
+                                      const uint32_t keypath1[BIP44_KEYPATH_ADDRESS_DEPTH]);
+int wallet_check_bip44_change_keypath(const uint32_t utxo[BIP44_KEYPATH_ADDRESS_DEPTH],
+                                      const uint32_t change[BIP44_KEYPATH_ADDRESS_DEPTH]);
+int wallet_parse_bip44_keypath(HDNode *node,
+                               uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH],
+                               uint32_t *depth, const char *keypath, const uint8_t *privkeymaster,
+                               const uint8_t *chaincodemaster);
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
-                        const uint8_t *chaincode);
+                        const uint8_t *chaincodemaster);
 
 /* BIP39 */
 int wallet_generate_node(const char *passphrase, const char *entropy, HDNode *node);

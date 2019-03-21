@@ -42,15 +42,6 @@
 #include "ecc.h"
 
 
-typedef enum BIP44_LEVELS {
-    BIP44_LEVEL_PURPOSE,
-    BIP44_LEVEL_COIN_TYPE,
-    BIP44_LEVEL_ACCOUNT,
-    BIP44_LEVEL_CHANGE,
-    BIP44_LEVEL_ADDRESS,
-} BIP44_LEVELS;
-
-
 extern const uint8_t MEM_PAGE_ERASE[MEM_PAGE_LEN];
 extern const uint8_t MEM_PAGE_ERASE_FE[MEM_PAGE_LEN];
 extern const uint16_t MEM_PAGE_ERASE_2X[MEM_PAGE_LEN];
@@ -149,18 +140,46 @@ exit:
 }
 
 
-/*
- Returns DBB_OK if successful and keypath is whitelisted
- Returns DBB_WARN_KEYPATH if successful but keypath is not whitelisted
- Returns DBB_ERROR if could not generate a key
-*/
-int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
-                        const uint8_t *chaincode)
+int wallet_check_bip44_keypath_prefix(const uint32_t
+                                      keypath0[BIP44_KEYPATH_ADDRESS_DEPTH],
+                                      const uint32_t keypath1[BIP44_KEYPATH_ADDRESS_DEPTH])
+{
+    // Check that purpose, coin type, and account indices are the same
+    if (keypath0[BIP44_LEVEL_PURPOSE] != keypath1[BIP44_LEVEL_PURPOSE] ||
+            keypath0[BIP44_LEVEL_ACCOUNT] != keypath1[BIP44_LEVEL_ACCOUNT] ||
+            keypath0[BIP44_LEVEL_COIN_TYPE] != keypath1[BIP44_LEVEL_COIN_TYPE]) {
+        return DBB_ERROR;
+    }
+    return DBB_OK;
+}
+
+
+int wallet_check_bip44_change_keypath(const uint32_t utxo[BIP44_KEYPATH_ADDRESS_DEPTH],
+                                      const uint32_t change[BIP44_KEYPATH_ADDRESS_DEPTH])
+{
+    // Check the change keypath's change level
+    if (change[BIP44_LEVEL_CHANGE] != 1) {
+        return DBB_ERROR;
+    }
+    // Check that the change keypath address level is within range
+    if (change[BIP44_LEVEL_ADDRESS] > BIP44_ADDRESS_MAX) {
+        return DBB_ERROR;
+    }
+    // Check that purpose, coin type, and account indices are the same
+    return wallet_check_bip44_keypath_prefix(utxo, change);
+}
+
+
+int wallet_parse_bip44_keypath(HDNode *node,
+                               uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH],
+                               uint32_t *depth, const char *keypath, const uint8_t *privkeymaster,
+                               const uint8_t *chaincodemaster)
 {
     static char delim[] = "/";
     static char prime[] = "phH\'";
     static char digits[] = "0123456789";
     uint64_t idx = 0;
+    *depth = 0;
 
     char *kp = strdup(keypath);
     if (!kp) {
@@ -175,19 +194,21 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
         goto err;
     }
 
-    node->depth = 0;
-    node->child_num = 0;
-    node->fingerprint = 0;
-    memcpy(node->chain_code, chaincode, 32);
-    memcpy(node->private_key, privkeymaster, 32);
-    hdnode_fill_public_key(node);
+    if (node && privkeymaster && chaincodemaster) {
+        node->depth = 0;
+        node->child_num = 0;
+        node->fingerprint = 0;
+        memcpy(node->chain_code, chaincodemaster, 32);
+        memcpy(node->private_key, privkeymaster, 32);
+        hdnode_fill_public_key(node);
+    }
 
     char *pch = strtok(kp + 2, delim);
     if (pch == NULL) {
         goto err;
     }
     uint8_t path_level = 0;
-    bool has_prime = false, whitelisted_keypath = true;
+    bool has_prime = false;
     while (pch != NULL) {
         size_t i = 0;
         bool is_prime = false;
@@ -207,78 +228,94 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
             goto err;
         }
         idx = strtoull(pch, NULL, 10);
-        if (idx > UINT32_MAX) {
+        if (idx >= BIP44_PRIME) {
             goto err;
         }
 
-        if (is_prime) {
-            if (hdnode_private_ckd_prime(node, idx) != DBB_OK) {
-                goto err;
-            }
-        } else {
-            // Note: if `idx` >= 0x80000000, prime derivation still occurs
-            // even if the `keypath` does not have a `prime` marker, following
-            // the BIP32 standard.
-            if (hdnode_private_ckd(node, idx) != DBB_OK) {
-                goto err;
+        if (node && privkeymaster && chaincodemaster) {
+            if (is_prime) {
+                if (hdnode_private_ckd_prime(node, idx) != DBB_OK) {
+                    goto err;
+                }
+            } else {
+                if (hdnode_private_ckd(node, idx) != DBB_OK) {
+                    goto err;
+                }
             }
         }
 
-        // Check if the keypath is whitelisted
-        if (whitelisted_keypath) {
-            switch (path_level) {
-                case (BIP44_LEVEL_PURPOSE):
-                    if (is_prime != BIP44_PURPOSE_HARDENED || (
-                                idx != BIP44_PURPOSE_P2PKH &&
-                                idx != BIP44_PURPOSE_P2WPKH_P2SH &&
-                                idx != BIP44_PURPOSE_P2WPKH
-                            )) {
-                        whitelisted_keypath = false;
-                    }
-                    break;
-                case (BIP44_LEVEL_COIN_TYPE):
-                    if (is_prime != BIP44_COIN_TYPE_HARDENED || (
-                                idx != BIP44_COIN_TYPE_BTC &&
-                                idx != BIP44_COIN_TYPE_LTC &&
-                                idx != BIP44_COIN_TYPE_TESTNET
-                            )) {
-                        whitelisted_keypath = false;
-                    }
-                    break;
-                case (BIP44_LEVEL_ACCOUNT):
-                    if (is_prime != BIP44_ACCOUNT_HARDENED || idx > BIP44_ACCOUNT_MAX) {
-                        whitelisted_keypath = false;
-                    }
-                    break;
-                case (BIP44_LEVEL_CHANGE):
-                    if (is_prime != BIP44_CHANGE_HARDENED || idx > BIP44_CHANGE_MAX) {
-                        whitelisted_keypath = false;
-                    }
-                    break;
-                case (BIP44_LEVEL_ADDRESS):
-                    if (is_prime != BIP44_ADDRESS_HARDENED || idx > BIP44_ADDRESS_MAX) {
-                        whitelisted_keypath = false;
-                    }
-                    break;
-                default:
-                    whitelisted_keypath = false;
-            }
+        if (path_level < BIP44_KEYPATH_ADDRESS_DEPTH) {
+            keypath_array[path_level] = idx + (is_prime ? BIP44_PRIME : 0);
         }
+
         pch = strtok(NULL, delim);
         path_level++;
+        *depth = path_level;
     }
     if (!has_prime) {
         goto err;
     }
     free(kp);
-    if (!whitelisted_keypath) {
-        return DBB_WARN_KEYPATH;
-    }
     return DBB_OK;
 
 err:
     free(kp);
     return DBB_ERROR;
+}
+
+
+/*
+ Returns DBB_OK if successful and keypath is whitelisted
+ Returns DBB_WARN_KEYPATH if successful but keypath is not whitelisted
+ Returns DBB_ERROR if could not generate a key
+*/
+int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
+                        const uint8_t *chaincodemaster)
+{
+    uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    uint32_t depth = 0;
+    if (wallet_parse_bip44_keypath(node, keypath_array, &depth, keypath,
+                                   privkeymaster, chaincodemaster) != DBB_OK) {
+        return DBB_ERROR;
+    }
+
+    // Check if the keypath is whitelisted
+    uint32_t idx;
+    idx = keypath_array[BIP44_LEVEL_PURPOSE];
+    if (idx != (BIP44_PURPOSE_P2PKH + (BIP44_PURPOSE_HARDENED ? BIP44_PRIME : 0)) &&
+            idx != (BIP44_PURPOSE_P2WPKH + (BIP44_PURPOSE_HARDENED ? BIP44_PRIME : 0)) &&
+            idx != (BIP44_PURPOSE_P2WPKH_P2SH + (BIP44_PURPOSE_HARDENED ? BIP44_PRIME : 0))) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    idx = keypath_array[BIP44_LEVEL_COIN_TYPE];
+    if (idx != (BIP44_COIN_TYPE_BTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
+            idx != (BIP44_COIN_TYPE_LTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
+            idx != (BIP44_COIN_TYPE_TESTNET + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0))) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    idx = keypath_array[BIP44_LEVEL_ACCOUNT];
+    if (idx > (BIP44_ACCOUNT_MAX + (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) ||
+            idx < (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    idx = keypath_array[BIP44_LEVEL_CHANGE];
+    if (idx > BIP44_CHANGE_MAX) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    idx = keypath_array[BIP44_LEVEL_ADDRESS];
+    if (idx > BIP44_ADDRESS_MAX) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    if (node->depth != BIP44_KEYPATH_ADDRESS_DEPTH) {
+        return DBB_WARN_KEYPATH;
+    }
+
+    return DBB_OK;
 }
 
 

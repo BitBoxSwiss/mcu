@@ -57,10 +57,15 @@
 #define KEYPATH_ONE        "m/44'/0'/0'/1/7"
 #define KEYPATH_TWO        "m/44'/0'/0'/1/8"
 #define KEYPATH_THREE      "m/44'/0'/0'/0/5"
+#define KEYPATH_FOUR       "m/44'/1'/0'/1/5"
+#define KEYPATH_LONG       "m/44'/0'/0'/1/5/0"
+#define KEYPATH_CHANGE_RNG "m/44'/1'/0'/2/5"// Change address should equal 1
+#define KEYPATH_ADDR_RNG   "m/44'/0'/0'/1/10000"// BIP44_ADDRESS_MAX = 9999
 #define PUBKEY_INPUT_ONE   "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154"
 #define PUBKEY_INPUT_TWO_1 "035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704"
 #define PUBKEY_INPUT_TWO_2 "03cc673784d8dfe97ded72c91ebb1b87a52761e4be20f6229e56fd61fdf28ae3f2"
 #define PUBKEY_ZERO        "000000000000000000000000000000000000000000000000000000000000000000"
+#define RECID_00           "00"
 #define RECID_01           "01"
 #define RECID_EE           "ee"
 
@@ -79,7 +84,7 @@ static void tests_seed_xpub_backup(void)
     char filename2[] = "tests_backup2.pdf";
     char filename_create[] = "tests_backup_c.pdf";
     char filename_bad[] = "tests_backup_bad<.pdf";
-    char keypath[] = "m/44\'/0\'/";
+    char keypath[] = "m/44'/0'/0'/0/0";
     char seed_create[] =
         "{\"source\":\"create\", \"filename\":\"seed_create.pdf\", \"key\":\"password\"}";
     char seed_create_2[] =
@@ -534,6 +539,43 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS("\"xpub\":");
     ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
     ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Path < BIP44_KEYPATH_ADDRESS_DEPTH
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Path > BIP44_KEYPATH_ADDRESS_DEPTH
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS_NOT(cmd_str(CMD_echo));
+
+    // Path = BIP44_KEYPATH_ADDRESS_DEPTH
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_BTC, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
 
 
     // test create seeds differ
@@ -2704,21 +2746,24 @@ static void tests_sign(void)
 
     char checkpub[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
-        "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
-        KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
         KEYPATH_TWO"\"}]}";
     char check_1[] =
         "\"pubkey\":\"" PUBKEY_ZERO "\", \"present\":false";
     char check_2[] =
         "\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"present\":true";
-    // check_sig_1 is normalized (low-S). The non-normalized value is "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba924e51ccac655024165bb302d00174d842e5960cde8c448a6a900d26fe342fe9"
+    // check_sig_1 is normalized (low-S). The non-normalized value is
+    //  "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
     char check_sig_1[] =
-        "2a756acd456b732e779cd7e7f05ae2855ee3128bca75cb8fc805bba8c6fbabba6db1ae33539aafdbe9a44cfd2ffe8b2677c946d9d0bc5bb155425165d2021158";
+        "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0b18305a52f94153980f6e6d4383decc68028764b4f60ecb0d2a28e74359073012";
+    // check_sig_2 is normalized (low-S). The non-normalized value is
+    //  "1d1170079aa9ace9a2740f46f1319e10befa85d1ca713f40142b7e16146b0b44f2cfac9af878edd2a6f419778451c62add5edbdace9df2ae3bc4586897de0651"
     char check_sig_2[] =
-        "3323b353e9974ab1eb452eca19e1dc4dad0556dba668089c8c1214ca09b58ad12c82da6671a65f9b3803c1fe7a14f35d885caebce701f972641748738275782b";
+        "1d1170079aa9ace9a2740f46f1319e10befa85d1ca713f40142b7e16146b0b440d3053650787122d590be6887bae39d3dd50010be0aaad8d840e062438583af0";
     char check_pubkey[] =
-        "02df86355b162c942b89e297c1e919f40943834d448b0b6b4538556e805ea4e18c";
+        "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154";
 
     char checkpub_wrong_addr_len[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
@@ -2730,6 +2775,63 @@ static void tests_sign(void)
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\"}]}";
+
+    char checkpub_keypath_mismatch[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_FOUR "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
+        KEYPATH_TWO"\"}]}";
+
+    char checkpub_keypath_short[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
+        KEYPATH_TWO"\"}]}";
+
+    char checkpub_keypath_long[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_LONG "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
+        KEYPATH_TWO"\"}]}";
+
+    char checkpub_change_keypath_mismatch[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_FOUR "\"}]}";
+
+    char checkpub_change_keypath_short[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_BASE "\"}]}";
+
+    char checkpub_change_keypath_long[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_LONG "\"}]}";
+
+    char checkpub_change_address_out_of_range[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_ADDR_RNG "\"}]}";
+
+    char checkpub_change_out_of_range[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_CHANGE_RNG "\"}]}";
+
+    char checkpub_checking_non_change_address[] =
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
+        KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
+        KEYPATH_THREE "\"}]}";
 
     char sig_device_1[64 * 2 + 1];
     char sig_device_2[64 * 2 + 1];
@@ -2976,11 +3078,13 @@ static void tests_sign(void)
         pin_err_count++;
     }
 
-    // test checkpub
-    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_BASE, KEY_STANDARD);
+    // Test checkpub
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_ONE, KEY_STANDARD);
     hdnode_deserialize(api_read_value(CMD_xpub), &node);
     snprintf(pubkey_device_1, sizeof(pubkey_device_1), "%s",
              utils_uint8_to_hex(node.public_key, 33));
+    api_format_send_cmd(cmd_str(CMD_xpub), KEYPATH_THREE, KEY_STANDARD);
+    hdnode_deserialize(api_read_value(CMD_xpub), &node);
     snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
              utils_uint8_to_hex(node.public_key, 33));
 
@@ -3024,7 +3128,7 @@ static void tests_sign(void)
         u_assert_str_eq(pubkey_device_1, check_pubkey);
 #ifdef ECC_USE_SECP256K1_LIB
         u_assert_str_eq(recid_device_1, RECID_01);
-        u_assert_str_eq(recid_device_2, RECID_01);
+        u_assert_str_eq(recid_device_2, RECID_00);
 #else
         u_assert_str_eq(recid_device_1, RECID_EE);
         u_assert_str_eq(recid_device_2, RECID_EE);
@@ -3039,7 +3143,73 @@ static void tests_sign(void)
     api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
 
+    // Test invalid keypaths
+    if (!TEST_LIVE_DEVICE) {
+        // UTXO prefix mismatch
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_keypath_mismatch, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_KEYPATH));
 
+        // UTXO too short
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_keypath_short, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_KEYPATH));
+
+        // UTXO too long
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_keypath_long, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_KEYPATH));
+
+        // Change mismatch
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_change_keypath_mismatch, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+
+        // Change keypath too short
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_change_keypath_short, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+
+        // Change keypath too long
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_change_keypath_long, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+
+        // Change address out of range
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_change_address_out_of_range,
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+
+        // Change level out of range
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_change_out_of_range, KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+
+        // Checking non-change address should give error
+        api_format_send_cmd(cmd_str(CMD_sign), checkpub_checking_non_change_address,
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+        ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SIGN_CHANGE));
+    }
 
 
     // sign using two inputs
@@ -3099,10 +3269,26 @@ static void tests_sign(void)
     }
 
     {
-        // Check exception for ETH/ETC.
+        // Check PIN requirement exception for ETH, i.e., ETH can be signed
+        // without a response to the signing challenge.
         api_format_send_cmd(cmd_str(CMD_sign),
                             "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/60'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
+                            "m/44'/60'/" "\"}]}",
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            u_assert_str_eq(api_read_value(CMD_echo), "");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+        ASSERT_REPORT_HAS(cmd_str(CMD_recid));
+
+        // Check PIN requirement exception for ETC, i.e., ETC can be signed
+        // without a response to the signing challenge.
+        api_format_send_cmd(cmd_str(CMD_sign),
+                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "\", \"keypath\":\"" "m/44'/61'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                             "m/44'/61'/" "\"}]}",
                             KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_echo));
@@ -3111,9 +3297,26 @@ static void tests_sign(void)
         }
         api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
         ASSERT_REPORT_HAS(cmd_str(CMD_sig));
+        ASSERT_REPORT_HAS(cmd_str(CMD_recid));
 
-        // exception only applies if all keypaths are eth/etc, not if others are
-        // present too:
+        // PIN requirement exception only applies if all keypaths are eth/etc,
+        // not if others are present too:
+        api_format_send_cmd(cmd_str(CMD_sign),
+                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "\", \"keypath\":\"" "m/44'/1'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
+                            "m/44'/61'/" "\"}]}",
+                            KEY_STANDARD);
+        ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+        if (!TEST_LIVE_DEVICE) {
+            u_assert_str_not_eq(api_read_value(CMD_echo), "");
+        }
+        api_format_send_cmd(cmd_str(CMD_sign), "", KEY_STANDARD);
+        if (!TEST_LIVE_DEVICE) {
+            ASSERT_REPORT_HAS_NOT(cmd_str(CMD_recid));
+        } else {
+            pin_err_count++;
+        }
+
         api_format_send_cmd(cmd_str(CMD_sign),
                             "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/1'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
@@ -3125,6 +3328,7 @@ static void tests_sign(void)
         }
         api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
         if (!TEST_LIVE_DEVICE) {
+            ASSERT_REPORT_HAS(cmd_str(CMD_recid));
             ASSERT_REPORT_HAS(cmd_str(CMD_sig));
         } else {
             pin_err_count++;

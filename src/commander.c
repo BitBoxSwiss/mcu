@@ -656,16 +656,97 @@ static void commander_process_seed(yajl_val json_node)
 }
 
 
+static int commander_check_change_keypath(yajl_val data, yajl_val checkpub)
+{
+    // Check that all UTXOs use the same BIP44 prefix and depth
+    size_t i;
+    uint32_t depth = 0;
+    uint32_t keypath_utxo_0[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    uint32_t keypath_utxo_i[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    for (i = 0; i < data->u.array.len; i++) {
+        const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+        yajl_val obj = data->u.array.values[i];
+        const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
+
+        if (!keypath) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
+            return DBB_ERROR;
+        }
+
+        if (i == 0) {
+            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_0, &depth, keypath, NULL,
+                                           NULL) != DBB_OK) {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+                return DBB_ERROR;
+            }
+        } else {
+            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_i, &depth, keypath, NULL,
+                                           NULL) != DBB_OK) {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+                return DBB_ERROR;
+            }
+            if (wallet_check_bip44_keypath_prefix(keypath_utxo_0, keypath_utxo_i) != DBB_OK) {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+                return DBB_ERROR;
+            }
+        }
+
+        if (depth != BIP44_KEYPATH_ADDRESS_DEPTH) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+            return DBB_ERROR;
+        }
+    }
+
+    // Check that change addresses correspond to the UTXO prefix and BIP44 depth
+    uint32_t keypath_change[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    for (i = 0; i < checkpub->u.array.len; i++) {
+        const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+        yajl_val obj = checkpub->u.array.values[i];
+        const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
+
+        if (!keypath) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
+            return DBB_ERROR;
+        }
+
+        if (wallet_parse_bip44_keypath(NULL, keypath_change, &depth, keypath, NULL,
+                                       NULL) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+            return DBB_ERROR;
+        }
+
+        if (depth != BIP44_KEYPATH_ADDRESS_DEPTH) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_CHANGE);
+            return DBB_ERROR;
+        }
+
+        if (wallet_check_bip44_change_keypath(keypath_utxo_0, keypath_change) != DBB_OK) {
+            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_CHANGE);
+            return DBB_ERROR;
+        }
+    }
+    return DBB_OK;
+}
+
+
 static int commander_process_sign(yajl_val json_node)
 {
     size_t i;
     int ret;
     const char *data_path[] = { cmd_str(CMD_sign), cmd_str(CMD_data), NULL };
+    const char *checkpub_path[] = { cmd_str(CMD_sign), cmd_str(CMD_checkpub), NULL };
     yajl_val data = yajl_tree_get(json_node, data_path, yajl_t_array);
+    yajl_val checkpub = yajl_tree_get(json_node, checkpub_path, yajl_t_array);
 
     if (!YAJL_IS_ARRAY(data) || data->u.array.len == 0) {
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
         return DBB_ERROR;
+    }
+
+    if (YAJL_IS_ARRAY(checkpub)) {
+        if (commander_check_change_keypath(data, checkpub) != DBB_OK) {
+            return DBB_ERROR;
+        }
     }
 
     memset(json_array, 0, COMMANDER_ARRAY_MAX);

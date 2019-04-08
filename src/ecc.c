@@ -42,6 +42,7 @@
 struct ecc_wrapper bitcoin_ecc = {
     ecc_context_init,
     ecc_context_destroy,
+    ecc_sign_digest_tweak,
     ecc_sign_digest,
     ecc_sign,
     ecc_sign_double,
@@ -85,6 +86,17 @@ static uECC_Curve ecc_curve_from_id(ecc_curve_id curve)
     return uECC_secp256k1();
 }
 
+int ecc_sign_digest_tweak(const uint8_t *private_key, const uint8_t *data,
+                          const uint8_t *tweak, uint8_t *sig, uint8_t *recid, ecc_curve_id curve)
+{
+    (void) private_key;
+    (void) data;
+    (void) tweak;
+    (void) sig;
+    (void) recid;
+    (void) curve;
+    return 1; // error
+}
 
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
                     uint8_t *recid, ecc_curve_id curve)

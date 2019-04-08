@@ -42,6 +42,8 @@ typedef enum ecc_curve_id {
 struct ecc_wrapper {
     void (*ecc_context_init)(void);
     void (*ecc_context_destroy)(void);
+    int (*ecc_sign_digest_tweak)(const uint8_t *private_key, const uint8_t *data,
+                                 const uint8_t *tweak, uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
     int (*ecc_sign_digest)(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
                            uint8_t *recid, ecc_curve_id curve);
     int (*ecc_sign)(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
@@ -67,6 +69,8 @@ struct ecc_wrapper {
 /* uECC direct wrapper */
 void ecc_context_init(void);
 void ecc_context_destroy(void);
+int ecc_sign_digest_tweak(const uint8_t *private_key, const uint8_t *data,
+                          const uint8_t *tweak, uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
 int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig,
                     uint8_t *recid, ecc_curve_id curve);
 int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,

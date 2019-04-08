@@ -99,6 +99,7 @@ X(pin)            \
 X(U2F)            \
 X(U2F_hijack)     \
 X(U2F_counter)    \
+X(tweak)          \
 /*  reply keys  */\
 X(ciphertext)     \
 X(echo)           \

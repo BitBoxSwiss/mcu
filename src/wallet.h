@@ -73,7 +73,7 @@ int wallet_seeded(void);
 int wallet_erased(void);
 int wallet_create(const char *passphrase, const char *entropy_in);
 int wallet_check_pubkey(const char *pubkey, const char *keypath);
-int wallet_sign(const char *message, const char *keypath);
+int wallet_sign(const char *message, const char *keypath, const char *tweak);
 int wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
 int wallet_check_bip44_keypath_prefix(const uint32_t

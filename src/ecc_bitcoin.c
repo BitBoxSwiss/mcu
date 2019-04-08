@@ -44,6 +44,8 @@ static secp256k1_context *libsecp256k1_ctx = NULL;
 
 void libsecp256k1_ecc_context_init(void);
 void libsecp256k1_ecc_context_destroy(void);
+int libsecp256k1_ecc_sign_digest_tweak(const uint8_t *private_key, const uint8_t *data,
+                                       const uint8_t *tweak, uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
 int libsecp256k1_ecc_sign_digest(const uint8_t *private_key, const uint8_t *data,
                                  uint8_t *sig, uint8_t *recid, ecc_curve_id curve);
 int libsecp256k1_ecc_sign(const uint8_t *private_key, const uint8_t *msg,
@@ -68,6 +70,7 @@ int libsecp256k1_ecc_recover_public_key(const uint8_t *sig, const uint8_t *msg,
 struct ecc_wrapper bitcoin_ecc = {
     libsecp256k1_ecc_context_init,
     libsecp256k1_ecc_context_destroy,
+    libsecp256k1_ecc_sign_digest_tweak,
     libsecp256k1_ecc_sign_digest,
     libsecp256k1_ecc_sign,
     libsecp256k1_ecc_sign_double,
@@ -101,6 +104,18 @@ void libsecp256k1_ecc_context_init(void)
 void libsecp256k1_ecc_context_destroy(void)
 {
     secp256k1_context_destroy(libsecp256k1_ctx);
+}
+
+
+int libsecp256k1_ecc_sign_digest_tweak(const uint8_t *private_key, const uint8_t *data,
+                                       const uint8_t *tweak, uint8_t *sig, uint8_t *recid, ecc_curve_id curve)
+{
+    uint8_t privkey[32];
+    memcpy(privkey, private_key, 32);
+    if (secp256k1_ec_privkey_tweak_add(libsecp256k1_ctx, privkey, tweak)) {
+        return (libsecp256k1_ecc_sign_digest(privkey, data, sig, recid, curve));
+    }
+    return 1; // error
 }
 
 

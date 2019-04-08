@@ -753,17 +753,19 @@ static int commander_process_sign(yajl_val json_node)
     for (i = 0; i < data->u.array.len; i++) {
         const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
         const char *hash_path[] = { cmd_str(CMD_hash), NULL };
+        const char *tweak_path[] = { cmd_str(CMD_tweak), NULL };
 
         yajl_val obj = data->u.array.values[i];
         const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
         const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
+        const char *tweak = YAJL_GET_STRING(yajl_tree_get(obj, tweak_path, yajl_t_string));
 
         if (!hash || !keypath) {
             commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_INVALID_CMD);
             return DBB_ERROR;
         }
 
-        ret = wallet_sign(hash, keypath);
+        ret = wallet_sign(hash, keypath, tweak);
         if (ret != DBB_OK) {
             return ret;
         };

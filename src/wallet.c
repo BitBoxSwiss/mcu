@@ -412,8 +412,10 @@ err:
 }
 
 
-int wallet_sign(const char *message, const char *keypath)
+
+int wallet_sign(const char *message, const char *keypath, const char *tweak)
 {
+    int err;
     uint8_t data[32];
     uint8_t sig[64];
     uint8_t recid = 0xEE;// Set default value to give an error when trying to recover
@@ -440,7 +442,18 @@ int wallet_sign(const char *message, const char *keypath)
 
     memcpy(data, utils_hex_to_uint8(message), 32);
 
-    if (bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, &recid, ECC_SECP256k1)) {
+    if (tweak) {
+        err = 1;
+        if (strlens(tweak) == (32 * 2)) {
+            uint8_t tweak_b[32];
+            memcpy(tweak_b, utils_hex_to_uint8(tweak), 32);
+            err = bitcoin_ecc.ecc_sign_digest_tweak(node.private_key, data, tweak_b, sig, &recid,
+                                                    ECC_SECP256k1);
+        }
+    } else {
+        err = bitcoin_ecc.ecc_sign_digest(node.private_key, data, sig, &recid, ECC_SECP256k1);
+    }
+    if (err) {
         commander_clear_report();
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_ECCLIB);
         goto err;

@@ -52,6 +52,13 @@
 #define BIP44_KEYPATH_ADDRESS_DEPTH 5
 #define BIP44_PRIME 0x80000000
 
+#define MIN_WALLET_DEPTH 2
+#define MAX_PARSE_KEYPATH_LEVEL 10// For memory assignment only, can be increased independently of BIP44_KEYPATH_ADDRESS_DEPTH if needed
+#if (MAX_PARSE_KEYPATH_LEVEL < BIP44_KEYPATH_ADDRESS_DEPTH)
+#error "Max keypath level cannot be less than BIP44 depth"
+#endif
+
+
 typedef enum BIP44_LEVELS {
     BIP44_LEVEL_PURPOSE,
     BIP44_LEVEL_COIN_TYPE,
@@ -76,11 +83,13 @@ int wallet_check_pubkey(const char *pubkey, const char *keypath);
 int wallet_sign(const char *message, const char *keypath);
 int wallet_report_xpub(const char *keypath, char *xpub);
 void wallet_report_id(char *id);
-int wallet_check_bip44_keypath_prefix(const uint32_t
-                                      keypath0[BIP44_KEYPATH_ADDRESS_DEPTH],
-                                      const uint32_t keypath1[BIP44_KEYPATH_ADDRESS_DEPTH]);
-int wallet_check_bip44_change_keypath(const uint32_t utxo[BIP44_KEYPATH_ADDRESS_DEPTH],
-                                      const uint32_t change[BIP44_KEYPATH_ADDRESS_DEPTH]);
+int wallet_check_keypath_prefix(const uint32_t
+                                keypath0[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t keypath1[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t depth);
+int wallet_check_change_keypath(const uint32_t utxo[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t change[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t change_depth);
 int wallet_parse_bip44_keypath(HDNode *node,
                                uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH],
                                uint32_t *depth, const char *keypath, const uint8_t *privkeymaster,

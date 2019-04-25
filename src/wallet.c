@@ -139,39 +139,42 @@ exit:
     return ret;
 }
 
-
-int wallet_check_bip44_keypath_prefix(const uint32_t
-                                      keypath0[BIP44_KEYPATH_ADDRESS_DEPTH],
-                                      const uint32_t keypath1[BIP44_KEYPATH_ADDRESS_DEPTH])
+int wallet_check_keypath_prefix(const uint32_t
+                                keypath0[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t keypath1[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t depth)
 {
-    // Check that purpose, coin type, and account indices are the same
-    if (keypath0[BIP44_LEVEL_PURPOSE] != keypath1[BIP44_LEVEL_PURPOSE] ||
-            keypath0[BIP44_LEVEL_ACCOUNT] != keypath1[BIP44_LEVEL_ACCOUNT] ||
-            keypath0[BIP44_LEVEL_COIN_TYPE] != keypath1[BIP44_LEVEL_COIN_TYPE]) {
+    if (depth < MIN_WALLET_DEPTH || !MEMEQ(keypath0, keypath1, (depth - 2) * sizeof(uint32_t))) {
         return DBB_ERROR;
     }
     return DBB_OK;
 }
 
 
-int wallet_check_bip44_change_keypath(const uint32_t utxo[BIP44_KEYPATH_ADDRESS_DEPTH],
-                                      const uint32_t change[BIP44_KEYPATH_ADDRESS_DEPTH])
+int wallet_check_change_keypath(const uint32_t utxo[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t change[MAX_PARSE_KEYPATH_LEVEL],
+                                const uint32_t change_depth)
 {
+    // Check that the depth is at least 2
+    if (change_depth < MIN_WALLET_DEPTH) {
+        return DBB_ERROR;
+    }
+
     // Check the change keypath's change level
-    if (change[BIP44_LEVEL_CHANGE] != 1) {
+    if (change[change_depth - 2] != 1) {
         return DBB_ERROR;
     }
     // Check that the change keypath address level is within range
-    if (change[BIP44_LEVEL_ADDRESS] > BIP44_ADDRESS_MAX) {
+    if (change[change_depth - 1] > BIP44_ADDRESS_MAX) {
         return DBB_ERROR;
     }
     // Check that purpose, coin type, and account indices are the same
-    return wallet_check_bip44_keypath_prefix(utxo, change);
+    return wallet_check_keypath_prefix(utxo, change, change_depth);
 }
 
 
 int wallet_parse_bip44_keypath(HDNode *node,
-                               uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH],
+                               uint32_t keypath_array[MAX_PARSE_KEYPATH_LEVEL],
                                uint32_t *depth, const char *keypath, const uint8_t *privkeymaster,
                                const uint8_t *chaincodemaster)
 {
@@ -244,7 +247,7 @@ int wallet_parse_bip44_keypath(HDNode *node,
             }
         }
 
-        if (path_level < BIP44_KEYPATH_ADDRESS_DEPTH) {
+        if (path_level < MAX_PARSE_KEYPATH_LEVEL) {
             keypath_array[path_level] = idx + (is_prime ? BIP44_PRIME : 0);
         }
 
@@ -272,7 +275,7 @@ err:
 int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privkeymaster,
                         const uint8_t *chaincodemaster)
 {
-    uint32_t keypath_array[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    uint32_t keypath_array[MAX_PARSE_KEYPATH_LEVEL] = {0};
     uint32_t depth = 0;
     if (wallet_parse_bip44_keypath(node, keypath_array, &depth, keypath,
                                    privkeymaster, chaincodemaster) != DBB_OK) {

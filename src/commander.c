@@ -660,9 +660,8 @@ static int commander_check_change_keypath(yajl_val data, yajl_val checkpub)
 {
     // Check that all UTXOs use the same BIP44 prefix and depth
     size_t i;
-    uint32_t depth = 0;
-    uint32_t keypath_utxo_0[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
-    uint32_t keypath_utxo_i[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    uint32_t keypath_utxo_0[MAX_PARSE_KEYPATH_LEVEL] = {0};
+    uint32_t keypath_depth_0 = 0;
     for (i = 0; i < data->u.array.len; i++) {
         const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
         yajl_val obj = data->u.array.values[i];
@@ -674,31 +673,32 @@ static int commander_check_change_keypath(yajl_val data, yajl_val checkpub)
         }
 
         if (i == 0) {
-            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_0, &depth, keypath, NULL,
+            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_0, &keypath_depth_0, keypath, NULL,
                                            NULL) != DBB_OK) {
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
                 return DBB_ERROR;
             }
         } else {
-            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_i, &depth, keypath, NULL,
+            uint32_t keypath_utxo_i[MAX_PARSE_KEYPATH_LEVEL] = {0};
+            uint32_t keypath_depth_i = 0;
+            if (wallet_parse_bip44_keypath(NULL, keypath_utxo_i, &keypath_depth_i, keypath, NULL,
                                            NULL) != DBB_OK) {
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
                 return DBB_ERROR;
             }
-            if (wallet_check_bip44_keypath_prefix(keypath_utxo_0, keypath_utxo_i) != DBB_OK) {
+            if (keypath_depth_0 != keypath_depth_i) {
                 commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
                 return DBB_ERROR;
             }
-        }
+            if (wallet_check_keypath_prefix(keypath_utxo_0, keypath_utxo_i, keypath_depth_0) != DBB_OK) {
+                commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
+                return DBB_ERROR;
+            }
 
-        if (depth != BIP44_KEYPATH_ADDRESS_DEPTH) {
-            commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
-            return DBB_ERROR;
         }
     }
 
-    // Check that change addresses correspond to the UTXO prefix and BIP44 depth
-    uint32_t keypath_change[BIP44_KEYPATH_ADDRESS_DEPTH] = {0};
+    // Check that all change addresses have the same prefix as all the inputs up to the depth minus two
     for (i = 0; i < checkpub->u.array.len; i++) {
         const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
         yajl_val obj = checkpub->u.array.values[i];
@@ -709,18 +709,20 @@ static int commander_check_change_keypath(yajl_val data, yajl_val checkpub)
             return DBB_ERROR;
         }
 
-        if (wallet_parse_bip44_keypath(NULL, keypath_change, &depth, keypath, NULL,
+        uint32_t keypath_change[MAX_PARSE_KEYPATH_LEVEL] = {0};
+        uint32_t change_depth = 0;
+        if (wallet_parse_bip44_keypath(NULL, keypath_change, &change_depth, keypath, NULL,
                                        NULL) != DBB_OK) {
             commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_KEYPATH);
             return DBB_ERROR;
         }
 
-        if (depth != BIP44_KEYPATH_ADDRESS_DEPTH) {
+        if (keypath_depth_0 != change_depth) {
             commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_CHANGE);
             return DBB_ERROR;
         }
 
-        if (wallet_check_bip44_change_keypath(keypath_utxo_0, keypath_change) != DBB_OK) {
+        if (wallet_check_change_keypath(keypath_utxo_0, keypath_change, change_depth) != DBB_OK) {
             commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_CHANGE);
             return DBB_ERROR;
         }

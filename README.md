@@ -9,19 +9,11 @@ Digital Bitbox Firmware
 
 **MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 
-All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is described in the [API](https://digitalbitbox.com/api.html).
+All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is described in the [API](https://digitalbitbox.com/api.html). A Python script to interact with the device is in the `py/` folder.
 
-The code can be compiled and tested locally without the need for a device. See the `tests_cmdline.c` code for a simple example and the `tests_api.c` code to test the full API. The `tests_api.c` code will also test a live device if one is plugged into a USB slot. This requires installation of the [hidapi library](http://www.signal11.us/oss/hidapi/) for USB communication, a micro SD card in the device, and a number of touch button presses to permit `erase` and `sign` commands. WARNING: data on the device and micro SD card will be **lost** when running `tests_api.c`.
+The code can be compiled and tested locally without the need for a device, e.g., `tests/tests_api.c` tests the full API. The `tests_api.c` code will also test a live device if one is plugged into a USB slot. This requires installation of the [hidapi library](http://www.signal11.us/oss/hidapi/) for USB communication, a micro SD card in the device, and a number of touch button presses to permit `erase` and `sign` commands.
 
 ECDSA signatures are performed with either the [bitcoin core secp256k1 library](https://github.com/bitcoin/secp256k1) or using a simplified version of the smaller [micro ECC library](https://github.com/kmackay/micro-ecc), depending on a setting in the `CMakeLists.txt` file. Each library is resistant to known side channel attacks.
-
-
-**Standardized functions:**
-
-	Cryptographic: secp256k1, RFC6979, AES-256-CBC, SHA2, HMAC, PBKDF2, RIPEMD160
-	Encoding: Base-64, Base-58-check, JSON
-	Bitcoin: BIP32, BIP39, BIP44
-
 
 
 ## Build Instructions
@@ -30,7 +22,9 @@ ECDSA signatures are performed with either the [bitcoin core secp256k1 library](
 
 Dependencies:
 
+- [GNU ARM Embedded Toolchain](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads)
 - [HIDAPI](https://github.com/signal11/hidapi) (For live testing)
+- cmake
 - Doxygen (Optional, to generate source code documentation)
 - Graphviz (Optional, to generate graphs for the Doxygen documentation)
 
@@ -41,6 +35,15 @@ Build:
     cmake .. -DBUILD_TYPE=test # `-DBUILD_TYPE=firmware` and `-DBUILD_TYPE=bootloader` work if a GNU ARM toolchain is installed
     make
     make test
+
+Load the firmware by the bootloader (requires a bootloader already on the device):
+
+- If you used the device with the desktop app, your bootloader will be locked
+    - Unlock it by sending the `message = '{"bootloader":"unlock"}'` command with `send_command.py` ([see python API documentation](https://github.com/shiftdevices/mcu/tree/master/py))
+    - Long touch the device when the LED turns on
+    - You should receive a `Reply:   {"bootloader":"unlock"}` reply
+- Long touch the device after plugging in to enter the bootloader
+- Flash the new firmware with `./load_firmware.py ../build/bin/firmware.bin debug` from the `py` directory
 
 #### Deterministic build of firmware:
 

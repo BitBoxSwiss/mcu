@@ -91,7 +91,7 @@ void commander_fill_report(const char *cmd, const char *msg, int flag)
     char *p = json_report;
 
     if (!strlens(json_report)) {
-        strncat(json_report, "{", 1);
+        strcat(json_report, "{");
     } else {
         json_report[strlens(json_report) - 1] = ','; // replace closing '}' with continuing ','
     }
@@ -162,7 +162,7 @@ int commander_fill_json_array(const char **key, const char **value, int *type, i
 
     // add element to array
     if (!strlens(json_array)) {
-        strncat(json_array, "[", 1);
+        strcat(json_array, "[");
     } else {
         json_array[strlens(json_array) - 1] = ','; // replace closing ']' with continuing ','
     }
@@ -1444,9 +1444,15 @@ static int commander_echo_command(yajl_val json_node)
         commander_fill_report(cmd_str(CMD_checkpub), json_array, DBB_JSON_ARRAY);
     }
 
-    snprintf(json_array, COMMANDER_ARRAY_MAX, "%s", json_report);
-    memset(json_report, 0, COMMANDER_REPORT_SIZE);
-    commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
+    int ret = snprintf(json_array, COMMANDER_ARRAY_MAX, "%s", json_report);
+    if (ret >= COMMANDER_ARRAY_MAX || ret < 0) {
+        commander_clear_report();
+        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_IO_REPORT_BUF);
+        return DBB_ERROR;
+    } else {
+        memset(json_report, 0, COMMANDER_REPORT_SIZE);
+        commander_fill_report(cmd_str(CMD_sign), json_array, DBB_JSON_ARRAY);
+    }
 
     uint8_t disable_pairing = 1;
     for (size_t i = 0; i < data->u.array.len; i++) {

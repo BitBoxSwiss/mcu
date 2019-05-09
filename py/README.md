@@ -10,7 +10,5 @@ Use `send_command.py` and `dbb_utils.py` to communicate with a Digital Bitbox. S
 Dependencies:
 
 - [Python](http://python.org)
-- [Cython](http://cython.org)
-- [HIDAPI](https://pypi.python.org/pypi/hidapi)
 
-The code uses the following additional Python libraries: `os`, `sys`, `struct`, `json`, `base64`, `pyaes`, and `hashlib`.
+The code uses the following additional Python libraries: `os`, `sys`, `struct`, `json`, `base64`, `pyaes`, `hashlib`, and `hidapi`.

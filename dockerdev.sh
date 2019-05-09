@@ -1,3 +1,5 @@
+#!/bin/bash -e
+#
 # The MIT License (MIT)
 #
 # Copyright 2019 Shift Cryptosecurity AG
@@ -19,21 +21,39 @@
 # OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-#
-# Run with Docker:
-# docker build --tag shift/mcu-base -f Dockerfile.dev .
-#
 
-FROM debian:stretch
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-RUN apt update && apt-get install -y cmake git wget locales python python-pip
-RUN mkdir ~/Downloads && cd ~/Downloads && wget -O gcc.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2018q4/gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2
-RUN cd ~/Downloads && tar -xjvf gcc.tar.bz2
-RUN cd ~/Downloads && rsync -a gcc-arm-none-eabi-7-2018-q2-update/ /usr/local/
-RUN apt install -y libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3 libssl1.0-dev
-RUN apt install -y libbz2-dev libbz2-dev libbz2-1.0 libncurses5 libz1 valgrind astyle clang libudev-dev python-urllib3
-RUN pip install --prefix /usr/local  cpp-coveralls
-RUN locale-gen UTF-8
-ENV CC gcc
+dockerdev () {
+    local container_image=shift/mcu-base
+    local container_name=mcu-dev
 
-CMD ["bash"]
+    if ! docker images | grep -q $container_image; then
+        echo "No $container_image docker image found! Maybe you need to run 'docker build --tag $container_image -f Dockerfile.dev .'?" >&2
+        exit 1
+    fi
+
+    # If already running, enter the container.
+    if docker ps | grep -q $container_name; then
+        docker exec -it $container_name bash
+        return
+    fi
+
+    if docker ps -a | grep -q $container_name; then
+        docker rm $container_name
+    fi
+
+    local repo_path="$DIR"
+    docker run \
+           --detach \
+           --privileged -v /dev/bus/usb:/dev/bus/usb \
+           --interactive --tty \
+           --name=$container_name \
+           -v $repo_path:/app \
+           $container_image bash
+
+    # Call a second time to enter the container.
+    dockerdev
+}
+
+dockerdev

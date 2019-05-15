@@ -219,9 +219,7 @@ static uint8_t bootloader_unlocked(void)
 
 static void bootloader_blink(void)
 {
-    led_toggle();
-    delay_ms(300);
-    led_toggle();
+    led_wink();
     bootloader_report_status(OP_STATUS_OK);
 }
 
@@ -344,27 +342,17 @@ void bootloader_jump(void)
             binary_exec(app_start_addr);
             /* no return */
         }
-        if (touch_button_press(DBB_TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
+        if (touch_button_press(TOUCH_TIMEOUT) == DBB_ERR_TOUCH_TIMEOUT) {
             binary_exec(app_start_addr);
             /* no return */
         }
     } else {
-        for (int i = 0; i < 9; i++) {
-            led_toggle();
-            delay_ms(100);
-            led_toggle();
-            delay_ms(150);
-        }
-        led_off();
+        led_abort();
+        led_abort();
     }
 
     // App not entered. Start USB API to receive boot commands
     usb_suspend_action();
     udc_start();
-
-    for (int i = 0; i < 6; i++) {
-        led_toggle();
-        delay_ms(100);
-    }
-    led_off();
+    led_abort();
 }

@@ -282,7 +282,7 @@ int libsecp256k1_ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privke
     }
 
     if (!secp256k1_ecdh(libsecp256k1_ctx, ecdh_secret_compressed, &pubkey_secp,
-                        rand_privkey)) {
+                        rand_privkey, NULL, NULL)) {
         return 1;
     }
 

@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2018 Douglas J. Bakkum
+ Copyright (c) 2015-2019 Douglas J. Bakkum, SHIFT Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -69,6 +69,7 @@
 #define RECID_01           "01"
 #define RECID_EE           "ee"
 
+static uint8_t ZERO_32[32] = {0};
 
 int U_TESTS_RUN = 0;
 int U_TESTS_FAIL = 0;
@@ -2232,59 +2233,148 @@ static void tests_password(void)
     char ecdh_hash_cmd[256];
     snprintf(ecdh_hash_cmd, 256, "{\"hash_pubkey\":\"%s\"}", hash_ecdh_hex);
 
+    // Test command order. Enforced order is:
+    //      1 hash_pubkey (can be called anytime to start over)
+    //      2 pubkey (cannot be called twice)
+    //      3 challenge (can be called repeatedly)
+
+    // Send wrong order
+    //      1 hash_pubkey
+    //      3 challenge
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send wrong order
+    //      1 hash_pubkey
+    //      2 pubkey
+    //      2 pubkey
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send wrong order
+    //      3 challenge
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send wrong order
+    //      2 pubkey
+    //      3 challenge (after a pubkey call in the wrong order)
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send abort
+    //      1 hash_pubkey
+    //      2 pubkey
+    //      - abort
+    //      2 pubkey (aborted)
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"abort\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(attr_str(ATTR_aborted));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send abort
+    //      1 hash_pubkey
+    //      2 pubkey
+    //      - abort
+    //      3 challenge (aborted)
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
+    ASSERT_REPORT_HAS(cmd_str(CMD_pubkey));
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"abort\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(attr_str(ATTR_aborted));
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
+    // Send correct order
+    //      1 hash_pubkey
+    //      2 pubkey
+    //      3 challenge
     api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_hash_cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     ASSERT_REPORT_HAS(cmd_str(CMD_hash_pubkey));
 
-    const char *response_hash_ecdh = api_read_decrypted_report();
-
-    yajl_val json_node_0 = yajl_tree_parse(response_hash_ecdh, NULL, 0);
-    u_assert(json_node_0);
-    u_assert(YAJL_IS_OBJECT(json_node_0));
-
-    const char *path[] = { cmd_str(CMD_ecdh), NULL };
-    yajl_val ecdh_node = yajl_tree_get(json_node_0, path, yajl_t_any);
-    const char *path_hash_ecdh[] = { cmd_str(CMD_hash_pubkey), NULL };
-    const char *out_hash_ecdh_hex = YAJL_GET_STRING(yajl_tree_get(ecdh_node,
-                                    path_hash_ecdh, yajl_t_string));
-
-    // we should have received a hex representation of the hashed ECDH public key of the bitbox.
-    u_assert(out_hash_ecdh_hex);
-
+    // We should receive a hex representation of the hashed ECDH public key of the bitbox.
     uint8_t out_hash_ecdh[32];
-    memcpy(out_hash_ecdh, utils_hex_to_uint8(out_hash_ecdh_hex), 32 * sizeof(uint8_t));
+    memcpy(out_hash_ecdh, utils_hex_to_uint8(api_read_value_depth_2(CMD_ecdh,
+            CMD_hash_pubkey)), sizeof(out_hash_ecdh));
 
     api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
     ASSERT_REPORT_HAS_NOT(attr_str(ATTR_error));
     ASSERT_REPORT_HAS(cmd_str(CMD_pubkey));
-    // TODO: assert that hash of response is the same as the hash received above.
-
-    const char *response_ecdh = api_read_decrypted_report();
-
-    yajl_val json_node_1 = yajl_tree_parse(response_ecdh, NULL, 0);
-    u_assert(json_node_1);
-    u_assert(YAJL_IS_OBJECT(json_node_1));
-
-    ecdh_node = yajl_tree_get(json_node_1, path, yajl_t_any);
-    const char *path_ecdh[] = { cmd_str(CMD_pubkey), NULL };
-    const char *out_ecdh_pub_hex = YAJL_GET_STRING(yajl_tree_get(ecdh_node, path_ecdh,
-                                   yajl_t_string));
-    u_assert(out_ecdh_pub_hex);
 
     uint8_t out_ecdh_pub[33];
-    memcpy(out_ecdh_pub, utils_hex_to_uint8(out_ecdh_pub_hex), 33);
+    memcpy(out_ecdh_pub, utils_hex_to_uint8(api_read_value_depth_2(CMD_ecdh, CMD_pubkey)),
+           33);
 
+    // Assert that hash of response is the same as the hash received above.
     uint8_t calculated_hash[32];
     sha256_Raw(out_ecdh_pub, 33, calculated_hash);
     u_assert_mem_eq(out_hash_ecdh, calculated_hash, SHA256_DIGEST_LENGTH);
 
-    api_format_send_cmd(cmd_str(CMD_ecdh), cmd_str(CMD_challenge), KEY_STANDARD);
 
-    yajl_tree_free(json_node_0);
-    yajl_tree_free(json_node_1);
+    uint8_t ecdh_shared_secret[SIZE_ECDH_SHARED_SECRET];
+    bitcoin_ecc.ecc_ecdh(out_ecdh_pub, ecdh_priv, ecdh_shared_secret, ECC_SECP256k1);
+    if (!TEST_LIVE_DEVICE) {
+        // Check that the shared secret matches that calculated by the firmware
+        u_assert_mem_eq(ecdh_shared_secret, test_shared_secret_report(), SIZE_ECDH_SHARED_SECRET);
+    }
+
+    // Send repeated challenges
+    for (int i = 0; i < CHALLENGE_MIN_BLINK_SETS - 1; i++) {
+        api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+        ASSERT_SUCCESS;
+        if (!TEST_LIVE_DEVICE) {
+            // Check that the shared secret has not been erased yet
+            u_assert_mem_eq(ecdh_shared_secret, test_shared_secret_report(), SIZE_ECDH_SHARED_SECRET);
+        }
+    }
+
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    if (!TEST_LIVE_DEVICE) {
+        // Check that the shared secret was erased after the repeating the challenge command
+        // the minimum amount of times necessary
+        u_assert_mem_eq(&ZERO_32, test_shared_secret_report(), SIZE_ECDH_SHARED_SECRET);
+    }
+
+    // Send wrong order
+    //      3 challenge
+    //      2 pubkey
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_SUCCESS;
+    api_format_send_cmd(cmd_str(CMD_ecdh), ecdh_cmd, KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+    // Send wrong order
+    //      3 challenge
+    api_format_send_cmd(cmd_str(CMD_ecdh), "{\"challenge\":true}", KEY_STANDARD);
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_CMD_ORDER));
+
 
     // TODO: test blinking by writing the number that has been blinked into a buffer and read from
     // this buffer to compare it with the calculated shared secret.
+
 
     //
     // Test hidden password

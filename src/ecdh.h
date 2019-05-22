@@ -31,9 +31,17 @@
 
 #include "yajl/src/api/yajl_tree.h"
 
+
+#define CHALLENGE_MIN_BLINK_SETS 12// Minimum sets of blinks required before the shared secret is saved to eeprom
 #define SIZE_ECDH_SHARED_SECRET SHA256_DIGEST_LENGTH
 
+
+#ifdef TESTING
+uint8_t *test_shared_secret_report(void);
+void test_shared_secret_write(const uint8_t *data);
+#endif
 void ecdh_dispatch_command(yajl_val json_node);
+
 
 #endif
 

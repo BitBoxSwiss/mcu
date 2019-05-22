@@ -208,6 +208,7 @@ X(ERR_IO_RESET,        110, "Too many failed access attempts. Device reset.")\
 X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.")\
 X(ERR_IO_PW_COLLIDE,   112, "Device password matches reset password. Disabling reset password.")\
 X(ERR_IO_TOUCH_BUTTON, 113, "Due to many login attempts, the next login requires holding the touch button for 3 seconds.")\
+X(ERR_IO_CMD_ORDER,    114, "Invalid command order.")\
 X(ERR_SEED_SD,         200, "Seed creation requires an SD card for automatic encrypted backup of the seed.")\
 X(ERR_SEED_SD_NUM,     201, "Too many backup files. Please remove one from the SD card.")\
 X(ERR_SEED_MEM,        202, "Could not allocate memory for seed.")\

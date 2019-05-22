@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2018 Douglas J. Bakkum, Stephanie Stroka, Shift Cryptosecurity
+ Copyright (c) 2015-2019 Douglas J. Bakkum, Stephanie Stroka, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -103,7 +103,7 @@ static void ecdh_hash_pubkey_command(const char *pair_hash_pubkey)
         return;
     }
 
-    int status = touch_button_press(DBB_TOUCH_LONG);
+    int status = touch_button_press(TOUCH_LONG_PAIR);
     if (status != DBB_TOUCHED) {
         utils_zero(TFA_IN_HASH_PUB, SHA256_DIGEST_LENGTH);
         commander_fill_report(cmd_str(CMD_ecdh), NULL, status);
@@ -222,7 +222,7 @@ static void ecdh_challenge_command(void)
         TFA_VERIFY_BYTEPOS = (TFA_VERIFY_BYTEPOS + 1) % SIZE_ECDH_SHARED_SECRET;
         TFA_VERIFY_BITPOS = 1;
     }
-    led_code(two_bit + 1);
+    led_2FA_pairing_code(two_bit + 1);
 
     utils_zero(encryption_and_authentication_key, SHA512_DIGEST_LENGTH);
     utils_zero(encryption_and_authentication_challenge, SHA256_DIGEST_LENGTH);

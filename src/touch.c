@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2019 Douglas J. Bakkum, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -68,17 +68,7 @@ void touch_init(void)
 uint8_t touch_button_press(uint8_t touch_type)
 {
 #ifdef TESTING
-    if (touch_type == DBB_TOUCH_REJECT_TIMEOUT) {
-        // Simulate touch sequence for ecdh led blink coding
-        static uint8_t touch_short_count = 0;
-        if (!touch_short_count) {
-            touch_short_count++;
-            return DBB_ERR_TOUCH_TIMEOUT;
-        } else {
-            touch_short_count = 0;
-            return DBB_ERR_TOUCH_ABORT;
-        }
-    }
+    (void) touch_type;
     commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
     return DBB_TOUCHED;
 #else
@@ -93,17 +83,11 @@ uint8_t touch_button_press(uint8_t touch_type)
     }
 
 
-    if (touch_type != DBB_TOUCH_LONG &&
-            touch_type != DBB_TOUCH_SHORT &&
-            touch_type != DBB_TOUCH_LONG_BLINK &&
-            touch_type != DBB_TOUCH_REJECT_TIMEOUT &&
-            touch_type != DBB_TOUCH_TIMEOUT) {
+    if (touch_type >= TOUCH_REQUIRE_TOUCH) {
         return DBB_ERROR;
     }
 
-    if (touch_type != DBB_TOUCH_REJECT_TIMEOUT) {
-        led_on();
-    }
+    led_on();
 
     // Make higher priority so that we can timeout
     NVIC_SetPriority(SysTick_IRQn, 4);
@@ -111,18 +95,34 @@ uint8_t touch_button_press(uint8_t touch_type)
     qt_led_toggle_ms = QTOUCH_TOUCH_BLINK_OFF;
     systick_current_time_ms = 0;
     while (systick_current_time_ms < QTOUCH_TOUCH_TIMEOUT ||
-            touch_type == DBB_TOUCH_SHORT ||
-            touch_type == DBB_TOUCH_LONG_BLINK ||
-            touch_type == DBB_TOUCH_LONG) {
+            touch_type == TOUCH_SHORT ||
+            touch_type < TOUCH_REQUIRE_LONG_TOUCH) {
 
         if (systick_current_time_ms > QTOUCH_TOUCH_TIMEOUT_HARD) {
             break;
         }
 
-        if (touch_type == DBB_TOUCH_LONG_BLINK && systick_current_time_ms > qt_led_toggle_ms) {
-            led_off();
+        // Send an intermittent blink indicator for each touch type.
+        if (touch_type < TOUCH_REQUIRE_LONG_TOUCH && systick_current_time_ms > qt_led_toggle_ms) {
             if (systick_current_time_ms > qt_led_toggle_ms + QTOUCH_TOUCH_BLINK_OFF) {
                 qt_led_toggle_ms += QTOUCH_TOUCH_BLINK_ON + QTOUCH_TOUCH_BLINK_OFF;
+                switch (touch_type) {
+                    case TOUCH_LONG_SIGN:
+                        led_sign();
+                        break;
+                    case TOUCH_LONG_BOOT:
+                        led_boot_unlock();
+                        break;
+                    case TOUCH_LONG_PW:
+                        led_password();
+                        break;
+                    case TOUCH_LONG_PAIR:
+                        led_pair();
+                        break;
+                    default:
+                        led_warn();
+                        break;
+                }
                 led_on();
             }
         }
@@ -152,24 +152,21 @@ uint8_t touch_button_press(uint8_t touch_type)
                     // If released before exit_time_ms for:
                     //     - DBB_TOUCH_LONG_BLINK, answer is 'reject'
                     //     - DBB_TOUCH_LONG, answer is 'reject'
-                    //     - DBB_TOUCH_SHORT, answer is 'accept'
-                    if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
+                    //     - TOUCH_SHORT, answer is 'accept'
+                    if (touch_type  < TOUCH_REQUIRE_LONG_TOUCH) {
                         pushed = DBB_TOUCHED_ABORT;
                         break;
-                    } else if (touch_type == DBB_TOUCH_SHORT) {
+                    } else if (touch_type == TOUCH_SHORT) {
                         pushed = DBB_TOUCHED;
                         break;
                     }
-                } else if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
+                } else if (touch_type < TOUCH_REQUIRE_LONG_TOUCH) {
                     pushed = DBB_TOUCHED;
-                } else if (touch_type == DBB_TOUCH_SHORT) {
+                } else if (touch_type == TOUCH_SHORT) {
                     pushed = DBB_TOUCHED_ABORT;
-                } else if (touch_type == DBB_TOUCH_REJECT_TIMEOUT) {
-                    pushed = DBB_TOUCHED_ABORT;
-                    break;
-                } else if (touch_type == DBB_TOUCH_TIMEOUT) {
+                } else if (touch_type == TOUCH_TIMEOUT) {
                     // If touched before exit_time_ms for:
-                    //     - DBB_TOUCH_TIMEOUT, answer is 'accept'
+                    //     - TOUCH_TIMEOUT, answer is 'accept'
                     pushed = DBB_TOUCHED;
                     break;
                 }
@@ -182,10 +179,8 @@ uint8_t touch_button_press(uint8_t touch_type)
     NVIC_SetPriority(SysTick_IRQn, 15);
 
     if (pushed == DBB_TOUCHED) {
-        if (touch_type == DBB_TOUCH_LONG_BLINK || touch_type == DBB_TOUCH_LONG) {
-            led_off();
-            delay_ms(300);
-            led_blink();
+        if (touch_type < TOUCH_REQUIRE_LONG_TOUCH) {
+            led_success();
         }
         led_off();
         return DBB_TOUCHED;

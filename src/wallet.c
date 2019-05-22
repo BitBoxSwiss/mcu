@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2019 Douglas J. Bakkum, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -144,7 +144,8 @@ int wallet_check_keypath_prefix(const uint32_t
                                 const uint32_t keypath1[MAX_PARSE_KEYPATH_LEVEL],
                                 const uint32_t depth)
 {
-    if (depth < MIN_WALLET_DEPTH || !MEMEQ(keypath0, keypath1, (depth - 2) * sizeof(uint32_t))) {
+    if (depth < MIN_WALLET_DEPTH ||
+            !MEMEQ(keypath0, keypath1, (depth - 2) * sizeof(uint32_t))) {
         return DBB_ERROR;
     }
     return DBB_OK;

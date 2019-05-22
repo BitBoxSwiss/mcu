@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2015-2016 Douglas J. Bakkum
+ Copyright (c) 2015-2019 Douglas J. Bakkum, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -33,15 +33,20 @@
 
 
 #define LED_MAX_CODE_BLINKS 4
-#define LED_MAX_BLINK_SETS  6
 
 
 void led_on(void);
 void led_off(void);
+void led_warn(void);
+void led_pair(void);
+void led_success(void);
+void led_wink(void);
+void led_password(void);
+void led_sign(void);
+void led_boot_unlock(void);
 void led_toggle(void);
-void led_blink(void);
 void led_abort(void);
-void led_code(uint8_t code);
+void led_2FA_pairing_code(uint8_t code);
 
 
 #endif

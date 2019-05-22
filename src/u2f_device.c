@@ -2,7 +2,7 @@
 
  The MIT License (MIT)
 
- Copyright (c) 2016-2017 Douglas J. Bakkum, Shift Devices AG
+ Copyright (c) 2016-2019 Douglas J. Bakkum, Shift Cryptosecurity
 
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the "Software"),
@@ -199,7 +199,7 @@ static void u2f_device_register(const USB_APDU *a)
         return;
     }
 
-    if (touch_button_press(DBB_TOUCH_TIMEOUT) != DBB_TOUCHED) {
+    if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
         u2f_send_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 
@@ -282,7 +282,6 @@ static void u2f_device_hijack(const U2F_AUTHENTICATE_REQ *req)
         report = empty_report;
         report_len = sizeof(empty_report);
     } else {
-        led_blink();
         report = commander(hijack_cmd);
         report_len = MIN(strlens(report) + sizeof(empty_report), COMMANDER_REPORT_SIZE);
         memmove(report + 1 + U2F_CTR_SIZE, report, MIN(strlens(report),
@@ -354,7 +353,7 @@ static void u2f_device_authenticate(const USB_APDU *a)
         return;
     }
 
-    if (touch_button_press(DBB_TOUCH_TIMEOUT) != DBB_TOUCHED) {
+    if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
         u2f_send_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 
@@ -414,7 +413,7 @@ static void u2f_device_wink(const uint8_t *buf, uint32_t len)
         return;
     }
 
-    led_blink();
+    led_wink();
 
     USB_FRAME f;
     utils_zero(&f, sizeof(f));

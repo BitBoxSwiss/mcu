@@ -137,7 +137,6 @@ void led_success(void)
 {
     _short_blink();
     _long_blink();
-    _short_blink();
 }
 
 /**

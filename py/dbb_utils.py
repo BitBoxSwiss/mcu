@@ -68,8 +68,7 @@ def double_hash(x):
 def derive_keys(x):
     h = double_hash(x)
     h = sha512(h)
-    return (h[:len(h)/2],h[len(h)/2:])
-
+    return (h[:(int(len(h) / 2))], h[(int(len(h)) / 2):])
 # ----------------------------------------------------------------------------------
 # HID
 #
@@ -105,8 +104,8 @@ HWW_CMD = 0x80 + 0x40 + 0x01
 def hid_send_frame(data):
     data = bytearray(data)
     data_len = len(data)
-    seq = 0;
-    idx = 0;
+    seq = 0
+    idx = 0
     write = []
     while idx < data_len:
         if idx == 0:
@@ -128,7 +127,7 @@ def hid_read_frame():
     cmd = read[4]
     data_len = read[5] * 256 + read[6]
     data = read[7:]
-    idx = len(read) - 7;
+    idx = len(read) - 7
     while idx < data_len:
         # CONT response
         read = dbb_hid.read(usb_report_size)

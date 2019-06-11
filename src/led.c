@@ -86,6 +86,20 @@ static void _long_blink(void)
     delay_ms(300);
 }
 
+static void _off_on_blink(void)
+{
+    led_off();
+    delay_ms(200);
+    led_on();
+    delay_ms(100);
+}
+
+static void _off_delay(void)
+{
+    led_off();
+    delay_ms(200);
+}
+
 void led_toggle(void)
 {
     ioport_set_pin_level(LED_0_PIN, !ioport_get_pin_level(LED_0_PIN));
@@ -161,7 +175,7 @@ void led_boot_unlock(void)
  */
 void led_sign(void)
 {
-    _short_blink();
+    _off_delay();
 }
 
 /**
@@ -169,8 +183,8 @@ void led_sign(void)
  */
 void led_password(void)
 {
-    _short_blink();
-    _short_blink();
+    _off_on_blink();
+    _off_delay();
 }
 
 /**
@@ -179,9 +193,9 @@ void led_password(void)
  */
 void led_warn(void)
 {
-    _short_blink();
-    _short_blink();
-    _short_blink();
+    _off_on_blink();
+    _off_on_blink();
+    _off_delay();
 }
 
 /**
@@ -189,8 +203,8 @@ void led_warn(void)
  */
 void led_pair(void)
 {
-    _short_blink();
-    _short_blink();
-    _short_blink();
-    _short_blink();
+    _off_on_blink();
+    _off_on_blink();
+    _off_on_blink();
+    _off_delay();
 }

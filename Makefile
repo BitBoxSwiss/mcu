@@ -28,6 +28,8 @@ docs:
 	mkdir -p build; cd build; cmake .. -DBUILD_TYPE=firmware -DBUILD_DOCUMENTATION=ON && make doc
 test:
 	mkdir -p build; cd build; cmake .. -DBUILD_TYPE=test && make -j4
+run-test:
+	mkdir -p build; cd build; make test
 flash-dev-firmware:
 	./py/load_firmware.py build/bin/firmware.bin debug
 clean:

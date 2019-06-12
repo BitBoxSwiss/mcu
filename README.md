@@ -1,5 +1,4 @@
-Digital Bitbox Firmware
-============
+<img src="./doc/BB01_logo_github.svg" width="345px"/>
 
 [![Build Status](https://travis-ci.org/digitalbitbox/mcu.svg?branch=master)](https://travis-ci.org/digitalbitbox/mcu)
 [![Coverage Status](https://coveralls.io/repos/github/digitalbitbox/mcu/badge.svg?branch=master)](https://coveralls.io/github/digitalbitbox/mcu?branch=master)
@@ -7,7 +6,20 @@ Digital Bitbox Firmware
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
 
-**MCU code for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
+The [Bitbox01](https://shiftcrypto.com) is a hardware wallet that simplifies secure handling of crypto coins through storing private keys and signing transactions. The content of this repository is the bootloader and firmware used on the device. The BitBox01 is meant to be used primarily with the [BitBox App](https://github.com/digitalbitbox/bitbox-wallet-app), although third party integration is possible through the BitBox01 API.
+
+The main functionality of the firmware is the following:
+
+* Safely receive and send coins
+* Back up the seed to a microSD card
+* Generate a random seed from multiple strong sources of entropy
+* Protect the seed from attackers
+* Derive keys from the seed according to BIP39 and BIP32
+* Return the extended public key for a keypath so that the app can find all unspent transaction outputs
+* Second factor authentication (FIDO U2F compliant)
+
+
+## Building the code
 
 All communication to the hardware wallet enters and exits a single gateway `char *commander(const char *command)` that receives an encrypted command and returns an encrypted reply. The communication protocol is described in the [API](https://digitalbitbox.com/api.html). A Python script to interact with the device is in the `py/` folder.
 
@@ -16,9 +28,7 @@ The code can be compiled and tested locally without the need for a device, e.g.,
 ECDSA signatures are performed with either the [bitcoin core secp256k1 library](https://github.com/bitcoin/secp256k1) or using a simplified version of the smaller [micro ECC library](https://github.com/kmackay/micro-ecc), depending on a setting in the `CMakeLists.txt` file. Each library is resistant to known side channel attacks.
 
 
-## Build Instructions
-
-#### Building test code:
+#### Build instructions
 
 Dependencies:
 
@@ -31,10 +41,8 @@ Dependencies:
 Build:
 
     git clone https://github.com/digitalbitbox/mcu && cd mcu
-    mkdir build && cd build
-    cmake .. -DBUILD_TYPE=test # `-DBUILD_TYPE=firmware` and `-DBUILD_TYPE=bootloader` work if a GNU ARM toolchain is installed
-    make
-    make test
+    make test  #  or `make firmware` or `make bootloader`
+    make run-test
 
 Load the firmware by the bootloader (requires a bootloader already on the device):
 
@@ -45,36 +53,13 @@ Load the firmware by the bootloader (requires a bootloader already on the device
 - Long touch the device after plugging in to enter the bootloader
 - Flash the new firmware with `./load_firmware.py ../build/bin/firmware.bin debug` from the `py` directory
 
-#### Deterministic build of firmware:
+#### Deterministic builds
 
-### Build environment with Docker and Debian Stretch:
-
-Requires:
-
-- [Docker CE](https://download.docker.com/)
-
-To build the base image:
-
-    docker build --tag shift/mcu-base -f Dockerfile.dev .
-
-To build and run the full set of tests with both gcc and clang:
-
-    docker build --tag shift/mcu-base-ci -f Dockerfile.tests .
-
-To use the base container:
-
-    docker run -it shift/mcu-base
-
-To use the contious integration container:
-
-    docker run -it shift/mcu-base-ci
-
-This build process Debian Stable (Stretch).
+See the [releases page](releases) for instructions or to download deterministically built firmware.
 
 ## Contributing
-Please do not use an editor that automatically reformats.
 
-Please do use the coding style set by AStyle version 3.0 (http://astyle.sourceforge.net/; also available from homebrew) with the following parameters:
+Please use the coding style set by AStyle version 3.0 (http://astyle.sourceforge.net/; also available from homebrew) with the following parameters:
 
     astyle --style=kr --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-braces --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=src/yajl --exclude=src/secp256k1 --exclude=src/drivers --exclude=tests/hidapi | grep Formatted
 
@@ -90,3 +75,7 @@ All commits must be signed with PGP. To set Git to auto-sign your commits:
     git config --global commit.gpgsign true
 
 The PGP public keys of the contributors can be found in contrib/contributors_gpg_keys. Please add your PGP key with your first pull request.
+
+## Reporting a Vulnerability
+
+See our [security policy](SECURITY.md).

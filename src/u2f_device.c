@@ -258,15 +258,35 @@ static void u2f_device_register(const USB_APDU *a)
 }
 
 
+/*
+ * Add flag, U2F counter, and return code framing to the U2F data packet for
+ * the U2F hijack communication. Return the lenght of the framed report.
+ */
+static uint16_t _frame_hijack_report(char *report, uint16_t len, uint16_t report_size)
+{
+    uint16_t report_len = len + U2F_FRAME_SIZE;
+    if (report_len > COMMANDER_REPORT_SIZE || report_len > report_size) {
+        return 0;
+    }
+    const uint32_t ctr = memory_u2f_count_iter();
+    memmove(report + 1 + U2F_CTR_SIZE, report, len);
+    report[0] = 0; // Flags
+    report[1] = (ctr >> 24) & 0xff;
+    report[2] = (ctr >> 16) & 0xff;
+    report[3] = (ctr >> 8) & 0xff;
+    report[4] = ctr & 0xff;
+    // Append success bytes so that response gets through U2F client code.
+    // Otherwise, the client will resend sign requests until timing out.
+    // Errors encoded in JSON-formatted report.
+    memcpy(report + report_len - 2, "\x90\x00", 2);
+    return report_len;
+}
+
 static void u2f_device_hijack(const U2F_AUTHENTICATE_REQ *req)
 {
     static char hijack_cmd[COMMANDER_REPORT_SIZE] = {0};
-
-    const uint32_t ctr = memory_u2f_count_iter();
-    char empty_report[3 + U2F_CTR_SIZE] = {0};// 1-byte flag | 4-byte ctr | 2-byte status
     char *report;
     int report_len;
-
     size_t kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
     uint8_t tot = req->keyHandle[0];
     uint8_t cnt = req->keyHandle[1];
@@ -278,27 +298,16 @@ static void u2f_device_hijack(const U2F_AUTHENTICATE_REQ *req)
     }
 
     if (cnt + 1 < tot) {
-        // Need more data. Acknowledge by returning an empty report.
-        report = empty_report;
-        report_len = sizeof(empty_report);
-    } else {
-        report = commander(hijack_cmd);
-        report_len = MIN(strlens(report) + sizeof(empty_report), COMMANDER_REPORT_SIZE);
-        memmove(report + 1 + U2F_CTR_SIZE, report, MIN(strlens(report),
-                COMMANDER_REPORT_SIZE - U2F_CTR_SIZE - 1));
-        memset(hijack_cmd, 0, sizeof(hijack_cmd));
+        // Need more data. Acknowledge by returning a 1-byte empty report.
+        char empty_report[U2F_FRAME_SIZE + 1] = {0};
+        report_len = _frame_hijack_report(empty_report, 1, sizeof(empty_report));
+        u2f_send_message((const uint8_t *)empty_report, report_len);
+        return;
     }
 
-    report[0] = 0;// Flags
-    report[1] = (ctr >> 24) & 0xff;
-    report[2] = (ctr >> 16) & 0xff;
-    report[3] = (ctr >> 8) & 0xff;
-    report[4] = ctr & 0xff;
-
-    // Append success bytes so that response gets through U2F client code.
-    // Otherwise, the client will resend sign requests until timing out.
-    // Errors encoded in JSON-formatted report.
-    memcpy(report + report_len - 2, "\x90\x00", 2);
+    report = commander(hijack_cmd);
+    report_len = _frame_hijack_report(report, strlens(report), COMMANDER_REPORT_SIZE);
+    utils_zero(hijack_cmd, sizeof(hijack_cmd));
     u2f_send_message((const uint8_t *)report, report_len);
 }
 

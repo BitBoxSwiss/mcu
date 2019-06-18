@@ -20,6 +20,7 @@
 #define U2F_MAX_ATT_CERT_SIZE   1024    // Max size of attestation certificate
 #define U2F_MAX_EC_SIG_SIZE     72      // Max size of ANS.1 DER encoded EC signature
 #define U2F_CTR_SIZE            4       // Size of counter field
+#define U2F_FRAME_SIZE (3 + U2F_CTR_SIZE)// 1-byte flag | 4-byte counter | 2-byte status
 #define U2F_APPID_SIZE          32      // Size of application id
 #define U2F_NONCE_LENGTH        32      // Size of challenge nonce
 #define U2F_UNCOMPRESSED_POINT  0x04    // Uncompressed point format

@@ -132,16 +132,15 @@ static uint32_t _next_cid(void)
 }
 
 
-void u2f_send_message(const uint8_t *data, const uint32_t len)
+void u2f_queue_message(const uint8_t *data, const uint32_t len)
 {
     usb_reply_queue_load_msg(U2FHID_MSG, data, len, _cid);
 }
 
 
-void u2f_send_err_hid(uint32_t fcid, uint8_t err)
+void u2f_queue_error_hid(uint32_t fcid, uint8_t err)
 {
     USB_FRAME f;
-
     utils_zero(&f, sizeof(f));
     f.cid = fcid;
     f.init.cmd = U2FHID_ERROR;
@@ -151,24 +150,24 @@ void u2f_send_err_hid(uint32_t fcid, uint8_t err)
 }
 
 
-static void _send_error(const uint16_t err)
+static void _queue_error(const uint16_t err)
 {
     uint8_t data[2];
     data[0] = err >> 8 & 0xFF;
     data[1] = err & 0xFF;
-    u2f_send_message(data, 2);
+    u2f_queue_message(data, 2);
 }
 
 
 static void _version(const USB_APDU *a)
 {
     if (APDU_LEN(*a) != 0) {
-        _send_error(U2F_SW_WRONG_LENGTH);
+        _queue_error(U2F_SW_WRONG_LENGTH);
         return;
     }
 
     static const uint8_t version_response[] = {'U', '2', 'F',  '_', 'V', '2', 0x90, 0x00};
-    u2f_send_message(version_response, sizeof(version_response));
+    u2f_queue_message(version_response, sizeof(version_response));
 }
 
 
@@ -195,12 +194,12 @@ static void _register(const USB_APDU *a)
     const U2F_REGISTER_REQ *req = (const U2F_REGISTER_REQ *)a->data;
 
     if (APDU_LEN(*a) != sizeof(U2F_REGISTER_REQ)) {
-        _send_error(U2F_SW_WRONG_LENGTH);
+        _queue_error(U2F_SW_WRONG_LENGTH);
         return;
     }
 
     if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
-        _send_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
+        _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 
     } else {
@@ -213,7 +212,7 @@ static void _register(const USB_APDU *a)
         utils_zero(data, sizeof(data));
 
         if (random_bytes(nonce, sizeof(nonce), 0) == DBB_ERROR) {
-            _send_error(U2F_SW_WRONG_DATA);
+            _queue_error(U2F_SW_WRONG_DATA);
             return;
         }
 
@@ -237,7 +236,7 @@ static void _register(const USB_APDU *a)
 
         if (ecc_sign(U2F_ATT_PRIV_KEY, (uint8_t *)&sig_base, sizeof(sig_base), sig,
                      NULL, ECC_SECP256r1)) {
-            _send_error(U2F_SW_WRONG_DATA);
+            _queue_error(U2F_SW_WRONG_DATA);
             return;
         }
 
@@ -253,7 +252,7 @@ static void _register(const USB_APDU *a)
                   1 /* keyhandleLen */ + resp->keyHandleLen +
                   sizeof(U2F_ATT_CERT) + sig_len + 2;
 
-        u2f_send_message(data, len);
+        u2f_queue_message(data, len);
     }
 }
 
@@ -281,6 +280,7 @@ static uint16_t _frame_hijack_report(char *report, uint16_t len, uint16_t report
     memcpy(report + report_len - 2, "\x90\x00", 2);
     return report_len;
 }
+
 
 static void _hijack(const U2F_AUTHENTICATE_REQ *req)
 {
@@ -320,7 +320,7 @@ static void _authenticate(const USB_APDU *a)
     U2F_AUTHENTICATE_SIG_STR sig_base;
 
     if (APDU_LEN(*a) < U2F_KEYHANDLE_LEN) { // actual size could vary
-        _send_error(U2F_SW_WRONG_LENGTH);
+        _queue_error(U2F_SW_WRONG_LENGTH);
         return;
     }
 
@@ -330,7 +330,7 @@ static void _authenticate(const USB_APDU *a)
         if (MEMEQ(req->appId, _hijack_code[i], U2F_APPID_SIZE)) {
             if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
                 // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
-                u2f_send_err_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);
+                u2f_queue_error_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);
             } else {
                 _hijack(req);
             }
@@ -339,7 +339,7 @@ static void _authenticate(const USB_APDU *a)
     }
 
     if (req->keyHandleLen != U2F_KEYHANDLE_LEN) {
-        _send_error(U2F_SW_WRONG_DATA);
+        _queue_error(U2F_SW_WRONG_DATA);
         return;
     }
 
@@ -348,22 +348,22 @@ static void _authenticate(const USB_APDU *a)
     _keyhandle_gen(req->appId, nonce, privkey, mac);
 
     if (!MEMEQ(req->keyHandle, mac, SHA256_DIGEST_LENGTH)) {
-        _send_error(U2F_SW_WRONG_DATA);
+        _queue_error(U2F_SW_WRONG_DATA);
         return;
     }
 
     if (a->p1 == U2F_AUTH_CHECK_ONLY) {
-        _send_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
+        _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
     }
 
     if (a->p1 != U2F_AUTH_ENFORCE) {
-        _send_error(U2F_SW_WRONG_DATA);
+        _queue_error(U2F_SW_WRONG_DATA);
         return;
     }
 
     if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
-        _send_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
+        _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 
     } else {
@@ -385,7 +385,7 @@ static void _authenticate(const USB_APDU *a)
         memcpy(sig_base.challenge, req->challenge, U2F_NONCE_LENGTH);
 
         if (ecc_sign(privkey, (uint8_t *)&sig_base, sizeof(sig_base), sig, NULL, ECC_SECP256r1)) {
-            _send_error(U2F_SW_WRONG_DATA);
+            _queue_error(U2F_SW_WRONG_DATA);
             return;
         }
 
@@ -395,7 +395,7 @@ static void _authenticate(const USB_APDU *a)
         memcpy(buf + sizeof(U2F_AUTHENTICATE_RESP) - U2F_MAX_EC_SIG_SIZE + sig_len, "\x90\x00",
                2);
 
-        u2f_send_message(buf, sizeof(U2F_AUTHENTICATE_RESP) - U2F_MAX_EC_SIG_SIZE + sig_len + 2);
+        u2f_queue_message(buf, sizeof(U2F_AUTHENTICATE_RESP) - U2F_MAX_EC_SIG_SIZE + sig_len + 2);
     }
 }
 
@@ -418,7 +418,7 @@ static void _cmd_wink(const uint8_t *buf, uint32_t len)
     (void)buf;
 
     if (len > 0) {
-        u2f_send_err_hid(_cid, U2FHID_ERR_INVALID_LEN);
+        u2f_queue_error_hid(_cid, U2FHID_ERR_INVALID_LEN);
         return;
     }
 
@@ -456,7 +456,7 @@ static void _cmd_init(const USB_FRAME *in)
     U2FHID_INIT_RESP resp;
 
     if (in->cid == 0) {
-        u2f_send_err_hid(in->cid, U2FHID_ERR_INVALID_CID);
+        u2f_queue_error_hid(in->cid, U2FHID_ERR_INVALID_CID);
         return;
     }
 
@@ -486,7 +486,7 @@ static void _cmd_msg(const USB_APDU *a, uint32_t len)
     }
 
     if (a->cla != 0) {
-        _send_error(U2F_SW_CLA_NOT_SUPPORTED);
+        _queue_error(U2F_SW_CLA_NOT_SUPPORTED);
         return;
     }
 
@@ -501,7 +501,7 @@ static void _cmd_msg(const USB_APDU *a, uint32_t len)
             _version(a);
             break;
         default:
-            _send_error(U2F_SW_INS_NOT_SUPPORTED);
+            _queue_error(U2F_SW_INS_NOT_SUPPORTED);
     }
 }
 
@@ -521,7 +521,7 @@ static void _continue(const USB_FRAME *f)
             !(memory_report_ext_flags() & MEM_EXT_MASK_U2F) ) {
         // Abort U2F commands if the U2F bit is not set (==U2F disabled).
         // Vendor specific commands are passed through.
-        u2f_send_err_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);
+        u2f_queue_error_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);
     } else {
         // Received all data
         switch (_reader.cmd) {
@@ -542,7 +542,7 @@ static void _continue(const USB_FRAME *f)
                 break;
             }
             default:
-                u2f_send_err_hid(_cid, U2FHID_ERR_INVALID_CMD);
+                u2f_queue_error_hid(_cid, U2FHID_ERR_INVALID_CMD);
                 break;
         }
     }
@@ -556,12 +556,12 @@ static void _continue(const USB_FRAME *f)
 static void _init(const USB_FRAME *f)
 {
     if (f->cid == U2FHID_CID_BROADCAST || f->cid == 0) {
-        u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_CID);
+        u2f_queue_error_hid(f->cid, U2FHID_ERR_INVALID_CID);
         return;
     }
 
     if ((unsigned)U2FHID_MSG_LEN(*f) > sizeof(_reader.buf)) {
-        u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_LEN);
+        u2f_queue_error_hid(f->cid, U2FHID_ERR_INVALID_LEN);
         return;
     }
 
@@ -593,9 +593,9 @@ void u2f_device_run(const USB_FRAME *f)
             if (f->cid == _cid) {
                 usb_reply_queue_clear();
                 _reset_state();
-                u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
+                u2f_queue_error_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
             } else {
-                u2f_send_err_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
+                u2f_queue_error_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
             }
         } else {
             _init(f);
@@ -610,14 +610,14 @@ void u2f_device_run(const USB_FRAME *f)
         }
 
         if (_cid != f->cid) {
-            u2f_send_err_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
+            u2f_queue_error_hid(f->cid, U2FHID_ERR_CHANNEL_BUSY);
             goto exit;
         }
 
         if (_reader.seq != f->cont.seq) {
             usb_reply_queue_clear();
             _reset_state();
-            u2f_send_err_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
+            u2f_queue_error_hid(f->cid, U2FHID_ERR_INVALID_SEQ);
             goto exit;
         }
 
@@ -649,7 +649,7 @@ void u2f_device_timeout(void)
 
     if (_current_time_ms > U2F_TIMEOUT) {
         _reset_state();
-        u2f_send_err_hid(_cid, U2FHID_ERR_MSG_TIMEOUT);
+        u2f_queue_error_hid(_cid, U2FHID_ERR_MSG_TIMEOUT);
         usb_reply_queue_send();
     }
 }

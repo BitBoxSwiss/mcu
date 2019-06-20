@@ -94,6 +94,15 @@ const uint8_t _hijack_code[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE] = {
     }
 };
 
+typedef enum HIJACK_STATE {
+    // Do not change the order!
+    // Order affects third party integrations that make use of the hijack mode
+    HIJACK_STATE_RESPONSE_READY,
+    HIJACK_STATE_PROCESSING_COMMAND,
+    HIJACK_STATE_INCOMPLETE_COMMAND,
+    HIJACK_STATE_IDLE,
+} HIJACK_STATE;
+
 typedef struct {
     uint8_t reserved;
     uint8_t appId[U2F_APPID_SIZE];
@@ -284,31 +293,64 @@ static uint16_t _frame_hijack_report(char *report, uint16_t len, uint16_t report
 
 static void _hijack(const U2F_AUTHENTICATE_REQ *req)
 {
-    static char hijack_cmd[COMMANDER_REPORT_SIZE] = {0};
-    char *report;
-    int report_len;
+    static HIJACK_STATE state = HIJACK_STATE_IDLE;
+    static char hijack_io_buffer[COMMANDER_REPORT_SIZE] = {0};
+    char byte_report[U2F_FRAME_SIZE + 1] = {0};
+    uint16_t report_len;
     size_t kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
     uint8_t tot = req->keyHandle[0];
     uint8_t cnt = req->keyHandle[1];
     size_t idx = cnt * (U2F_MAX_KH_SIZE - 2);
 
-    if (idx + kh_len < sizeof(hijack_cmd)) {
-        memcpy(hijack_cmd + idx, req->keyHandle + 2, kh_len);
-        hijack_cmd[idx + kh_len] = '\0';
-    }
+    switch (state) {
+        case HIJACK_STATE_PROCESSING_COMMAND:
+            // Previous command is still processing, for example, waiting for a touch button press
+            byte_report[0] = state;
+            report_len = _frame_hijack_report(byte_report, 1, sizeof(byte_report));
+            u2f_queue_message((const uint8_t *)byte_report, report_len);
+            break;
+        case HIJACK_STATE_RESPONSE_READY:
+            // Previous command finished processing; return the response
+            report_len = _frame_hijack_report(hijack_io_buffer, strlens(hijack_io_buffer),
+                                              COMMANDER_REPORT_SIZE);
+            u2f_queue_message((const uint8_t *)hijack_io_buffer, report_len);
+            utils_zero(hijack_io_buffer, sizeof(hijack_io_buffer));
+            state = HIJACK_STATE_IDLE;
+            break;
+        case HIJACK_STATE_INCOMPLETE_COMMAND:
+        case HIJACK_STATE_IDLE: {
+            if (idx + kh_len < sizeof(hijack_io_buffer)) {
+                // Fill the buffer with the command to process
+                snprintf(hijack_io_buffer + idx, sizeof(hijack_io_buffer) - idx, "%.*s",
+                         kh_len, req->keyHandle + 2);
+            }
 
-    if (cnt + 1 < tot) {
-        // Need more data. Acknowledge by returning a 1-byte empty report.
-        char empty_report[U2F_FRAME_SIZE + 1] = {0};
-        report_len = _frame_hijack_report(empty_report, 1, sizeof(empty_report));
-        u2f_send_message((const uint8_t *)empty_report, report_len);
-        return;
-    }
+            if (cnt + 1 < tot) {
+                // Command string is incomplete; acknowledge receipt of USB frame
+                state = HIJACK_STATE_INCOMPLETE_COMMAND;
+                byte_report[0] = state;
+                report_len = _frame_hijack_report(byte_report, 1, sizeof(byte_report));
+                u2f_queue_message((const uint8_t *)byte_report, report_len);
+                break;
+            }
 
-    report = commander(hijack_cmd);
-    report_len = _frame_hijack_report(report, strlens(report), COMMANDER_REPORT_SIZE);
-    utils_zero(hijack_cmd, sizeof(hijack_cmd));
-    u2f_send_message((const uint8_t *)report, report_len);
+            // Acknowledge receipt of command
+            state = HIJACK_STATE_PROCESSING_COMMAND;
+            byte_report[0] = state;
+            report_len = _frame_hijack_report(byte_report, 1, sizeof(byte_report));
+            u2f_queue_message((const uint8_t *)byte_report, report_len);
+            usb_reply_queue_send();
+
+            // Process the command and fill the buffer with the response
+            char *report = commander(hijack_io_buffer);
+            utils_zero(hijack_io_buffer, sizeof(hijack_io_buffer));
+            snprintf(hijack_io_buffer, sizeof(hijack_io_buffer), "%s", report);
+            state = HIJACK_STATE_RESPONSE_READY;
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 

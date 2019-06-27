@@ -40,6 +40,15 @@
 
 extern const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE];
 
+typedef enum HIJACK_STATE {
+    // Do not change the order!
+    // Order affects third party integrations that make use of the hijack mode
+    HIJACK_STATE_RESPONSE_READY,
+    HIJACK_STATE_PROCESSING_COMMAND,
+    HIJACK_STATE_INCOMPLETE_COMMAND,
+    HIJACK_STATE_IDLE,
+} HIJACK_STATE;
+
 
 void u2f_queue_message(const uint8_t *data, const uint32_t len);
 void u2f_queue_error_hid(uint32_t fcid, uint8_t err);

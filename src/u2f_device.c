@@ -25,6 +25,7 @@
 */
 
 
+#include <stdio.h>
 #include <string.h>
 
 #include "bip32.h"
@@ -65,7 +66,7 @@
 static uint32_t _cid = 0;
 volatile bool _state_continue = false;
 volatile uint16_t _current_time_ms = 0;
-const uint8_t _hijack_code[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE] = {
+const uint8_t U2F_HIJACK_CODE[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE] = {
     {
         /* Corresponds to U2F client challenge filled with `0xdb` */
         /* Origin `https://digitalbitbox.com` */
@@ -93,15 +94,6 @@ const uint8_t _hijack_code[U2F_HIJACK_ORIGIN_TOTAL][U2F_APPID_SIZE] = {
         0x2e, 0x24, 0x01, 0xa7, 0xce, 0xfd, 0x1a, 0xa8,
     }
 };
-
-typedef enum HIJACK_STATE {
-    // Do not change the order!
-    // Order affects third party integrations that make use of the hijack mode
-    HIJACK_STATE_RESPONSE_READY,
-    HIJACK_STATE_PROCESSING_COMMAND,
-    HIJACK_STATE_INCOMPLETE_COMMAND,
-    HIJACK_STATE_IDLE,
-} HIJACK_STATE;
 
 typedef struct {
     uint8_t reserved;
@@ -297,7 +289,7 @@ static void _hijack(const U2F_AUTHENTICATE_REQ *req)
     static char hijack_io_buffer[COMMANDER_REPORT_SIZE] = {0};
     char byte_report[U2F_FRAME_SIZE + 1] = {0};
     uint16_t report_len;
-    size_t kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
+    int kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
     uint8_t tot = req->keyHandle[0];
     uint8_t cnt = req->keyHandle[1];
     size_t idx = cnt * (U2F_MAX_KH_SIZE - 2);
@@ -369,7 +361,7 @@ static void _authenticate(const USB_APDU *a)
     for (i = 0; i < U2F_HIJACK_ORIGIN_TOTAL; i++) {
         // As an alternative interface, hijack the U2F AUTH key handle data field.
         // Slower but works in browsers for specified sites without requiring an extension.
-        if (MEMEQ(req->appId, _hijack_code[i], U2F_APPID_SIZE)) {
+        if (MEMEQ(req->appId, U2F_HIJACK_CODE[i], U2F_APPID_SIZE)) {
             if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
                 // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
                 u2f_queue_error_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);

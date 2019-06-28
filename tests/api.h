@@ -326,31 +326,6 @@ static int api_hid_init(void)
 #endif
 
 
-static void api_hid_read(uint8_t *key)
-{
-    int res;
-    int u2fhid_cmd = TEST_U2FAUTH_HIJACK ? U2FHID_MSG : U2FHID_HWW;
-    memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    res = api_hid_read_frames(HWW_CID, u2fhid_cmd, HID_REPORT, HID_REPORT_SIZE);
-    if (res < 0) {
-        strcpy(decrypted_report, "/* " API_READ_ERROR " */");
-        return;
-    }
-    if (TEST_U2FAUTH_HIJACK) {
-        // If the hijack command was sent in chunks, the first chunks return empty frames.
-        // The last chunk holds the JSON response. So poll until get a non-empty frame.
-        // First 5 bytes are the frame header.
-        // Set the appended U2F success byte 0x90 to zero. Otherwise cannot decrypt.
-        char *r = (char *)(HID_REPORT + 5);
-        r[strlens(r) - 1] = 0;
-        strlens(r) ? api_decrypt_report(r, key) : api_hid_read(key);
-    } else {
-        api_decrypt_report((char *)HID_REPORT, key);
-    }
-    //printf("received:  >>%s<<\n", api_read_decrypted_report());
-}
-
-
 static void api_hid_send_len(const char *cmd, int cmdlen)
 {
     if (TEST_U2FAUTH_HIJACK) {
@@ -398,6 +373,50 @@ static void api_hid_send_encrypt(const char *cmd, uint8_t *key)
                                             key);
     api_hid_send_len(enc, enc_len);
     free(enc);
+}
+
+
+static void api_hid_read(uint8_t *key)
+{
+    int res;
+    int u2fhid_cmd = TEST_U2FAUTH_HIJACK ? U2FHID_MSG : U2FHID_HWW;
+    memset(HID_REPORT, 0, HID_REPORT_SIZE);
+    res = api_hid_read_frames(HWW_CID, u2fhid_cmd, HID_REPORT, HID_REPORT_SIZE);
+    if (res < 0) {
+        strcpy(decrypted_report, "/* " API_READ_ERROR " */");
+        return;
+    }
+    if (TEST_U2FAUTH_HIJACK) {
+        // If the hijack command was sent in multiple chunks, the first chunks are replied
+        // with a single-byte (framed) having the value HIJACK_STATE_INCOMPLETE_COMMAND.
+        //
+        // After receiving the all chunks, the firware replies with a single-byte
+        // HIJACK_STATE_PROCESSING_COMMAND.
+        //
+        // The client can poll the firmware for the JSON response by sending a single-byte
+        // (framed) having any value. If the firmware is busy, for example waiting for user touch
+        // button press, the firmware will reply with a single-byte HIJACK_STATE_PROCESSING_COMMAND.
+        // If the firmware finished processing, the reply will contain the JSON response.
+        //
+        // The first 5 bytes are the frame header. The last two bytes contain the U2F status,
+        // which should be the success bytes \x90\x00 in order for the U2F hijack approach
+        // to work in browsers.
+        char *r = (char *)(HID_REPORT + 1 + U2F_CTR_SIZE);
+        r[strlens(r) - 1] = 0;
+        if (strlens(r) == 1) {
+            if (r[0] == HIJACK_STATE_PROCESSING_COMMAND) {
+                api_hid_send(" ");
+            }
+            api_hid_read(key);
+        } else if (strlens(r) > 1) {
+            api_decrypt_report(r, key);
+        } else {
+            strcpy(decrypted_report, "/* " API_READ_ERROR " */");
+        }
+    } else {
+        api_decrypt_report((char *)HID_REPORT, key);
+    }
+    //printf("received:  >>%s<<\n", api_read_decrypted_report());
 }
 
 

@@ -1059,6 +1059,8 @@ static void tests_u2f(void)
     api_format_send_cmd(cmd_str(CMD_backup),
                         "{\"erase\":\"u2f_test_0.pdf\"}",
                         KEY_STANDARD);
+    ASSERT_SUCCESS;
+
     // U2F command runs
     api_hid_send_frame(&f);
     api_hid_read_frame(&r);
@@ -1066,9 +1068,11 @@ static void tests_u2f(void)
     u_assert_int_eq(r.init.cmd, U2FHID_WINK);
     u_assert_int_eq(r.init.bcntl, 0);
 
-    // Disable U2F
+    // Disable U2F - Must be done through HWW interface.
+    TEST_U2FAUTH_HIJACK = 0;
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F\":false}", KEY_STANDARD);
     ASSERT_SUCCESS;
+    TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {
@@ -1097,9 +1101,11 @@ static void tests_u2f(void)
     ASSERT_REPORT_HAS("\"U2F_hijack\":true");
 
 
-    // Disable U2F hijack
+    // Disable U2F - Must be done through HWW interface.
+    TEST_U2FAUTH_HIJACK = 0;
     api_format_send_cmd(cmd_str(CMD_feature_set), "{\"U2F_hijack\":false}", KEY_STANDARD);
     ASSERT_SUCCESS;
+    TEST_U2FAUTH_HIJACK = test_u2fauth_hijack;
 
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), KEY_STANDARD);
     if (TEST_U2FAUTH_HIJACK) {

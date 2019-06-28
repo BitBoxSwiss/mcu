@@ -71,7 +71,7 @@ void usb_u2f_report(const unsigned char *command)
     }
     if (c->type >= U2FHID_VENDOR_FIRST) {
         // Disable vendor defined commands in u2f interface
-        u2f_send_err_hid(c->cid, U2FHID_ERR_INVALID_CMD);
+        u2f_queue_error_hid(c->cid, U2FHID_ERR_INVALID_CMD);
         usb_reply_queue_send();
         return;
     }
@@ -79,6 +79,10 @@ void usb_u2f_report(const unsigned char *command)
 }
 
 
+/*
+ * Callback passed to the low level driver.
+ * Called after a report is sent to the host computer.
+ */
 void usb_report_sent(void)
 {
     usb_reply_queue_send();

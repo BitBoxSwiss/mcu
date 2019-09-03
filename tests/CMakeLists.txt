@@ -18,10 +18,10 @@ target_link_libraries(tests_unit bitbox)
 
 #-----------------------------------------------------------------------------
 # Build tests_openssl
-find_package(OpenSSL REQUIRED)
-include_directories(${OPENSSL_INCLUDE_DIR})
-add_executable(tests_openssl tests_openssl.c)
-target_link_libraries(tests_openssl bitbox ${OPENSSL_LIBRARIES})
+# find_package(OpenSSL REQUIRED)
+# include_directories(${OPENSSL_INCLUDE_DIR})
+# add_executable(tests_openssl tests_openssl.c)
+# target_link_libraries(tests_openssl bitbox ${OPENSSL_LIBRARIES})
 
 
 #-----------------------------------------------------------------------------

@@ -183,6 +183,9 @@ if(BUILD_TYPE STREQUAL "test")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -Wno-unused-function -Wno-missing-field-initializers -Wno-long-long -Wno-expansion-to-defined")
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow -Wno-format-truncation")
+endif()
 
 if(BUILD_TYPE STREQUAL "test")
     if(APPLE)

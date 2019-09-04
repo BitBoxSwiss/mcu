@@ -162,7 +162,7 @@ int wallet_check_change_keypath(const uint32_t utxo[MAX_PARSE_KEYPATH_LEVEL],
     }
 
     // Check the change keypath's change level
-    if (change[change_depth - 2] != 1) {
+    if (change[change_depth - 2] != 1 && change[change_depth - 2] != 0) {
         return DBB_ERROR;
     }
     // Check that the change keypath address level is within range

@@ -199,7 +199,7 @@ static void _register(const USB_APDU *a)
         return;
     }
 
-    if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
+    if (touch_button_press(TOUCH_U2F) != DBB_TOUCHED) {
         _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 
@@ -289,7 +289,7 @@ static void _hijack(const U2F_AUTHENTICATE_REQ *req)
     static char hijack_io_buffer[COMMANDER_REPORT_SIZE] = {0};
     char byte_report[U2F_FRAME_SIZE + 1] = {0};
     uint16_t report_len;
-    int kh_len = MIN(U2F_MAX_KH_SIZE - 2, strlens((const char *)req->keyHandle + 2));
+    int kh_len = MIN(U2F_MAX_KH_SIZE - 2, req->keyHandleLen - 2);
     uint8_t tot = req->keyHandle[0];
     uint8_t cnt = req->keyHandle[1];
     size_t idx = cnt * (U2F_MAX_KH_SIZE - 2);
@@ -362,6 +362,12 @@ static void _authenticate(const USB_APDU *a)
         // As an alternative interface, hijack the U2F AUTH key handle data field.
         // Slower but works in browsers for specified sites without requiring an extension.
         if (MEMEQ(req->appId, U2F_HIJACK_CODE[i], U2F_APPID_SIZE)) {
+            if(a->p1 == U2F_AUTH_CHECK_ONLY) {
+                // Windows first sends a "check-only" command which we must confirm
+                // The error message here indicates that our device is valid for this keyhandle
+                _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
+                return;
+            }
             if (!(memory_report_ext_flags() & MEM_EXT_MASK_U2F_HIJACK)) {
                 // Abort U2F hijack commands if the U2F_hijack bit is not set (== disabled).
                 u2f_queue_error_hid(_cid, U2FHID_ERR_CHANNEL_BUSY);
@@ -396,7 +402,7 @@ static void _authenticate(const USB_APDU *a)
         return;
     }
 
-    if (touch_button_press(TOUCH_TIMEOUT) != DBB_TOUCHED) {
+    if (touch_button_press(TOUCH_U2F) != DBB_TOUCHED) {
         _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);
         return;
 

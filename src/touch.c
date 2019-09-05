@@ -102,6 +102,10 @@ uint8_t touch_button_press(uint8_t touch_type)
             break;
         }
 
+        if (touch_type == TOUCH_U2F && systick_current_time_ms > QTOUCH_TOUCH_TIMEOUT_U2F) {
+            break;
+        }
+
         // Send an intermittent blink indicator for each touch type.
         if (touch_type < TOUCH_REQUIRE_LONG_TOUCH && systick_current_time_ms > qt_led_toggle_ms) {
             if (systick_current_time_ms > qt_led_toggle_ms + QTOUCH_TOUCH_BLINK_OFF) {
@@ -164,7 +168,7 @@ uint8_t touch_button_press(uint8_t touch_type)
                     pushed = DBB_TOUCHED;
                 } else if (touch_type == TOUCH_SHORT) {
                     pushed = DBB_TOUCHED_ABORT;
-                } else if (touch_type == TOUCH_TIMEOUT) {
+                } else if (touch_type == TOUCH_TIMEOUT || touch_type == TOUCH_U2F) {
                     // If touched before exit_time_ms for:
                     //     - TOUCH_TIMEOUT, answer is 'accept'
                     pushed = DBB_TOUCHED;

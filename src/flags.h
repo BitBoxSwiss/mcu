@@ -167,6 +167,7 @@ X(LONG_PAIR)             \
 X(REQUIRE_LONG_TOUCH)    /* placeholder - do not move                */\
 X(TIMEOUT)               /* any touch 'accept'; 3s timeout 'reject'  */\
 X(SHORT)                 /* brief touch 'accept'; hold 3s 'reject'   */\
+X(U2F)                   /* any touch 'accept'; 1.9s timeout 'reject'*/\
 X(REQUIRE_TOUCH)         /* placeholder - do not move                */
 
 // Status and error flags

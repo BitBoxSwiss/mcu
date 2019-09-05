@@ -40,9 +40,9 @@ install:
           export PATH=$PATH:$PWD/bin/;
           cd ../../..;
     - if [ "$TEST" = "no" ]; then
-          wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2018q4/gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2;
-          tar -xf gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2;
-          export PATH=$PATH:$PWD/gcc-arm-none-eabi-8-2018-q4-major/bin;
+          wget -O gcc.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2;
+          tar -xf gcc.tar.bz2;
+          export PATH=$PATH:$PWD/gcc-arm-none-eabi-8-2019-q3-update/bin;
       fi;
     - if [ "$TEST" = "yes" ]; then
           sudo apt-get update;

@@ -35,7 +35,7 @@ dockerdev () {
 
     # If already running, enter the container.
     if docker ps | grep -q $container_name; then
-        docker exec -it $container_name bash
+        docker exec --user=dockeruser --workdir=/app -it $container_name bash
         return
     fi
 
@@ -51,6 +51,11 @@ dockerdev () {
            --name=$container_name \
            -v $repo_path:/app \
            $container_image bash
+
+    # Use same user/group id as on the host, so that files are not created as root in the mounted
+    # volume.
+    docker exec -it $container_name groupadd -g `id -g` dockergroup
+    docker exec -it $container_name useradd -u `id -u` -m -g dockergroup dockeruser
 
     # Call a second time to enter the container.
     dockerdev

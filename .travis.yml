@@ -26,9 +26,7 @@ matrix:
 
 addons:
   apt_packages:
-    - lib32bz2-1.0
-    - lib32ncurses5
-    - lib32z1
+    - libbz2-1.0
     - valgrind
 
 install:

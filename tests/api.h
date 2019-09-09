@@ -346,6 +346,7 @@ static void api_hid_send_len(const char *cmd, int cmdlen)
             a->lc1 = 0;
             a->lc2 = (sizeof(U2F_AUTHENTICATE_REQ) >> 8) & 255;
             a->lc3 = (sizeof(U2F_AUTHENTICATE_REQ) & 255);
+            auth_req->keyHandleLen = MIN(U2F_MAX_KH_SIZE, cmdlen - idx * kh_max_len + 2);
             auth_req->keyHandle[0] = total;
             auth_req->keyHandle[1] = idx;
             memcpy(auth_req->keyHandle + 2, cmd + idx * kh_max_len, MIN(kh_max_len, MAX(0,

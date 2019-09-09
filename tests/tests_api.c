@@ -256,15 +256,15 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 
     // test sd list overflow
-    char long_backup_name[SD_FILEBUF_LEN_MAX / 8];
+    char long_backup_name[SD_FILEBUF_LEN_MAX / 8 - 1]; // 1 character number prefix
     char lbn[SD_FILEBUF_LEN_MAX / 8];
     size_t i;
 
     memset(long_backup_name, '-', sizeof(long_backup_name) - 1);
-    long_backup_name[(SD_FILEBUF_LEN_MAX / 8) - 1] = 0;
+    long_backup_name[sizeof(long_backup_name) - 1] = 0;
 
     for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
-        snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
+        snprintf(lbn, sizeof(lbn), "%.1lu%s", (unsigned long)i, long_backup_name);
 
         snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
                  lbn);
@@ -278,7 +278,7 @@ static void tests_seed_xpub_backup(void)
         ASSERT_REPORT_HAS_NOT(cmd_str(CMD_warning));
     }
 
-    snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
+    snprintf(lbn, sizeof(lbn), "%.1lu%s", (unsigned long)i, long_backup_name);
     snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
     api_format_send_cmd(cmd_str(CMD_backup), back, KEY_STANDARD);
     ASSERT_SUCCESS;
@@ -287,7 +287,7 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS(cmd_str(CMD_warning));
 
     for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name) + 1; i++) {
-        snprintf(lbn, sizeof(lbn), "%lu%s", (unsigned long)i, long_backup_name);
+        snprintf(lbn, sizeof(lbn), "%.1lu%s", (unsigned long)i, long_backup_name);
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
 
         snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),

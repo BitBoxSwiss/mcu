@@ -7,9 +7,9 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     sudo locale-gen UTF-8
     sudo apt update && sudo apt-get install -y cmake git
-    wget -O gcc.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2018q4/gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2;
+    wget -O gcc.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
     tar -xf gcc.tar.bz2
-    sudo rsync -a gcc-arm-none-eabi-8-2018-q4-major/ /usr/local/
+    sudo rsync -a gcc-arm-none-eabi-8-2019-q3-update/ /usr/local/
   SHELL
 
   config.vm.provision "shell", run: "always", privileged: false, inline: <<-SHELL

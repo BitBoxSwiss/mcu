@@ -362,7 +362,7 @@ static void _authenticate(const USB_APDU *a)
         // As an alternative interface, hijack the U2F AUTH key handle data field.
         // Slower but works in browsers for specified sites without requiring an extension.
         if (MEMEQ(req->appId, U2F_HIJACK_CODE[i], U2F_APPID_SIZE)) {
-            if(a->p1 == U2F_AUTH_CHECK_ONLY) {
+            if (a->p1 == U2F_AUTH_CHECK_ONLY) {
                 // Windows first sends a "check-only" command which we must confirm
                 // The error message here indicates that our device is valid for this keyhandle
                 _queue_error(U2F_SW_CONDITIONS_NOT_SATISFIED);

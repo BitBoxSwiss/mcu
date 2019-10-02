@@ -418,6 +418,7 @@ char *sd_load(const char *fn, int cmd)
 #ifdef TESTING
     FILE *file_object = fopen(file, "r");
     if (!file_object) {
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_READ_FILE);
         goto err;
     }
 #else
@@ -442,7 +443,7 @@ char *sd_load(const char *fn, int cmd)
 
     res = f_open(FO(file_object), (char const *)file, FA_OPEN_EXISTING | FA_READ);
     if (res != FR_OK) {
-        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_OPEN_FILE);
+        commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_READ_FILE);
         f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
         goto err;
     }
@@ -560,16 +561,28 @@ uint8_t sd_list(int cmd)
             f_len += strlen(pc_fn) + strlens(",\"\"");
             if (f_len + 1 >= sizeof(files)) {
                 f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
-                commander_fill_report(cmd_str(CMD_warning), flag_msg(DBB_WARN_SD_NUM_FILES), DBB_OK);
+                commander_fill_report(cmd_str(CMD_warning), flag_msg(DBB_WARN_SD_NUM_FILES),
+                                      DBB_JSON_STRING);
                 strcat(files, "\"");
                 break;
             }
 
             if (pos >= sd_listing_pos) {
-                if (strlens(files) > 1) {
+                if (files[1] != '\0') {
                     strcat(files, ",");
                 }
-                snprintf(files + strlens(files), sizeof(files) - f_len, "\"%s\"", pc_fn);
+                size_t size = sizeof(files) - f_len;
+                size_t result = snprintf(files + strlens(files), size, "\"%s\"", pc_fn);
+                if (size <= result) {
+                    commander_fill_report(cmd_str(CMD_warning), flag_msg(DBB_WARN_SD_NUM_FILES),
+                                          DBB_JSON_STRING);
+                    f_mount(LUN_ID_SD_MMC_0_MEM, NULL);
+                    utils_zero(files, sizeof(files));
+#ifdef TESTING
+                    closedir(dir);
+#endif
+                    return DBB_ERROR;
+                }
             }
             pos += 1;
         }
@@ -821,7 +834,7 @@ uint8_t sd_erase(int cmd, const char *fn)
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_SD_ERASE);
         return DBB_ERROR;
     } else {
-        commander_fill_report(cmd_str(cmd), attr_str(ATTR_success), DBB_OK);
+        commander_fill_report(cmd_str(cmd), attr_str(ATTR_success), DBB_JSON_STRING);
         return DBB_OK;
     }
 }

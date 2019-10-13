@@ -517,6 +517,18 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
 
+    // SYS - note we use bech32 by default (p2wpkh for this test is set)
+    snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
+             BIP44_PURPOSE_P2WPKH, BIP44_PURPOSE_HARDENED ? "p" : "",
+             BIP44_COIN_TYPE_SYS, BIP44_COIN_TYPE_HARDENED ? "p" : "",
+             BIP44_ACCOUNT_MAX, BIP44_ACCOUNT_HARDENED ? "p" : "",
+             BIP44_CHANGE_MAX, BIP44_CHANGE_HARDENED ? "p" : "",
+             BIP44_ADDRESS_MAX, BIP44_ADDRESS_HARDENED ? "p" : "");
+    api_format_send_cmd(cmd_str(CMD_xpub), kp, KEY_STANDARD);
+    ASSERT_REPORT_HAS("\"xpub\":");
+    ASSERT_REPORT_HAS_NOT(flag_msg(DBB_WARN_KEYPATH));
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+
     // TESTNET
     snprintf(kp, sizeof(kp), "m/%i%s/%i%s/%i%s/%i%s/%i%s",
              BIP44_PURPOSE_P2PKH, BIP44_PURPOSE_HARDENED ? "p" : "",

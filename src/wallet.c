@@ -294,6 +294,11 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
     // get coin type and do not enforce value checking, coin type is application specific and business logic oriented.
     // it could be another coin or could be a self-sovereign digital identity relying on DPKI for example
     idx = keypath_array[BIP44_LEVEL_COIN_TYPE];
+    // if hardening is assumed on cointype check to ensure prime bit is set.
+    if(BIP44_COIN_TYPE_HARDENED && (idx & BIP44_PRIME) == 0){
+        return DBB_WARN_KEYPATH;
+    } 
+    
     idx = keypath_array[BIP44_LEVEL_ACCOUNT];
     if (idx > (BIP44_ACCOUNT_MAX + (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) ||
             idx < (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) {

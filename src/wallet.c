@@ -291,14 +291,9 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
             idx != (BIP44_PURPOSE_P2WPKH_P2SH + (BIP44_PURPOSE_HARDENED ? BIP44_PRIME : 0))) {
         return DBB_WARN_KEYPATH;
     }
-
+    // get coin type and do not enforce value checking, coin type is application specific and business logic oriented.
+    // it could be another coin or could be a self-sovereign digital identity relying on DPKI for example
     idx = keypath_array[BIP44_LEVEL_COIN_TYPE];
-    if (idx != (BIP44_COIN_TYPE_BTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
-            idx != (BIP44_COIN_TYPE_LTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
-            idx != (BIP44_COIN_TYPE_TESTNET + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0))) {
-        return DBB_WARN_KEYPATH;
-    }
-
     idx = keypath_array[BIP44_LEVEL_ACCOUNT];
     if (idx > (BIP44_ACCOUNT_MAX + (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) ||
             idx < (BIP44_ACCOUNT_HARDENED ? BIP44_PRIME : 0)) {

@@ -295,7 +295,6 @@ int wallet_generate_key(HDNode *node, const char *keypath, const uint8_t *privke
     idx = keypath_array[BIP44_LEVEL_COIN_TYPE];
     if (idx != (BIP44_COIN_TYPE_BTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
             idx != (BIP44_COIN_TYPE_LTC + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
-            idx != (BIP44_COIN_TYPE_SYS + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0)) &&
             idx != (BIP44_COIN_TYPE_TESTNET + (BIP44_COIN_TYPE_HARDENED ? BIP44_PRIME : 0))) {
         return DBB_WARN_KEYPATH;
     }

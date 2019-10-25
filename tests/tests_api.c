@@ -240,19 +240,17 @@ static void tests_seed_xpub_backup(void)
     ASSERT_REPORT_HAS("seed_create.pdf");
 
     // cleanup
+    // Do not check `ASSERT_SUCCESS` because the file to erase may
+    // not exist depending on the order of tests performed.
     snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "seed_create_2.pdf");
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "test_backup.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup.pdf");
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "test_backup_hww.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup2.pdf");
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "test_backup_u2f.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_hww.pdf");
-    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_u2f.pdf");
-    api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
-    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "tests_backup_v2.2.3.pdf");
+    snprintf(erase_cmd, sizeof(erase_cmd), "{\"erase\":\"%s\"}", "test_backup_v2.2.3.pdf");
     api_format_send_cmd(cmd_str(CMD_backup), erase_cmd, KEY_STANDARD);
 
     // test sd list overflow
@@ -263,7 +261,7 @@ static void tests_seed_xpub_backup(void)
     memset(long_backup_name, '-', sizeof(long_backup_name) - 1);
     long_backup_name[sizeof(long_backup_name) - 1] = 0;
 
-    for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
+    for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name) - 1; i++) {
         snprintf(lbn, sizeof(lbn), "%.1lu%s", (unsigned long)i, long_backup_name);
 
         snprintf(erase_file, sizeof(erase_file), "{\"%s\":\"%s\"}", attr_str(ATTR_erase),
@@ -286,7 +284,7 @@ static void tests_seed_xpub_backup(void)
     api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_warning));
 
-    for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name) + 1; i++) {
+    for (i = 0; i < SD_FILEBUF_LEN_MAX / sizeof(long_backup_name); i++) {
         snprintf(lbn, sizeof(lbn), "%.1lu%s", (unsigned long)i, long_backup_name);
         snprintf(back, sizeof(back), "{\"filename\":\"%s\", \"key\":\"password\"}", lbn);
 
@@ -1183,7 +1181,7 @@ static void tests_u2f(void)
              "{\"source\":\"%s\", \"key\":\"password\", \"filename\":\"%s\", \"U2F_counter\":100}",
              attr_str(ATTR_U2F_create), fn0);
     api_format_send_cmd(cmd_str(CMD_seed), cmd, KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_KEY_MASTER));
+    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_SEED_INVALID));
 
 
     // seed0 (creates backup0 `all` by default)
@@ -2809,9 +2807,9 @@ const char sig_2_input_2[] =
 static void tests_sign(void)
 {
     int i, res;
-    char one_input[] = "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_ONE
+    char one_input[] = "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_ONE
                        "\", \"keypath\":\"" KEYPATH_ONE "\"}]}";
-    char two_inputs[] = "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+    char two_inputs[] = "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                         "\", \"keypath\":\"" KEYPATH_TWO "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                         KEYPATH_THREE "\"}]}";
     char hashstr[] = "{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\"m/44p/0p/0p/0/9999\"}";
@@ -2841,15 +2839,20 @@ static void tests_sign(void)
 
 
     char checkpub[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
         KEYPATH_TWO"\"}]}";
+    char json_injection[] =
+        "{\"meta\":\"\\\",\\\"key_in\\\":\\\"value_in\\\",\\\"rest\\\":\\\"\""
+        ", \"data\":[{\"hash\":\"" HASH_INPUT_ONE
+        "\", \"keypath\":\"" KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_INPUT_TWO_1
+        "\", \"keypath\":\"" KEYPATH_TWO "\"}]}";
     char check_1[] =
-        "\"pubkey\":\"" PUBKEY_ZERO "\", \"present\":false";
+        "\"pubkey\":\"" PUBKEY_ZERO "\",\"present\":false";
     char check_2[] =
-        "\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"present\":true";
+        "\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\",\"present\":true";
     // check_sig_1 is normalized (low-S). The non-normalized value is
     //  "61e87a12a111987e3bef9dffd4b30a0322f2cc74e65a19aa551a3eaa8f417d0be7cfa5ad06beac67f09192bc7c213396b8277831b939d52e95a97749772f112f"
     char check_sig_1[] =
@@ -2862,69 +2865,69 @@ static void tests_sign(void)
         "025acc8c55e1a786f7b8ca742f725909019c849abe2051b7bc8bc580af3dc17154";
 
     char checkpub_wrong_addr_len[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"" KEYPATH_TWO
         "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\"" KEYPATH_TWO "\"}]}";
 
     char checkpub_missing_parameter[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_BASE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\"}]}";
 
     char checkpub_keypath_mismatch[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_FOUR "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
         KEYPATH_TWO"\"}]}";
 
     char checkpub_keypath_short[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_BASE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
         KEYPATH_TWO"\"}]}";
 
     char checkpub_keypath_long[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_LONG "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_ONE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_TWO "\"},{\"pubkey\":\"" PUBKEY_INPUT_TWO_1 "\", \"keypath\":\""
         KEYPATH_TWO"\"}]}";
 
     char checkpub_change_keypath_mismatch[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_FOUR "\"}]}";
 
     char checkpub_change_keypath_short[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_BASE "\"}]}";
 
     char checkpub_change_keypath_long[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_LONG "\"}]}";
 
     char checkpub_change_address_out_of_range[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_ADDR_RNG "\"}]}";
 
     char checkpub_change_out_of_range[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_CHANGE_RNG "\"}]}";
 
     char checkpub_checking_non_change_address[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
+        "{\"meta\":\"ABCDEF123456\", \"data\": [{\"hash\":\"" HASH_INPUT_ONE
         "\", \"keypath\":\"" KEYPATH_ONE "\"},{\"hash\":\"" HASH_DEFAULT "\", \"keypath\":\""
         KEYPATH_THREE "\"}], \"checkpub\":[{\"pubkey\":\"" PUBKEY_ZERO "\", \"keypath\":\""
         KEYPATH_THREE "\"}]}";
@@ -2991,12 +2994,12 @@ static void tests_sign(void)
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // sig using no inputs
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"_meta_data_\", \"data\":[]}",
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"ABCDEF123456\", \"data\":[]}",
                         KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // invalid data field
-    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"_meta_data_\", \"data\":true}",
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"meta\":\"ABCDEF123456\", \"data\":true}",
                         KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_INVALID_CMD));
 
@@ -3111,7 +3114,7 @@ static void tests_sign(void)
                      memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "ABCDEF123456");
         u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
@@ -3134,7 +3137,7 @@ static void tests_sign(void)
                      memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "ABCDEF123456");
         u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
@@ -3153,7 +3156,7 @@ static void tests_sign(void)
                      memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "ABCDEF123456");
         u_assert_str_has(echo, KEYPATH_ONE);
         u_assert_str_has(echo, cmd_str(CMD_pin));
         free(echo);
@@ -3183,6 +3186,26 @@ static void tests_sign(void)
     hdnode_deserialize(api_read_value(CMD_xpub), &node);
     snprintf(pubkey_device_2, sizeof(pubkey_device_2), "%s",
              utils_uint8_to_hex(node.public_key, 33));
+
+    // json injection resistant
+    api_format_send_cmd(cmd_str(CMD_sign), json_injection, KEY_STANDARD);
+    ASSERT_REPORT_HAS(cmd_str(CMD_echo));
+    if (!TEST_LIVE_DEVICE) {
+        int len;
+        const char *val = api_read_value(CMD_echo);
+        char *echo = cipher_aes_b64_hmac_decrypt((const unsigned char *)val, strlens(val), &len,
+                     memory_report_aeskey(TFA_SHARED_SECRET));
+        u_assert_str_has_not(echo, "key_in");
+        u_assert_str_has_not(echo, "value_in");
+        free(echo);
+    }
+    api_format_send_cmd(cmd_str(CMD_sign), "{\"pin\":\"0001\"}", KEY_STANDARD);
+    if (!TEST_LIVE_DEVICE) {
+        ASSERT_REPORT_HAS(cmd_str(CMD_sign));
+    } else {
+        pin_err_count++;
+    }
+
 
     api_format_send_cmd(cmd_str(CMD_sign), checkpub, KEY_STANDARD);
     ASSERT_REPORT_HAS(cmd_str(CMD_echo));
@@ -3318,7 +3341,7 @@ static void tests_sign(void)
                      memory_report_aeskey(TFA_SHARED_SECRET));
         u_assert(echo);
         u_assert_str_has_not(echo, cmd_str(CMD_recid));
-        u_assert_str_has(echo, "_meta_data_");
+        u_assert_str_has(echo, "ABCDEF123456");
         u_assert_str_has(echo, KEYPATH_TWO);
         free(echo);
     }
@@ -3368,7 +3391,7 @@ static void tests_sign(void)
         // Check PIN requirement exception for ETH, i.e., ETH can be signed
         // without a response to the signing challenge.
         api_format_send_cmd(cmd_str(CMD_sign),
-                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/60'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                             "m/44'/60'/" "\"}]}",
                             KEY_STANDARD);
@@ -3383,7 +3406,7 @@ static void tests_sign(void)
         // Check PIN requirement exception for ETC, i.e., ETC can be signed
         // without a response to the signing challenge.
         api_format_send_cmd(cmd_str(CMD_sign),
-                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/61'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                             "m/44'/61'/" "\"}]}",
                             KEY_STANDARD);
@@ -3398,7 +3421,7 @@ static void tests_sign(void)
         // PIN requirement exception only applies if all keypaths are eth/etc,
         // not if others are present too:
         api_format_send_cmd(cmd_str(CMD_sign),
-                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/1'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                             "m/44'/61'/" "\"}]}",
                             KEY_STANDARD);
@@ -3414,7 +3437,7 @@ static void tests_sign(void)
         }
 
         api_format_send_cmd(cmd_str(CMD_sign),
-                            "{\"meta\":\"_meta_data_\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
+                            "{\"meta\":\"ABCDEF123456\", \"data\":[{\"hash\":\"" HASH_INPUT_TWO_1
                             "\", \"keypath\":\"" "m/44'/1'/" "\"},{\"hash\":\"" HASH_INPUT_TWO_2 "\", \"keypath\":\""
                             "m/44'/61'/" "\"}]}",
                             KEY_STANDARD);

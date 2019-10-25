@@ -69,7 +69,8 @@ uint8_t touch_button_press(uint8_t touch_type)
 {
 #ifdef TESTING
     (void) touch_type;
-    commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU), DBB_OK);
+    commander_fill_report(cmd_str(CMD_touchbutton), flag_msg(DBB_WARN_NO_MCU),
+                          DBB_JSON_STRING);
     return DBB_TOUCHED;
 #else
     int pushed = DBB_NOT_TOUCHED;

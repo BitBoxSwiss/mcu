@@ -33,6 +33,7 @@ set(DBB-FIRMWARE-SOURCES
         flash.c
         touch.c
         ecdh.c
+        json.c
 )
 
 if(USE_SECP256K1_LIB)

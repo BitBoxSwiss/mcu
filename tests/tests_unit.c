@@ -1076,13 +1076,13 @@ static void test_buffer_overflow(void)
     int t[] = {DBB_JSON_STRING, DBB_JSON_NONE};
 
     commander_clear_report();
-    memset(val, '1', COMMANDER_ARRAY_ELEMENT_MAX + 1);
+    memset(val, '1', COMMANDER_ARRAY_MAX + 1);
     commander_fill_json_array(key, value, t, CMD_data);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     commander_clear_report();
     memset(val, '1', COMMANDER_REPORT_SIZE + 1);
-    commander_fill_report("testing", val, DBB_OK);
+    commander_fill_report("testing", val, DBB_JSON_STRING);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 
     uint8_t sig[64] = {0};
@@ -1091,9 +1091,9 @@ static void test_buffer_overflow(void)
     commander_clear_report();
     val[COMMANDER_REPORT_SIZE - sizeof(sig) - sizeof(recid) - strlens(flag_msg(
                                       DBB_ERR_IO_REPORT_BUF))] = '\0';
-    commander_fill_report("testing", val, DBB_OK);
+    commander_fill_report("testing", val, DBB_JSON_STRING);
     commander_fill_signature_array(sig, recid);
-    commander_fill_report("sign", commander_read_array(), DBB_OK);
+    commander_fill_report("sign", commander_read_array(), DBB_JSON_STRING);
     u_assert_str_has(commander_read_report(), flag_msg(DBB_ERR_IO_REPORT_BUF));
 }
 

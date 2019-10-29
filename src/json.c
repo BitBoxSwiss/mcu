@@ -80,7 +80,7 @@ int json_format_error(char *out, size_t len, const char *cmd, const char *msg, i
     GEN_CHECK(yajl_gen_string(g, (const uint8_t *)"message", sizeof("message") - 1), g);
     GEN_CHECK(yajl_gen_string(g, (const uint8_t *)msg, strlens(msg)), g);
     GEN_CHECK(yajl_gen_string(g, (const uint8_t *)"code", sizeof("code") - 1), g);
-    GEN_CHECK(yajl_gen_string(g, (const uint8_t *)flag_code(flag), strlens(flag_code(flag))),
+    GEN_CHECK(yajl_gen_number(g, flag_code(flag), strlens(flag_code(flag))),
               g);
     GEN_CHECK(yajl_gen_string(g, (const uint8_t *)"command", sizeof("command") - 1), g);
     GEN_CHECK(yajl_gen_string(g, (const uint8_t *)cmd, strlens(cmd)), g);

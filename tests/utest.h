@@ -183,8 +183,9 @@
  } while(0); }
 
 #define u_assert(V) {\
- const bool v_ = (V); \
- do { if (!v_) { \
+ do { \
+  const bool v_ = (V);                                           \
+  if (!v_) {                                                     \
   u_print_error("FAILED - %s() - Line %d\n", __func__, __LINE__);\
   U_TESTS_FAIL++;\
   return; }; \

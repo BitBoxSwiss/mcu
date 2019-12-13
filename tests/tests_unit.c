@@ -40,7 +40,6 @@
 #include "random.h"
 #include "base64.h"
 #include "base58.h"
-#include "base64.h"
 #include "pbkdf2.h"
 #include "flags.h"
 #include "flash.h"

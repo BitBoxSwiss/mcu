@@ -28,13 +28,10 @@
   YWxsIHlvdXIgYmFzZSBhcmUgYmVsb25nIHRvIHVz
 
 */
-#ifndef BASE64_H
-#define BASE64_H
 
 #include "base64.h"
-#include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 static const char *b64 =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" ;
@@ -67,11 +64,8 @@ static const unsigned char unb64[] = {
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //240
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //250
     0,   0,   0,   0,   0,   0,
-}; // This array has 255 elements
+}; // This array has 256 elements
 
-// Converts binary data of length=len to base64 characters.
-// Length of the resultant string is stored in flen
-// (you must pass pointer flen).
 char *base64( const void *binaryData, int len, int *flen )
 {
     const unsigned char *bin = (const unsigned char *) binaryData ;
@@ -124,8 +118,8 @@ unsigned char *unbase64( const char *ascii, int len, int *flen )
     int charNo;
     int pad = 0 ;
 
-    if ( len < 2 ) { // 2 accesses below would be OOB.
-        // catch empty string, return NULL as result.
+    if ((len <= 0) || (len % 4 != 0)) { // 2 accesses below would be OOB.
+        // catch empty string or incorrect padding size, return NULL as result.
         *flen = 0;
         return 0;
     }
@@ -149,6 +143,14 @@ unsigned char *unbase64( const char *ascii, int len, int *flen )
         }
     }
 
+    /*
+     * Length is guaranteed to be >0 and a multiple of 4 here,
+     * so the integer division will  be exact and positive.
+     * Any '=' in the input padding removes a byte
+     * from the output.
+     *
+     * Note that this guarantees a positive value for flen.
+     */
     *flen = 3 * len / 4 - pad ;
     bin = malloc( *flen ) ;
     if ( !bin ) {
@@ -182,5 +184,3 @@ unsigned char *unbase64( const char *ascii, int len, int *flen )
 
     return bin ;
 }
-
-#endif

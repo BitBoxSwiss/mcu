@@ -101,10 +101,14 @@ static uint8_t *cipher_aes_encrypt(const unsigned char *in, int inlen,
     return enc_cat;
 }
 
-// Encrypts a given constant char array of length inlen using the AES algorithm with CBC mode
-// and base64 encodes the result.
-//
-// Must free() returned value (allocated inside base64() function)
+/**
+ * Encrypts a given constant char array of length inlen using the AES algorithm with CBC mode
+ * and base64 encodes the result.
+ *
+ * Must free() returned value (allocated inside base64() function)
+ *
+ * @return Encrypted, base64-encoded buffer, or NULL in case of error.
+ */
 char *cipher_aes_b64_encrypt(const unsigned char *in, int inlen, int *outb64len,
                              const uint8_t *key)
 {
@@ -240,10 +244,16 @@ char *cipher_aes_hmac_decrypt(const uint8_t *in, int inlen,
     return ret;
 }
 
-// Decrypts a given constant char array of length inlen using the AES algorithm with CBC mode
-// and base64 decodes the result.
-//
-// Must free() returned value (allocated inside base64() function)
+/**
+ * Decrypts a given constant char array of length inlen using the AES algorithm with CBC mode
+ * and base64 decodes the result.
+ *
+ * Must free() returned value (allocated inside base64() function)
+ * @param[in] in Pointer to the buffer to decrpyt. Must contain a
+ *               NULL-terminated string.
+ * @param[in] inlen Length of the buffer to decrypt, excluding the
+ *                  terminating NULL character.
+ */
 char *cipher_aes_b64_hmac_decrypt(const unsigned char *in, int inlen, int *out_msg_len,
                                   const uint8_t *secret)
 {
@@ -273,7 +283,13 @@ char *cipher_aes_b64_hmac_decrypt(const unsigned char *in, int inlen, int *out_m
     return decrypted;
 }
 
-// Must free() returned value
+/**
+ * Must free() returned value.
+ * @param[in] in Pointer to the buffer to decrpyt. Must contain a
+ *               NULL-terminated string.
+ * @param[in] inlen Length of the buffer to decrypt, excluding the
+ *                  terminating NULL character.
+ */
 char *cipher_aes_b64_decrypt(const unsigned char *in, int inlen, int *outlen,
                              const uint8_t *key)
 {

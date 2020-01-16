@@ -40,7 +40,6 @@
 #include "random.h"
 #include "base64.h"
 #include "base58.h"
-#include "base64.h"
 #include "pbkdf2.h"
 #include "flags.h"
 #include "flash.h"
@@ -1023,6 +1022,54 @@ static void test_base58(void)
     }
 }
 
+/**
+ * Checks that the provided base64-encoded string
+ * is decoded correctly into the expected binary.
+ *
+ * @param[in] decoded Expected decoded binary. 
+ * @param[in] decoded_len Size of the expected binary.
+ * @param[in] encoded Base64 encoded string.
+ */
+static void _base64_check_decode(const char* decoded, size_t decoded_len, const char* encoded)
+{
+    size_t encoded_len = strlen(encoded);
+    int out_decoded_len;
+    unsigned char *out_decoded = unbase64(encoded, encoded_len, &out_decoded_len);
+    u_assert_int_eq(out_decoded_len, decoded_len);
+    u_assert_mem_eq(out_decoded, decoded, decoded_len);
+    free(out_decoded);
+    out_decoded = NULL;
+}
+
+/**
+ * Checks that the provided binary
+ * is encoded correctly into the expected base64 string.
+ *
+ * @param[in] decoded Binary to encode.
+ * @param[in] decoded_len Size of the binary.
+ * @param[in] encoded Expected base64 encoded string.
+ */
+static void _base64_check_encode(const char* decoded, size_t decoded_len, const char* encoded)
+{
+    size_t encoded_len = strlen(encoded);
+    // encode
+    int out_encoded_len;
+    char *out_encoded = base64(decoded, decoded_len, &out_encoded_len);
+    u_assert_int_eq(out_encoded_len, encoded_len);
+    u_assert_str_eq(out_encoded, encoded);
+    free(out_encoded);
+    out_encoded = NULL;
+}
+
+/**
+ * Runs a single test vector through the base64 encode/decode functions.
+ * Checks that base64(decoded) == encoded, unbase64(encoded) == decoded.
+ */
+static void _base64_test_vector(const char* decoded, size_t decoded_len, const char* encoded)
+{
+    _base64_check_encode(decoded, decoded_len, encoded);
+    _base64_check_decode(decoded, decoded_len, encoded);
+}
 
 // test vectors from:
 // https://tools.ietf.org/html/rfc4648
@@ -1049,23 +1096,77 @@ static void test_base64(void)
     plainp = base64_vector;
     base64p = base64_vector + 1;
     while (*plainp && *base64p) {
-        // encode
-        int b64len;
-        char *b64 = base64(*plainp, strlen(*plainp), &b64len);
-        u_assert_mem_eq(b64, *base64p, b64len);
-        free(b64);
-
-        // decode
-        int ub64len;
-        unsigned char *ub64 = unbase64(*base64p, strlen(*base64p), &ub64len);
-        u_assert_mem_eq(ub64, *plainp, ub64len);
-        free(ub64);
-
+        _base64_test_vector(*plainp, strlen(*plainp), *base64p);
         plainp += 2;
         base64p += 2;
     }
 }
 
+static void test_base64_invalid(void)
+{
+    const char **plainp, **base64p;
+    static const char *base64_vector[] = {
+        // plain    base64
+        "",         "/=",
+        "",         "//=",
+        "",         "\\/=",
+        "",         "\\//=",
+        "",         "=",
+        "",         "==",
+        "",         "===",
+        "",         "====",
+        "",         "Zm9vYg",
+        0, 0,
+    };
+    plainp = base64_vector;
+    base64p = base64_vector + 1;
+    while (*plainp && *base64p) {
+        _base64_check_decode(*plainp, strlen(*plainp), *base64p);
+        plainp += 2;
+        base64p += 2;
+    }
+}
+
+/**
+ * Tests the base64 encoder/decoder with testcases read from a file.
+ * See generate_base64_testcases.py for details of the file format.
+ */
+static void test_base64_file(void)
+{
+    static const char* base64_test_filename = "bin/base64_testcases.bin";
+    FILE* test_file = fopen(base64_test_filename, "rb");
+    u_assert(test_file);
+    uint16_t n_tests;
+    size_t n_read = fread(&n_tests, sizeof(n_tests), 1, test_file);
+    u_assert_int_eq(n_read, 1);
+    u_print_info("Reading %u test cases from %s.", n_tests, base64_test_filename);
+    for (size_t i = 0; i < n_tests; ++i) {
+        /* Load the binary data. */
+        uint16_t binary_size;
+        n_read = fread(&binary_size, sizeof(binary_size), 1, test_file);
+        u_assert_int_eq(n_read, 1);
+        char* binary_data = malloc(binary_size);
+        u_assert(binary_data);
+        n_read = fread(binary_data, 1, binary_size, test_file);
+        u_assert_int_eq(n_read, binary_size);
+
+        /* Load the matching base64 encoded data. */
+        uint16_t encoded_size;
+        n_read = fread(&encoded_size, sizeof(encoded_size), 1, test_file);
+        u_assert_int_eq(n_read, 1);
+        char* encoded_data = malloc(encoded_size + 1);
+        u_assert(encoded_data);
+        n_read = fread(encoded_data, 1, encoded_size, test_file);
+        u_assert_int_eq(n_read, encoded_size);
+        encoded_data[encoded_size] = '\0';
+
+        /* Now check that the encoding/decoding is correct. */
+        _base64_test_vector(binary_data, binary_size, encoded_data);
+        free(encoded_data);
+        free(binary_data);
+    }
+    fclose(test_file);
+}
 
 static void test_buffer_overflow(void)
 {
@@ -1705,6 +1806,8 @@ int main(void)
     u_run_test(test_pbkdf2);
     u_run_test(test_base58);
     u_run_test(test_base64);
+    u_run_test(test_base64_file);
+    u_run_test(test_base64_invalid);
     u_run_test(test_address);
     u_run_test(test_wif);
     u_run_test(test_aes_cbc);

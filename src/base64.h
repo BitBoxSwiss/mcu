@@ -36,12 +36,28 @@
 #ifndef _BASE64_H_
 #define _BASE64_H_
 
+/**
+ * Converts binary data of length=len to base64 characters.
+ *
+ * @param[in] binaryData Binary buffer to encode. Must be len bytes long.
+ * @paramm[in] len Length of the binaryData buffer.
+ * @param[out] flen Resulting length of the encoded buffer.
+ * @return Decoded buffer, or NULL if an error occurred. Must be free()'d by the
+ * caller.
+ */
+char *base64(const void *binaryData, int len, int *flen);
 
-// Converts binary data of length=len to base64 characters.
-// Length of the resultant string is stored in flen
-// (you must pass pointer flen).
-char *base64( const void *binaryData, int len, int *flen );
+/**
+ * Decodes the provided base64 string.
+ *
+ * @param[in] ascii Base64-encoded buffer to decoded. Must contain a
+ * zero-terminated string.
+ * @param[in] len Length of the string to decode (excluding the terminating
+ * character).
+ * @param[out] flen Resulting length of the decoded buffer.
+ * @return Decoded buffer, or NULL if an error occurred. Must be free()'d by the
+ * caller.
+ */
 unsigned char *unbase64( const char *ascii, int len, int *flen );
-
 
 #endif

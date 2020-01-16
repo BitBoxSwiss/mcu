@@ -478,6 +478,9 @@ static void api_reset_device(void)
 }
 
 
+/**
+ * @return Buffer containing the read value. Guaranteed to be nonnull.
+ */
 static const char *api_read_value(int cmd)
 {
     static char value[HID_REPORT_SIZE];

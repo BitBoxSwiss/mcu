@@ -2734,8 +2734,10 @@ static void tests_echo_tfa(void)
                         KEY_STANDARD);
     ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
 
-    api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
-    ASSERT_REPORT_HAS(flag_msg(DBB_ERR_IO_LOCKED));
+    if (!TEST_LIVE_DEVICE) {
+        api_format_send_cmd(cmd_str(CMD_backup), attr_str(ATTR_list), KEY_STANDARD);
+        ASSERT_REPORT_HAS("test_backup.pdf");
+    }
 }
 
 

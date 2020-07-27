@@ -305,11 +305,15 @@ static int commander_process_backup_check(const char *key, const char *filename,
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 ret = DBB_ERROR;
             } else {
+                uint8_t is_hidden = wallet_is_hidden();
+                // constant time !is_hidden
+                uint8_t negated[] = {1, 0};
+                uint8_t is_main = negated[is_hidden];
                 uint8_t main_ok = MEMEQ(node.private_key, memory_master_hww(NULL), MEM_PAGE_LEN) &&
                                   MEMEQ(node.chain_code, memory_master_hww_chaincode(NULL), MEM_PAGE_LEN);
                 uint8_t hidden_ok = MEMEQ(node.private_key, memory_hidden_hww(NULL), MEM_PAGE_LEN) &&
                                     MEMEQ(node.chain_code, memory_hidden_hww_chaincode(NULL), MEM_PAGE_LEN);
-                ret = (main_ok | hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
+                ret = (is_main & main_ok) | (is_hidden & hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
             }
             utils_zero(seed, sizeof(seed));
         }

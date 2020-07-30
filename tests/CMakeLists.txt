@@ -15,6 +15,15 @@ endif()
 add_executable(tests_unit tests_unit.c)
 target_link_libraries(tests_unit bitbox)
 
+#-----------------------------------------------------------------------------
+# Generate test vectors for the base64 unit test.
+add_custom_command(TARGET tests_unit
+  POST_BUILD
+  COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/generate_base64_testcases.py"
+  --output "${CMAKE_BINARY_DIR}/bin/base64_testcases.bin"
+  --seed 31337 --count 10000 --maxSize 2000
+  )
+
 
 #-----------------------------------------------------------------------------
 # Build tests_openssl

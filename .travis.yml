@@ -52,7 +52,7 @@ before_script:
     - if astyle --style=kr --indent-switches --indent-labels --pad-oper --pad-header --align-pointer=name --add-braces --convert-tabs --max-code-length=90 --break-after-logical --suffix=none *.c *.h --recursive --exclude=contrib --exclude=src/yajl --exclude=src/secp256k1 --exclude=tests/windows/hidapi --exclude=src/drivers --dry-run -Q | grep "Formatted" ; then exit 1 ; fi;
     - gpg --import contrib/contributors_gpg_keys/*
     - if ! git show c6ce843547c5212e33665dd4ca7c951a43067044; then exit 1 ; fi;
-    - if git log --pretty="format:%H   %aN   %s   %G?" e3e5f027b49fd4a2a52ee62fa779d6252021f855..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
+    - if git log --pretty="format:%H   %aN   %s   %G?" e31ee47782e2299902586f032e1abda867af897c..HEAD^1 | grep -v "${t} G$" | grep -v "${t} U$"; then exit 1 ; fi;
 
 script:
     - mkdir build && cd build

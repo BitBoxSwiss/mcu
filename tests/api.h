@@ -32,6 +32,7 @@
 #include <arpa/inet.h>
 #include "flags.h"
 #include "yajl/src/api/yajl_tree.h"
+#include "yajl/src/api/yajl_parse.h"
 #include "u2f/u2f_hid.h"
 #include "u2f/u2f.h"
 #include "u2f_device.h"
@@ -46,16 +47,31 @@
 #define HID_REPORT_SIZE COMMANDER_REPORT_SIZE
 #define API_READ_ERROR "ERROR: Unable to read report."
 
+#define ASSERT_JSON                                                          \
+    do {                                                                     \
+        yajl_callbacks callbacks = {NULL};                                   \
+        yajl_handle hand = yajl_alloc(&callbacks, NULL, NULL);               \
+        yajl_config(hand, yajl_allow_comments, 1);                           \
+        size_t size = strlen(api_read_decrypted_report());                   \
+        yajl_status err = yajl_parse(                                        \
+            hand, (const unsigned char *)api_read_decrypted_report(), size); \
+        u_assert(err == yajl_status_ok);                                     \
+        yajl_free(hand);                                                     \
+    } while (0)
+
 #define ASSERT_SUCCESS do {\
+  ASSERT_JSON;\
   u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_success));\
   u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));\
 } while (0);
 
 #define ASSERT_REPORT_HAS(a) do {\
+  ASSERT_JSON;\
   u_assert_str_has(api_read_decrypted_report(), (a));\
 } while (0);
 
 #define ASSERT_REPORT_HAS_NOT(a) do {\
+  ASSERT_JSON;\
   u_assert_str_has_not(api_read_decrypted_report(), (a));\
 } while (0);
 
@@ -462,6 +478,9 @@ static void api_reset_device(void)
 }
 
 
+/**
+ * @return Buffer containing the read value. Guaranteed to be nonnull.
+ */
 static const char *api_read_value(int cmd)
 {
     static char value[HID_REPORT_SIZE];

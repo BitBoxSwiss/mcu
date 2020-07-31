@@ -305,11 +305,15 @@ static int commander_process_backup_check(const char *key, const char *filename,
             if (wallet_generate_node(key, seed, &node) == DBB_ERROR) {
                 ret = DBB_ERROR;
             } else {
+                uint8_t is_hidden = wallet_is_hidden();
+                // constant time !is_hidden
+                uint8_t negated[] = {1, 0};
+                uint8_t is_main = negated[is_hidden];
                 uint8_t main_ok = MEMEQ(node.private_key, memory_master_hww(NULL), MEM_PAGE_LEN) &&
                                   MEMEQ(node.chain_code, memory_master_hww_chaincode(NULL), MEM_PAGE_LEN);
                 uint8_t hidden_ok = MEMEQ(node.private_key, memory_hidden_hww(NULL), MEM_PAGE_LEN) &&
                                     MEMEQ(node.chain_code, memory_hidden_hww_chaincode(NULL), MEM_PAGE_LEN);
-                ret = (main_ok | hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
+                ret = (is_main & main_ok) | (is_hidden & hidden_ok) ? DBB_OK : DBB_ERROR; // bitwise for constant time
             }
             utils_zero(seed, sizeof(seed));
         }
@@ -395,11 +399,6 @@ static void commander_process_backup(yajl_val json_node)
     char source[MAX(MAX(strlens(attr_str(ATTR_U2F)), strlens(attr_str(ATTR_HWW))),
                                                          strlens(attr_str(ATTR_all))) + 1];
 
-    if (wallet_is_locked()) {
-        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_LOCKED);
-        return;
-    }
-
     if (strlens(value)) {
         if (STREQ(value, attr_str(ATTR_list))) {
             sd_list(CMD_backup);
@@ -407,17 +406,6 @@ static void commander_process_backup(yajl_val json_node)
         }
 
         commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_INVALID_CMD);
-        return;
-    }
-
-    if (strlens(erase)) {
-        // Erase single file
-        int status = touch_button_press(TOUCH_LONG_WARN);
-        if (status == DBB_TOUCHED) {
-            sd_erase(CMD_backup, erase);
-        } else {
-            commander_fill_report(cmd_str(CMD_backup), NULL, status);
-        }
         return;
     }
 
@@ -432,12 +420,6 @@ static void commander_process_backup(yajl_val json_node)
         }
     }
 
-    if (!strlens(key) && !STREQ(source, attr_str(ATTR_U2F))) {
-        // Exit if backing up HWW but no key given
-        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
-        return;
-    }
-
     if (check) {
         // Verify existing backup
         if (STREQ(source, attr_str(ATTR_all))) {
@@ -445,6 +427,30 @@ static void commander_process_backup(yajl_val json_node)
             return;
         }
         commander_process_backup_check(key, check, source);
+        return;
+    }
+
+
+    if (wallet_is_locked()) {
+        commander_fill_report(cmd_str(CMD_backup), NULL, DBB_ERR_IO_LOCKED);
+        return;
+    }
+
+    if (strlens(erase)) {
+        // Erase single file
+        int status = touch_button_press(TOUCH_LONG_WARN);
+        if (status == DBB_TOUCHED) {
+            sd_erase(CMD_backup, erase);
+        } else {
+            commander_fill_report(cmd_str(CMD_backup), NULL, status);
+        }
+        return;
+    }
+
+
+    if (!strlens(key) && !STREQ(source, attr_str(ATTR_U2F))) {
+        // Exit if backing up HWW but no key given
+        commander_fill_report(cmd_str(CMD_seed), NULL, DBB_ERR_SD_KEY);
         return;
     }
 

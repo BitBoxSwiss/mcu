@@ -19,7 +19,7 @@ import binascii
 from dbb_utils import *
 
 
-if len(sys.argv) is not 3:
+if len(sys.argv) != 3:
     print('\n\nUsage:\n\tpython load_firmware.py firmware_name.bin firmware_version\n\n')
     sys.exit()
 else:
